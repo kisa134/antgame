@@ -1,5 +1,6 @@
 ﻿#include "AntHUD.h"
 #include "KitchenInteractables.h"
+#include "AntSwarm.h"
 #include "AntCharacter.h"
 #include "HumanCharacter.h"
 #include "AntGameState.h"
@@ -280,6 +281,20 @@ void AAntHUD::DrawAnt(AAntCharacter* Ant)
 		Txt(St, X, Y - 56.f * S, SC, Small, 1.15f * S);
 	}
 
+	// Colony swarm
+	if (const AAntSwarm* Swarm = AAntSwarm::Get(GetWorld()))
+	{
+		Txt(FString::Printf(TEXT("КОЛОНИЯ: %d рабочих  |  в гнезде %d  |  на тропах %d  (%d троп)"),
+			Swarm->Population, Swarm->Idle, Swarm->AntsOnTrails(), Swarm->Streams.Num()),
+			X, Y - 84.f * S, FLinearColor(0.55f, 1.f, 0.6f), Small, 1.1f * S);
+	}
+	if (Ant->bLayingTrail)
+	{
+		Txt(FString::Printf(TEXT("ФЕРОМОНОВАЯ ТРОПА: %d / %d — ползи в муравейник  (T — отменить)"), Ant->TrailPoints.Num(), AAntCharacter::TrailMaxPoints),
+			W * 0.5f, H * 0.5f + 175.f * S, FLinearColor(0.4f, 1.f, 0.45f), Med, 1.f * S, true);
+		Marker(AKitchenBuilder::NestLocation() + FVector(0.f, 0.f, 200.f), TEXT("МУРАВЕЙНИК"), FLinearColor(0.4f, 1.f, 0.45f), true);
+	}
+
 	// Interaction prompt: gadgets win over loot when closer.
 	float GadgetDist = 0.f;
 	AKitchenInteractable* Gadget = Ant->FindNearestInteractable(&GadgetDist);
@@ -305,6 +320,10 @@ void AAntHUD::DrawAnt(AAntCharacter* Ant)
 			if (!bFits)
 			{
 				Txt(TEXT("Не влезет! Отнеси груз в муравейник"), PX, PY + 34.f * S, Red, Small, 1.1f * S, true);
+			}
+			if (!Ant->bLayingTrail)
+			{
+				Txt(TEXT("[T] проложить феромоновую тропу — рой будет таскать это сам"), PX, PY + 62.f * S, FLinearColor(0.5f, 1.f, 0.55f), Small, 1.05f * S, true);
 			}
 		}
 	}
@@ -528,7 +547,7 @@ void AAntHUD::DrawHelp(APawn* Me)
 	}
 	else
 	{
-		Help = TEXT("WASD — ползти (по стенам и потолку тоже) | ЛКМ — плевок | E — взять / использовать | Shift — спринт | Пробел — прыжок | H — стать Человеком | Tab — счёт");
+		Help = TEXT("WASD — ползти (по стенам и потолку тоже) | ЛКМ — плевок | E — взять / использовать | T — тропа для роя | G — отозвать рой | Shift — спринт | Пробел — прыжок | H — Человек | Tab — счёт");
 	}
 	Txt(Help, Canvas->ClipX * 0.5f, Canvas->ClipY - 26.f * S, FLinearColor(1.f, 1.f, 1.f, 0.6f), GEngine->GetSmallFont(), 1.f * S, true);
 }

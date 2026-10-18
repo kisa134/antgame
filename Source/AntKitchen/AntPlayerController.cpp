@@ -2,6 +2,7 @@
 #include "AntKitchenGameMode.h"
 #include "HumanCharacter.h"
 #include "AntCharacter.h"
+#include "AntSwarm.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "TimerManager.h"
@@ -20,7 +21,7 @@ void AAntPlayerController::BeginPlay()
 
 		// Dev/test switches.
 		FString TpArg;
-		if (FParse::Value(FCommandLine::Get(), TEXT("AntTp="), TpArg))
+		if (FParse::Value(FCommandLine::Get(), TEXT("AntTp="), TpArg, false))
 		{
 			TArray<FString> Parts;
 			TpArg.ParseIntoArray(Parts, TEXT(","));
@@ -30,6 +31,12 @@ void AAntPlayerController::BeginPlay()
 				FTimerHandle H;
 				GetWorldTimerManager().SetTimer(H, FTimerDelegate::CreateWeakLambda(this, [this, L]() { ServerTp(L); }), 3.f, false);
 			}
+		}
+		int32 TestAnts = 0;
+		if (FParse::Value(FCommandLine::Get(), TEXT("AntSwarmTest="), TestAnts) && TestAnts > 0)
+		{
+			FTimerHandle H;
+			GetWorldTimerManager().SetTimer(H, FTimerDelegate::CreateWeakLambda(this, [this, TestAnts]() { ServerSwarmTest(TestAnts); }), 2.f, false);
 		}
 		if (FParse::Param(FCommandLine::Get(), TEXT("AntPeace")))
 		{
@@ -42,6 +49,19 @@ void AAntPlayerController::BeginPlay()
 void AAntPlayerController::Tp(float X, float Y, float Z)
 {
 	ServerTp(FVector(X, Y, Z));
+}
+
+void AAntPlayerController::SwarmTest(int32 Ants)
+{
+	ServerSwarmTest(Ants);
+}
+
+void AAntPlayerController::ServerSwarmTest_Implementation(int32 Ants)
+{
+	if (AAntSwarm* Swarm = AAntSwarm::Get(GetWorld()))
+	{
+		Swarm->DebugSpawnTestStreams(FMath::Clamp(Ants, 0, 200000));
+	}
 }
 
 void AAntPlayerController::Peace()

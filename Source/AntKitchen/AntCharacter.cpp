@@ -4,6 +4,7 @@
 #include "KitchenLoot.h"
 #include "KitchenBuilder.h"
 #include "KitchenInteractables.h"
+#include "AntSwarm.h"
 #include "AntKitchenGameMode.h"
 #include "AntPlayerController.h"
 #include "AntPlayerState.h"
@@ -80,6 +81,8 @@ void AAntCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	DOREPLIFETIME(AAntCharacter, bSprinting);
 	DOREPLIFETIME(AAntCharacter, Temperature);
 	DOREPLIFETIME(AAntCharacter, StatusFlags);
+	DOREPLIFETIME(AAntCharacter, TrailPoints);
+	DOREPLIFETIME(AAntCharacter, bLayingTrail);
 }
 
 void AAntCharacter::BeginPlay()
@@ -271,6 +274,8 @@ void AAntCharacter::SetupPlayerInputComponent(UInputComponent* Input)
 	Input->BindAction("Interact", IE_Pressed, this, &AAntCharacter::Interact);
 	Input->BindAction("Sprint", IE_Pressed, this, &AAntCharacter::StartSprint);
 	Input->BindAction("Sprint", IE_Released, this, &AAntCharacter::StopSprint);
+	Input->BindAction("LayTrail", IE_Pressed, this, &AAntCharacter::ToggleTrail);
+	Input->BindAction("RecallSwarm", IE_Pressed, this, &AAntCharacter::RecallSwarm);
 }
 
 void AAntCharacter::SurfaceAxes(FVector& OutForward, FVector& OutRight) const
@@ -378,6 +383,167 @@ void AAntCharacter::DoJump()
 void AAntCharacter::DoStopJump()
 {
 	StopJumping();
+}
+
+void AAntCharacter::ToggleTrail()
+{
+	if (!bDead)
+	{
+		ServerToggleTrail();
+	}
+}
+
+void AAntCharacter::RecallSwarm()
+{
+	ServerRecallSwarm();
+}
+
+// ---------------------------------------------------------------------------------------------
+// Pheromone trails: start at food, crawl home; the swarm follows the trail.
+// ---------------------------------------------------------------------------------------------
+
+void AAntCharacter::ServerToggleTrail_Implementation()
+{
+	if (bDead)
+	{
+		return;
+	}
+	if (bLayingTrail)
+	{
+		CancelTrail(TEXT("Тропа отменена"));
+		return;
+	}
+	if (IsInNest())
+	{
+		Toast(TEXT("Тропу начинают у еды и ведут домой, в муравейник"));
+		return;
+	}
+	AKitchenLoot* Food = nullptr;
+	float Best = 480.f;
+	for (TActorIterator<AKitchenLoot> It(GetWorld()); It; ++It)
+	{
+		const float D = FVector::Dist(It->GetActorLocation(), GetActorLocation());
+		if (!It->bIsGear && D < Best)
+		{
+			Best = D;
+			Food = *It;
+		}
+	}
+	if (!Food)
+	{
+		Toast(TEXT("Рядом нет еды. Встань у еды и нажми T, потом ползи в муравейник"));
+		return;
+	}
+	TrailFood = Food;
+	TrailPoints.Reset();
+	TrailNormals.Reset();
+	TrailPoints.Add(Food->GetActorLocation() - FVector(0.f, 0.f, 30.f));
+	TrailNormals.Add(FVector::UpVector);
+	bLayingTrail = true;
+	Toast(FString::Printf(TEXT("Метка феромона у «%s». Ползи в муравейник — рой пойдёт по твоему следу"), *Food->LootName));
+}
+
+void AAntCharacter::ServerRecallSwarm_Implementation()
+{
+	if (AAntSwarm* Swarm = AAntSwarm::Get(GetWorld()))
+	{
+		const int32 N = Swarm->RecallStreams(GetDisplayName());
+		Toast(N > 0 ? FString::Printf(TEXT("Твои тропы стёрты, %d рабочих вернулись в гнездо"), N) : FString(TEXT("У тебя нет троп")));
+	}
+}
+
+void AAntCharacter::CancelTrail(const TCHAR* Why)
+{
+	bLayingTrail = false;
+	TrailPoints.Reset();
+	TrailNormals.Reset();
+	TrailFood = nullptr;
+	if (Why)
+	{
+		Toast(Why);
+	}
+}
+
+void AAntCharacter::TickTrail()
+{
+	if (!bLayingTrail)
+	{
+		return;
+	}
+	if (!TrailFood.IsValid())
+	{
+		CancelTrail(TEXT("Еду унесли — тропа пропала"));
+		return;
+	}
+	const FVector P = GetActorLocation();
+	const UAntMovementComponent* M = GetAntMovement();
+	const FVector N = (M && M->IsCrawling()) ? M->GetSurfaceNormal() : FVector::UpVector;
+	if (FVector::Dist(P, TrailPoints.Last()) >= TrailStep && (M && M->IsCrawling()))
+	{
+		TrailPoints.Add(P - N * (BodyRadius - 2.f));
+		TrailNormals.Add(N);
+		if (TrailPoints.Num() > TrailMaxPoints)
+		{
+			CancelTrail(TEXT("Тропа слишком длинная, феромон выветрился"));
+			return;
+		}
+	}
+
+	if (IsInNest())
+	{
+		TArray<FVector> Pts;
+		TArray<FVector> Nrm;
+		Pts.Add(AKitchenBuilder::NestLocation() + FVector(0.f, 0.f, 2.f));
+		Nrm.Add(FVector::UpVector);
+		for (int32 i = TrailPoints.Num() - 1; i >= 0; --i)
+		{
+			Pts.Add(TrailPoints[i]);
+			Nrm.Add(TrailNormals.IsValidIndex(i) ? TrailNormals[i] : FVector::UpVector);
+		}
+		AKitchenLoot* Food = TrailFood.Get();
+		const FString FoodName = Food ? Food->LootName : FString();
+		CancelTrail(nullptr);
+
+		FString Why;
+		AAntSwarm* Swarm = AAntSwarm::Get(GetWorld());
+		const int32 Sent = Swarm ? Swarm->CreateStream(Pts, Nrm, Food, this, Why) : 0;
+		if (Sent > 0)
+		{
+			Toast(FString::Printf(TEXT("Тропа готова! %d рабочих пошли за «%s»"), Sent, *FoodName));
+			if (AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
+			{
+				GM->Broadcast(FString::Printf(TEXT("%s проложил тропу: %d муравьёв идут за «%s»"), *GetDisplayName(), Sent, *FoodName), FLinearColor(0.5f, 1.f, 0.6f));
+			}
+		}
+		else
+		{
+			Toast(Why);
+		}
+	}
+}
+
+void AAntCharacter::UpdateTrailDots()
+{
+	const int32 Want = bDead ? 0 : TrailPoints.Num();
+	while (TrailDots.Num() < Want)
+	{
+		UStaticMeshComponent* D = AntKit::AddPart(this, RootComponent, EAntShape::Sphere, FVector::ZeroVector, FVector(0.12f), FLinearColor(0.3f, 1.f, 0.35f));
+		D->SetUsingAbsoluteLocation(true);
+		D->SetUsingAbsoluteRotation(true);
+		D->SetCastShadow(false);
+		TrailDots.Add(D);
+	}
+	for (int32 i = 0; i < TrailDots.Num(); ++i)
+	{
+		const bool bShow = i < Want;
+		TrailDots[i]->SetVisibility(bShow);
+		if (bShow)
+		{
+			const float Pulse = 0.10f + 0.04f * FMath::Sin(AnimTime * 6.f - i * 0.5f);
+			TrailDots[i]->SetWorldLocation(FVector(TrailPoints[i]) + FVector(0.f, 0.f, 4.f));
+			TrailDots[i]->SetWorldScale3D(FVector(Pulse));
+		}
+	}
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -533,7 +699,12 @@ void AAntCharacter::Tick(float DeltaSeconds)
 			{
 				Die(nullptr, nullptr);
 			}
+			TickTrail();
 		}
+	}
+	if (GetNetMode() != NM_DedicatedServer)
+	{
+		UpdateTrailDots();
 	}
 
 	UpdateSpeed();
@@ -753,6 +924,10 @@ void AAntCharacter::Die(AController* Killer, AActor* Causer)
 		return;
 	}
 	DropEverything();
+	if (bLayingTrail)
+	{
+		CancelTrail(TEXT("Ты погиб — тропа оборвалась"));
+	}
 	bDead = true;
 	OnRep_Dead();
 

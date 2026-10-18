@@ -100,6 +100,12 @@ public:
 	UPROPERTY(Replicated) float Temperature = 22.f;
 	UPROPERTY(Replicated) uint8 StatusFlags = 0;
 
+	/** Pheromone trail being laid right now (food -> nest). Everyone sees the glowing dots. */
+	UPROPERTY(Replicated) TArray<FVector_NetQuantize> TrailPoints;
+	UPROPERTY(Replicated) bool bLayingTrail = false;
+	static constexpr float TrailStep = 140.f;
+	static constexpr int32 TrailMaxPoints = 160;
+
 	UAntMovementComponent* GetAntMovement() const;
 	bool IsCrawling() const;
 	bool IsClimbing() const;     // on a wall or ceiling
@@ -142,10 +148,14 @@ protected:
 	void StopSprint();
 	void DoJump();
 	void DoStopJump();
+	void ToggleTrail();
+	void RecallSwarm();
 
 	UFUNCTION(Server, Unreliable) void ServerFire(FVector_NetQuantize Origin, FVector_NetQuantizeNormal Direction);
 	UFUNCTION(Server, Reliable) void ServerInteract();
 	UFUNCTION(Server, Reliable) void ServerSetSprint(bool bNewSprint);
+	UFUNCTION(Server, Reliable) void ServerToggleTrail();
+	UFUNCTION(Server, Reliable) void ServerRecallSwarm();
 	UFUNCTION(Client, Reliable) void ClientLaunch(FVector_NetQuantize10 Velocity);
 	UFUNCTION(Client, Reliable) void ClientTeleport(FVector_NetQuantize Location);
 
@@ -163,6 +173,9 @@ private:
 	void UpdateLegs(float DeltaSeconds, const FVector& N);
 	FVector EstimateSurfaceNormal() const;
 	void Die(AController* Killer, AActor* Causer);
+	void TickTrail();
+	void CancelTrail(const TCHAR* Why);
+	void UpdateTrailDots();
 
 	UPROPERTY(VisibleAnywhere) USpringArmComponent* SpringArm;
 	UPROPERTY(VisibleAnywhere) UCameraComponent* Camera;
@@ -177,6 +190,10 @@ private:
 	UPROPERTY() UStaticMeshComponent* CarryChunk = nullptr;
 	UPROPERTY() UMaterialInstanceDynamic* GlandMID = nullptr;
 	UPROPERTY() UStaticMeshComponent* FrostShell = nullptr;
+	UPROPERTY() TArray<UStaticMeshComponent*> TrailDots;
+
+	TArray<FVector> TrailNormals;                 // server
+	TWeakObjectPtr<AKitchenLoot> TrailFood;       // server
 
 	TArray<FAntLeg> Legs;
 	FVector VisNormal = FVector::UpVector;

@@ -1,8 +1,9 @@
-#include "HumanAIController.h"
+﻿#include "HumanAIController.h"
 #include "HumanCharacter.h"
 #include "AntCharacter.h"
 #include "KitchenBuilder.h"
 #include "KitchenInteractables.h"
+#include "AntSwarm.h"
 #include "Components/CapsuleComponent.h"
 #include "EngineUtils.h"
 
@@ -164,6 +165,26 @@ void AHumanAIController::Tick(float DeltaSeconds)
 			}
 			DesiredRotation.Yaw = TargetYaw;
 			H->SetSpraying(FVector::Dist(Origin, TL) < AHumanCharacter::SprayRange - 100.f && YawErr < 15.f && H->SprayFuel > 10.f);
+		}
+	}
+	else if (AAntSwarm* Swarm = AAntSwarm::Get(GetWorld()); Swarm && Swarm->FindStompTarget(MyLoc, 7000.f, SwarmPoint))
+	{
+		// No ant players around: go stomp the worker trails.
+		H->SetSpraying(false);
+		const FVector To = SwarmPoint - MyLoc;
+		const float Dist = (float)To.Size2D();
+		const float TargetYaw = (float)To.Rotation().Yaw;
+		const float YawErr = FMath::Abs(FMath::FindDeltaAngleDegrees((float)H->GetActorRotation().Yaw, TargetYaw));
+		DesiredRotation.Yaw = TargetYaw;
+		DesiredRotation.Pitch = -35.f;
+		if (Dist > 520.f)
+		{
+			MoveTowards(H, SwarmPoint, 0.8f);
+		}
+		if (Dist < 760.f && YawErr < 35.f)
+		{
+			const float Side = FVector::DotProduct(To, H->GetActorRightVector());
+			H->TryStomp(Side < 0.f ? 0 : 1);
 		}
 	}
 	else

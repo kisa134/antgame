@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "AIController.h"
@@ -30,6 +30,7 @@ private:
 	TWeakObjectPtr<AAntCharacter> Target;
 	FRotator DesiredRotation = FRotator::ZeroRotator;
 	FVector WanderPoint = FVector::ZeroVector;
+	FVector SwarmPoint = FVector::ZeroVector;
 	float RetargetTimer = 0.f;
 	float WanderTimer = 0.f;
 	float StuckTimer = 0.f;

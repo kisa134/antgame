@@ -1,4 +1,5 @@
 ﻿#include "HumanCharacter.h"
+#include "AntSwarm.h"
 #include "HumanAIController.h"
 #include "AntCharacter.h"
 #include "AntKitchenGameMode.h"
@@ -225,6 +226,10 @@ FVector AHumanCharacter::GetStompPoint(int32 Leg) const
 void AHumanCharacter::DoStompImpact()
 {
 	const FVector P = GetStompPoint(PendingLeg);
+	if (AAntSwarm* Swarm = AAntSwarm::Get(GetWorld()))
+	{
+		Swarm->KillInSphere(P, StompRadius * 1.15f);
+	}
 	for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
 	{
 		AAntCharacter* Ant = *It;
@@ -267,6 +272,10 @@ void AHumanCharacter::DoSprayDamage(float Dt)
 	const FVector Origin = GetSprayOrigin();
 	const FVector Dir = GetSprayDirection();
 	const float CosCone = FMath::Cos(FMath::DegreesToRadians(20.f));
+	if (AAntSwarm* Swarm = AAntSwarm::Get(GetWorld()))
+	{
+		Swarm->KillInCone(Origin, Dir, SprayRange, CosCone, Dt);
+	}
 
 	for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
 	{

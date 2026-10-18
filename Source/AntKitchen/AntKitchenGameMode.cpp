@@ -8,6 +8,7 @@
 #include "KitchenLoot.h"
 #include "KitchenBuilder.h"
 #include "KitchenInteractables.h"
+#include "AntSwarm.h"
 #include "EngineUtils.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
@@ -57,6 +58,7 @@ void AAntKitchenGameMode::BeginPlay()
 
 	SpawnHuman();
 	SpawnGadgets();
+	SpawnSwarm();
 	SpawnInitialLoot();
 
 	GetWorldTimerManager().SetTimer(MatchTimer, this, &AAntKitchenGameMode::MatchTick, 1.f, true);
@@ -141,6 +143,31 @@ void AAntKitchenGameMode::SpawnGadgets()
 			P->Color = D.Color;
 			P->Mass = D.Mass;
 		});
+	}
+}
+
+void AAntKitchenGameMode::SpawnSwarm()
+{
+	FActorSpawnParameters P;
+	P.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	GetWorld()->SpawnActor<AAntSwarm>(AAntSwarm::StaticClass(), FTransform::Identity, P);
+}
+
+void AAntKitchenGameMode::OnSwarmIncome(int32 Value)
+{
+	AAntGameState* GS = GetGameState<AAntGameState>();
+	if (!GS || GS->Phase != 0 || Value <= 0)
+	{
+		return;
+	}
+	GS->TeamScore += Value;
+	if (AAntSwarm* Swarm = AAntSwarm::Get(GetWorld()))
+	{
+		Swarm->AddPopulation(Value * 2);
+	}
+	if (GS->TeamScore >= GS->TargetScore)
+	{
+		EndMatch(true);
 	}
 }
 
@@ -470,6 +497,10 @@ void AAntKitchenGameMode::OnLootDelivered(AAntCharacter* Ant, int32 Value, int32
 		return;
 	}
 	GS->TeamScore += Value;
+	if (AAntSwarm* Swarm = AAntSwarm::Get(GetWorld()))
+	{
+		Swarm->AddPopulation(Value * 4);   // food feeds the brood: more workers hatch
+	}
 	if (AAntPlayerState* PS = Ant->GetPlayerState<AAntPlayerState>())
 	{
 		PS->Delivered += Value;

@@ -43,6 +43,9 @@ public:
 	UFUNCTION(Exec) void Peace();
 	UFUNCTION(Server, Reliable) void ServerTp(FVector Location);
 	UFUNCTION(Server, Reliable) void ServerPeace();
+	/** Dev console: SwarmTest 30000 -> lays test trails with that many worker ants. */
+	UFUNCTION(Exec) void SwarmTest(int32 Ants);
+	UFUNCTION(Server, Reliable) void ServerSwarmTest(int32 Ants);
 
 	bool bShowScores = false;
 	TArray<FAntToast> Toasts;

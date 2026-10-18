@@ -40,6 +40,8 @@ public:
 	void OnAntKilled(AAntCharacter* Ant, AController* Killer, AActor* Causer);
 	void OnLootDelivered(AAntCharacter* Ant, int32 Value, int32 Items);
 	void OnHumanKnockedOut(AController* By);
+	/** The worker swarm brought food home. */
+	void OnSwarmIncome(int32 Value);
 	void Broadcast(const FString& Text, const FLinearColor& Color);
 
 	AKitchenLoot* SpawnFood(const FVector& Location, int32 Tier);
@@ -53,6 +55,7 @@ public:
 private:
 	void SpawnHuman();
 	void SpawnGadgets();
+	void SpawnSwarm();
 	void KitchenLifeEvent();
 	void SpawnInitialLoot();
 	void RefillLoot();
