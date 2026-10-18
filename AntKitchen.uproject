@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"EngineAssociation": "5.6",
+	"EngineAssociation": "5.8",
 	"Category": "",
 	"Description": "Ant Kitchen: multiplayer looter-shooter. Ants loot the kitchen, the Human (AI or player) stomps them.",
 	"Modules": [
@@ -15,3 +15,4 @@
 		}
 	]
 }
+

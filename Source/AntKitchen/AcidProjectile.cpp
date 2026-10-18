@@ -15,7 +15,7 @@ AAcidProjectile::AAcidProjectile()
 {
 	bReplicates = true;
 	SetReplicatingMovement(true);
-	NetCullDistanceSquared = 1.0e9f;
+	SetNetCullDistanceSquared(1.0e9f);
 	InitialLifeSpan = 4.f;
 
 	Sphere = CreateDefaultSubobject<USphereComponent>(TEXT("Sphere"));

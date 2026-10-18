@@ -1,4 +1,4 @@
-﻿#include "HumanCharacter.h"
+#include "HumanCharacter.h"
 #include "HumanAIController.h"
 #include "AntCharacter.h"
 #include "AntKitchenGameMode.h"
@@ -30,7 +30,7 @@ using namespace HumanLook;
 AHumanCharacter::AHumanCharacter()
 {
 	PrimaryActorTick.bCanEverTick = true;
-	NetCullDistanceSquared = 1.0e9f;
+	SetNetCullDistanceSquared(1.0e9f);
 
 	AIControllerClass = AHumanAIController::StaticClass();
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
@@ -344,9 +344,9 @@ FString AHumanCharacter::GetDisplayName() const
 {
 	if (const APlayerState* PS = GetPlayerState())
 	{
-		return FString::Printf(TEXT("Человек (%s)"), *PS->GetPlayerName());
+		return FString::Printf(TEXT("??????? (%s)"), *PS->GetPlayerName());
 	}
-	return TEXT("Человек (ИИ)");
+	return TEXT("??????? (??)");
 }
 
 // ---------------------------------------------------------------------------------------------

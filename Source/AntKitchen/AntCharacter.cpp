@@ -1,4 +1,4 @@
-﻿#include "AntCharacter.h"
+#include "AntCharacter.h"
 #include "AcidProjectile.h"
 #include "KitchenLoot.h"
 #include "KitchenBuilder.h"
@@ -21,7 +21,7 @@
 AAntCharacter::AAntCharacter()
 {
 	PrimaryActorTick.bCanEverTick = true;
-	NetCullDistanceSquared = 1.0e9f;
+	SetNetCullDistanceSquared(1.0e9f);
 
 	GetCapsuleComponent()->InitCapsuleSize(26.f, 26.f);
 
@@ -507,13 +507,13 @@ void AAntCharacter::ServerInteract_Implementation()
 		{
 			GM->SpawnGear(DropAt, Old);
 		}
-		Toast(FString::Printf(TEXT("Экипировано: %s"), *Weapon.Name));
+		Toast(FString::Printf(TEXT("???????????: %s"), *Weapon.Name));
 		return;
 	}
 
 	if (CarriedWeight + Loot->Weight > MaxCarry)
 	{
-		Toast(TEXT("Слишком тяжело! Сначала оттащи груз в муравейник"));
+		Toast(TEXT("??????? ??????! ??????? ?????? ???? ? ??????????"));
 		return;
 	}
 
@@ -618,7 +618,7 @@ FString AAntCharacter::GetDisplayName() const
 	{
 		return PS->GetPlayerName();
 	}
-	return TEXT("Муравей");
+	return TEXT("???????");
 }
 
 void AAntCharacter::Toast(const FString& Msg) const
