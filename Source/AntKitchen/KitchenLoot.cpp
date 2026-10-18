@@ -1,4 +1,4 @@
-#include "KitchenLoot.h"
+﻿#include "KitchenLoot.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/PointLightComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
@@ -98,10 +98,29 @@ void AKitchenLoot::RefreshVisual()
 	}
 	const FLinearColor Col = bIsGear ? AntKit::RarityColor(Gear.Rarity) : Color;
 
-	Mesh->SetStaticMesh(AntKit::ShapeMesh((EAntShape)ShapeIndex));
-	Mesh->SetRelativeScale3D(VisualScale);
-	if (!MeshMID) { MeshMID = AntKit::Paint(Mesh, Col); }
-	else { MeshMID->SetVectorParameterValue(TEXT("Color"), Col); }
+	const TCHAR* ArtName = bIsGear ? nullptr : AntArt::FoodArtName(LootName);
+	const AntArt::FPart* Art = ArtName ? &AntArt::Get(ArtName) : nullptr;
+	if (Art && Art->IsValid())
+	{
+		// Generated food model, a bit bigger than the old shape so it reads well.
+		bHasArt = true;
+		const float Size = FMath::Max(40.f, (float)VisualScale.GetMax() * 100.f * 1.4f);
+		const float S = Size / FMath::Max(1.f, (float)Art->Bounds.GetSize().GetMax());
+		Mesh->SetStaticMesh(Art->Mesh);
+		Mesh->SetMaterial(0, Art->Material);
+		Mesh->SetRelativeScale3D(FVector(S));
+		ArtOffset = -Art->Bounds.GetCenter() * S;
+		MeshMID = nullptr;
+	}
+	else
+	{
+		bHasArt = false;
+		ArtOffset = FVector::ZeroVector;
+		Mesh->SetStaticMesh(AntKit::ShapeMesh((EAntShape)ShapeIndex));
+		Mesh->SetRelativeScale3D(VisualScale);
+		if (!MeshMID) { MeshMID = AntKit::Paint(Mesh, Col); }
+		else { MeshMID->SetVectorParameterValue(TEXT("Color"), Col); }
+	}
 
 	const bool bShowBeam = bIsGear && Gear.Rarity >= 1;
 	Beam->SetStaticMesh(AntKit::ShapeMesh(EAntShape::Cylinder));
@@ -123,6 +142,6 @@ void AKitchenLoot::Tick(float DeltaSeconds)
 		return;
 	}
 	Phase += DeltaSeconds;
-	Mesh->SetRelativeLocation(FVector(0.f, 0.f, FMath::Sin(Phase * 2.5f) * 6.f));
+	Mesh->SetRelativeLocation(ArtOffset + FVector(0.f, 0.f, FMath::Sin(Phase * 2.5f) * 6.f));
 	Mesh->AddRelativeRotation(FRotator(0.f, 45.f * DeltaSeconds, 0.f));
 }

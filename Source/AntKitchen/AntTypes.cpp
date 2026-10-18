@@ -6,6 +6,7 @@
 #include "Materials/MaterialInterface.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "GameFramework/Actor.h"
+#include "Engine/StaticMesh.h"
 
 namespace AntKit
 {
@@ -219,3 +220,110 @@ float WeaponDps(const FAntWeapon& W)
 }
 
 } // namespace AntKit
+
+namespace AntArt
+{
+
+const FPart& Get(const TCHAR* Name)
+{
+	static TMap<FString, FPart> Cache;
+	if (const FPart* Found = Cache.Find(Name))
+	{
+		return *Found;
+	}
+	FPart P;
+	const FString N(Name);
+	const FString Short = N.StartsWith(TEXT("SM_")) ? N.Mid(3) : N;
+	P.Mesh = LoadObject<UStaticMesh>(nullptr, *FString::Printf(TEXT("/Game/Meshy/%s/%s.%s"), *N, *N, *N), nullptr, LOAD_NoWarn | LOAD_Quiet);
+	if (P.Mesh)
+	{
+		P.Material = LoadObject<UMaterialInterface>(nullptr, *FString::Printf(TEXT("/Game/Meshy/%s/MI_%s.MI_%s"), *N, *Short, *Short), nullptr, LOAD_NoWarn | LOAD_Quiet);
+		P.Bounds = P.Mesh->GetBoundingBox();
+		const FVector E = P.Bounds.GetSize();
+		P.LongAxis = (E.X >= E.Y && E.X >= E.Z) ? 0 : ((E.Y >= E.Z) ? 1 : 2);
+	}
+	return Cache.Add(N, P);
+}
+
+FQuat AxisFix(const FPart& P, bool bFlip)
+{
+	FQuat Q = FQuat::Identity;
+	if (P.LongAxis == 1) { Q = FRotator(0.f, -90.f, 0.f).Quaternion(); }       // Y -> X
+	else if (P.LongAxis == 2) { Q = FRotator(-90.f, 0.f, 0.f).Quaternion(); }  // Z -> X
+	if (bFlip)
+	{
+		Q = FRotator(0.f, 180.f, 0.f).Quaternion() * Q;
+	}
+	return Q;
+}
+
+static FVector PartScale(const FPart& P, float Length, float Thickness)
+{
+	const FVector E = P.Bounds.GetSize().ComponentMax(FVector(0.01f));
+	FVector S;
+	for (int32 i = 0; i < 3; ++i)
+	{
+		S[i] = (i == P.LongAxis) ? Length / E[i] : Thickness / E[i];
+	}
+	return S;
+}
+
+void PlaceAlong(USceneComponent* C, const FPart& P, const FVector& A, const FVector& B, const FVector& Up, float Thickness, bool bFlip, bool bRelative)
+{
+	if (!C || !P.IsValid())
+	{
+		return;
+	}
+	const FVector D = B - A;
+	const float Len = FMath::Max(1.f, (float)D.Size());
+	const FQuat Q = FRotationMatrix::MakeFromXZ(D / Len, Up).ToQuat() * AxisFix(P, bFlip);
+	const FVector S = PartScale(P, Len, Thickness);
+	const FVector Loc = (A + B) * 0.5f - Q.RotateVector(S * P.Bounds.GetCenter());
+	const FTransform T(Q, Loc, S);
+	if (bRelative) { C->SetRelativeTransform(T); }
+	else { C->SetWorldTransform(T); }
+}
+
+FTransform Fit(const FPart& P, const FVector& Center, float Length, bool bFlip, const FRotator& Extra)
+{
+	if (!P.IsValid())
+	{
+		return FTransform(Center);
+	}
+	const FVector E = P.Bounds.GetSize().ComponentMax(FVector(0.01f));
+	const float S = Length / E.GetMax();
+	const FQuat Q = Extra.Quaternion() * AxisFix(P, bFlip);
+	return FTransform(Q, Center - Q.RotateVector(P.Bounds.GetCenter() * S), FVector(S));
+}
+
+UStaticMeshComponent* AddArt(AActor* Owner, USceneComponent* Parent, const FPart& P)
+{
+	UStaticMeshComponent* C = NewObject<UStaticMeshComponent>(Owner);
+	C->SetMobility(EComponentMobility::Movable);
+	C->SetStaticMesh(P.Mesh);
+	if (P.Material)
+	{
+		C->SetMaterial(0, P.Material);
+	}
+	C->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	C->SetGenerateOverlapEvents(false);
+	C->SetCanEverAffectNavigation(false);
+	C->SetupAttachment(Parent);
+	C->RegisterComponent();
+	Owner->AddInstanceComponent(C);
+	return C;
+}
+
+const TCHAR* FoodArtName(const FString& LootName)
+{
+	if (LootName.Contains(TEXT("мишка"))) return TEXT("SM_Food_GummyBearGold");
+	if (LootName.Contains(TEXT("Мармелад"))) return TEXT("SM_Food_Gummy");
+	if (LootName.Contains(TEXT("сыр"))) return TEXT("SM_Food_CheeseChunk");
+	if (LootName.Contains(TEXT("мёд"))) return TEXT("SM_Food_HoneyDrop");
+	if (LootName.Contains(TEXT("торт"))) return TEXT("SM_Food_CakePiece");
+	if (LootName.Contains(TEXT("шоколад"))) return TEXT("SM_Food_Chocolate");
+	if (LootName.Contains(TEXT("сахар"))) return TEXT("SM_Food_SugarCube");
+	return nullptr;
+}
+
+} // namespace AntArt

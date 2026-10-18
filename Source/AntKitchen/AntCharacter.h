@@ -85,6 +85,11 @@ public:
 	static constexpr int32 MaxCarry = 10;
 	static constexpr float InteractRadius = 190.f;
 	static constexpr float BodyRadius = 26.f;
+	// Orientation of the generated (Meshy) parts: flip if a part shows up backwards.
+	static constexpr bool ArtFlipBody = false;
+	static constexpr bool ArtFlipFemur = false;
+	static constexpr bool ArtFlipTibia = false;
+	static constexpr bool ArtFlipFlagellum = false;
 
 	UPROPERTY(Replicated, BlueprintReadOnly) float Health = 100.f;
 	UPROPERTY(BlueprintReadOnly) float MaxHealth = 100.f;
@@ -191,6 +196,10 @@ private:
 	UPROPERTY() UMaterialInstanceDynamic* GlandMID = nullptr;
 	UPROPERTY() UStaticMeshComponent* FrostShell = nullptr;
 	UPROPERTY() TArray<UStaticMeshComponent*> TrailDots;
+	UPROPERTY() TArray<UStaticMeshComponent*> LegCoxas;
+	UPROPERTY() TArray<UMaterialInstanceDynamic*> ArtMIDs;
+	UPROPERTY() UMaterialInstanceDynamic* GlandArtMID = nullptr;
+	bool bArtLegs = false;
 
 	TArray<FVector> TrailNormals;                 // server
 	TWeakObjectPtr<AKitchenLoot> TrailFood;       // server

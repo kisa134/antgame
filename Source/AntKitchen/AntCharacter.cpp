@@ -154,21 +154,60 @@ void AAntCharacter::BuildBody()
 		return C;
 	};
 
-	AddBody(VisualRoot, EAntShape::Sphere, FVector(-30.f, 0.f, 2.f), FVector(0.48f, 0.34f, 0.30f), FRotator(8.f, 0.f, 0.f)); // abdomen
-	AddBody(VisualRoot, EAntShape::Sphere, FVector(-8.f, 0.f, 0.f), FVector(0.12f), FRotator::ZeroRotator);                  // petiole
-	AddBody(VisualRoot, EAntShape::Sphere, FVector(4.f, 0.f, 2.f), FVector(0.32f, 0.20f, 0.20f), FRotator::ZeroRotator);    // thorax
-	AddBody(VisualRoot, EAntShape::Sphere, FVector(26.f, 0.f, 6.f), FVector(0.30f, 0.26f, 0.24f), FRotator::ZeroRotator);   // head
+	// Generated art (Meshy) when imported, engine shapes otherwise.
+	const AntArt::FPart& ArtBody = AntArt::Get(TEXT("SM_Ant_Body"));
+	const AntArt::FPart& ArtScape = AntArt::Get(TEXT("SM_Ant_Antenna_Scape"));
+	const AntArt::FPart& ArtFlag = AntArt::Get(TEXT("SM_Ant_Antenna_Flagellum"));
+	const AntArt::FPart& ArtFemur = AntArt::Get(TEXT("SM_Ant_Femur"));
+	const AntArt::FPart& ArtTibia = AntArt::Get(TEXT("SM_Ant_Tibia"));
+	const AntArt::FPart& ArtCoxa = AntArt::Get(TEXT("SM_Ant_Coxa"));
+	const AntArt::FPart& ArtGland = AntArt::Get(TEXT("SM_Ant_AcidGland"));
+	auto AddArtPart = [this](USceneComponent* Parent, const AntArt::FPart& P)
+	{
+		UStaticMeshComponent* C = AntArt::AddArt(this, Parent, P);
+		if (UMaterialInstanceDynamic* M = C->CreateDynamicMaterialInstance(0))
+		{
+			ArtMIDs.Add(M);
+		}
+		return C;
+	};
+	bArtLegs = ArtFemur.IsValid() && ArtTibia.IsValid();
+
+	if (ArtBody.IsValid())
+	{
+		UStaticMeshComponent* B = AddArtPart(VisualRoot, ArtBody);
+		B->SetRelativeTransform(AntArt::Fit(ArtBody, FVector(-6.f, 0.f, 6.f), 98.f, ArtFlipBody));
+		B->SetCastShadow(true);
+	}
+	else
+	{
+		AddBody(VisualRoot, EAntShape::Sphere, FVector(-30.f, 0.f, 2.f), FVector(0.48f, 0.34f, 0.30f), FRotator(8.f, 0.f, 0.f)); // abdomen
+		AddBody(VisualRoot, EAntShape::Sphere, FVector(-8.f, 0.f, 0.f), FVector(0.12f), FRotator::ZeroRotator);                  // petiole
+		AddBody(VisualRoot, EAntShape::Sphere, FVector(4.f, 0.f, 2.f), FVector(0.32f, 0.20f, 0.20f), FRotator::ZeroRotator);    // thorax
+		AddBody(VisualRoot, EAntShape::Sphere, FVector(26.f, 0.f, 6.f), FVector(0.30f, 0.26f, 0.24f), FRotator::ZeroRotator);   // head
+	}
 
 	for (int32 s = -1; s <= 1; s += 2)
 	{
-		AntKit::AddPart(this, VisualRoot, EAntShape::Sphere, FVector(34.f, 9.f * s, 10.f), FVector(0.08f), Eye);
-		AddBody(VisualRoot, EAntShape::Cube, FVector(42.f, 5.f * s, 1.f), FVector(0.13f, 0.03f, 0.04f), FRotator(0.f, -25.f * s, 0.f)); // mandible
+		if (!ArtBody.IsValid())
+		{
+			AntKit::AddPart(this, VisualRoot, EAntShape::Sphere, FVector(34.f, 9.f * s, 10.f), FVector(0.08f), Eye);
+			AddBody(VisualRoot, EAntShape::Cube, FVector(42.f, 5.f * s, 1.f), FVector(0.13f, 0.03f, 0.04f), FRotator(0.f, -25.f * s, 0.f)); // mandible
+		}
 
 		// Elbowed antenna: scape + flagellum on a swaying pivot.
 		USceneComponent* P = AntKit::AddPivot(this, VisualRoot, FVector(34.f, 6.f * s, 14.f), FRotator(40.f, 25.f * s, 0.f));
-		AddBody(P, EAntShape::Cylinder, FVector(8.f, 0.f, 0.f), FVector(0.022f, 0.022f, 0.16f), FRotator(90.f, 0.f, 0.f));
 		USceneComponent* Elbow = AntKit::AddPivot(this, P, FVector(16.f, 0.f, 0.f), FRotator(-70.f, 0.f, 0.f));
-		AddBody(Elbow, EAntShape::Cylinder, FVector(11.f, 0.f, 0.f), FVector(0.026f, 0.026f, 0.22f), FRotator(90.f, 0.f, 0.f));
+		if (ArtScape.IsValid() && ArtFlag.IsValid())
+		{
+			AntArt::PlaceAlong(AddArtPart(P, ArtScape), ArtScape, FVector::ZeroVector, FVector(17.f, 0.f, 0.f), FVector::UpVector, 3.4f, false, true);
+			AntArt::PlaceAlong(AddArtPart(Elbow, ArtFlag), ArtFlag, FVector::ZeroVector, FVector(24.f, 0.f, 0.f), FVector::UpVector, 3.2f, ArtFlipFlagellum, true);
+		}
+		else
+		{
+			AddBody(P, EAntShape::Cylinder, FVector(8.f, 0.f, 0.f), FVector(0.022f, 0.022f, 0.16f), FRotator(90.f, 0.f, 0.f));
+			AddBody(Elbow, EAntShape::Cylinder, FVector(11.f, 0.f, 0.f), FVector(0.026f, 0.026f, 0.22f), FRotator(90.f, 0.f, 0.f));
+		}
 		AntennaPivots.Add(P);
 	}
 
@@ -185,15 +224,35 @@ void AAntCharacter::BuildBody()
 			L.Side = s;
 			L.Group = (i + (s > 0 ? 1 : 0)) % 2;
 			Legs.Add(L);
-			LegFemurs.Add(AddLeg(EAntShape::Cylinder, FVector(0.07f)));
-			LegTibias.Add(AddLeg(EAntShape::Cylinder, FVector(0.05f)));
-			LegKnees.Add(AddLeg(EAntShape::Sphere, FVector(0.075f)));
+			if (bArtLegs)
+			{
+				LegFemurs.Add(AddArtPart(VisualRoot, ArtFemur));
+				LegTibias.Add(AddArtPart(VisualRoot, ArtTibia));
+				LegKnees.Add(nullptr);
+				LegCoxas.Add(ArtCoxa.IsValid() ? AddArtPart(VisualRoot, ArtCoxa) : nullptr);
+			}
+			else
+			{
+				LegFemurs.Add(AddLeg(EAntShape::Cylinder, FVector(0.07f)));
+				LegTibias.Add(AddLeg(EAntShape::Cylinder, FVector(0.05f)));
+				LegKnees.Add(AddLeg(EAntShape::Sphere, FVector(0.075f)));
+				LegCoxas.Add(nullptr);
+			}
 		}
 	}
 
 	// Acid gland at the tip of the abdomen, glows in the weapon's rarity color.
-	UStaticMeshComponent* Gland = AntKit::AddPart(this, VisualRoot, EAntShape::Sphere, FVector(-55.f, 0.f, 4.f), FVector(0.13f), AntKit::RarityColor(Weapon.Rarity));
-	GlandMID = Cast<UMaterialInstanceDynamic>(Gland->GetMaterial(0));
+	if (ArtGland.IsValid())
+	{
+		UStaticMeshComponent* G = AntArt::AddArt(this, VisualRoot, ArtGland);
+		G->SetRelativeTransform(AntArt::Fit(ArtGland, FVector(-57.f, 0.f, 6.f), 18.f, false));
+		GlandArtMID = G->CreateDynamicMaterialInstance(0);
+	}
+	else
+	{
+		UStaticMeshComponent* Gland = AntKit::AddPart(this, VisualRoot, EAntShape::Sphere, FVector(-55.f, 0.f, 4.f), FVector(0.13f), AntKit::RarityColor(Weapon.Rarity));
+		GlandMID = Cast<UMaterialInstanceDynamic>(Gland->GetMaterial(0));
+	}
 
 	// Food chunk carried on the back.
 	CarryChunk = AntKit::AddPart(this, VisualRoot, EAntShape::Sphere, FVector(-20.f, 0.f, 30.f), FVector(0.2f), FLinearColor(1.f, 0.75f, 0.2f));
@@ -214,6 +273,17 @@ void AAntCharacter::OnRep_BodyColor()
 	{
 		if (M) { M->SetVectorParameterValue(TEXT("Color"), BodyColor * 0.6f); }
 	}
+	// Generated art: tint the chitin towards the player's color (the default color keeps the texture as is).
+	const float MaxC = FMath::Max3(BodyColor.R, BodyColor.G, BodyColor.B);
+	FLinearColor Tint = FLinearColor::White;
+	if (MaxC > 0.f && !BodyColor.Equals(FLinearColor(0.12f, 0.04f, 0.03f), 0.01f))
+	{
+		Tint = FMath::Lerp(FLinearColor::White, BodyColor / MaxC, 0.7f) * 1.3f;
+	}
+	for (UMaterialInstanceDynamic* M : ArtMIDs)
+	{
+		if (M) { M->SetVectorParameterValue(TEXT("Tint"), Tint); }
+	}
 }
 
 void AAntCharacter::OnRep_Weapon()
@@ -221,6 +291,11 @@ void AAntCharacter::OnRep_Weapon()
 	if (GlandMID)
 	{
 		GlandMID->SetVectorParameterValue(TEXT("Color"), AntKit::RarityColor(Weapon.Rarity));
+	}
+	if (GlandArtMID)
+	{
+		GlandArtMID->SetVectorParameterValue(TEXT("Tint"), FMath::Lerp(FLinearColor::White, AntKit::RarityColor(Weapon.Rarity), Weapon.Rarity > 0 ? 0.8f : 0.f));
+		GlandArtMID->SetScalarParameterValue(TEXT("Glow"), 1.5f + Weapon.Rarity * 1.5f);
 	}
 }
 
@@ -245,6 +320,7 @@ void AAntCharacter::OnRep_Dead()
 		for (UStaticMeshComponent* C : LegFemurs) { if (C) C->SetVisibility(false); }
 		for (UStaticMeshComponent* C : LegTibias) { if (C) C->SetVisibility(false); }
 		for (UStaticMeshComponent* C : LegKnees) { if (C) C->SetVisibility(false); }
+		for (UStaticMeshComponent* C : LegCoxas) { if (C) C->SetVisibility(false); }
 		if (FrostShell) { FrostShell->SetVisibility(false); }
 		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		GetCharacterMovement()->StopMovementImmediately();
@@ -1258,11 +1334,25 @@ void AAntCharacter::UpdateLegs(float Dt, const FVector& N)
 		const FVector Knee = Hip + Dir * A + Pole * H;
 		const FVector FootDraw = Hip + Dir * FMath::Min((float)ToFoot.Size(), L1 + L2);
 
-		PlaceSegment(LegFemurs[i], Hip, Knee, 7.f);
-		PlaceSegment(LegTibias[i], Knee, FootDraw, 5.f);
-		if (LegKnees[i])
+		if (bArtLegs)
 		{
-			LegKnees[i]->SetWorldLocation(Knee);
+			const FVector KneeUp = FVector::VectorPlaneProject(N, Dir).GetSafeNormal();
+			AntArt::PlaceAlong(LegFemurs[i], AntArt::Get(TEXT("SM_Ant_Femur")), Hip, Knee, KneeUp.IsNearlyZero() ? N : KneeUp, 7.5f, ArtFlipFemur, false);
+			AntArt::PlaceAlong(LegTibias[i], AntArt::Get(TEXT("SM_Ant_Tibia")), Knee, FootDraw, KneeUp.IsNearlyZero() ? N : KneeUp, 5.5f, ArtFlipTibia, false);
+			if (LegCoxas.IsValidIndex(i) && LegCoxas[i])
+			{
+				const FVector CoxaDir = (Knee - Hip).GetSafeNormal();
+				AntArt::PlaceAlong(LegCoxas[i], AntArt::Get(TEXT("SM_Ant_Coxa")), Hip - CoxaDir * 3.f, Hip + CoxaDir * 6.f, N, 8.f, false, false);
+			}
+		}
+		else
+		{
+			PlaceSegment(LegFemurs[i], Hip, Knee, 7.f);
+			PlaceSegment(LegTibias[i], Knee, FootDraw, 5.f);
+			if (LegKnees[i])
+			{
+				LegKnees[i]->SetWorldLocation(Knee);
+			}
 		}
 	}
 }

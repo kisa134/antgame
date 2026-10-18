@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "AntTypes.generated.h"
@@ -69,4 +69,42 @@ namespace AntKit
 	ANTKITCHEN_API FAntWeapon RollWeapon(int32 Rarity, FRandomStream& Rng);
 	ANTKITCHEN_API FAntFoodDef RollFood(int32 Tier, FRandomStream& Rng);
 	ANTKITCHEN_API float WeaponDps(const FAntWeapon& W);
+}
+
+/**
+ * Generated art (Meshy) imported to /Game/Meshy/<Name>/<Name>.
+ * Everything falls back to engine shapes when an asset is missing.
+ */
+namespace AntArt
+{
+	struct FPart
+	{
+		UStaticMesh* Mesh = nullptr;
+		class UMaterialInterface* Material = nullptr;
+		FBox Bounds = FBox(ForceInit);
+		int32 LongAxis = 0;              // 0 X, 1 Y, 2 Z: the axis the part is longest along
+		bool IsValid() const { return Mesh != nullptr; }
+	};
+
+	/** Loads (and caches) /Game/Meshy/<Name>/<Name> with MI_<Name without SM_>. */
+	ANTKITCHEN_API const FPart& Get(const TCHAR* Name);
+
+	/** Rotation that turns the part's long axis into +X (bFlip: into -X). */
+	ANTKITCHEN_API FQuat AxisFix(const FPart& P, bool bFlip);
+
+	/**
+	 * Place a part so its long axis spans A -> B (in the parent's space if bRelative, else world),
+	 * Up chooses the roll, Thickness is the size across.
+	 */
+	ANTKITCHEN_API void PlaceAlong(USceneComponent* C, const FPart& P, const FVector& A, const FVector& B, const FVector& Up,
+		float Thickness, bool bFlip, bool bRelative);
+
+	/** Relative transform that fits the part centered at Center with its longest side = Length, long axis along +X. */
+	ANTKITCHEN_API FTransform Fit(const FPart& P, const FVector& Center, float Length, bool bFlip, const FRotator& Extra = FRotator::ZeroRotator);
+
+	/** Creates a static mesh component showing the part (no collision). */
+	ANTKITCHEN_API UStaticMeshComponent* AddArt(AActor* Owner, USceneComponent* Parent, const FPart& P);
+
+	/** Food art by loot name, or nullptr name if none. */
+	ANTKITCHEN_API const TCHAR* FoodArtName(const FString& LootName);
 }

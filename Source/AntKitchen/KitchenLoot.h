@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
@@ -47,4 +47,6 @@ private:
 	UPROPERTY() UMaterialInstanceDynamic* BeamMID = nullptr;
 
 	float Phase = 0.f;
+	FVector ArtOffset = FVector::ZeroVector;
+	bool bHasArt = false;
 };
