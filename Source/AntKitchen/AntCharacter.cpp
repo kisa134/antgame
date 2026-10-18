@@ -1,4 +1,4 @@
-#include "AntCharacter.h"
+﻿#include "AntCharacter.h"
 #include "AcidProjectile.h"
 #include "KitchenLoot.h"
 #include "KitchenBuilder.h"
@@ -507,13 +507,13 @@ void AAntCharacter::ServerInteract_Implementation()
 		{
 			GM->SpawnGear(DropAt, Old);
 		}
-		Toast(FString::Printf(TEXT("???????????: %s"), *Weapon.Name));
+		Toast(FString::Printf(TEXT("Экипировано: %s"), *Weapon.Name));
 		return;
 	}
 
 	if (CarriedWeight + Loot->Weight > MaxCarry)
 	{
-		Toast(TEXT("??????? ??????! ??????? ?????? ???? ? ??????????"));
+		Toast(TEXT("Слишком тяжело! Сначала оттащи груз в муравейник"));
 		return;
 	}
 
@@ -618,7 +618,7 @@ FString AAntCharacter::GetDisplayName() const
 	{
 		return PS->GetPlayerName();
 	}
-	return TEXT("???????");
+	return TEXT("Муравей");
 }
 
 void AAntCharacter::Toast(const FString& Msg) const

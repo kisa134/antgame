@@ -1,4 +1,4 @@
-#include "HumanCharacter.h"
+﻿#include "HumanCharacter.h"
 #include "HumanAIController.h"
 #include "AntCharacter.h"
 #include "AntKitchenGameMode.h"
@@ -344,9 +344,9 @@ FString AHumanCharacter::GetDisplayName() const
 {
 	if (const APlayerState* PS = GetPlayerState())
 	{
-		return FString::Printf(TEXT("??????? (%s)"), *PS->GetPlayerName());
+		return FString::Printf(TEXT("Человек (%s)"), *PS->GetPlayerName());
 	}
-	return TEXT("??????? (??)");
+	return TEXT("Человек (ИИ)");
 }
 
 // ---------------------------------------------------------------------------------------------
