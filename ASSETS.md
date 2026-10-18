@@ -19,15 +19,28 @@
 ## P0 — нужно в первую очередь
 
 ### Муравей (игрок)
-Лапы и антенны у меня процедурные: они сами ставятся на поверхность, когда муравей ползёт по стене или потолку. Поэтому **тело генерируй БЕЗ лап и без антенн**.
+Тело утверждено (глянцевый тёмный хитин с медными прожилками — это эталон стиля для всех частей муравья).
+Лапы и антенны процедурные: код сам сгибает их и ставит на стену/потолок. Поэтому их генерим **отдельными
+прямыми сегментами** — один меш на кость. Каждый сегмент: лежит горизонтально, вдоль одной оси, без изгиба.
+
+Хвост для всех частей муравья:
+`, glossy dark brown-black chitin with thin copper cracks, same style as the ant body reference, single isolated part, lying horizontally, straight, centered, no base, no background`
 
 | Файл | Промпт | Размер в игре |
 |---|---|---|
-| `SM_Ant_Body` | `ant body without legs and without antennae, head with big mandibles and compound eyes, thorax, thin waist petiole, large glossy abdomen, side view, worker ant, glossy dark chitin` | 85 × 30 × 30 |
-| `SM_Ant_LegSegment` | `single insect leg segment, thin tapered chitin rod with joint knob on one end, glossy dark brown` | 25 × 4 × 4 |
-| `SM_Ant_Foot` | `tiny insect foot claw, two small hooks, chitin` | 6 × 4 × 3 |
-| `SM_Ant_Antenna` | `single ant antenna, elbowed segmented thin feeler, chitin` | 35 × 3 × 3 |
+| `SM_Ant_Body` ✅ | (готово) ant body without legs and antennae, head with mandibles, thorax, petiole, abdomen. **Перегенерь с добавкой:** `three pairs of small round leg sockets on the underside of the thorax` — чтобы лапам было куда крепиться | 85 × 30 × 30 |
+| `SM_Ant_Coxa` | `ant hip joint, short thick rounded chitin segment like a small barrel` | 8 × 8 × 8 |
+| `SM_Ant_Femur` | `ant upper leg segment, straight thick chitin rod, slightly flattened, thicker in the middle, ball joint knob at one end` | 25 × 7 × 7 |
+| `SM_Ant_Tibia` | `ant lower leg segment, straight thin chitin rod tapering toward the end, ending with a tiny segmented foot and two small hook claws, few fine spines along it` | 32 × 5 × 5 |
+| `SM_Ant_Antenna_Scape` | `ant antenna base segment, long thin straight chitin rod` | 16 × 3 × 3 |
+| `SM_Ant_Antenna_Flagellum` | `ant antenna tip, straight segmented beaded feeler, 10 small bead segments, slightly thicker club at the end` | 22 × 3 × 3 |
 | `SM_Ant_AcidGland` | `small glowing translucent acid sac, organic bulb, emissive green liquid inside` | 15 × 15 × 15 |
+
+Касты на потом (то же тело, другой силуэт):
+| `SM_Ant_Soldier_Body` | `soldier ant body without legs and antennae, oversized armored head with huge crossing mandibles` |
+|---|---|
+| `SM_Ant_Queen_Body` | `ant queen body without legs and antennae, huge long abdomen, wing stubs on thorax` |
+| `SM_Ant_Scout_Body` | `slim winged ant body without legs and antennae, two pairs of translucent veined wings folded on the back` |
 
 ### Человек (враг / босс)
 Генерируй в **A-pose** и прогони через **Meshy Auto-Rig** (humanoid). Анимации ходьбы и топота возьмём из Meshy Animation Library или Mixamo.
@@ -142,9 +155,6 @@
 | `SK_Human_Grandma` | `small old grandma in a robe with a fly swatter, A-pose` (босс другой карты) |
 | `SM_RobotVacuum` | `round robot vacuum cleaner` (патруль на карте «гостиная») |
 | `SK_Spider` | `big hairy house spider` (мини-босс в вентиляции) |
-| `SM_Ant_Queen_Body` | `ant queen body without legs, huge abdomen, small wings stubs` |
-| `SM_Ant_Soldier_Body` | `soldier ant body without legs, giant head with huge mandibles` |
-| `SM_Ant_Scout_Body` | `winged ant body without legs, translucent wings` |
 
 ## Текстуры / декали (Meshy Texture или любой генератор)
 - `T_Tiles_Checker` — бело-красная кухонная плитка, швы, лёгкая грязь
