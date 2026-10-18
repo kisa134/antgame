@@ -2,6 +2,7 @@
 #include "HumanCharacter.h"
 #include "AntCharacter.h"
 #include "KitchenBuilder.h"
+#include "KitchenInteractables.h"
 #include "Components/CapsuleComponent.h"
 #include "EngineUtils.h"
 
@@ -31,6 +32,7 @@ AAntCharacter* AHumanAIController::PickTarget(const AHumanCharacter* H) const
 	AAntCharacter* Best = nullptr;
 	float BestScore = 8000.f;
 	const FVector Me = H->GetActorLocation();
+	const bool bDark = !AKitchenSwitch::AreLightsOn(GetWorld());
 	for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
 	{
 		AAntCharacter* Ant = *It;
@@ -38,7 +40,19 @@ AAntCharacter* AHumanAIController::PickTarget(const AHumanCharacter* H) const
 		{
 			continue;
 		}
-		float Score = FVector::Dist2D(Me, Ant->GetActorLocation());
+		const FVector AL = Ant->GetActorLocation();
+		// Can't see ants hiding inside the fridge, the oven, the walls or behind the cabinets.
+		if (AL.Y > 4750.f || FBox(FVector(2700.f, 3000.f, 0.f), FVector(4700.f, 4750.f, 3700.f)).IsInside(AL)
+			|| FBox(FVector(-1500.f, 3000.f, 120.f), FVector(0.f, 4750.f, 1650.f)).IsInside(AL)
+			|| FBox(FVector(-4200.f, 3000.f, 0.f), FVector(-2800.f, 4750.f, 1100.f)).IsInside(AL))
+		{
+			continue;
+		}
+		float Score = FVector::Dist2D(Me, AL);
+		if (bDark && Score > (Ant->CarriedWeight > 0 ? 3200.f : 2200.f))
+		{
+			continue;   // lights are off: only notices ants close by
+		}
 		if (Ant->CarriedWeight > 0) { Score -= 2500.f; }   // smells the sugar
 		if (Ant->GetActorLocation().Z > 300.f) { Score += 800.f; }
 		if (Score < BestScore)

@@ -1,13 +1,14 @@
 ﻿#include "AntCharacter.h"
+#include "AntMovementComponent.h"
 #include "AcidProjectile.h"
 #include "KitchenLoot.h"
 #include "KitchenBuilder.h"
+#include "KitchenInteractables.h"
 #include "AntKitchenGameMode.h"
 #include "AntPlayerController.h"
 #include "AntPlayerState.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
-#include "GameFramework/CharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/InputComponent.h"
@@ -15,15 +16,18 @@
 #include "Net/UnrealNetwork.h"
 #include "Engine/World.h"
 #include "Engine/DamageEvents.h"
+#include "GameFramework/DamageType.h"
 #include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
 
-AAntCharacter::AAntCharacter()
+AAntCharacter::AAntCharacter(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer.SetDefaultSubobjectClass<UAntMovementComponent>(ACharacter::CharacterMovementComponentName))
 {
 	PrimaryActorTick.bCanEverTick = true;
 	SetNetCullDistanceSquared(1.0e9f);
 
-	GetCapsuleComponent()->InitCapsuleSize(26.f, 26.f);
+	// A sphere: the collision never needs to rotate when the ant is on a wall or ceiling.
+	GetCapsuleComponent()->InitCapsuleSize(BodyRadius, BodyRadius);
 
 	bUseControllerRotationYaw = true;
 	bUseControllerRotationPitch = false;
@@ -31,16 +35,16 @@ AAntCharacter::AAntCharacter()
 
 	UCharacterMovementComponent* CM = GetCharacterMovement();
 	CM->MaxWalkSpeed = 600.f;
+	CM->MaxAcceleration = 4000.f;
 	CM->JumpZVelocity = 620.f;
 	CM->AirControl = 0.7f;
 	CM->GravityScale = 1.4f;
-	CM->MaxFlySpeed = 420.f;
-	CM->BrakingDecelerationFlying = 6000.f;
 	CM->MaxStepHeight = 20.f;
 	CM->SetWalkableFloorAngle(55.f);
 	CM->bOrientRotationToMovement = false;
-	CM->NavAgentProps.bCanFly = true;
-	// Casual co-op: trust the client's position so wall-climbing never rubber-bands.
+	CM->bEnablePhysicsInteraction = true;
+	CM->PushForceFactor = 120000.f;
+	// Casual co-op: trust the client's position so crawling never rubber-bands.
 	CM->bIgnoreClientMovementErrorChecksAndCorrection = true;
 	CM->bServerAcceptClientAuthoritativePosition = true;
 
@@ -74,6 +78,8 @@ void AAntCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	DOREPLIFETIME(AAntCharacter, Weapon);
 	DOREPLIFETIME(AAntCharacter, BodyColor);
 	DOREPLIFETIME(AAntCharacter, bSprinting);
+	DOREPLIFETIME(AAntCharacter, Temperature);
+	DOREPLIFETIME(AAntCharacter, StatusFlags);
 }
 
 void AAntCharacter::BeginPlay()
@@ -94,8 +100,24 @@ void AAntCharacter::PossessedBy(AController* NewController)
 	}
 }
 
+UAntMovementComponent* AAntCharacter::GetAntMovement() const
+{
+	return Cast<UAntMovementComponent>(GetCharacterMovement());
+}
+
+bool AAntCharacter::IsCrawling() const
+{
+	const UAntMovementComponent* M = GetAntMovement();
+	return M && M->IsCrawling();
+}
+
+bool AAntCharacter::IsClimbing() const
+{
+	return IsCrawling() && VisNormal.Z < 0.6f;
+}
+
 // ---------------------------------------------------------------------------------------------
-// Body made of spheres and cylinders
+// Body made of spheres and cylinders; legs are procedural.
 // ---------------------------------------------------------------------------------------------
 
 void AAntCharacter::BuildBody()
@@ -109,50 +131,74 @@ void AAntCharacter::BuildBody()
 	const FLinearColor Leg = Body * 0.6f;
 	const FLinearColor Eye(0.01f, 0.01f, 0.01f);
 
-	auto AddBody = [this, &Body](EAntShape S, const FVector& L, const FVector& Sc, const FRotator& R)
+	auto AddBody = [this, &Body](USceneComponent* Parent, EAntShape S, const FVector& L, const FVector& Sc, const FRotator& R)
 	{
-		UStaticMeshComponent* C = AntKit::AddPart(this, VisualRoot, S, L, Sc, Body, R);
+		UStaticMeshComponent* C = AntKit::AddPart(this, Parent, S, L, Sc, Body, R);
+		C->SetCastShadow(true);
 		if (UMaterialInstanceDynamic* M = Cast<UMaterialInstanceDynamic>(C->GetMaterial(0)))
 		{
 			BodyMIDs.Add(M);
 		}
 		return C;
 	};
+	auto AddLeg = [this, &Leg](EAntShape S, const FVector& Sc)
+	{
+		UStaticMeshComponent* C = AntKit::AddPart(this, VisualRoot, S, FVector::ZeroVector, Sc, Leg);
+		if (UMaterialInstanceDynamic* M = Cast<UMaterialInstanceDynamic>(C->GetMaterial(0)))
+		{
+			LegMIDs.Add(M);
+		}
+		return C;
+	};
 
-	AddBody(EAntShape::Sphere, FVector(-30.f, 0.f, -4.f), FVector(0.48f, 0.34f, 0.30f), FRotator(8.f, 0.f, 0.f)); // abdomen
-	AddBody(EAntShape::Sphere, FVector(-8.f, 0.f, -6.f), FVector(0.12f), FRotator::ZeroRotator);                  // petiole
-	AddBody(EAntShape::Sphere, FVector(4.f, 0.f, -4.f), FVector(0.32f, 0.20f, 0.20f), FRotator::ZeroRotator);    // thorax
-	AddBody(EAntShape::Sphere, FVector(26.f, 0.f, 0.f), FVector(0.30f, 0.26f, 0.24f), FRotator::ZeroRotator);    // head
+	AddBody(VisualRoot, EAntShape::Sphere, FVector(-30.f, 0.f, 2.f), FVector(0.48f, 0.34f, 0.30f), FRotator(8.f, 0.f, 0.f)); // abdomen
+	AddBody(VisualRoot, EAntShape::Sphere, FVector(-8.f, 0.f, 0.f), FVector(0.12f), FRotator::ZeroRotator);                  // petiole
+	AddBody(VisualRoot, EAntShape::Sphere, FVector(4.f, 0.f, 2.f), FVector(0.32f, 0.20f, 0.20f), FRotator::ZeroRotator);    // thorax
+	AddBody(VisualRoot, EAntShape::Sphere, FVector(26.f, 0.f, 6.f), FVector(0.30f, 0.26f, 0.24f), FRotator::ZeroRotator);   // head
 
 	for (int32 s = -1; s <= 1; s += 2)
 	{
-		AntKit::AddPart(this, VisualRoot, EAntShape::Sphere, FVector(34.f, 9.f * s, 4.f), FVector(0.08f), Eye);
-		AddBody(EAntShape::Cube, FVector(42.f, 5.f * s, -5.f), FVector(0.13f, 0.03f, 0.04f), FRotator(0.f, -25.f * s, 0.f));       // mandible
-		AddBody(EAntShape::Cylinder, FVector(36.f, 8.f * s, 18.f), FVector(0.025f, 0.025f, 0.32f), FRotator(-35.f, 0.f, -25.f * s)); // antenna
+		AntKit::AddPart(this, VisualRoot, EAntShape::Sphere, FVector(34.f, 9.f * s, 10.f), FVector(0.08f), Eye);
+		AddBody(VisualRoot, EAntShape::Cube, FVector(42.f, 5.f * s, 1.f), FVector(0.13f, 0.03f, 0.04f), FRotator(0.f, -25.f * s, 0.f)); // mandible
+
+		// Elbowed antenna: scape + flagellum on a swaying pivot.
+		USceneComponent* P = AntKit::AddPivot(this, VisualRoot, FVector(34.f, 6.f * s, 14.f), FRotator(40.f, 25.f * s, 0.f));
+		AddBody(P, EAntShape::Cylinder, FVector(8.f, 0.f, 0.f), FVector(0.022f, 0.022f, 0.16f), FRotator(90.f, 0.f, 0.f));
+		USceneComponent* Elbow = AntKit::AddPivot(this, P, FVector(16.f, 0.f, 0.f), FRotator(-70.f, 0.f, 0.f));
+		AddBody(Elbow, EAntShape::Cylinder, FVector(11.f, 0.f, 0.f), FVector(0.026f, 0.026f, 0.22f), FRotator(90.f, 0.f, 0.f));
+		AntennaPivots.Add(P);
 	}
 
-	const float LegX[3] = { 12.f, 0.f, -12.f };
+	// Six legs: femur + tibia + knee joint, placed every frame by UpdateLegs.
+	const float HipX[3] = { 10.f, 2.f, -6.f };
+	const float RestX[3] = { 36.f, 4.f, -30.f };
 	for (int32 i = 0; i < 3; ++i)
 	{
 		for (int32 s = -1; s <= 1; s += 2)
 		{
-			USceneComponent* P = AntKit::AddPivot(this, VisualRoot, FVector(LegX[i], 8.f * s, -8.f));
-			UStaticMeshComponent* L = AntKit::AddPart(this, P, EAntShape::Cylinder, FVector(0.f, 14.f * s, -9.f), FVector(0.05f, 0.05f, 0.36f), Leg, FRotator(0.f, 0.f, 60.f * s));
-			if (UMaterialInstanceDynamic* M = Cast<UMaterialInstanceDynamic>(L->GetMaterial(0)))
-			{
-				LegMIDs.Add(M);
-			}
-			LegPivots.Add(P);
+			FAntLeg L;
+			L.HipLocal = FVector(HipX[i], 6.f * s, -2.f);
+			L.RestLocal = FVector(RestX[i], 40.f * s, -24.f);
+			L.Side = s;
+			L.Group = (i + (s > 0 ? 1 : 0)) % 2;
+			Legs.Add(L);
+			LegFemurs.Add(AddLeg(EAntShape::Cylinder, FVector(0.07f)));
+			LegTibias.Add(AddLeg(EAntShape::Cylinder, FVector(0.05f)));
+			LegKnees.Add(AddLeg(EAntShape::Sphere, FVector(0.075f)));
 		}
 	}
 
 	// Acid gland at the tip of the abdomen, glows in the weapon's rarity color.
-	UStaticMeshComponent* Gland = AntKit::AddPart(this, VisualRoot, EAntShape::Sphere, FVector(-55.f, 0.f, -2.f), FVector(0.13f), AntKit::RarityColor(Weapon.Rarity));
+	UStaticMeshComponent* Gland = AntKit::AddPart(this, VisualRoot, EAntShape::Sphere, FVector(-55.f, 0.f, 4.f), FVector(0.13f), AntKit::RarityColor(Weapon.Rarity));
 	GlandMID = Cast<UMaterialInstanceDynamic>(Gland->GetMaterial(0));
 
 	// Food chunk carried on the back.
-	CarryChunk = AntKit::AddPart(this, VisualRoot, EAntShape::Sphere, FVector(-26.f, 0.f, 24.f), FVector(0.2f), FLinearColor(1.f, 0.75f, 0.2f));
+	CarryChunk = AntKit::AddPart(this, VisualRoot, EAntShape::Sphere, FVector(-20.f, 0.f, 30.f), FVector(0.2f), FLinearColor(1.f, 0.75f, 0.2f));
 	CarryChunk->SetVisibility(false);
+
+	// Ice crust shown when frozen.
+	FrostShell = AntKit::AddPart(this, VisualRoot, EAntShape::Sphere, FVector(-6.f, 0.f, 4.f), FVector(0.95f, 0.55f, 0.5f), FLinearColor(0.75f, 0.9f, 1.f));
+	FrostShell->SetVisibility(false);
 }
 
 void AAntCharacter::OnRep_BodyColor()
@@ -190,9 +236,13 @@ void AAntCharacter::OnRep_Dead()
 	if (bDead)
 	{
 		bWantsFire = false;
-		bClimbing = false;
+		VisualRoot->SetWorldLocationAndRotation(GetActorLocation() - VisNormal * 20.f, FRotationMatrix::MakeFromZX(VisNormal, VisHeading).ToQuat());
 		VisualRoot->SetRelativeScale3D(FVector(1.4f, 1.4f, 0.15f));   // squashed flat
-		VisualRoot->SetRelativeLocation(FVector(0.f, 0.f, -22.f));
+		for (USceneComponent* P : AntennaPivots) { if (P) P->SetVisibility(false, true); }
+		for (UStaticMeshComponent* C : LegFemurs) { if (C) C->SetVisibility(false); }
+		for (UStaticMeshComponent* C : LegTibias) { if (C) C->SetVisibility(false); }
+		for (UStaticMeshComponent* C : LegKnees) { if (C) C->SetVisibility(false); }
+		if (FrostShell) { FrostShell->SetVisibility(false); }
 		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		GetCharacterMovement()->StopMovementImmediately();
 		GetCharacterMovement()->DisableMovement();
@@ -223,22 +273,46 @@ void AAntCharacter::SetupPlayerInputComponent(UInputComponent* Input)
 	Input->BindAction("Sprint", IE_Released, this, &AAntCharacter::StopSprint);
 }
 
+void AAntCharacter::SurfaceAxes(FVector& OutForward, FVector& OutRight) const
+{
+	const UAntMovementComponent* M = GetAntMovement();
+	const FVector N = M ? M->GetSurfaceNormal() : FVector::UpVector;
+	const FRotator CR = Controller ? Controller->GetControlRotation() : GetActorRotation();
+	const FRotationMatrix CM(CR);
+	const FVector CamF = CM.GetUnitAxis(EAxis::X);
+	const FVector CamR = CM.GetUnitAxis(EAxis::Y);
+	const FVector CamU = CM.GetUnitAxis(EAxis::Z);
+
+	if (N.Z > 0.95f)
+	{
+		// Plain floor: classic third-person controls.
+		const FRotator Yaw(0.f, CR.Yaw, 0.f);
+		OutForward = FRotationMatrix(Yaw).GetUnitAxis(EAxis::X);
+		OutRight = FRotationMatrix(Yaw).GetUnitAxis(EAxis::Y);
+		return;
+	}
+
+	// On walls/ceilings: "forward" is where the camera looks, projected on the surface.
+	// Looking straight at a wall, forward blends towards camera-up (= up the wall).
+	const FVector PF = FVector::VectorPlaneProject(CamF, N);
+	const float W = FMath::Clamp(1.f - (float)PF.Size(), 0.f, 1.f);
+	OutForward = (PF + FVector::VectorPlaneProject(CamU, N) * W).GetSafeNormal();
+	OutRight = FVector::VectorPlaneProject(CamR, N).GetSafeNormal();
+	if (OutForward.IsNearlyZero())
+	{
+		OutForward = FVector::CrossProduct(OutRight, N).GetSafeNormal();
+	}
+}
+
 void AAntCharacter::MoveForward(float Value)
 {
-	ForwardInput = Value;
 	if (!Controller || bDead || FMath::IsNearlyZero(Value))
 	{
 		return;
 	}
-	if (bClimbing)
-	{
-		// W while facing a wall = crawl up it.
-		AddMovementInput(FVector::UpVector, Value);
-		AddMovementInput(GetActorForwardVector(), 0.2f);
-		return;
-	}
-	const FRotator Yaw(0.f, Controller->GetControlRotation().Yaw, 0.f);
-	AddMovementInput(FRotationMatrix(Yaw).GetUnitAxis(EAxis::X), Value);
+	FVector F, R;
+	SurfaceAxes(F, R);
+	AddMovementInput(F, Value);
 }
 
 void AAntCharacter::MoveRight(float Value)
@@ -247,8 +321,9 @@ void AAntCharacter::MoveRight(float Value)
 	{
 		return;
 	}
-	const FRotator Yaw(0.f, Controller->GetControlRotation().Yaw, 0.f);
-	AddMovementInput(FRotationMatrix(Yaw).GetUnitAxis(EAxis::Y), Value);
+	FVector F, R;
+	SurfaceAxes(F, R);
+	AddMovementInput(R, Value);
 }
 
 void AAntCharacter::TurnRate(float Value)
@@ -294,24 +369,130 @@ void AAntCharacter::ServerSetSprint_Implementation(bool bNewSprint)
 
 void AAntCharacter::DoJump()
 {
-	if (bDead)
+	if (!bDead)
 	{
-		return;
+		Jump();
 	}
-	if (bClimbing)
-	{
-		// Kick off the wall.
-		bClimbing = false;
-		GetCharacterMovement()->SetMovementMode(MOVE_Falling);
-		LaunchCharacter(-GetActorForwardVector() * 420.f + FVector::UpVector * 380.f, true, true);
-		return;
-	}
-	Jump();
 }
 
 void AAntCharacter::DoStopJump()
 {
 	StopJumping();
+}
+
+// ---------------------------------------------------------------------------------------------
+// Launch / teleport (movement is client-authoritative, so the server asks the owner to do it)
+// ---------------------------------------------------------------------------------------------
+
+void AAntCharacter::ApplyLaunch(const FVector& V)
+{
+	if (bDead)
+	{
+		return;
+	}
+	if (UAntMovementComponent* M = GetAntMovement())
+	{
+		M->BlockSticking(0.35f);
+	}
+	LaunchCharacter(V, true, true);
+	if (!IsLocallyControlled())
+	{
+		ClientLaunch(V);
+	}
+}
+
+void AAntCharacter::ClientLaunch_Implementation(FVector_NetQuantize10 V)
+{
+	if (UAntMovementComponent* M = GetAntMovement())
+	{
+		M->BlockSticking(0.35f);
+	}
+	LaunchCharacter(V, true, true);
+}
+
+void AAntCharacter::ApplyTeleport(const FVector& Location)
+{
+	if (bDead)
+	{
+		return;
+	}
+	SetActorLocation(Location, false, nullptr, ETeleportType::TeleportPhysics);
+	GetCharacterMovement()->Velocity = FVector::ZeroVector;
+	GetCharacterMovement()->SetMovementMode(MOVE_Falling);
+	if (!IsLocallyControlled())
+	{
+		ClientTeleport(Location);
+	}
+	for (FAntLeg& L : Legs)
+	{
+		L.bInit = false;
+	}
+}
+
+void AAntCharacter::ClientTeleport_Implementation(FVector_NetQuantize Location)
+{
+	SetActorLocation(Location, false, nullptr, ETeleportType::TeleportPhysics);
+	GetCharacterMovement()->Velocity = FVector::ZeroVector;
+	GetCharacterMovement()->SetMovementMode(MOVE_Falling);
+	for (FAntLeg& L : Legs)
+	{
+		L.bInit = false;
+	}
+}
+
+// ---------------------------------------------------------------------------------------------
+// Environment: temperature, honey, water, electricity
+// ---------------------------------------------------------------------------------------------
+
+void AAntCharacter::ApplyEnvironment(const FAntEnv& Env, float Dt)
+{
+	if (!HasAuthority() || bDead)
+	{
+		return;
+	}
+
+	FAntEnv E = Env;
+	if (IsInNest())
+	{
+		E.Temp(24.f, 30.f);    // the nest is cozy
+		E.Dps = 0.f;
+	}
+
+	Temperature = FMath::FInterpConstantTo(Temperature, E.TargetTemp, Dt, E.Rate);
+	StatusFlags = E.Flags;
+
+	float Dps = E.Dps;
+	const TCHAR* Cause = *E.Cause;
+	if (Temperature > 55.f)
+	{
+		Dps += (Temperature - 55.f) * 0.6f;
+		Cause = TEXT("Горячо! Убирайся с огня");
+	}
+	else if (Temperature < -4.f)
+	{
+		Dps += 3.f + (-4.f - Temperature) * 0.3f;
+		Cause = TEXT("Ты замерзаешь! Беги к теплу");
+	}
+
+	const float Now = GetWorld()->GetTimeSeconds();
+	if (Dps > 0.f)
+	{
+		LastHazard = Temperature > 55.f ? TEXT("поджарился") : (Temperature < -4.f ? TEXT("замёрз насмерть") :
+			(HasStatus(AntStatus::Drowning) ? TEXT("утонул в раковине") : TEXT("не пережил кухню")));
+		LastHazardTime = Now;
+		DamageAccum += Dps * Dt;
+		if (DamageAccum >= 1.f)
+		{
+			const float Whole = FMath::FloorToFloat(DamageAccum);
+			DamageAccum -= Whole;
+			UGameplayStatics::ApplyDamage(this, Whole, nullptr, nullptr, UDamageType::StaticClass());
+		}
+		if (Now - LastEnvToast > 3.f && Cause && *Cause)
+		{
+			LastEnvToast = Now;
+			Toast(Cause);
+		}
+	}
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -326,7 +507,6 @@ void AAntCharacter::Tick(float DeltaSeconds)
 	{
 		if (IsLocallyControlled())
 		{
-			UpdateClimb();
 			TickFire();
 		}
 
@@ -360,42 +540,6 @@ void AAntCharacter::Tick(float DeltaSeconds)
 	UpdateVisuals(DeltaSeconds);
 }
 
-void AAntCharacter::UpdateClimb()
-{
-	UCharacterMovementComponent* CM = GetCharacterMovement();
-	const FVector Fwd = GetActorForwardVector();
-	const FVector Start = GetActorLocation();
-	const FVector End = Start + Fwd * (GetCapsuleComponent()->GetScaledCapsuleRadius() + 30.f);
-
-	FHitResult Hit;
-	FCollisionQueryParams Params(SCENE_QUERY_STAT(AntClimb), false, this);
-	const bool bHit = GetWorld()->LineTraceSingleByObjectType(Hit, Start, End, FCollisionObjectQueryParams(ECC_WorldStatic), Params);
-	const bool bWall = bHit && FMath::Abs(Hit.ImpactNormal.Z) < 0.6f;
-	const bool bWants = ForwardInput > 0.1f;
-
-	if (bWall && bWants)
-	{
-		if (!bClimbing)
-		{
-			bClimbing = true;
-			CM->SetMovementMode(MOVE_Flying);
-		}
-	}
-	else if (bClimbing)
-	{
-		bClimbing = false;
-		if (CM->MovementMode == MOVE_Flying)
-		{
-			CM->SetMovementMode(MOVE_Falling);
-		}
-		if (!bWall && bWants)
-		{
-			// Reached the top edge: hop over it.
-			LaunchCharacter(Fwd * 260.f + FVector::UpVector * 320.f, true, true);
-		}
-	}
-}
-
 void AAntCharacter::TickFire()
 {
 	if (!bWantsFire || !Controller)
@@ -407,7 +551,8 @@ void AAntCharacter::TickFire()
 	{
 		return;
 	}
-	NextFireTime = Now + 1.f / FMath::Max(0.2f, Weapon.FireRate);
+	const float ColdMult = Temperature < 8.f ? 0.6f : 1.f;
+	NextFireTime = Now + 1.f / FMath::Max(0.2f, Weapon.FireRate * ColdMult);
 
 	const FVector Origin = GetMuzzleLocation();
 	FVector CamLoc;
@@ -462,7 +607,7 @@ void AAntCharacter::ServerFire_Implementation(FVector_NetQuantize Origin, FVecto
 }
 
 // ---------------------------------------------------------------------------------------------
-// Looting
+// Looting and gadgets
 // ---------------------------------------------------------------------------------------------
 
 AKitchenLoot* AAntCharacter::FindNearestLoot(float Radius) const
@@ -482,13 +627,49 @@ AKitchenLoot* AAntCharacter::FindNearestLoot(float Radius) const
 	return Best;
 }
 
+AKitchenInteractable* AAntCharacter::FindNearestInteractable(float* OutDistance) const
+{
+	AKitchenInteractable* Best = nullptr;
+	float BestDist = TNumericLimits<float>::Max();
+	const FVector Me = GetActorLocation();
+	for (TActorIterator<AKitchenInteractable> It(GetWorld()); It; ++It)
+	{
+		AKitchenInteractable* I = *It;
+		if (!I || !I->CanInteract(this))
+		{
+			continue;
+		}
+		const float D = I->DistanceTo(Me);
+		if (D < I->InteractRadius && D < BestDist)
+		{
+			BestDist = D;
+			Best = I;
+		}
+	}
+	if (OutDistance)
+	{
+		*OutDistance = BestDist;
+	}
+	return Best;
+}
+
 void AAntCharacter::ServerInteract_Implementation()
 {
 	if (bDead)
 	{
 		return;
 	}
+
+	float GadgetDist = 0.f;
+	AKitchenInteractable* Gadget = FindNearestInteractable(&GadgetDist);
 	AKitchenLoot* Loot = FindNearestLoot(InteractRadius + 30.f);
+	const float LootDist = Loot ? FVector::Dist(Loot->GetActorLocation(), GetActorLocation()) : TNumericLimits<float>::Max();
+
+	if (Gadget && (!Loot || GadgetDist < LootDist))
+	{
+		Gadget->Interact(this);
+		return;
+	}
 	if (!Loot)
 	{
 		return;
@@ -513,7 +694,7 @@ void AAntCharacter::ServerInteract_Implementation()
 
 	if (CarriedWeight + Loot->Weight > MaxCarry)
 	{
-		Toast(TEXT("Слишком тяжело! Сначала оттащи груз в муравейник"));
+		Toast(TEXT("Слишком тяжело! Отнеси добычу в муравейник"));
 		return;
 	}
 
@@ -597,7 +778,12 @@ bool AAntCharacter::IsInNest() const
 
 FVector AAntCharacter::GetMuzzleLocation() const
 {
-	return GetActorLocation() + GetActorForwardVector() * 45.f + FVector(0.f, 0.f, 8.f);
+	FVector Aim = GetActorForwardVector();
+	if (Controller)
+	{
+		Aim = Controller->GetControlRotation().Vector();
+	}
+	return GetActorLocation() + VisNormal * 10.f + Aim * 40.f;
 }
 
 FVector AAntCharacter::GetGroundLocation() const
@@ -621,6 +807,17 @@ FString AAntCharacter::GetDisplayName() const
 	return TEXT("Муравей");
 }
 
+void AAntCharacter::HurtBy(float Damage, const FString& Hazard)
+{
+	if (!HasAuthority() || bDead)
+	{
+		return;
+	}
+	LastHazard = Hazard;
+	LastHazardTime = GetWorld()->GetTimeSeconds();
+	UGameplayStatics::ApplyDamage(this, Damage, nullptr, nullptr, UDamageType::StaticClass());
+}
+
 void AAntCharacter::Toast(const FString& Msg) const
 {
 	if (AAntPlayerController* PC = Cast<AAntPlayerController>(GetController()))
@@ -631,30 +828,266 @@ void AAntCharacter::Toast(const FString& Msg) const
 
 void AAntCharacter::UpdateSpeed()
 {
-	UCharacterMovementComponent* CM = GetCharacterMovement();
-	if (!CM)
+	UAntMovementComponent* M = GetAntMovement();
+	if (!M)
 	{
 		return;
 	}
 	const float Load = FMath::Max(0.55f, 1.f - 0.035f * CarriedWeight);
-	CM->MaxWalkSpeed = (bSprinting ? 950.f : 600.f) * Load;
-	CM->MaxFlySpeed = 420.f * Load;
+	M->MaxWalkSpeed = (bSprinting ? 950.f : 600.f) * Load;
+
+	float Mult = 1.f;
+	if (HasStatus(AntStatus::Sticky)) { Mult *= 0.35f; }
+	if (HasStatus(AntStatus::Wet)) { Mult *= 0.7f; }
+	if (Temperature < 8.f)
+	{
+		Mult *= FMath::Lerp(1.f, 0.45f, FMath::Clamp((8.f - Temperature) / 13.f, 0.f, 1.f));
+	}
+	if (IsFrozen()) { Mult *= 0.5f; }
+	M->SpeedMultiplier = Mult;
+	M->bNoJump = HasStatus(AntStatus::Sticky) || IsFrozen();
+	M->bNoClimb = IsFrozen();
+	M->bHeavyLoad = CarriedWeight >= 7;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Visuals: body aligned to the surface, procedural legs, antennae
+// ---------------------------------------------------------------------------------------------
+
+FVector AAntCharacter::EstimateSurfaceNormal() const
+{
+	// Remote ants: find the closest surface around the body.
+	static const FVector Dirs[6] = { -FVector::UpVector, FVector::UpVector, FVector::ForwardVector, -FVector::ForwardVector, FVector::RightVector, -FVector::RightVector };
+	const FVector Me = GetActorLocation();
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(AntVisNormal), false, this);
+	float Best = BodyRadius + 22.f;
+	FVector N = FVector::UpVector;
+	bool bAny = false;
+	for (const FVector& D : Dirs)
+	{
+		FHitResult Hit;
+		if (GetWorld()->LineTraceSingleByObjectType(Hit, Me, Me + D * (BodyRadius + 22.f), FCollisionObjectQueryParams(ECC_WorldStatic), Params))
+		{
+			const float Dist = Hit.Distance - (FVector::DotProduct(D, -VisNormal) > 0.7f ? 4.f : 0.f);   // prefer the current surface
+			if (Dist < Best)
+			{
+				Best = Dist;
+				N = Hit.ImpactNormal;
+				bAny = true;
+			}
+		}
+	}
+	return bAny ? N : FVector::UpVector;
 }
 
 void AAntCharacter::UpdateVisuals(float DeltaSeconds)
 {
-	if (GetNetMode() == NM_DedicatedServer || bDead || LegPivots.Num() == 0)
+	if (GetNetMode() == NM_DedicatedServer || bDead || Legs.Num() == 0)
 	{
 		return;
 	}
-	const float Speed = GetVelocity().Size();
-	WalkPhase += DeltaSeconds * (Speed / 30.f + (bClimbing ? 8.f : 0.f));
-	const float Amp = 22.f * FMath::Min(1.f, Speed / 200.f);
-	for (int32 i = 0; i < LegPivots.Num(); ++i)
+	AnimTime += DeltaSeconds;
+
+	// Skip the expensive part for ants far away from the local camera.
+	bool bNear = true;
+	if (const APlayerController* LPC = GetWorld()->GetFirstPlayerController())
 	{
-		const int32 Pair = i / 2;
-		const int32 Side = i % 2;
-		const float Offset = ((Pair + Side) % 2) ? PI : 0.f;   // tripod gait
-		LegPivots[i]->SetRelativeRotation(FRotator(0.f, FMath::Sin(WalkPhase + Offset) * Amp, 0.f));
+		if (LPC->PlayerCameraManager)
+		{
+			bNear = FVector::DistSquared(LPC->PlayerCameraManager->GetCameraLocation(), GetActorLocation()) < FMath::Square(9000.f);
+		}
+	}
+
+	// --- Surface normal ---
+	FVector TargetN = FVector::UpVector;
+	const bool bCrawling = IsCrawling();
+	if (bCrawling)
+	{
+		TargetN = IsLocallyControlled() ? GetAntMovement()->GetSurfaceNormal() : EstimateSurfaceNormal();
+	}
+	VisNormal = FMath::VInterpNormalRotationTo(VisNormal, TargetN, DeltaSeconds, 720.f).GetSafeNormal();
+	if (VisNormal.IsNearlyZero())
+	{
+		VisNormal = FVector::UpVector;
+	}
+
+	// --- Heading: where we walk, or where we aim when standing/shooting ---
+	const FVector VelP = FVector::VectorPlaneProject(GetVelocity(), VisNormal);
+	FVector AimDir = GetActorForwardVector();
+	if (Controller)
+	{
+		AimDir = Controller->GetControlRotation().Vector();
+	}
+	FVector Desired;
+	if (VelP.SizeSquared() > FMath::Square(60.f) && !bWantsFire)
+	{
+		Desired = VelP.GetSafeNormal();
+	}
+	else
+	{
+		Desired = FVector::VectorPlaneProject(AimDir, VisNormal);
+		if (Desired.SizeSquared() < 0.04f)
+		{
+			Desired = FVector::VectorPlaneProject(FVector::UpVector, VisNormal);
+		}
+		Desired = Desired.GetSafeNormal();
+		if (Desired.IsNearlyZero())
+		{
+			Desired = VisHeading;
+		}
+	}
+	VisHeading = FVector::VectorPlaneProject(FMath::VInterpNormalRotationTo(VisHeading, Desired, DeltaSeconds, 540.f), VisNormal).GetSafeNormal();
+	if (VisHeading.IsNearlyZero())
+	{
+		VisHeading = FVector::VectorPlaneProject(FVector::ForwardVector, VisNormal).GetSafeNormal();
+		if (VisHeading.IsNearlyZero())
+		{
+			VisHeading = FVector::RightVector;
+		}
+	}
+
+	const float Speed = (float)GetVelocity().Size();
+	const float Bob = bCrawling ? FMath::Sin(AnimTime * 22.f) * FMath::Min(1.f, Speed / 500.f) * 1.5f : 0.f;
+	VisualRoot->SetWorldLocationAndRotation(GetActorLocation() - VisNormal * (2.f - Bob), FRotationMatrix::MakeFromZX(VisNormal, VisHeading).ToQuat());
+
+	if (FrostShell)
+	{
+		FrostShell->SetVisibility(IsFrozen());
+	}
+
+	// Camera pivot sits "above" the ant relative to the surface it crawls on, so it never digs into a ceiling.
+	if (IsLocallyControlled())
+	{
+		SpringArm->SocketOffset = FVector::ZeroVector;
+		SpringArm->TargetOffset = FMath::VInterpTo(SpringArm->TargetOffset, VisNormal * 55.f, DeltaSeconds, 6.f);
+		const float WantLen = VisNormal.Z < 0.6f ? 300.f : 230.f;
+		SpringArm->TargetArmLength = FMath::FInterpTo(SpringArm->TargetArmLength, WantLen, DeltaSeconds, 4.f);
+	}
+
+	// Antennae sway, faster when moving.
+	for (int32 i = 0; i < AntennaPivots.Num(); ++i)
+	{
+		const float s = (i == 0) ? -1.f : 1.f;
+		const float Ph = AnimTime * (3.f + Speed / 150.f) + i * 1.7f;
+		AntennaPivots[i]->SetRelativeRotation(FRotator(40.f + FMath::Sin(Ph) * 10.f, 25.f * s + FMath::Sin(Ph * 0.7f) * 12.f, 0.f));
+	}
+
+	if (bNear)
+	{
+		UpdateLegs(DeltaSeconds, VisNormal);
+	}
+}
+
+namespace
+{
+	void PlaceSegment(UStaticMeshComponent* C, const FVector& A, const FVector& B, float Thickness)
+	{
+		if (!C)
+		{
+			return;
+		}
+		const FVector D = B - A;
+		const float Len = FMath::Max(1.f, (float)D.Size());
+		C->SetWorldLocationAndRotation((A + B) * 0.5f, FRotationMatrix::MakeFromZ(D).ToQuat());
+		C->SetWorldScale3D(FVector(Thickness / 100.f, Thickness / 100.f, Len / 100.f));
+	}
+}
+
+void AAntCharacter::UpdateLegs(float Dt, const FVector& N)
+{
+	const FTransform BodyTM = VisualRoot->GetComponentTransform();
+	const bool bGrounded = IsCrawling();
+	const FVector Vel = FVector::VectorPlaneProject(GetVelocity(), N);
+	const float Speed = (float)Vel.Size();
+	const float StepDur = FMath::Clamp(0.15f - Speed * 0.00009f, 0.06f, 0.15f);
+	const float Threshold = 16.f + Speed * 0.035f;
+	const float StepHeight = 9.f + Speed * 0.006f;
+	constexpr float L1 = 24.f;
+	constexpr float L2 = 32.f;
+
+	bool GroupStepping[2] = { false, false };
+	for (const FAntLeg& L : Legs)
+	{
+		if (L.T < 1.f) { GroupStepping[L.Group] = true; }
+	}
+
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(AntFoot), false, this);
+
+	for (int32 i = 0; i < Legs.Num(); ++i)
+	{
+		FAntLeg& L = Legs[i];
+		const FVector RestW = BodyTM.TransformPosition(L.RestLocal);
+
+		FVector Desired = RestW;
+		bool bHit = false;
+		if (bGrounded)
+		{
+			FHitResult Hit;
+			if (GetWorld()->LineTraceSingleByObjectType(Hit, RestW + N * 30.f, RestW - N * 40.f, FCollisionObjectQueryParams(ECC_WorldStatic), Params))
+			{
+				Desired = Hit.ImpactPoint;
+				bHit = true;
+			}
+		}
+
+		if (!L.bInit)
+		{
+			L.Foot = Desired;
+			L.T = 1.f;
+			L.bInit = true;
+		}
+
+		if (!bGrounded || !bHit)
+		{
+			// Dangling in the air: legs pull in a little and wiggle.
+			const FVector Tuck = BodyTM.TransformPosition(L.RestLocal * FVector(0.8f, 0.75f, 0.45f));
+			const FVector Wiggle = N * FMath::Sin(AnimTime * 18.f + i) * 3.f;
+			L.Foot = FMath::VInterpTo(L.Foot, Tuck + Wiggle, Dt, 18.f);
+			L.T = 1.f;
+		}
+		else if (L.T < 1.f)
+		{
+			L.T = FMath::Min(1.f, L.T + Dt / StepDur);
+			L.Foot = FMath::Lerp(L.From, L.To, L.T) + N * FMath::Sin(L.T * PI) * StepHeight;
+		}
+		else
+		{
+			const float Dist = FVector::Dist(L.Foot, Desired);
+			if (Dist > 140.f)
+			{
+				L.Foot = Desired;   // teleported or fell far: snap
+			}
+			else if (Dist > Threshold && !GroupStepping[1 - L.Group])
+			{
+				L.From = L.Foot;
+				L.To = Desired + Vel * StepDur * 0.6f;
+				L.T = 0.f;
+				GroupStepping[L.Group] = true;
+			}
+		}
+
+		// Two-bone IK: knee bends up and outwards.
+		const FVector Hip = BodyTM.TransformPosition(L.HipLocal);
+		FVector ToFoot = L.Foot - Hip;
+		float D = (float)ToFoot.Size();
+		const FVector Dir = D > KINDA_SMALL_NUMBER ? ToFoot / D : -N;
+		D = FMath::Clamp(D, 4.f, L1 + L2 - 0.5f);
+		const FVector Side = BodyTM.TransformVectorNoScale(FVector(0.f, (float)L.Side, 0.f));
+		FVector Pole = FVector::VectorPlaneProject(N + Side * 0.5f, Dir).GetSafeNormal();
+		if (Pole.IsNearlyZero())
+		{
+			Pole = N;
+		}
+		const float A = (L1 * L1 - L2 * L2 + D * D) / (2.f * D);
+		const float H = FMath::Sqrt(FMath::Max(0.f, L1 * L1 - A * A));
+		const FVector Knee = Hip + Dir * A + Pole * H;
+		const FVector FootDraw = Hip + Dir * FMath::Min((float)ToFoot.Size(), L1 + L2);
+
+		PlaceSegment(LegFemurs[i], Hip, Knee, 7.f);
+		PlaceSegment(LegTibias[i], Knee, FootDraw, 5.f);
+		if (LegKnees[i])
+		{
+			LegKnees[i]->SetWorldLocation(Knee);
+		}
 	}
 }

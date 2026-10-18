@@ -24,6 +24,7 @@ AAcidProjectile::AAcidProjectile()
 	Sphere->SetCollisionObjectType(ECC_WorldDynamic);
 	Sphere->SetCollisionResponseToAllChannels(ECR_Ignore);
 	Sphere->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
+	Sphere->SetCollisionResponseToChannel(ECC_PhysicsBody, ECR_Block);
 	Sphere->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 	Sphere->SetGenerateOverlapEvents(true);
 	Sphere->SetCanEverAffectNavigation(false);
@@ -105,6 +106,15 @@ void AAcidProjectile::OnStop(const FHitResult& Hit)
 {
 	if (HasAuthority())
 	{
+		// Knock physics props around (grapes, bottle caps, sugar cubes...).
+		if (UPrimitiveComponent* C = Hit.GetComponent())
+		{
+			if (C->IsSimulatingPhysics())
+			{
+				const FVector Dir = (Hit.ImpactPoint - GetActorLocation()).GetSafeNormal();
+				C->AddImpulseAtLocation((Dir.IsNearlyZero() ? GetActorForwardVector() : Dir) * (300.f + Damage * 40.f), Hit.ImpactPoint);
+			}
+		}
 		Explode(nullptr);
 	}
 	else

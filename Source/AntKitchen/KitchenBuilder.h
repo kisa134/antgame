@@ -6,6 +6,10 @@
 #include "KitchenBuilder.generated.h"
 
 class UStaticMeshComponent;
+class UPointLightComponent;
+class UDirectionalLightComponent;
+class AAntCharacter;
+struct FAntEnv;
 
 /**
  * Builds the whole kitchen out of engine basic shapes.
@@ -33,6 +37,12 @@ public:
 	static FBox PlayArea();
 	static void LootSpots(TArray<FVector>& OutLocations, TArray<int32>& OutTiers);
 
+	/** Static kitchen zones (burner, honey, jam, water bowls...) acting on an ant. */
+	static void EnvironmentFor(const AAntCharacter* Ant, FAntEnv& Env);
+
+	/** Ceiling lamps on/off (light switch). */
+	void SetMainLights(bool bOn);
+
 private:
 	void Build();
 	UStaticMeshComponent* Part(EAntShape Shape, const FVector& Center, const FVector& Size, const FRotator& Rot, const FLinearColor& Color, bool bCollide);
@@ -41,10 +51,18 @@ private:
 	UStaticMeshComponent* Ball(const FVector& Center, const FVector& Radii, const FLinearColor& Color);
 	void Doors(float X0, float X1, int32 Count, const FLinearColor& DoorColor, const FLinearColor& HandleColor);
 	void Chair(const FVector& Center, bool bBackSouth, const FLinearColor& Color);
-	void Lamp(const FVector& Loc, float Intensity, const FLinearColor& Color, float Radius, bool bShadows);
+	UPointLightComponent* Lamp(const FVector& Loc, float Intensity, const FLinearColor& Color, float Radius, bool bShadows);
+	void BuildNorthRun();
+	void BuildFridge();
+	void BuildSecrets();
 
 	UPROPERTY()
 	USceneComponent* Root = nullptr;
+
+	UPROPERTY() TArray<UPointLightComponent*> MainLamps;
+	UPROPERTY() TArray<UStaticMeshComponent*> LampShades;
+	UPROPERTY() UDirectionalLightComponent* Fill = nullptr;
+	UPROPERTY() UPointLightComponent* WindowLight = nullptr;
 
 	float HazardTimer = 0.f;
 };

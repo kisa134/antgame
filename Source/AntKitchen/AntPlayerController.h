@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
@@ -37,6 +37,12 @@ public:
 	UFUNCTION(Exec) void HostGame();
 	/** Console: JoinGame 192.168.1.10  -> connects to a host. */
 	UFUNCTION(Exec) void JoinGame(const FString& Address);
+	/** Dev console: Tp -6800 -1500 60  -> teleport your ant. Also -AntTp=x,y,z on the command line. */
+	UFUNCTION(Exec) void Tp(float X, float Y, float Z);
+	/** Dev console: Peace  -> the AI Human stops hunting (toggle). Also -AntPeace on the command line. */
+	UFUNCTION(Exec) void Peace();
+	UFUNCTION(Server, Reliable) void ServerTp(FVector Location);
+	UFUNCTION(Server, Reliable) void ServerPeace();
 
 	bool bShowScores = false;
 	TArray<FAntToast> Toasts;

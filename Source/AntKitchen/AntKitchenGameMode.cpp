@@ -7,6 +7,7 @@
 #include "AntHUD.h"
 #include "KitchenLoot.h"
 #include "KitchenBuilder.h"
+#include "KitchenInteractables.h"
 #include "EngineUtils.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
@@ -55,10 +56,118 @@ void AAntKitchenGameMode::BeginPlay()
 	}
 
 	SpawnHuman();
+	SpawnGadgets();
 	SpawnInitialLoot();
 
 	GetWorldTimerManager().SetTimer(MatchTimer, this, &AAntKitchenGameMode::MatchTick, 1.f, true);
 	GetWorldTimerManager().SetTimer(RefillTimer, this, &AAntKitchenGameMode::RefillLoot, 10.f, true);
+	GetWorldTimerManager().SetTimer(LifeTimer, this, &AAntKitchenGameMode::KitchenLifeEvent, 38.f, true, 25.f);
+}
+
+// ---------------------------------------------------------------------------------------------
+// Kitchen gadgets (replicated actors): doors, faucet, light switch, vents, toaster, wire, trap, props
+// ---------------------------------------------------------------------------------------------
+
+void AAntKitchenGameMode::SpawnGadgets()
+{
+	UWorld* W = GetWorld();
+	auto Spawn = [W](UClass* Class, const FVector& Loc, const FRotator& Rot, TFunctionRef<void(AActor*)> Setup) -> AActor*
+	{
+		const FTransform TM(Rot, Loc);
+		AActor* A = W->SpawnActorDeferred<AActor>(Class, TM, nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+		if (A)
+		{
+			Setup(A);
+			A->FinishSpawning(TM);
+		}
+		return A;
+	};
+	auto Door = [&Spawn](EKitchenDoorKind Kind, const FVector& Loc)
+	{
+		return Cast<AKitchenDoor>(Spawn(AKitchenDoor::StaticClass(), Loc, FRotator::ZeroRotator, [Kind](AActor* A) { CastChecked<AKitchenDoor>(A)->Kind = Kind; }));
+	};
+	auto Passage = [&Spawn](EPassageLook Look, const FVector& Loc, float Yaw, const FVector& Exit, const TCHAR* Name)
+	{
+		Spawn(AKitchenPassage::StaticClass(), Loc, FRotator(0.f, Yaw, 0.f), [Look, Exit, Name](AActor* A)
+		{
+			AKitchenPassage* P = CastChecked<AKitchenPassage>(A);
+			P->Look = Look;
+			P->Exit = Exit;
+			P->RouteName = Name;
+		});
+	};
+	auto NoSetup = [](AActor*) {};
+
+	FridgeDoor = Door(EKitchenDoorKind::Fridge, FVector(4700.f, 3100.f, 120.f));
+	Door(EKitchenDoorKind::Oven, FVector(-750.f, 3000.f, 300.f));
+	Door(EKitchenDoorKind::Drawer, FVector(-4950.f, 3000.f, 1330.f));
+
+	Faucet = Cast<AKitchenFaucet>(Spawn(AKitchenFaucet::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, NoSetup));
+	Spawn(AKitchenSwitch::StaticClass(), FVector(-6995.f, 1900.f, 2300.f), FRotator::ZeroRotator, NoSetup);
+	Spawn(AKitchenToaster::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, NoSetup);
+	Spawn(AKitchenWire::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, NoSetup);
+	Spawn(AKitchenTrap::StaticClass(), FVector(-3150.f, 3450.f, 140.f), FRotator(0.f, 90.f, 0.f), NoSetup);
+
+	// Secret routes (each end leads to the other).
+	Passage(EPassageLook::Vent, FVector(-3100.f, -4995.f, 0.f), 90.f, FVector(-4500.f, 4500.f, 4470.f), TEXT("вентиляция → на верхние шкафы"));
+	Passage(EPassageLook::Vent, FVector(-4500.f, 4995.f, 4400.f), -90.f, FVector(-3100.f, -4750.f, 60.f), TEXT("вентиляция → к кошачьим мискам"));
+	Passage(EPassageLook::Vent, FVector(6995.f, 400.f, 0.f), 180.f, FVector(3700.f, 4350.f, 3760.f), TEXT("вентиляция → на холодильник"));
+	Passage(EPassageLook::Vent, FVector(3700.f, 4995.f, 3700.f), -90.f, FVector(6750.f, 400.f, 60.f), TEXT("вентиляция → в мусорный угол"));
+	Passage(EPassageLook::Drain, FVector(-3500.f, 4000.f, 1150.f), 0.f, FVector(-3500.f, 3600.f, 200.f), TEXT("слив раковины → под мойку"));
+	Passage(EPassageLook::Pipe, FVector(-3300.f, 4300.f, 140.f), 0.f, FVector(-3700.f, 3800.f, 1210.f), TEXT("труба → в раковину"));
+
+	// Physics junk to push around and shoot at.
+	struct FPropDef { EAntShape Shape; FVector Loc; FVector Size; FLinearColor Color; float Mass; };
+	const FPropDef Props[] =
+	{
+		{ EAntShape::Cylinder, FVector(-1200.f, -3000.f, 30.f), FVector(120.f, 120.f, 30.f), FLinearColor(0.8f, 0.1f, 0.1f), 1.5f },  // bottle cap
+		{ EAntShape::Sphere, FVector(200.f, -200.f, 1450.f), FVector(90.f), FLinearColor(0.5f, 0.85f, 0.3f), 1.f },               // grape on the table
+		{ EAntShape::Sphere, FVector(-400.f, -1000.f, 1450.f), FVector(90.f), FLinearColor(0.5f, 0.85f, 0.3f), 1.f },
+		{ EAntShape::Sphere, FVector(-3000.f, 1500.f, 40.f), FVector(55.f), FLinearColor(0.3f, 0.75f, 0.2f), 0.6f },              // peas
+		{ EAntShape::Sphere, FVector(-2900.f, 1550.f, 40.f), FVector(55.f), FLinearColor(0.3f, 0.75f, 0.2f), 0.6f },
+		{ EAntShape::Cylinder, FVector(-900.f, -300.f, 1450.f), FVector(70.f, 70.f, 80.f), FLinearColor(0.75f, 0.75f, 0.8f), 1.2f },   // thimble
+		{ EAntShape::Cube, FVector(1700.f, 3500.f, 1750.f), FVector(70.f), FLinearColor(1.f, 1.f, 1.f), 0.8f },                    // sugar cubes
+		{ EAntShape::Cube, FVector(1780.f, 3560.f, 1750.f), FVector(70.f), FLinearColor(1.f, 1.f, 1.f), 0.8f },
+		{ EAntShape::Cylinder, FVector(3600.f, 3800.f, 20.f), FVector(70.f, 70.f, 10.f), FLinearColor(0.75f, 0.6f, 0.3f), 2.f },    // coin under the fridge
+		{ EAntShape::Sphere, FVector(4000.f, -2500.f, 50.f), FVector(100.f), FLinearColor(0.9f, 0.5f, 0.1f), 1.5f },               // orange pea... a meatball
+	};
+	for (const FPropDef& D : Props)
+	{
+		Spawn(AKitchenProp::StaticClass(), D.Loc, FRotator::ZeroRotator, [&D](AActor* A)
+		{
+			AKitchenProp* P = CastChecked<AKitchenProp>(A);
+			P->ShapeIndex = (uint8)D.Shape;
+			P->Size = D.Size;
+			P->Color = D.Color;
+			P->Mass = D.Mass;
+		});
+	}
+}
+
+void AAntKitchenGameMode::KitchenLifeEvent()
+{
+	AAntGameState* GS = GetGameState<AAntGameState>();
+	if (!GS || GS->Phase != 0)
+	{
+		return;
+	}
+	const int32 Roll = Rng.RandRange(0, 3);
+	if (Roll == 0 && FridgeDoor && !FridgeDoor->IsOpen())
+	{
+		FridgeDoor->SetOpen(true, 9.f);
+		Broadcast(TEXT("Человек полез в холодильник за молоком — дверь открыта!"), Info);
+	}
+	else if (Roll == 1 && Faucet && !Faucet->IsOn())
+	{
+		const bool bHot = Rng.FRand() < 0.4f;
+		Faucet->SetWater(true, bHot);
+		Broadcast(bHot ? TEXT("Человек моет посуду горячей водой — раковина наполняется кипятком!") : TEXT("Человек включил воду в раковине"), Info);
+		TWeakObjectPtr<AKitchenFaucet> WeakF = Faucet;
+		GetWorldTimerManager().SetTimer(FaucetOffTimer, FTimerDelegate::CreateWeakLambda(this, [WeakF]()
+		{
+			if (WeakF.IsValid()) { WeakF->SetWater(false, false); }
+		}), 14.f, false);
+	}
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -96,7 +205,8 @@ void AAntKitchenGameMode::RestartPlayer(AController* NewPlayer)
 		return;
 	}
 	const FVector Nest = AKitchenBuilder::NestLocation();
-	const FVector Loc = Nest + FVector(FMath::FRandRange(600.f, 900.f), FMath::FRandRange(-350.f, 350.f), 60.f);
+	// Inside the safe zone of the nest (the old spot was outside it and the Human camped it).
+	const FVector Loc = Nest + FVector(FMath::FRandRange(180.f, 420.f), FMath::FRandRange(-300.f, 300.f), 60.f);
 	RestartPlayerAtTransform(NewPlayer, FTransform(FRotator::ZeroRotator, Loc));
 }
 
@@ -131,6 +241,24 @@ void AAntKitchenGameMode::SpawnHuman()
 	if (Human && !Human->GetController())
 	{
 		Human->SpawnDefaultController();
+	}
+}
+
+void AAntKitchenGameMode::TogglePeace()
+{
+	if (!Human)
+	{
+		return;
+	}
+	if (AController* C = Human->GetController())
+	{
+		if (C != HumanPlayer)
+		{
+			const bool bWasOn = C->IsActorTickEnabled();
+			C->SetActorTickEnabled(!bWasOn);
+			Human->SetSpraying(false);
+			Broadcast(bWasOn ? TEXT("[dev] Человек отдыхает") : TEXT("[dev] Человек снова охотится"), Info);
+		}
 	}
 }
 
@@ -371,11 +499,11 @@ void AAntKitchenGameMode::OnAntKilled(AAntCharacter* Ant, AController* Killer, A
 	}
 
 	FString How = TEXT("погиб");
-	if (Causer && Causer->IsA<AKitchenBuilder>())
+	if (!Ant->LastHazard.IsEmpty() && GetWorld()->GetTimeSeconds() - Ant->LastHazardTime < 3.f)
 	{
-		How = TEXT("поджарился на плите");
+		How = Ant->LastHazard;
 	}
-	else if (const AHumanCharacter* H = Cast<AHumanCharacter>(Causer))
+	if (const AHumanCharacter* H = Cast<AHumanCharacter>(Causer))
 	{
 		How = H->bSpraying ? TEXT("задохнулся дихлофосом") : TEXT("раздавлен тапком");
 	}

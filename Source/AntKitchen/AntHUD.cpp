@@ -1,4 +1,5 @@
 ﻿#include "AntHUD.h"
+#include "KitchenInteractables.h"
 #include "AntCharacter.h"
 #include "HumanCharacter.h"
 #include "AntGameState.h"
@@ -254,8 +255,40 @@ void AAntHUD::DrawAnt(AAntCharacter* Ant)
 		Txt(Traits, CX + 18.f * S, CY + 130.f * S, RC, Small, 1.1f * S);
 	}
 
-	// Interaction prompt
-	if (AKitchenLoot* L = Ant->FindNearestLoot(AAntCharacter::InteractRadius))
+	// Status effects: temperature, honey, water
+	{
+		const float T = Ant->Temperature;
+		if (T < 10.f)
+		{
+			const float A = FMath::Clamp((10.f - T) / 25.f, 0.f, 1.f);
+			DrawRect(FLinearColor(0.5f, 0.8f, 1.f, 0.28f * A), 0.f, 0.f, W, H);
+		}
+		else if (T > 40.f)
+		{
+			const float A = FMath::Clamp((T - 40.f) / 60.f, 0.f, 1.f);
+			DrawRect(FLinearColor(1.f, 0.35f, 0.05f, 0.25f * A), 0.f, 0.f, W, H);
+		}
+		FString St = FString::Printf(TEXT("%.0f°C"), T);
+		FLinearColor SC = White;
+		if (Ant->IsFrozen()) { St += TEXT("  ЗАМЁРЗ! медленно, не прыгнуть, не залезть на стену"); SC = FLinearColor(0.6f, 0.85f, 1.f); }
+		else if (T < 8.f) { St += TEXT("  холодно: медленнее бегаешь и стреляешь"); SC = FLinearColor(0.6f, 0.85f, 1.f); }
+		else if (T > 55.f) { St += TEXT("  ГОРИШЬ!"); SC = Red; }
+		else if (T > 40.f) { St += TEXT("  жарко"); SC = Gold; }
+		if (Ant->HasStatus(AntStatus::Sticky)) { St += TEXT("  | липкий: медленно, без прыжков"); SC = Gold; }
+		if (Ant->HasStatus(AntStatus::Wet)) { St += TEXT("  | мокрый"); }
+		if (Ant->HasStatus(AntStatus::Drowning)) { St += TEXT("  | ТОНЕШЬ!"); SC = Red; }
+		Txt(St, X, Y - 56.f * S, SC, Small, 1.15f * S);
+	}
+
+	// Interaction prompt: gadgets win over loot when closer.
+	float GadgetDist = 0.f;
+	AKitchenInteractable* Gadget = Ant->FindNearestInteractable(&GadgetDist);
+	AKitchenLoot* NearLoot = Ant->FindNearestLoot(AAntCharacter::InteractRadius);
+	if (Gadget && (!NearLoot || GadgetDist < FVector::Dist(NearLoot->GetActorLocation(), Ant->GetActorLocation())))
+	{
+		Txt(FString::Printf(TEXT("[E] %s"), *Gadget->GetPrompt(Ant)), W * 0.5f, H * 0.5f + 70.f * S, FLinearColor(0.6f, 1.f, 0.9f), Med, 1.05f * S, true);
+	}
+	else if (AKitchenLoot* L = NearLoot)
 	{
 		const float PX = W * 0.5f, PY = H * 0.5f + 70.f * S;
 		if (L->bIsGear)
@@ -278,7 +311,7 @@ void AAntHUD::DrawAnt(AAntCharacter* Ant)
 
 	if (Ant->IsClimbing())
 	{
-		Txt(TEXT("~ карабкаешься ~  (Пробел — оттолкнуться)"), W * 0.5f, H * 0.5f + 140.f * S, Grey, Small, 1.1f * S, true);
+		Txt(Ant->GetVisualUp().Z < -0.5f ? TEXT("~ ползёшь по потолку ~  (Пробел — отцепиться)") : TEXT("~ ползёшь по стене ~  (Пробел — оттолкнуться)"), W * 0.5f, H * 0.5f + 140.f * S, Grey, Small, 1.1f * S, true);
 	}
 
 	// Nest marker while carrying
@@ -495,7 +528,7 @@ void AAntHUD::DrawHelp(APawn* Me)
 	}
 	else
 	{
-		Help = TEXT("WASD — бег | ЛКМ — плевок | E — подобрать | Shift — спринт | Пробел — прыжок | W в стену — лезть | H — стать Человеком | Tab — счёт");
+		Help = TEXT("WASD — ползти (по стенам и потолку тоже) | ЛКМ — плевок | E — взять / использовать | Shift — спринт | Пробел — прыжок | H — стать Человеком | Tab — счёт");
 	}
 	Txt(Help, Canvas->ClipX * 0.5f, Canvas->ClipY - 26.f * S, FLinearColor(1.f, 1.f, 1.f, 0.6f), GEngine->GetSmallFont(), 1.f * S, true);
 }

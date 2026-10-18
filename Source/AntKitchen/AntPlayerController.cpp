@@ -1,6 +1,10 @@
-#include "AntPlayerController.h"
+﻿#include "AntPlayerController.h"
 #include "AntKitchenGameMode.h"
 #include "HumanCharacter.h"
+#include "AntCharacter.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
+#include "TimerManager.h"
 #include "Components/InputComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Engine/World.h"
@@ -13,6 +17,51 @@ void AAntPlayerController::BeginPlay()
 		FInputModeGameOnly Mode;
 		SetInputMode(Mode);
 		bShowMouseCursor = false;
+
+		// Dev/test switches.
+		FString TpArg;
+		if (FParse::Value(FCommandLine::Get(), TEXT("AntTp="), TpArg))
+		{
+			TArray<FString> Parts;
+			TpArg.ParseIntoArray(Parts, TEXT(","));
+			if (Parts.Num() == 3)
+			{
+				const FVector L(FCString::Atof(*Parts[0]), FCString::Atof(*Parts[1]), FCString::Atof(*Parts[2]));
+				FTimerHandle H;
+				GetWorldTimerManager().SetTimer(H, FTimerDelegate::CreateWeakLambda(this, [this, L]() { ServerTp(L); }), 3.f, false);
+			}
+		}
+		if (FParse::Param(FCommandLine::Get(), TEXT("AntPeace")))
+		{
+			FTimerHandle H;
+			GetWorldTimerManager().SetTimer(H, FTimerDelegate::CreateWeakLambda(this, [this]() { ServerPeace(); }), 1.f, false);
+		}
+	}
+}
+
+void AAntPlayerController::Tp(float X, float Y, float Z)
+{
+	ServerTp(FVector(X, Y, Z));
+}
+
+void AAntPlayerController::Peace()
+{
+	ServerPeace();
+}
+
+void AAntPlayerController::ServerTp_Implementation(FVector Location)
+{
+	if (AAntCharacter* Ant = Cast<AAntCharacter>(GetPawn()))
+	{
+		Ant->ApplyTeleport(Location);
+	}
+}
+
+void AAntPlayerController::ServerPeace_Implementation()
+{
+	if (AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
+	{
+		GM->TogglePeace();
 	}
 }
 

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
@@ -9,6 +9,8 @@ class AAntCharacter;
 class AHumanCharacter;
 class AAntPlayerController;
 class AKitchenLoot;
+class AKitchenDoor;
+class AKitchenFaucet;
 
 /**
  * Server-side rules:
@@ -31,6 +33,8 @@ public:
 	virtual void RestartPlayer(AController* NewPlayer) override;
 
 	void ToggleHuman(AAntPlayerController* PC);
+	/** Dev: AI Human stops hunting. */
+	void TogglePeace();
 	void HandleHumanPlayerLeft(AAntPlayerController* PC);
 
 	void OnAntKilled(AAntCharacter* Ant, AController* Killer, AActor* Causer);
@@ -48,6 +52,8 @@ public:
 
 private:
 	void SpawnHuman();
+	void SpawnGadgets();
+	void KitchenLifeEvent();
 	void SpawnInitialLoot();
 	void RefillLoot();
 	void MatchTick();
@@ -60,6 +66,8 @@ private:
 
 	UPROPERTY() AHumanCharacter* Human = nullptr;
 	UPROPERTY() AAntPlayerController* HumanPlayer = nullptr;
+	UPROPERTY() AKitchenDoor* FridgeDoor = nullptr;
+	UPROPERTY() AKitchenFaucet* Faucet = nullptr;
 
 	TArray<FVector> SpotLocations;
 	TArray<int32> SpotTiers;
@@ -69,4 +77,6 @@ private:
 	FTimerHandle MatchTimer;
 	FTimerHandle RefillTimer;
 	FTimerHandle ResetTimer;
+	FTimerHandle LifeTimer;
+	FTimerHandle FaucetOffTimer;
 };
