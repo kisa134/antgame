@@ -9,6 +9,7 @@
 #include "AntCharacter.h"
 #include "AntKitchenGameMode.h"
 #include "AntTypes.h"
+#include "AntMovementComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -71,6 +72,15 @@ AHumanCharacter::AHumanCharacter()
 
 	VisualRoot = CreateDefaultSubobject<USceneComponent>(TEXT("VisualRoot"));
 	VisualRoot->SetupAttachment(RootComponent);
+
+	BodyPivot = CreateDefaultSubobject<USceneComponent>(TEXT("BodyPivot"));
+	BodyPivot->SetupAttachment(VisualRoot);
+	BodyPivot->SetRelativeLocation(FVector(0.f, 0.f, -HalfHeight));   // feet
+	BodyMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BodyMesh"));
+	BodyMesh->SetupAttachment(BodyPivot);
+	BodyMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	BodyMesh->SetCanEverAffectNavigation(false);
+	BodyMesh->SetCastShadow(true);
 }
 
 void AHumanCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -78,6 +88,7 @@ void AHumanCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(AHumanCharacter, Health);
 	DOREPLIFETIME(AHumanCharacter, SprayFuel);
+	DOREPLIFETIME(AHumanCharacter, ShakeReadyTime);
 	DOREPLIFETIME(AHumanCharacter, bSpraying);
 	DOREPLIFETIME(AHumanCharacter, bKnockedOut);
 	DOREPLIFETIME(AHumanCharacter, Rage);
@@ -89,7 +100,33 @@ void AHumanCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 void AHumanCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+	SetupBody();
 	BuildBody();
+}
+
+void AHumanCharacter::SetupBody()
+{
+	const AntArt::FPart& Dad = AntArt::Get(TEXT("SM_Human_Dad"));
+	if (!Dad.IsValid() || !BodyMesh)
+	{
+		return;   // no model: the fallback shapes are drawn and nobody can climb him
+	}
+	BodyMesh->SetStaticMesh(Dad.Mesh);
+	if (Dad.Material)
+	{
+		BodyMesh->SetMaterial(0, Dad.Material);
+	}
+	const FVector E = Dad.Bounds.GetSize();
+	const float S = 3350.f / FMath::Max(1.f, (float)E.Z);
+	// Shoulders are the wide side: they go across (Y).
+	const float Yaw = (E.X > E.Y ? 90.f : 0.f) + ModelYaw;
+	const FQuat Q = FRotator(0.f, Yaw, 0.f).Quaternion();
+	const FVector C = Dad.Bounds.GetCenter();
+	const FVector FeetCenter(C.X, C.Y, Dad.Bounds.Min.Z);
+	BodyMesh->SetRelativeTransform(FTransform(Q, -Q.RotateVector(FeetCenter * S), FVector(S)));
+	// Ants, the spider (and anything else on UAntMovementComponent) can climb up his legs and ride him.
+	UAntMovementComponent::MakeClimbable(BodyMesh);
+	ModelPivot = BodyPivot;
 }
 
 void AHumanCharacter::BuildBody()
@@ -148,21 +185,14 @@ void AHumanCharacter::BuildBody()
 		R->GetChildrenComponents(true, Old);
 		for (USceneComponent* C : Old)
 		{
-			if (UPrimitiveComponent* Prim = Cast<UPrimitiveComponent>(C))
+			UPrimitiveComponent* Prim = Cast<UPrimitiveComponent>(C);
+			if (Prim && Prim != BodyMesh)
 			{
 				Prim->SetVisibility(false);
 			}
 		}
-		ModelPivot = AntKit::AddPivot(this, R, FVector(0.f, 0.f, -HalfHeight));   // feet
-		UStaticMeshComponent* Body = AntArt::AddArt(this, ModelPivot, Dad);
-		const FVector E = Dad.Bounds.GetSize();
-		const float S = 3350.f / FMath::Max(1.f, (float)E.Z);
-		// Shoulders are the wide side: they go across (Y).
-		const float Yaw = (E.X > E.Y ? 90.f : 0.f) + ModelYaw;
-		const FQuat Q = FRotator(0.f, Yaw, 0.f).Quaternion();
-		const FVector C = Dad.Bounds.GetCenter();
-		const FVector FeetCenter(C.X, C.Y, Dad.Bounds.Min.Z);
-		Body->SetRelativeTransform(FTransform(Q, -Q.RotateVector(FeetCenter * S), FVector(S)));
+		// The body model itself is BodyMesh (SetupBody): it's also the surface ants climb.
+		BodyPivot->SetVisibility(true, true);
 
 		const AntArt::FPart& Slip = AntArt::Get(TEXT("SM_Slipper"));
 		if (Slip.IsValid())
@@ -221,6 +251,7 @@ void AHumanCharacter::SetupPlayerInputComponent(UInputComponent* Input)
 	Input->BindAction("AltFire", IE_Released, this, &AHumanCharacter::OnSprayReleased);
 	Input->BindAction("Interact", IE_Pressed, this, &AHumanCharacter::OnGrabPressed);
 	Input->BindKey(EKeys::Q, IE_Pressed, this, &AHumanCharacter::OnSwatPressed);
+	Input->BindKey(EKeys::F, IE_Pressed, this, &AHumanCharacter::OnShakePressed);
 }
 
 bool AHumanCharacter::AimPoint(FVector& OutPoint, FVector& OutDir) const
@@ -254,6 +285,91 @@ void AHumanCharacter::OnGrabPressed()
 {
 	FVector P, D;
 	if (AimPoint(P, D)) { ServerGrabOrThrow(P, D); }
+}
+
+void AHumanCharacter::OnShakePressed()
+{
+	ServerShake();
+}
+
+void AHumanCharacter::ServerShake_Implementation() { TryShakeOff(); }
+
+int32 AHumanCharacter::CountClimbers() const
+{
+	int32 N = 0;
+	for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
+	{
+		if (!It->bDead && It->GetRiddenHuman() == this)
+		{
+			++N;
+		}
+	}
+	return N;
+}
+
+void AHumanCharacter::TryShakeOff()
+{
+	const float Now = GetWorld()->GetTimeSeconds();
+	if (!HasAuthority() || bKnockedOut || Now < ShakeReadyTime)
+	{
+		return;
+	}
+	ShakeReadyTime = Now + 6.f * (1.f - 0.15f * Rage);
+	MulticastShake();
+	const FVector Axis = GetActorLocation();
+	for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
+	{
+		AAntCharacter* Ant = *It;
+		if (!Ant || Ant->bDead || Ant->GetRiddenHuman() != this)
+		{
+			continue;
+		}
+		// Flung away from the body, some of them land hard.
+		FVector Out = (Ant->GetActorLocation() - Axis).GetSafeNormal2D();
+		if (Out.IsNearlyZero())
+		{
+			Out = FMath::VRand().GetSafeNormal2D();
+		}
+		Ant->ApplyLaunch(Out * FMath::FRandRange(800.f, 1100.f) + FVector(0.f, 0.f, 350.f));
+		UGameplayStatics::ApplyDamage(Ant, 25.f, GetController(), this, UDamageType::StaticClass());
+	}
+}
+
+void AHumanCharacter::MulticastShake_Implementation()
+{
+	ShakeLocalStart = GetWorld()->GetTimeSeconds();
+	AntSfx::Play(this, AntSfx::HumanPanic, GetActorLocation() + FVector(0.f, 0.f, 600.f), 1.f, FMath::FRandRange(0.95f, 1.1f));
+}
+
+void AHumanCharacter::AnimateBody(float DeltaSeconds)
+{
+	const float Now = GetWorld()->GetTimeSeconds();
+	const float Speed = GetVelocity().Size2D();
+	PrevWalkPhase = WalkPhase;
+	WalkPhase += DeltaSeconds * Speed / 140.f;
+
+	// Knockout sway + a violent shudder when shaking ants off.
+	float Roll = bKnockedOut ? FMath::Sin(Now * 2.5f) * 10.f : 0.f;
+	const float ST = Now - ShakeLocalStart;
+	if (ST >= 0.f && ST < 0.7f)
+	{
+		Roll += FMath::Sin(ST * 45.f) * 7.f * (1.f - ST / 0.7f);
+	}
+	VisualRoot->SetRelativeRotation(FRotator(0.f, 0.f, Roll));
+
+	if (ModelPivot)
+	{
+		// Static model: waddle while walking, lean into stomps.
+		const float Walk = FMath::Min(1.f, Speed / 300.f);
+		const float T = Now - LocalStompStart;
+		float Lean = 0.f, Lift = FMath::Abs(FMath::Sin(WalkPhase)) * 35.f * Walk;
+		if (T >= 0.f && T < 1.1f)
+		{
+			Lean = T < 0.45f ? -6.f * (T / 0.45f) : T < 0.6f ? FMath::Lerp(-6.f, 9.f, (T - 0.45f) / 0.15f) : FMath::Lerp(9.f, 0.f, (T - 0.6f) / 0.5f);
+		}
+		ModelPivot->SetRelativeLocation(FVector(0.f, 0.f, -HalfHeight + Lift));
+		ModelPivot->SetRelativeRotation(FRotator(-Lean, 0.f, FMath::Sin(WalkPhase) * 3.f * Walk));
+	}
 }
 
 void AHumanCharacter::ServerSwat_Implementation(FVector_NetQuantize Point) { TrySwat(Point); }
@@ -432,6 +548,10 @@ void AHumanCharacter::DoStompImpact()
 			continue;
 		}
 		const FVector A = Ant->GetActorLocation();
+		if (Ant->GetRiddenHuman() == this)
+		{
+			continue;   // can't stomp what's crawling up your own leg
+		}
 		if (FVector::Dist2D(A, P) < StompRadius && A.Z - P.Z < 220.f)
 		{
 			UGameplayStatics::ApplyDamage(Ant, 200.f, GetController(), this, UDamageType::StaticClass());
@@ -613,6 +733,19 @@ void AHumanCharacter::Tick(float DeltaSeconds)
 		}
 	}
 
+	if (HasAuthority() && !IsPlayerControlled() && !bKnockedOut)
+	{
+		// AI: ants crawling up the legs get shaken off after a while (sooner the more there are).
+		const int32 N = CountClimbers();
+		ClimberTime = N > 0 ? ClimberTime + DeltaSeconds * (0.6f + 0.4f * N) : FMath::Max(0.f, ClimberTime - DeltaSeconds);
+		if (ClimberTime > 3.f && Now >= ShakeReadyTime)
+		{
+			ClimberTime = 0.f;
+			TryShakeOff();
+		}
+	}
+
+	AnimateBody(DeltaSeconds);
 	UpdateVisuals(DeltaSeconds);
 }
 
@@ -624,8 +757,7 @@ void AHumanCharacter::UpdateVisuals(float DeltaSeconds)
 	}
 	const float Now = GetWorld()->GetTimeSeconds();
 	const float Speed = GetVelocity().Size2D();
-	const float OldPhase = WalkPhase;
-	WalkPhase += DeltaSeconds * Speed / 140.f;
+	const float OldPhase = PrevWalkPhase;   // WalkPhase is advanced in AnimateBody
 	if (Speed > 80.f && FMath::FloorToInt(OldPhase / PI) != FMath::FloorToInt(WalkPhase / PI))
 	{
 		// Heavy slipper footfall, heard from the floor.
@@ -650,7 +782,6 @@ void AHumanCharacter::UpdateVisuals(float DeltaSeconds)
 	ArmPivots[0]->SetRelativeRotation(FRotator(-Swing * 0.8f, 0.f, 0.f));
 	ArmPivots[1]->SetRelativeRotation(FRotator(bSpraying ? 80.f : Swing * 0.8f, 0.f, 0.f));
 
-	VisualRoot->SetRelativeRotation(FRotator(0.f, 0.f, bKnockedOut ? FMath::Sin(Now * 2.5f) * 10.f : 0.f));
 
 	// Newspaper slap: swings down onto the target point.
 	if (PaperArt)
@@ -679,15 +810,7 @@ void AHumanCharacter::UpdateVisuals(float DeltaSeconds)
 
 	if (ModelPivot)
 	{
-		// Static model: waddle while walking, lean into stomps.
-		const float Walk = FMath::Min(1.f, Speed / 300.f);
-		float Lean = 0.f, Lift = FMath::Abs(FMath::Sin(WalkPhase)) * 35.f * Walk;
-		if (T >= 0.f && T < 1.1f)
-		{
-			Lean = T < 0.45f ? -6.f * (T / 0.45f) : T < 0.6f ? FMath::Lerp(-6.f, 9.f, (T - 0.45f) / 0.15f) : FMath::Lerp(9.f, 0.f, (T - 0.6f) / 0.5f);
-		}
-		ModelPivot->SetRelativeLocation(FVector(0.f, 0.f, -HalfHeight + Lift));
-		ModelPivot->SetRelativeRotation(FRotator(-Lean, 0.f, FMath::Sin(WalkPhase) * 3.f * Walk));
+		// (the body pose itself is set in AnimateBody, on every machine)
 		if (SprayArt)
 		{
 			SprayArt->SetVisibility(bSpraying);

@@ -120,6 +120,8 @@ public:
 
 	UAntMovementComponent* GetAntMovement() const;
 	bool IsCrawling() const;
+	/** The Human this ant is crawling on right now (climbed up his leg), or null. */
+	class AHumanCharacter* GetRiddenHuman() const;
 	bool IsClimbing() const;     // on a wall or ceiling
 	bool IsFrozen() const { return Temperature < -5.f; }
 	bool HasStatus(uint8 Bit) const { return (StatusFlags & Bit) != 0; }

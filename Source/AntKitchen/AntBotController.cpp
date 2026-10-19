@@ -245,6 +245,27 @@ void AAntBotController::Think(AAntCharacter* Ant)
 		}
 	}
 
+	// Board the Human: a third of the colony climbs up his legs and chews on him. Riders keep at it until shaken off.
+	{
+		AHumanCharacter* H = Ant->GetRiddenHuman();
+		if (!H && !Ant->IsMonster() && GetUniqueID() % 3 == 0)
+		{
+			H = Cast<AHumanCharacter>(ShootTarget.Get());
+		}
+		if (H && !H->IsKnockedOut())
+		{
+			ShootTarget = H;
+			FoodTarget = nullptr;
+			Goal = H->GetActorLocation() + FVector(0.f, 0.f, H->GetSimpleCollisionHalfHeight() * 0.5f);   // up to the chest
+			bHasGoal = true;
+			if (Ant->GetRiddenHuman() == H)
+			{
+				Ant->BotBite();
+			}
+			return;
+		}
+	}
+
 	// Enemy carrying our future dinner nearby: chase it.
 	if (AAntCharacter* E = Cast<AAntCharacter>(ShootTarget.Get()); E && E->IsCarrying() && E->Carrying)
 	{

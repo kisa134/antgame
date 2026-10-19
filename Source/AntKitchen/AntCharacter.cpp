@@ -224,6 +224,13 @@ void AAntCharacter::TickNurse(float Dt)
 	}
 }
 
+AHumanCharacter* AAntCharacter::GetRiddenHuman() const
+{
+	const UAntMovementComponent* M = GetAntMovement();
+	const UPrimitiveComponent* C = M ? M->GetRiddenComponent() : nullptr;
+	return C ? Cast<AHumanCharacter>(C->GetOwner()) : nullptr;
+}
+
 UAntMovementComponent* AAntCharacter::GetAntMovement() const
 {
 	return Cast<UAntMovementComponent>(GetCharacterMovement());
@@ -1283,10 +1290,22 @@ void AAntCharacter::ServerBite_Implementation()
 			bHit = true;
 		}
 	}
+	// Riding the Human: chew on whatever is under your feet (more painful than the ankles).
+	AHumanCharacter* Ridden = GetRiddenHuman();
+	if (Ridden && !Ridden->IsKnockedOut())
+	{
+		UGameplayStatics::ApplyDamage(Ridden, Dmg * 1.5f, GetController(), this, UDamageType::StaticClass());
+		if (PC) { PC->ClientDamageNumber(Me + Fwd * 40.f, FMath::RoundToInt(Dmg * 1.5f), false); }
+		bHit = true;
+	}
 	// The Human's ankles.
 	for (TActorIterator<AHumanCharacter> It(GetWorld()); It; ++It)
 	{
 		AHumanCharacter* H = *It;
+		if (H == Ridden)
+		{
+			continue;
+		}
 		const FVector Foot = H->GetActorLocation() - FVector(0.f, 0.f, H->GetSimpleCollisionHalfHeight());
 		if (FVector::Dist2D(Foot, Me) < H->GetSimpleCollisionRadius() + 140.f && Me.Z - Foot.Z < 400.f)
 		{
@@ -1705,7 +1724,7 @@ FVector AAntCharacter::EstimateSurfaceNormal() const
 	for (const FVector& D : Dirs)
 	{
 		FHitResult Hit;
-		if (GetWorld()->LineTraceSingleByObjectType(Hit, Me, Me + D * (BodyRadius + 22.f), FCollisionObjectQueryParams(ECC_WorldStatic), Params))
+		if (GetWorld()->LineTraceSingleByObjectType(Hit, Me, Me + D * (BodyRadius + 22.f), UAntMovementComponent::SurfaceObjects(), Params))
 		{
 			const float Dist = Hit.Distance - (FVector::DotProduct(D, -VisNormal) > 0.7f ? 4.f : 0.f);   // prefer the current surface
 			if (Dist < Best)
@@ -1912,7 +1931,7 @@ void AAntCharacter::UpdateLegs(float Dt, const FVector& N)
 		if (bGrounded)
 		{
 			FHitResult Hit;
-			if (GetWorld()->LineTraceSingleByObjectType(Hit, RestW + N * 30.f * VS, RestW - N * 40.f * VS, FCollisionObjectQueryParams(ECC_WorldStatic), Params))
+			if (GetWorld()->LineTraceSingleByObjectType(Hit, RestW + N * 30.f * VS, RestW - N * 40.f * VS, UAntMovementComponent::SurfaceObjects(), Params))
 			{
 				Desired = Hit.ImpactPoint;
 				bHit = true;

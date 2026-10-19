@@ -54,6 +54,12 @@ public:
 	static constexpr float SwatRadius = 300.f;
 	static constexpr float SwatRange = 3200.f;
 
+	/** Server: shake off every ant/spider crawling on the body (AI does it on its own, a player presses F). */
+	void TryShakeOff();
+	UPROPERTY(Replicated) float ShakeReadyTime = 0.f;
+	/** Ants (and the spider) crawling on the Human right now. */
+	int32 CountClimbers() const;
+
 	/** Server: turn the bug spray on/off. */
 	void SetSpraying(bool bOn);
 	/** Server: full heal + teleport (new round). */
@@ -81,6 +87,9 @@ protected:
 	UFUNCTION(NetMulticast, Unreliable) void MulticastSwat(FVector_NetQuantize Point);
 	void OnSwatPressed();
 	void OnGrabPressed();
+	void OnShakePressed();
+	UFUNCTION(Server, Reliable) void ServerShake();
+	UFUNCTION(NetMulticast, Unreliable) void MulticastShake();
 	bool AimPoint(FVector& OutPoint, FVector& OutDir) const;
 	UFUNCTION(NetMulticast, Unreliable) void MulticastStomp(uint8 Leg);
 	UFUNCTION() void OnRep_KnockedOut();
@@ -92,6 +101,10 @@ private:
 	void DoSprayDamage(float Dt);
 	void KnockOut(AController* By);
 	void UpdateVisuals(float DeltaSeconds);
+	/** Sets up the body model + its climbable collision (on every machine, the server too). */
+	void SetupBody();
+	/** Waddle / stomp lean / knockout sway / shake of the body. Runs everywhere so ants ride the same pose. */
+	void AnimateBody(float DeltaSeconds);
 
 	UPROPERTY(VisibleAnywhere) USpringArmComponent* SpringArm;
 	UPROPERTY(VisibleAnywhere) UCameraComponent* Camera;
@@ -101,7 +114,11 @@ private:
 	UPROPERTY() TArray<USceneComponent*> ArmPivots;
 	UPROPERTY() TArray<UStaticMeshComponent*> Puffs;
 	// Generated art: the whole body is one static model (no skeleton yet), a giant slipper slams for stomps.
-	UPROPERTY() USceneComponent* ModelPivot = nullptr;
+	// Both are created in the constructor: the body is a moving surface ants ride on, and a base
+	// must have a stable network name so the ant's position can replicate relative to it.
+	UPROPERTY(VisibleAnywhere) USceneComponent* BodyPivot = nullptr;
+	UPROPERTY(VisibleAnywhere) UStaticMeshComponent* BodyMesh = nullptr;
+	USceneComponent* ModelPivot = nullptr;   // = BodyPivot once the model is loaded
 	UPROPERTY() UStaticMeshComponent* SlipperArt = nullptr;
 	UPROPERTY() UStaticMeshComponent* SprayArt = nullptr;
 	FTransform SlipperFit;
@@ -122,4 +139,7 @@ private:
 	float LocalStompStart = -100.f;
 	uint8 LocalStompLeg = 0;
 	float WalkPhase = 0.f;
+	float PrevWalkPhase = 0.f;
+	float ClimberTime = 0.f;          // server, AI: how long (weighted by count) ants have been on him
+	float ShakeLocalStart = -100.f;
 };

@@ -2,7 +2,11 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "CollisionQueryParams.h"
 #include "AntMovementComponent.generated.h"
+
+/** Object channel for moving things ants can crawl on: the Human's body, later the cat (Config/DefaultEngine.ini). */
+#define ECC_AntClimbable ECC_GameTraceChannel1
 
 /** Custom movement modes (MOVE_Custom + this value). */
 enum EAntMoveMode : uint8
@@ -45,14 +49,24 @@ public:
 	virtual void HandleImpact(const FHitResult& Hit, float TimeSlice = 0.f, const FVector& MoveDelta = FVector::ZeroVector) override;
 	virtual void OnMovementUpdated(float DeltaSeconds, const FVector& OldLocation, const FVector& OldVelocity) override;
 
+	/** Everything an ant can stand on: the static kitchen + climbable moving bodies. Use it for every "find the surface" trace. */
+	static FCollisionObjectQueryParams SurfaceObjects();
+	/** Turn any mesh into a moving surface ants (and the spider) can climb and ride: the Human, the cat, a boss... */
+	static void MakeClimbable(UPrimitiveComponent* C);
+	/** The moving thing the ant is riding right now (null on the static kitchen). */
+	UPrimitiveComponent* GetRiddenComponent() const;
+
 protected:
 	virtual void PhysCustom(float DeltaTime, int32 Iterations) override;
+	/** Riding a moving body: also turn the surface normal with it. */
+	virtual void UpdateBasedMovement(float DeltaSeconds) override;
 
 private:
 	void PhysCrawl(float DeltaTime);
 	bool TraceSurface(const FVector& Start, const FVector& End, FHitResult& OutHit) const;
 	bool IsStickable(const FHitResult& Hit) const;
 	void Detach(const FVector& Push);
+	void SetCrawlBase(UPrimitiveComponent* C, FName Bone);
 	float Now() const;
 
 	FVector SurfaceNormal = FVector::UpVector;

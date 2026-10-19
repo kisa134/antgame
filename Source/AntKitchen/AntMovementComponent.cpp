@@ -2,6 +2,9 @@
 #include "GameFramework/Character.h"
 #include "Components/CapsuleComponent.h"
 #include "Engine/World.h"
+#include "PhysicsEngine/BodySetup.h"
+#include "Engine/StaticMesh.h"
+#include "Components/StaticMeshComponent.h"
 
 UAntMovementComponent::UAntMovementComponent()
 {
@@ -42,16 +45,91 @@ void UAntMovementComponent::Detach(const FVector& Push)
 	BlockSticking(0.25f);
 }
 
+FCollisionObjectQueryParams UAntMovementComponent::SurfaceObjects()
+{
+	FCollisionObjectQueryParams P(ECC_WorldStatic);
+	P.AddObjectTypesToQuery(ECC_AntClimbable);
+	return P;
+}
+
+void UAntMovementComponent::MakeClimbable(UPrimitiveComponent* C)
+{
+	if (!C)
+	{
+		return;
+	}
+	// Ants crawl on exactly what is drawn: the mesh's own triangles are its collision.
+	if (UStaticMeshComponent* SM = Cast<UStaticMeshComponent>(C))
+	{
+		if (UStaticMesh* Mesh = SM->GetStaticMesh())
+		{
+			if (UBodySetup* BS = Mesh->GetBodySetup(); BS && BS->CollisionTraceFlag != CTF_UseComplexAsSimple)
+			{
+				BS->CollisionTraceFlag = CTF_UseComplexAsSimple;
+				SM->RecreatePhysicsState();
+			}
+		}
+	}
+	C->SetMobility(EComponentMobility::Movable);
+	C->SetCollisionObjectType(ECC_AntClimbable);
+	C->SetCollisionResponseToAllChannels(ECR_Ignore);
+	C->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);         // ants, spider bump into it and climb
+	C->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);   // you can aim at it
+	C->SetCollisionEnabled(ECollisionEnabled::QueryOnly);           // no physics: it never shoves food around
+	C->SetGenerateOverlapEvents(false);
+	C->SetCanEverAffectNavigation(false);
+	C->ComponentTags.AddUnique(TEXT("AntClimbable"));
+}
+
+UPrimitiveComponent* UAntMovementComponent::GetRiddenComponent() const
+{
+	UPrimitiveComponent* B = CharacterOwner ? CharacterOwner->GetMovementBase() : nullptr;
+	return (B && B->GetCollisionObjectType() == ECC_AntClimbable) ? B : nullptr;
+}
+
 bool UAntMovementComponent::TraceSurface(const FVector& Start, const FVector& End, FHitResult& OutHit) const
 {
 	FCollisionQueryParams Params(SCENE_QUERY_STAT(AntCrawl), false, CharacterOwner);
-	return GetWorld()->LineTraceSingleByObjectType(OutHit, Start, End, FCollisionObjectQueryParams(ECC_WorldStatic), Params);
+	return GetWorld()->LineTraceSingleByObjectType(OutHit, Start, End, SurfaceObjects(), Params);
 }
 
 bool UAntMovementComponent::IsStickable(const FHitResult& Hit) const
 {
 	const UPrimitiveComponent* C = Hit.GetComponent();
-	return C && C->GetCollisionObjectType() == ECC_WorldStatic;
+	if (!C || (CharacterOwner && C->GetOwner() == CharacterOwner))
+	{
+		return false;
+	}
+	const ECollisionChannel T = C->GetCollisionObjectType();
+	return T == ECC_WorldStatic || T == ECC_AntClimbable;
+}
+
+void UAntMovementComponent::SetCrawlBase(UPrimitiveComponent* C, FName Bone)
+{
+	// Only climbable moving bodies become a base: the ant then moves and turns with them,
+	// and its position replicates relative to them. The static kitchen needs none of that.
+	UPrimitiveComponent* Want = (C && C->GetCollisionObjectType() == ECC_AntClimbable && C->Mobility == EComponentMobility::Movable) ? C : nullptr;
+	if (CharacterOwner && (CharacterOwner->GetMovementBase() != Want || CharacterOwner->GetBasedMovement().BoneName != (Want ? Bone : NAME_None)))
+	{
+		SetBase(Want, Want ? Bone : NAME_None);
+	}
+}
+
+void UAntMovementComponent::UpdateBasedMovement(float DeltaSeconds)
+{
+	if (IsCrawling() && HasValidData())
+	{
+		const UPrimitiveComponent* B = CharacterOwner->GetMovementBase();
+		FVector NewLoc;
+		FQuat NewQuat;
+		if (MovementBaseUtility::UseRelativeLocation(B)
+			&& MovementBaseUtility::GetMovementBaseTransform(B, CharacterOwner->GetBasedMovement().BoneName, NewLoc, NewQuat)
+			&& !OldBaseQuat.Equals(NewQuat, 1e-6f))
+		{
+			SurfaceNormal = (NewQuat * OldBaseQuat.Inverse()).RotateVector(SurfaceNormal).GetSafeNormal();
+		}
+	}
+	Super::UpdateBasedMovement(DeltaSeconds);
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -237,6 +315,7 @@ void UAntMovementComponent::PhysCrawl(float DeltaTime)
 			FHitResult H2;
 			SafeMoveUpdatedComponent(-N * Gap, Rot, true, H2);
 		}
+		SetCrawlBase(G.GetComponent(), G.BoneName);
 	}
 	else
 	{
@@ -254,6 +333,7 @@ void UAntMovementComponent::PhysCrawl(float DeltaTime)
 				Velocity = FQuat::FindBetweenNormals(N, NewN).RotateVector(Velocity);
 				N = NewN;
 				bWrapped = true;
+				SetCrawlBase(W.GetComponent(), W.BoneName);
 			}
 		}
 		if (!bWrapped)

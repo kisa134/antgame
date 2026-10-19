@@ -2,7 +2,7 @@
 # so ants crawl on exactly what is drawn. Ant body parts and food are skipped.
 import unreal
 EAL = unreal.EditorAssetLibrary
-SKIP = ("SM_Ant_", "SM_Food_", "SM_Human_", "SM_Slipper", "SM_BugSpray", "SM_RolledNewspaper")
+SKIP = ("SM_Ant_", "SM_Food_", "SM_Slipper", "SM_BugSpray", "SM_RolledNewspaper")
 n = 0
 for path in EAL.list_assets("/Game/Meshy", recursive=True, include_folder=False):
     a = EAL.load_asset(path)
