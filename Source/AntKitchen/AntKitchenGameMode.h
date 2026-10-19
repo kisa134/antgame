@@ -11,6 +11,9 @@ class AAntPlayerController;
 class AKitchenLoot;
 class AKitchenDoor;
 class AKitchenFaucet;
+class AAntTerritory;
+class AAntCashout;
+class AAntBotController;
 
 /**
  * Server-side rules:
@@ -52,6 +55,13 @@ public:
 	void OnSwarmIncome(int32 Value);
 	void Broadcast(const FString& Text, const FLinearColor& Color);
 	void AddScore(uint8 Team, int32 Value);
+	/** War mode: the reserve of army ants each side can send out (+ reinforcements, - armies sent). */
+	void AddPool(uint8 Team, int32 N);
+	/** Workers from a dissolved living bridge: back to the builder's army, else to the reserve. */
+	void ReturnWorkers(uint8 Team, int32 N, AAntCharacter* Builder);
+	/** [P] in the nest / while dead: play for the other colony. */
+	void SwitchTeam(AAntPlayerController* PC);
+	bool IsWar() const;
 
 	AKitchenLoot* SpawnFood(const FVector& Location, int32 Tier);
 	AKitchenLoot* SpawnGear(const FVector& Location, const FAntWeapon& Weapon);
@@ -62,6 +72,8 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Match") float RespawnDelay = 5.f;
 	UPROPERTY(EditDefaultsOnly, Category = "Match") int32 AllyBots = 7;    // + you = 8 per colony
 	UPROPERTY(EditDefaultsOnly, Category = "Match") int32 RivalBots = 8;
+	/** "Муравьиная война" (territories + cashouts). -AntClassic on the command line turns it off. */
+	UPROPERTY(EditDefaultsOnly, Category = "Match") bool bWar = true;
 
 private:
 	void SpawnHuman();
@@ -76,6 +88,14 @@ private:
 	void UpdateRage();
 	void SpawnHeavyLoot();
 	void RivalWarTick();
+	void SpawnWarZones();
+	void WarTick();
+	void SpawnVault();
+	void AssignWarRoles(uint8 Team);
+	FTimerHandle AntWarTimer;
+	float NextVault = 0.f;
+	UPROPERTY() TArray<AAntTerritory*> Territories;
+	UPROPERTY() TArray<AAntCashout*> Cashouts;
 	FTimerHandle WarTimer;
 	void ResetMatch();
 	void RespawnAnt(AController* C);

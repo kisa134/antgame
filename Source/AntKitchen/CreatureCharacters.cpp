@@ -11,6 +11,11 @@
 #include "Sound/SoundBase.h"
 #include "EngineUtils.h"
 #include "Engine/World.h"
+#include "Net/UnrealNetwork.h"
+#include "Camera/CameraComponent.h"
+#include "Components/InputComponent.h"
+#include "InputCoreTypes.h"
+#include "WarMode.h"
 
 namespace
 {
@@ -72,6 +77,12 @@ AFlyCharacter::AFlyCharacter(const FObjectInitializer& ObjectInitializer)
 	CM->MaxFlySpeed = 950.f;
 	CM->BrakingDecelerationFlying = 2200.f;
 	CM->MaxAcceleration = 3200.f;
+}
+
+void AFlyCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(AFlyCharacter, Fuel);
 }
 
 void AFlyCharacter::BeginPlay()
@@ -178,6 +189,31 @@ void AFlyCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	UCharacterMovementComponent* CM = GetCharacterMovement();
+	// Afterburner: Shift. Burns fuel, refills slowly (or at once on poop / trash).
+	const bool bBoost = IsBoosting();
+	CM->MaxFlySpeed = (bBoost ? 2600.f : 950.f) * (HoldingAnt ? 0.65f : 1.f);
+	CM->MaxAcceleration = bBoost ? 7500.f : 3200.f;
+	if (HasAuthority())
+	{
+		if (bBoost && GetVelocity().SizeSquared() > FMath::Square(250.f))
+		{
+			Fuel = FMath::Max(0.f, Fuel - 26.f * DeltaSeconds);
+		}
+		else if (!bSprinting)
+		{
+			Fuel = FMath::Min(100.f, Fuel + 4.f * DeltaSeconds);
+		}
+	}
+	if (bBoost && Controller && (IsLocallyControlled() || !IsPlayerControlled()))
+	{
+		AddMovementInput(Controller->GetControlRotation().Vector(), 0.6f);   // rockets where it looks
+	}
+	if (IsLocallyControlled() && Camera && !bBodycam)
+	{
+		BoostFov = FMath::FInterpTo(BoostFov, bBoost ? 1.f : 0.f, DeltaSeconds, 5.f);
+		Camera->SetFieldOfView(95.f + 20.f * BoostFov);
+		if (bBoost) { AddTrauma(0.02f); }
+	}
 	if (!bDead)
 	{
 		// Always airborne (a knock-back makes it fall for a moment).
@@ -199,7 +235,7 @@ void AFlyCharacter::Tick(float DeltaSeconds)
 	const FVector V = GetVelocity();
 	const float Speed = (float)V.Size();
 	FlapTime += DeltaSeconds;
-	const float Beat = bDead ? 0.f : FMath::Sin(FlapTime * 95.f);   // too fast to see: a blur, like a real fly
+	const float Beat = bDead ? 0.f : FMath::Sin(FlapTime * (bBoost ? 140.f : 95.f));   // too fast to see: a blur, like a real fly
 	for (int32 i = 0; i < WingPivots.Num(); ++i)
 	{
 		const float s = i == 0 ? -1.f : 1.f;
@@ -216,7 +252,7 @@ void AFlyCharacter::Tick(float DeltaSeconds)
 	}
 	if (BuzzAudio)
 	{
-		BuzzAudio->SetPitchMultiplier(0.9f + FMath::Min(Speed / 900.f, 1.f) * 0.35f);
+		BuzzAudio->SetPitchMultiplier(0.9f + FMath::Min(Speed / 900.f, 1.f) * 0.35f + (bBoost ? 0.35f : 0.f));
 		if (bDead && BuzzAudio->IsPlaying()) { BuzzAudio->Stop(); }
 		if (!bDead && !BuzzAudio->IsPlaying()) { BuzzAudio->Play(); }
 	}
@@ -297,6 +333,160 @@ ASpiderCharacter::ASpiderCharacter(const FObjectInitializer& ObjectInitializer)
 	BodyColor = FLinearColor(0.09f, 0.06f, 0.04f);
 	GetCapsuleComponent()->InitCapsuleSize(BodyRadius * 2.f, BodyRadius * 2.f);
 	GetCharacterMovement()->GravityScale = 0.55f;   // floats down on its silk
+}
+
+void ASpiderCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(ASpiderCharacter, bSwinging);
+	DOREPLIFETIME(ASpiderCharacter, SwingAnchor);
+}
+
+void ASpiderCharacter::SetupPlayerInputComponent(UInputComponent* Input)
+{
+	Super::SetupPlayerInputComponent(Input);
+	Input->BindKey(EKeys::Q, IE_Pressed, this, &ASpiderCharacter::SpiderBite);   // RMB is the web-swing
+}
+
+void ASpiderCharacter::AltFirePressed()
+{
+	if (bDead || !Controller || !IsLocallyControlled())
+	{
+		return;
+	}
+	FVector CamLoc;
+	FRotator CamRot;
+	Controller->GetPlayerViewPoint(CamLoc, CamRot);
+	FHitResult Hit;
+	FCollisionQueryParams Q(SCENE_QUERY_STAT(SpiderSwing), false, this);
+	if (GetWorld()->LineTraceSingleByChannel(Hit, CamLoc, CamLoc + CamRot.Vector() * 6000.f, ECC_Visibility, Q))
+	{
+		StartSwing(Hit.ImpactPoint);
+	}
+}
+
+void ASpiderCharacter::AltFireReleased()
+{
+	StopSwing(true);
+}
+
+void ASpiderCharacter::DoJump()
+{
+	if (bSwinging)
+	{
+		bReel = true;   // climb up the thread
+		return;
+	}
+	Super::DoJump();
+}
+
+void ASpiderCharacter::DoStopJump()
+{
+	bReel = false;
+	Super::DoStopJump();
+}
+
+bool ASpiderCharacter::StartSwing(const FVector& Target)
+{
+	if (bDead || IsAttached())
+	{
+		return false;
+	}
+	const FVector Me = GetActorLocation();
+	const float D = (float)FVector::Dist(Me, Target);
+	if (D < 150.f || D > 6000.f)
+	{
+		return false;
+	}
+	SwingAnchor = Target;
+	RopeLen = FMath::Clamp(D * 0.9f, 150.f, 6000.f);
+	bSwinging = true;
+	UCharacterMovementComponent* CM = GetCharacterMovement();
+	if (UAntMovementComponent* M = GetAntMovement())
+	{
+		M->BlockSticking(0.4f);
+	}
+	CM->SetMovementMode(MOVE_Falling);
+	CM->GravityScale = 1.7f;
+	CM->AirControl = 1.f;
+	CM->Velocity += (Target - Me).GetSafeNormal() * 500.f + FVector(0.f, 0.f, 150.f);
+	AntSfx::Play(this, AntSfx::Web, Me, 0.9f, 0.8f);
+	if (!HasAuthority())
+	{
+		ServerSetSwing(true, Target);
+	}
+	return true;
+}
+
+void ASpiderCharacter::StopSwing(bool bFling)
+{
+	if (!bSwinging)
+	{
+		return;
+	}
+	bSwinging = false;
+	bReel = false;
+	UCharacterMovementComponent* CM = GetCharacterMovement();
+	CM->GravityScale = 0.55f;
+	CM->AirControl = 0.7f;
+	if (bFling && !bDead)
+	{
+		// Let go at the bottom of the arc = fly like a superhero.
+		CM->Velocity += CM->Velocity.GetSafeNormal() * 300.f + FVector(0.f, 0.f, 420.f);
+	}
+	if (!HasAuthority())
+	{
+		ServerSetSwing(false, SwingAnchor);
+	}
+}
+
+void ASpiderCharacter::ServerSetSwing_Implementation(bool bOn, FVector_NetQuantize Anchor)
+{
+	bSwinging = bOn;
+	SwingAnchor = Anchor;
+}
+
+void ASpiderCharacter::TickSwing(float Dt)
+{
+	if (!bSwinging || !(IsLocallyControlled() || (HasAuthority() && !IsPlayerControlled())))
+	{
+		return;
+	}
+	if (bDead || IsAttached())
+	{
+		StopSwing(false);
+		return;
+	}
+	UCharacterMovementComponent* CM = GetCharacterMovement();
+	if (UAntMovementComponent* M = GetAntMovement())
+	{
+		M->BlockSticking(0.15f);   // swing freely; it sticks to a wall after letting go
+		if (M->IsCrawling()) { CM->SetMovementMode(MOVE_Falling); }
+	}
+	if (bReel)
+	{
+		RopeLen = FMath::Max(140.f, RopeLen - 1100.f * Dt);
+	}
+	const FVector A = SwingAnchor;
+	const FVector P = GetActorLocation();
+	const FVector D = P - A;
+	const float L = (float)D.Size();
+	if (L > RopeLen && L > 1.f)
+	{
+		const FVector N = D / L;
+		SetActorLocation(A + N * RopeLen, true);
+		FVector V = CM->Velocity;
+		const float Out = (float)FVector::DotProduct(V, N);
+		if (Out > 0.f)
+		{
+			V -= N * Out;   // the thread holds: only the swing direction remains
+		}
+		CM->Velocity = V;
+	}
+	if (L > 6500.f)
+	{
+		StopSwing(false);
+	}
 }
 
 void ASpiderCharacter::BuildBody()
@@ -384,8 +574,19 @@ void ASpiderCharacter::BuildBody()
 void ASpiderCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	TickSwing(DeltaSeconds);
 	if (GetNetMode() == NM_DedicatedServer || !Silk)
 	{
+		return;
+	}
+	if (bSwinging && !bDead)
+	{
+		const FVector A = SwingAnchor, B = GetActorLocation();
+		const float Len = (float)FVector::Dist(A, B);
+		Silk->SetWorldLocationAndRotation((A + B) * 0.5f, FRotationMatrix::MakeFromZ(B - A).ToQuat());
+		Silk->SetWorldScale3D(FVector(0.02f, 0.02f, Len / 100.f));
+		Silk->SetVisibility(true);
+		bOnSilk = false;
 		return;
 	}
 	// Let go of a ceiling -> hang on a thread from where you were.
@@ -439,6 +640,11 @@ void AFlyAIController::UpdateControlRotation(float DeltaTime, bool bUpdatePawn)
 void AFlyAIController::PickWander(const FVector& From)
 {
 	Goal = AKitchenBuilder::RandomFloorPoint() + FVector(0.f, 0.f, FMath::FRandRange(500.f, 3400.f));
+	if (FMath::FRand() < 0.2f)
+	{
+		Goal = AKitchenBuilder::RandomYardPoint() + FVector(0.f, 0.f, FMath::FRandRange(400.f, 2500.f));   // out the window
+	}
+	Hungry = FMath::FRand() < 0.15f;
 	StateTime = 0.f;
 }
 
@@ -463,11 +669,35 @@ void AFlyAIController::Tick(float DeltaSeconds)
 	}
 	LastHealth = Fly->Health;
 
+	Fly->bSprinting = Now < FleeUntil && Fly->Fuel > 20.f;   // afterburner to escape
+
 	ThinkTimer -= DeltaSeconds;
 	if (ThinkTimer <= 0.f && Now > FleeUntil)
 	{
 		ThinkTimer = 0.4f;
-		if (Fly->Carrying)
+		// Hungry: go eat (dog poop in the yard, the trash) - heals and refuels.
+		AFlyFeeder* Food = nullptr;
+		if (!Fly->Carrying && (Fly->Health < Fly->MaxHealth * 0.6f || Fly->Fuel < 25.f || Hungry))
+		{
+			float BestF = 1.0e9f;
+			for (TActorIterator<AFlyFeeder> It(GetWorld()); It; ++It)
+			{
+				const float D = (float)FVector::Dist(It->GetActorLocation(), Me);
+				if (D < BestF) { BestF = D; Food = *It; }
+			}
+		}
+		if (Food)
+		{
+			Hungry = true;
+			Goal = Food->GetActorLocation() + FVector(0.f, 0.f, 250.f);
+			if (FVector::Dist(Me, Goal) < 420.f)
+			{
+				Food->Interact(Fly);
+				Hungry = false;
+				PickWander(Me);
+			}
+		}
+		else if (Fly->Carrying)
 		{
 			// Carry it somewhere high and drop it: it smashes.
 			if (StateTime > 6.f || FVector::Dist(Me, Goal) < 200.f)
@@ -531,7 +761,7 @@ void AFlyAIController::Tick(float DeltaSeconds)
 	}
 
 	// Fly there in an erratic zig-zag, avoid walls (through the doorway between rooms).
-	FVector To = AKitchenBuilder::Route(Me, Goal) - Me;
+	FVector To = AKitchenBuilder::Route(Me, Goal, true) - Me;
 	const float T = Now + Seed;
 	const FVector Jitter(FMath::Sin(T * 3.1f), FMath::Cos(T * 2.3f), FMath::Sin(T * 4.7f) * 0.6f);
 	FVector Dir = To.GetSafeNormal() + Jitter * (To.Size() > 300.f ? 0.45f : 0.15f);

@@ -26,6 +26,7 @@
 #include "AntGameState.h"
 #include "AntArmy.h"
 #include "AntBotController.h"
+#include "AntChain.h"
 
 AAntCharacter::AAntCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<UAntMovementComponent>(ACharacter::CharacterMovementComponentName))
@@ -90,6 +91,9 @@ void AAntCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	DOREPLIFETIME(AAntCharacter, StatusFlags);
 	DOREPLIFETIME(AAntCharacter, TrailPoints);
 	DOREPLIFETIME(AAntCharacter, bLayingTrail);
+	DOREPLIFETIME(AAntCharacter, Chain);
+	DOREPLIFETIME(AAntCharacter, HeldBy);
+	DOREPLIFETIME(AAntCharacter, HoldingAnt);
 }
 
 void AAntCharacter::BeginPlay()
@@ -491,7 +495,9 @@ void AAntCharacter::SetupPlayerInputComponent(UInputComponent* Input)
 	Input->BindAction("LayTrail", IE_Pressed, this, &AAntCharacter::ToggleTrail);
 	Input->BindAction("RecallSwarm", IE_Pressed, this, &AAntCharacter::RecallSwarm);
 	// Caste selection, inside the nest.
-	Input->BindAction("AltFire", IE_Pressed, this, &AAntCharacter::Bite);
+	Input->BindAction("AltFire", IE_Pressed, this, &AAntCharacter::AltFirePressed);
+	Input->BindAction("AltFire", IE_Released, this, &AAntCharacter::AltFireReleased);
+	Input->BindKey(EKeys::G, IE_Pressed, this, &AAntCharacter::LinkPressed);
 	Input->BindKey(EKeys::V, IE_Pressed, this, &AAntCharacter::ToggleBodycam);
 	Input->BindKey(EKeys::F, IE_Pressed, this, &AAntCharacter::CmdArmy);
 	Input->BindKey(EKeys::R, IE_Pressed, this, &AAntCharacter::CmdArmyTarget);
@@ -537,7 +543,7 @@ void AAntCharacter::SurfaceAxes(FVector& OutForward, FVector& OutRight) const
 
 void AAntCharacter::MoveForward(float Value)
 {
-	if (!Controller || bDead || FMath::IsNearlyZero(Value))
+	if (!Controller || bDead || IsAttached() || FMath::IsNearlyZero(Value))
 	{
 		return;
 	}
@@ -548,7 +554,7 @@ void AAntCharacter::MoveForward(float Value)
 
 void AAntCharacter::MoveRight(float Value)
 {
-	if (!Controller || bDead || FMath::IsNearlyZero(Value))
+	if (!Controller || bDead || IsAttached() || FMath::IsNearlyZero(Value))
 	{
 		return;
 	}
@@ -600,6 +606,11 @@ void AAntCharacter::ServerSetSprint_Implementation(bool bNewSprint)
 
 void AAntCharacter::DoJump()
 {
+	if (!bDead && IsAttached())
+	{
+		LinkPressed();   // wriggle free / let go of the chain
+		return;
+	}
 	if (!bDead)
 	{
 		Jump();
@@ -954,7 +965,12 @@ void AAntCharacter::Tick(float DeltaSeconds)
 				Die(nullptr, nullptr);
 			}
 			TickTrail();
+			if (HoldingAnt && (!IsValid(HoldingAnt) || HoldingAnt->bDead || HoldingAnt->HeldBy != this))
+			{
+				HoldingAnt = nullptr;
+			}
 		}
+		ApplyAttachedPose();
 	}
 	if (GetNetMode() != NM_DedicatedServer)
 	{
@@ -1097,11 +1113,33 @@ void AAntCharacter::ServerInteract_Implementation()
 	{
 		return;
 	}
+	if (HoldingAnt)
+	{
+		ReleaseAnt(false);
+		return;
+	}
+	if (IsAttached())
+	{
+		return;
+	}
 	if (Carrying)
 	{
 		Toast(FString::Printf(TEXT("Отпустил «%s»"), *Carrying->LootName));
 		LetGo();
 		return;
+	}
+	// A fly picks up ants of its colony (and drops them wherever).
+	if (Creature == 1)
+	{
+		if (AAntCharacter* Ally = FindGrabbableAlly(InteractRadius + 80.f))
+		{
+			AKitchenLoot* L = FindNearestLoot(InteractRadius + 30.f);
+			if (!L || FVector::Dist(Ally->GetActorLocation(), GetActorLocation()) < FVector::Dist(L->GetActorLocation(), GetActorLocation()))
+			{
+				GrabAnt(Ally);
+				return;
+			}
+		}
 	}
 
 	float GadgetDist = 0.f;
@@ -1351,15 +1389,22 @@ void AAntCharacter::ServerCommand_Implementation(uint8 Cmd, FVector_NetQuantize 
 		int32 Avail = 0;
 		AAntSwarm* Swarm = AAntSwarm::Get(GetWorld());
 		AAntGameState* GS = GetWorld()->GetGameState<AAntGameState>();
-		if (Team == 0 && Swarm) { Avail = Swarm->Idle; }
+		const bool bWar = GS && GS->bWarMode;
+		if (bWar) { Avail = GS->WarPool(Team); }
+		else if (Team == 0 && Swarm) { Avail = Swarm->Idle; }
 		else if (GS) { Avail = GS->RivalWorkers; }
-		const int32 N = FMath::Min(Avail, FMath::Clamp(Avail / 2, 150, 4000));
-		if (N < 30)
+		const int32 N = bWar ? FMath::Min(Avail, 48) : FMath::Min(Avail, FMath::Clamp(Avail / 2, 150, 4000));
+		if (N < (bWar ? 8 : 30))
 		{
-			Toast(TEXT("В муравейнике почти нет свободных рабочих — тащите еду, они вылупятся"));
+			Toast(bWar ? TEXT("Резерв армии пуст — держите территории и кассы, придёт подкрепление")
+				: TEXT("В муравейнике почти нет свободных рабочих — тащите еду, они вылупятся"));
 			return;
 		}
-		if (Team == 0 && Swarm) { Swarm->Idle -= N; } else if (GS) { GS->RivalWorkers -= N; }
+		if (bWar)
+		{
+			if (AAntKitchenGameMode* WGM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>()) { WGM->AddPool(Team, -N); }
+		}
+		else if (Team == 0 && Swarm) { Swarm->Idle -= N; } else if (GS) { GS->RivalWorkers -= N; }
 		FActorSpawnParameters SP;
 		SP.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 		const FVector Start = AKitchenBuilder::NestLocation(Team) + FVector(0.f, 0.f, 10.f);
@@ -1517,6 +1562,9 @@ void AAntCharacter::Die(AController* Killer, AActor* Causer)
 		return;
 	}
 	DropEverything();
+	if (HoldingAnt) { ReleaseAnt(false); }
+	if (HeldBy && IsValid(HeldBy)) { HeldBy->ReleaseAnt(false); }
+	if (Chain) { Chain->Leave(this); }
 	if (bLayingTrail)
 	{
 		CancelTrail(TEXT("Ты погиб — тропа оборвалась"));
@@ -1619,6 +1667,10 @@ void AAntCharacter::UpdateSpeed()
 		else { Load = 0.02f; bVeryHeavy = true; }
 		bHeavy = R < 1.4f;
 	}
+	if (HoldingAnt)
+	{
+		Load *= 0.6f;   // a friend in the mandibles
+	}
 	const float ClassSpeed = GetClassDef().Speed * SpeedScale;
 	M->MaxWalkSpeed = (bSprinting && !Carrying ? 760.f : 480.f) * Load * ClassSpeed;
 
@@ -1632,7 +1684,7 @@ void AAntCharacter::UpdateSpeed()
 	if (IsFrozen()) { Mult *= 0.5f; }
 	if (HasStatus(AntStatus::Webbed)) { Mult *= 0.08f; }
 	M->SpeedMultiplier = Mult;
-	M->bNoJump = HasStatus(AntStatus::Sticky) || IsFrozen() || Carrying != nullptr || HasStatus(AntStatus::Webbed);
+	M->bNoJump = HasStatus(AntStatus::Sticky) || IsFrozen() || Carrying != nullptr || HoldingAnt != nullptr || HasStatus(AntStatus::Webbed);
 	M->bNoClimb = IsFrozen() || bVeryHeavy;
 	M->bHeavyLoad = bHeavy;
 }
@@ -1736,6 +1788,13 @@ void AAntCharacter::UpdateVisuals(float DeltaSeconds)
 	const float Speed = (float)GetVelocity().Size();
 	const float Bob = bCrawling ? FMath::Sin(AnimTime * 22.f) * FMath::Min(1.f, Speed / 500.f) * 1.5f : 0.f;
 	VisualRoot->SetWorldLocationAndRotation(GetActorLocation() - VisNormal * (2.f - Bob) * AntScale, FRotationMatrix::MakeFromZX(VisNormal, VisHeading).ToQuat());
+	if (IsAttached())
+	{
+		// Held in someone's jaws / gripping the next ant of the chain.
+		VisNormal = AttachedUp;
+		VisHeading = AttachedAlong;
+		VisualRoot->SetWorldLocationAndRotation(GetActorLocation(), FRotationMatrix::MakeFromXZ(AttachedAlong, AttachedUp).ToQuat());
+	}
 
 	if (WebShell)
 	{
@@ -1939,4 +1998,356 @@ void AAntCharacter::UpdateLegs(float Dt, const FVector& N)
 			}
 		}
 	}
+}
+
+// ---------------------------------------------------------------------------------------------
+// Holding each other: carry a friend, a fly lifting an ant, living chains and bridges
+// ---------------------------------------------------------------------------------------------
+
+float AAntCharacter::AntWeight() const
+{
+	const float B = GetClassDef().BodyScale;
+	return 6.f * B * B * B;
+}
+
+bool AAntCharacter::CanSwitchTeam() const
+{
+	return Creature == 0 && (bDead || IsInNest());
+}
+
+AAntCharacter* AAntCharacter::FindGrabbableAlly(float Radius) const
+{
+	AAntCharacter* Best = nullptr;
+	float BestD = Radius;
+	for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
+	{
+		AAntCharacter* O = *It;
+		if (!O || O == this || O->bDead || O->Creature != 0 || O->Team != Team || O->IsAttached() || O->HoldingAnt)
+		{
+			continue;
+		}
+		const float D = (float)FVector::Dist(O->GetActorLocation(), GetActorLocation());
+		if (D < BestD)
+		{
+			BestD = D;
+			Best = O;
+		}
+	}
+	return Best;
+}
+
+bool AAntCharacter::GrabAnt(AAntCharacter* O)
+{
+	if (!HasAuthority() || bDead || !O || O == this || O->bDead || O->Creature != 0 || O->IsAttached() || O->HoldingAnt || HoldingAnt || IsAttached())
+	{
+		return false;
+	}
+	if (O->Team != Team)
+	{
+		Toast(TEXT("Чужих не таскают — их кусают (ПКМ)"));
+		return false;
+	}
+	const float Cap = GetStrength() * 1.1f;
+	if (O->AntWeight() > Cap)
+	{
+		Toast(FString::Printf(TEXT("%s слишком тяжёлый для тебя (вес %.0f, ты поднимаешь %.0f)"), *O->GetDisplayName(), O->AntWeight(), Cap));
+		return false;
+	}
+	if (Carrying) { LetGo(); }
+	if (O->Carrying) { O->LetGo(); }
+	HoldingAnt = O;
+	O->HeldBy = this;
+	O->AttachedSince = GetWorld()->GetTimeSeconds();
+	O->OnRep_Link();
+	UpdateSpeed();
+	AntSfx::Everyone(this, AntSfx::Grab, GetActorLocation(), 0.85f);
+	Toast(Creature == 1 ? FString::Printf(TEXT("Подхватил %s в воздух! E — сбросить где надо"), *O->GetDisplayName())
+		: FString::Printf(TEXT("Несёшь %s в жвалах. G — поставить"), *O->GetDisplayName()));
+	O->Toast(FString::Printf(TEXT("%s несёт тебя! Пробел или G — вырваться"), *GetDisplayName()));
+	return true;
+}
+
+void AAntCharacter::ReleaseAnt(bool bThrow)
+{
+	if (!HasAuthority() || !HoldingAnt)
+	{
+		return;
+	}
+	AAntCharacter* O = HoldingAnt;
+	HoldingAnt = nullptr;
+	UpdateSpeed();
+	if (!IsValid(O) || O->HeldBy != this)
+	{
+		return;
+	}
+	O->HeldBy = nullptr;
+	O->OnRep_Link();
+	FVector V = GetVelocity();
+	if (bThrow)
+	{
+		const FVector Aim = Controller ? Controller->GetControlRotation().Vector() : GetActorForwardVector();
+		V += Aim * 650.f + FVector(0.f, 0.f, 250.f);
+	}
+	if (V.SizeSquared() > FMath::Square(60.f))
+	{
+		O->ApplyLaunch(V);
+	}
+}
+
+void AAntCharacter::SetChain(AAntChain* NewChain)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+	if (NewChain)
+	{
+		if (Carrying) { LetGo(); }
+		if (HoldingAnt) { ReleaseAnt(false); }
+		AttachedSince = GetWorld()->GetTimeSeconds();
+	}
+	Chain = NewChain;
+	OnRep_Link();
+}
+
+void AAntCharacter::OnRep_Link()
+{
+	const bool bAtt = IsAttached();
+	if (UCapsuleComponent* Cap = GetCapsuleComponent())
+	{
+		const ECollisionResponse R = bAtt ? ECR_Ignore : ECR_Block;
+		Cap->SetCollisionResponseToChannel(ECC_Pawn, R);
+		Cap->SetCollisionResponseToChannel(ECC_WorldStatic, R);
+		Cap->SetCollisionResponseToChannel(ECC_WorldDynamic, R);
+		Cap->SetCollisionResponseToChannel(ECC_PhysicsBody, R);
+	}
+	UCharacterMovementComponent* CM = GetCharacterMovement();
+	if (bAtt)
+	{
+		CM->StopMovementImmediately();
+		CM->SetMovementMode(MOVE_Flying);
+	}
+	else if (!bDead)
+	{
+		CM->SetMovementMode(Creature == 1 ? MOVE_Flying : MOVE_Falling);
+		if (UAntMovementComponent* M = GetAntMovement())
+		{
+			M->BlockSticking(0.1f);
+		}
+	}
+	for (FAntLeg& L : Legs)
+	{
+		L.bInit = false;
+	}
+	UpdateSpeed();
+}
+
+void AAntCharacter::ApplyAttachedPose()
+{
+	FVector P;
+	FVector Along = GetActorForwardVector();
+	FVector Up = FVector::UpVector;
+	if (HeldBy)
+	{
+		if (!IsValid(HeldBy) || HeldBy->bDead || HeldBy->HoldingAnt != this)
+		{
+			if (HasAuthority())
+			{
+				HeldBy = nullptr;
+				OnRep_Link();
+			}
+			return;
+		}
+		const bool bFly = HeldBy->Creature == 1;
+		Up = bFly ? FVector::UpVector : HeldBy->GetVisualUp();
+		P = HeldBy->GetHoldPoint() + (bFly ? FVector(0.f, 0.f, -BodyRadius * 1.3f) : Up * BodyRadius * 0.7f);
+		Along = HeldBy->GetActorForwardVector();
+		Along = FVector::VectorPlaneProject(Along, Up).GetSafeNormal();
+		if (!bFly)
+		{
+			// Carried across the jaws, like real ants carry a nestmate.
+			Along = FVector::CrossProduct(Up, Along).GetSafeNormal();
+		}
+	}
+	else if (Chain)
+	{
+		const int32 Idx = Chain->IndexOf(this);
+		if (Idx == INDEX_NONE)
+		{
+			return;
+		}
+		P = Chain->LinkPoint(Idx);
+		Along = (Chain->PointAt(Idx * AAntChain::LinkLen) - P).GetSafeNormal();   // head towards the one it grips
+		Up = FVector::VectorPlaneProject(FVector::UpVector, Along);
+		if (Up.SizeSquared() < 0.01f)
+		{
+			Up = FVector::VectorPlaneProject(FVector::RightVector, Along);
+		}
+		Up.Normalize();
+		// Every second ant flips: real ant chains are a tangle of legs.
+		if (Idx % 2 == 1)
+		{
+			Up = -Up;
+		}
+	}
+	else
+	{
+		return;
+	}
+	if (Along.IsNearlyZero())
+	{
+		Along = FVector::ForwardVector;
+	}
+	AttachedUp = Up;
+	AttachedAlong = Along;
+	SetActorLocation(P, false, nullptr, ETeleportType::TeleportPhysics);
+	GetCharacterMovement()->Velocity = FVector::ZeroVector;
+}
+
+void AAntCharacter::AltFirePressed()
+{
+	Bite();
+}
+
+void AAntCharacter::LinkPressed()
+{
+	if (!bDead)
+	{
+		ServerLink(AimPoint());
+	}
+}
+
+void AAntCharacter::ServerLink_Implementation(FVector_NetQuantize Aim)
+{
+	DoLink(Aim);
+}
+
+void AAntCharacter::DoLink(const FVector& Aim)
+{
+	if (!HasAuthority() || bDead)
+	{
+		return;
+	}
+	if (HeldBy)
+	{
+		if (IsValid(HeldBy)) { HeldBy->ReleaseAnt(false); }
+		else { HeldBy = nullptr; OnRep_Link(); }
+		Toast(TEXT("Вырвался!"));
+		return;
+	}
+	if (Chain)
+	{
+		Chain->Leave(this);
+		Toast(TEXT("Отцепился от цепочки"));
+		return;
+	}
+	if (HoldingAnt)
+	{
+		ReleaseAnt(false);
+		return;
+	}
+	if (Creature == 1)
+	{
+		if (AAntCharacter* A = FindGrabbableAlly(InteractRadius + 80.f)) { GrabAnt(A); }
+		else { Toast(TEXT("Рядом нет муравьёв твоей колонии")); }
+		return;
+	}
+	if (Creature != 0)
+	{
+		return;
+	}
+	if (Carrying)
+	{
+		Toast(TEXT("Сначала отпусти груз (E)"));
+		return;
+	}
+	// 1. Someone is building a chain right here: become the next link.
+	if (AAntChain* C = AAntChain::FindNearTail(GetWorld(), Team, GetActorLocation(), 190.f))
+	{
+		if (C->Join(this))
+		{
+			Toast(C->bBridge
+				? FString::Printf(TEXT("Ты звено моста: %d/%d. G или Пробел — отцепиться"), C->NumLinks(), FMath::CeilToInt(C->Span() / AAntChain::LinkLen))
+				: FString::Printf(TEXT("Ты звено лестницы (%d). По вам можно лезть. G — отцепиться"), C->NumLinks()));
+			return;
+		}
+	}
+	// 2. A friend next to you: pick him up.
+	if (AAntCharacter* A = FindGrabbableAlly(InteractRadius))
+	{
+		GrabAnt(A);
+		return;
+	}
+	// 3. Commander with an army: the workers pour a bridge to where you aim.
+	if (AAntArmy* Army = AAntArmy::FindFor(this))
+	{
+		const float D = (float)FVector::Dist(Aim, GetActorLocation());
+		if (D > 250.f && D < AAntChain::LinkLen * AAntChain::MaxLinks)
+		{
+			Army->BuildBridge(GetActorLocation() - EstimateSurfaceNormal() * BodyRadius, Aim);
+			return;
+		}
+	}
+	// 4. Start a chain yourself.
+	StartChainHere(Aim);
+}
+
+bool AAntCharacter::StartChainHere(const FVector& Aim)
+{
+	if (!IsCrawling() && GetCharacterMovement()->IsFalling())
+	{
+		Toast(TEXT("Сцепиться можно, когда держишься за поверхность"));
+		return false;
+	}
+	const FVector N = EstimateSurfaceNormal();
+	const FVector Me = GetActorLocation();
+	const FVector S = Me - N * BodyRadius;
+	const FVector ToAim = Aim - S;
+	const float D = (float)ToAim.Size();
+	FCollisionQueryParams Q(SCENE_QUERY_STAT(AntChainProbe), false, this);
+
+	// Bridge: aim at the far bank across a gap or up/down to another level.
+	if (D > 220.f && D < AAntChain::LinkLen * AAntChain::MaxLinks && FVector::DotProduct(ToAim / D, N) < 0.85f)
+	{
+		bool bGap = FMath::Abs(Aim.Z - S.Z) > 120.f;
+		if (!bGap)
+		{
+			FHitResult Hit;
+			const FVector Mid = (S + Aim) * 0.5f;
+			bGap = !GetWorld()->LineTraceSingleByObjectType(Hit, Mid + FVector(0.f, 0.f, 20.f), Mid - FVector(0.f, 0.f, 160.f), FCollisionObjectQueryParams(ECC_WorldStatic), Q);
+		}
+		if (bGap)
+		{
+			AAntChain::Start(GetWorld(), Team, this, S, ToAim / D, true, Aim);
+			Toast(FString::Printf(TEXT("Ты начал ЖИВОЙ МОСТ: нужно ~%d муравьёв. Свои — к тебе на G (с армией — G построит сразу)"),
+				FMath::CeilToInt(D / AAntChain::LinkLen)));
+			return true;
+		}
+	}
+	// Ladder from a ceiling.
+	if (N.Z < -0.6f)
+	{
+		AAntChain::Start(GetWorld(), Team, this, S, FVector(0.f, 0.f, -1.f), false, S);
+		Toast(TEXT("Висишь с потолка — начало живой лестницы вниз. Свои цепляются снизу (G)"));
+		return true;
+	}
+	// Ladder over the edge of the table / shelf you stand on.
+	FVector F = FVector::VectorPlaneProject(Controller ? Controller->GetControlRotation().Vector() : GetActorForwardVector(), N).GetSafeNormal();
+	if (N.Z > 0.6f && !F.IsNearlyZero())
+	{
+		for (float Ahead = 50.f; Ahead <= 130.f; Ahead += 40.f)
+		{
+			const FVector Probe = Me + F * Ahead;
+			FHitResult Hit;
+			if (!GetWorld()->LineTraceSingleByObjectType(Hit, Probe + N * 10.f, Probe - N * 350.f, FCollisionObjectQueryParams(ECC_WorldStatic), Q))
+			{
+				const FVector Anchor = Me + F * (Ahead - 20.f) - N * BodyRadius;
+				AAntChain::Start(GetWorld(), Team, this, Anchor, FVector(0.f, 0.f, -1.f), false, Anchor);
+				Toast(TEXT("Свесился с края — начало живой лестницы вниз. Свои цепляются снизу (G)"));
+				return true;
+			}
+		}
+	}
+	Toast(TEXT("Цепочку начинают: с края (лестница вниз), с потолка, или прицелься в другой берег (мост)"));
+	return false;
 }

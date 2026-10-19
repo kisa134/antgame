@@ -4,6 +4,10 @@
 #include "HumanCharacter.h"
 #include "KitchenLoot.h"
 #include "KitchenBuilder.h"
+#include "AntGameState.h"
+#include "AntArmy.h"
+#include "AntChain.h"
+#include "WarMode.h"
 #include "EngineUtils.h"
 #include "Engine/World.h"
 
@@ -185,6 +189,12 @@ void AAntBotController::Think(AAntCharacter* Ant)
 			ShootTarget = nullptr;
 		}
 		bHasGoal = true;
+		return;
+	}
+
+	// War: commanders and their squads (player orders still win).
+	if (OrderMode == 0 && ThinkWar(Ant))
+	{
 		return;
 	}
 
@@ -386,15 +396,191 @@ void AAntBotController::Tick(float DeltaSeconds)
 	{
 		return;
 	}
+	// Part of a living chain / held by someone: no walking. Let go after a while.
+	if (Ant->IsAttached())
+	{
+		AttachedFor += DeltaSeconds;
+		if (Ant->Chain && (AttachedFor > 50.f || (!Ant->Chain->IsGrowing() && AttachedFor > 30.f)))
+		{
+			Ant->DoLink(Ant->GetActorLocation());
+			AttachedFor = 0.f;
+		}
+		Shoot(Ant, DeltaSeconds);
+		return;
+	}
+	AttachedFor = 0.f;
 	ThinkTimer -= DeltaSeconds;
 	if (ThinkTimer <= 0.f)
 	{
 		ThinkTimer = 0.5f;
 		Think(Ant);
+		if (Ant->Creature == 0 && !Ant->Carrying)
+		{
+			ThinkChain(Ant);
+		}
 	}
 	if (bHasGoal)
 	{
 		Steer(Ant, Goal, DeltaSeconds);
 	}
 	Shoot(Ant, DeltaSeconds);
+}
+
+void AAntBotController::SetWarRole(bool bCommander, AAntCharacter* Leader)
+{
+	bWarCommander = bCommander;
+	WarLeader = bCommander ? nullptr : Leader;
+	if (bCommander)
+	{
+		OrderMode = 0;
+	}
+}
+
+void AAntBotController::SetWarObjective(const FVector& Point, AActor* Obj)
+{
+	WarPoint = Point;
+	WarObj = Obj;
+	bHasWarPoint = true;
+}
+
+namespace
+{
+	AAntCashout* NearestCashout(UWorld* W, const FVector& P)
+	{
+		AAntCashout* Best = nullptr;
+		double BestD = 1e12;
+		for (TActorIterator<AAntCashout> It(W); It; ++It)
+		{
+			if (It->bActive)
+			{
+				continue;   // busy counting another safe
+			}
+			const double D = FVector::DistSquared(It->GetActorLocation(), P);
+			if (D < BestD) { BestD = D; Best = *It; }
+		}
+		return Best;
+	}
+}
+
+bool AAntBotController::ThinkWar(AAntCharacter* Ant)
+{
+	const AAntGameState* GS = GetWorld()->GetGameState<AAntGameState>();
+	if (!GS || !GS->bWarMode || Ant->Creature != 0)
+	{
+		return false;
+	}
+	// Carrying the safe: to the nearest free cashout.
+	if (Ant->Carrying && Ant->Carrying->bVault)
+	{
+		if (AAntCashout* C = NearestCashout(GetWorld(), Ant->GetActorLocation()))
+		{
+			Goal = C->GetActorLocation() + FVector(0.f, 0.f, 30.f);
+			bHasGoal = true;
+			return true;
+		}
+		return false;
+	}
+	if (Ant->Carrying)
+	{
+		return false;   // ordinary food: drag it home as usual
+	}
+	AAntCharacter* Lead = WarLeader.Get();
+	if (!bWarCommander && (!Lead || Lead->bDead))
+	{
+		return false;
+	}
+	// Who carries the safe on our side: help (it takes 3 workers).
+	AKitchenLoot* Safe = nullptr;
+	if (bWarCommander)
+	{
+		Safe = Cast<AKitchenLoot>(WarObj.Get());
+	}
+	else if (Lead->Carrying && Lead->Carrying->bVault)
+	{
+		Safe = Lead->Carrying;
+	}
+	if (Safe && Safe->bVault && (!Safe->IsCarried() || Safe->CarryTeam() == Ant->Team || Safe->CarryRatio() < 1.5f))
+	{
+		const float Reach = AAntCharacter::InteractRadius + Safe->GetRadius() * 0.5f;
+		if (FVector::Dist(Safe->GetActorLocation(), Ant->GetActorLocation()) < Reach && Ant->GrabLoot(Safe))
+		{
+			LastCarried = Safe;
+			LastLootPos = Safe->GetActorLocation();
+			HeavyTimer = 0.f;
+			return true;
+		}
+		Goal = Safe->GetActorLocation();
+		bHasGoal = true;
+		return true;
+	}
+	if (bWarCommander)
+	{
+		if (!bHasWarPoint)
+		{
+			return false;
+		}
+		const FVector Me = Ant->GetActorLocation();
+		// Walk slowly enough for the column to keep up; once there, send the army in.
+		Goal = WarPoint + FVector(FMath::Cos(GetUniqueID() * 1.3f), FMath::Sin(GetUniqueID() * 1.3f), 0.f) * 250.f + FVector(0.f, 0.f, 30.f);
+		bHasGoal = true;
+		if (AAntArmy* A = AAntArmy::FindFor(Ant))
+		{
+			const bool bNear = FVector::Dist(Me, WarPoint) < 1500.f;
+			if (bNear || ShootTarget.IsValid())
+			{
+				A->Mode = EArmyMode::Attack;
+				A->Target = bNear ? WarPoint : ShootTarget->GetActorLocation();
+			}
+			else
+			{
+				A->Mode = EArmyMode::Follow;
+			}
+			// Don't outrun the column.
+			if (!bNear && FVector::Dist(Me, A->GetActorLocation()) > 1400.f)
+			{
+				Goal = A->GetActorLocation();
+			}
+		}
+		return true;
+	}
+	// Squad member: stay around the leader, in a loose ring behind him.
+	const float Ang = (GetUniqueID() % 8) * 0.785f;
+	Goal = Lead->GetActorLocation() - Lead->GetActorForwardVector() * 200.f + FVector(FMath::Cos(Ang), FMath::Sin(Ang), 0.f) * 220.f;
+	bHasGoal = true;
+	return true;
+}
+
+bool AAntBotController::ThinkChain(AAntCharacter* Ant)
+{
+	if (!bHasGoal || Ant->HoldingAnt)
+	{
+		return false;
+	}
+	const FVector Me = Ant->GetActorLocation();
+	const float MyDist = (float)FVector::Dist(Me, Goal);
+	for (TActorIterator<AAntChain> It(GetWorld()); It; ++It)
+	{
+		AAntChain* C = *It;
+		if (!C || C->Team != Ant->Team || !C->bBridge || !C->IsGrowing())
+		{
+			continue;
+		}
+		// A bridge being built towards where we're going: become a link of it.
+		const FVector Tail = C->TailPoint();
+		const float ToTail = (float)FVector::Dist(Me, Tail);
+		if (ToTail > 1500.f || FVector::Dist(FVector(C->EndPoint), Goal) > MyDist - 600.f)
+		{
+			continue;
+		}
+		if (ToTail < 180.f)
+		{
+			Ant->DoLink(FVector(C->EndPoint));
+		}
+		else
+		{
+			Goal = Tail;
+		}
+		return true;
+	}
+	return false;
 }

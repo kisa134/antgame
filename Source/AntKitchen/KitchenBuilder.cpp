@@ -14,6 +14,7 @@
 #include "Engine/World.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Engine/Texture.h"
+#include "Components/InstancedStaticMeshComponent.h"
 
 namespace KitchenPalette
 {
@@ -88,14 +89,86 @@ FVector AKitchenBuilder::RandomFloorPoint(FRandomStream* Rng)
 	return FVector(R(8000.f, 19000.f), R(-8300.f, -500.f), 0.f);
 }
 
-FVector AKitchenBuilder::Route(const FVector& From, const FVector& To)
+int32 AKitchenBuilder::Region(const FVector& P)
 {
-	const bool bFromKitchen = From.X < 7100.f;
-	const bool bToKitchen = To.X < 7100.f;
-	if (bFromKitchen == bToKitchen)
+	if (P.Y < -5150.f && (P.X < 7000.f || P.Y < -9150.f))
+	{
+		return 2;   // outside, on the lawn
+	}
+	return P.X < 7100.f ? 0 : 1;
+}
+
+FVector AKitchenBuilder::RandomYardPoint(FRandomStream* Rng)
+{
+	auto R = [Rng](float A, float B) { return Rng ? Rng->FRandRange(A, B) : FMath::FRandRange(A, B); };
+	return FVector(R(-10500.f, 5500.f), R(-14500.f, -6000.f), 0.f);
+}
+
+namespace
+{
+	/** Out of the kitchen window and down the outside wall (reversed: back in). */
+	FVector WindowPath(const FVector& From, bool bToYard)
+	{
+		static const FVector Out[] = { FVector(0.f, -4870.f, 0.f), FVector(0.f, -4870.f, 2240.f), FVector(0.f, -5500.f, 2240.f), FVector(0.f, -5500.f, 0.f), FVector(0.f, -5900.f, 0.f) };
+		constexpr int32 N = UE_ARRAY_COUNT(Out);
+		FVector Pts[N];
+		for (int32 i = 0; i < N; ++i)
+		{
+			Pts[i] = bToYard ? Out[i] : Out[N - 1 - i];
+		}
+		// Which leg of the path are we on?
+		int32 Best = -1;
+		float BestD = 450.f;
+		for (int32 i = 0; i + 1 < N; ++i)
+		{
+			const FVector C = FMath::ClosestPointOnSegment(From, Pts[i], Pts[i + 1]);
+			const float D = (float)FVector::Dist(C, From);
+			if (D < BestD)
+			{
+				BestD = D;
+				Best = i;
+			}
+		}
+		if (Best < 0)
+		{
+			return Pts[0];
+		}
+		const int32 Next = Best + 1;
+		if (FVector::Dist(From, Pts[Next]) < 110.f && Next + 1 < N)
+		{
+			return Pts[Next + 1];
+		}
+		return Pts[Next];
+	}
+}
+
+FVector AKitchenBuilder::Route(const FVector& From, const FVector& To, bool bFlying)
+{
+	const int32 RF = Region(From), RT = Region(To);
+	if (RF == RT)
 	{
 		return To;
 	}
+	if (RF == 2 || RT == 2)
+	{
+		// The yard is reached through the kitchen window only.
+		if (RF == 1)
+		{
+			return Route(From, FVector(0.f, -4300.f, 0.f), bFlying);   // living room -> kitchen first
+		}
+		if (bFlying)
+		{
+			const FVector W(0.f, -5100.f, 3200.f);
+			if (FVector::Dist(From, W) < 350.f)
+			{
+				return FVector(0.f, RT == 2 ? -5900.f : -4300.f, 3200.f);
+			}
+			return W;
+		}
+		return WindowPath(From, RT == 2);
+	}
+	const bool bToKitchen = RT == 0;
+	const bool bFromKitchen = RF == 0;
 	const FVector D = Doorway();
 	const float Z = FMath::Clamp((float)FMath::Min(From.Z, To.Z), 0.f, 2800.f);
 	// At the door: step through to the other side. Otherwise head for our side of the door.
@@ -418,8 +491,8 @@ void AKitchenBuilder::Build()
 	Box(FVector(1500.f, -5200.f, 0.f), FVector(7200.f, -5000.f, 5400.f), WallC);
 	Box(FVector(-1500.f, -5200.f, 0.f), FVector(1500.f, -5000.f, 2200.f), WallC);
 	Box(FVector(-1500.f, -5200.f, 4200.f), FVector(1500.f, -5000.f, 5400.f), WallC);
-	// Outside: a lawn far below the window, so the view isn't a void.
-	Box(FVector(-40000.f, -60000.f, -900.f), FVector(40000.f, -5200.f, -800.f), Hex(70, 120, 50), false);
+	// Outside: the yard (lawn at floor level, see BuildYard) and fields beyond the fence.
+	Box(FVector(-40000.f, -60000.f, -400.f), FVector(40000.f, -5200.f, -300.f), Hex(70, 120, 50), false);
 	Box(FVector(-7200.f, -5000.f, 0.f), FVector(-7000.f, 5000.f, 5400.f), WallC);
 	// East wall with a doorway into the living room (y -4800..-3200, 3800 high).
 	Box(FVector(7000.f, -5000.f, 0.f), FVector(7200.f, -4800.f, 5400.f), WallC);
@@ -436,6 +509,7 @@ void AKitchenBuilder::Build()
 	Box(FVector(-7000.f, -1800.f, 0.f), FVector(-6970.f, 5000.f, 220.f), Baseboard, false);
 
 	BuildNorthRun();
+	BuildYard();
 
 	// Backsplash
 	Box(FVector(-7000.f, 4970.f, 1710.f), FVector(2500.f, 5000.f, 2900.f), Backsplash, false);
@@ -1169,4 +1243,87 @@ void AKitchenBuilder::Tick(float DeltaSeconds)
 		}
 		Ant->ApplyEnvironment(Env, Dt);
 	}
+}
+
+// ---------------------------------------------------------------------------------------------
+// The yard outside the kitchen window: lawn, dog poop, outdoor trash bin, a tree, a fence.
+// ---------------------------------------------------------------------------------------------
+
+void AKitchenBuilder::BuildYard()
+{
+	const FLinearColor Grass = Hex(86, 142, 60), GrassDark = Hex(52, 104, 38), Soil = Hex(110, 80, 50);
+	const FLinearColor FenceC = Hex(160, 120, 78), Bark = Hex(95, 68, 45), Leaves = Hex(60, 120, 50);
+	const FLinearColor BinC = Hex(40, 92, 55), Stone = Hex(150, 148, 140);
+
+	// Lawn at floor level (walkable), around the kitchen and under the living room's south side.
+	Box(FVector(-12000.f, -16000.f, -200.f), FVector(7000.f, -5200.f, 0.f), Grass);
+	Box(FVector(7000.f, -16000.f, -200.f), FVector(21000.f, -9200.f, 0.f), Grass);
+	// Outer window sill: step out of the window onto it, then down the wall.
+	Box(FVector(-1650.f, -5420.f, 2120.f), FVector(1650.f, -5200.f, 2200.f), White);
+
+	// Fence.
+	for (float X = -12000.f; X <= 21000.f; X += 1100.f)
+	{
+		Box(FVector(X - 60.f, -16060.f, 0.f), FVector(X + 60.f, -15940.f, 2600.f), FenceC);
+	}
+	Box(FVector(-12000.f, -16040.f, 600.f), FVector(21000.f, -15960.f, 760.f), FenceC);
+	Box(FVector(-12000.f, -16040.f, 1900.f), FVector(21000.f, -15960.f, 2060.f), FenceC);
+	for (float Y = -16000.f; Y <= -5200.f; Y += 1100.f)
+	{
+		Box(FVector(-12060.f, Y - 60.f, 0.f), FVector(-11940.f, Y + 60.f, 2600.f), FenceC);
+	}
+	Box(FVector(-12040.f, -16000.f, 600.f), FVector(-11960.f, -5200.f, 760.f), FenceC);
+	Box(FVector(-12040.f, -16000.f, 1900.f), FVector(-11960.f, -5200.f, 2060.f), FenceC);
+
+	// Stepping stones from the wall to the bin.
+	for (int32 i = 0; i < 7; ++i)
+	{
+		const FVector C(600.f + i * 520.f, -6400.f - i * 950.f, 0.f);
+		Cyl(C, 300.f + (i % 2) * 40.f, 22.f, Stone);
+	}
+
+	// The outdoor trash bin (lid open, a bag and junk spilled on the grass).
+	const FVector Bin = YardBin();
+	Cyl(Bin, 900.f, 2600.f, BinC);
+	Cyl(Bin + FVector(0.f, 0.f, 2600.f), 930.f, 40.f, Hex(30, 70, 42));
+	Part(EAntShape::Cube, Bin + FVector(-200.f, 950.f, 2900.f), FVector(1900.f, 80.f, 1300.f), FRotator(0.f, 0.f, -20.f), BinC, true);   // open lid
+	Ball(Bin + FVector(0.f, 0.f, 2700.f), FVector(700.f, 700.f, 250.f), Hex(25, 25, 28));
+	Ball(Bin + FVector(-1300.f, -500.f, 150.f), FVector(500.f, 380.f, 180.f), Hex(25, 25, 28));
+	Box(Bin + FVector(-1700.f, 300.f, 0.f), Bin + FVector(-1300.f, 500.f, 30.f), Hex(230, 170, 90), false);    // crust
+	Ball(Bin + FVector(-900.f, -1100.f, 60.f), FVector(90.f, 90.f, 130.f), Hex(170, 120, 60));                  // apple core
+
+	// A tree (climbable trunk) with a canopy.
+	const FVector Tree(-8000.f, -12500.f, 0.f);
+	Cyl(Tree, 520.f, 9000.f, Bark);
+	Part(EAntShape::Cube, Tree + FVector(900.f, 0.f, 5200.f), FVector(1900.f, 200.f, 200.f), FRotator(-25.f, 0.f, 0.f), Bark, true);   // branch
+	Ball(Tree + FVector(0.f, 0.f, 10500.f), FVector(4200.f, 4200.f, 2600.f), Leaves);
+	Ball(Tree + FVector(-500.f, -400.f, -60.f), FVector(1300.f, 1300.f, 160.f), Soil);
+
+	// The dog's spot: a chewed ball and a bowl (the poop itself is the fly feeder actor).
+	Cyl(FVector(-6000.f, -7200.f, 0.f), 500.f, 160.f, Hex(200, 40, 40));
+	Ball(FVector(-4300.f, -7800.f, 220.f), FVector(220.f, 220.f, 220.f), Hex(240, 220, 50));
+
+	// Grass blades: one instanced mesh, thousands of thin tilted strips (no collision).
+	UInstancedStaticMeshComponent* Blades = NewObject<UInstancedStaticMeshComponent>(this, TEXT("GrassBlades"));
+	Blades->SetupAttachment(Root);
+	Blades->SetStaticMesh(AntKit::ShapeMesh(EAntShape::Cube));
+	Blades->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	Blades->SetCastShadow(false);
+	Blades->SetCanEverAffectNavigation(false);
+	Blades->RegisterComponent();
+	AntKit::Paint(Blades, GrassDark);
+	FRandomStream R(4242);
+	TArray<FTransform> Xf;
+	for (int32 i = 0; i < 3200; ++i)
+	{
+		const FVector P = RandomYardPoint(&R);
+		if (FVector::Dist2D(P, Bin) < 1100.f || FVector::Dist2D(P, Tree) < 700.f || FVector::Dist2D(P, YardPoop()) < 700.f || P.Y > -5500.f)
+		{
+			continue;
+		}
+		const float H = R.FRandRange(180.f, 520.f);
+		const FRotator Rot(R.FRandRange(-18.f, 18.f), R.FRandRange(0.f, 360.f), R.FRandRange(-18.f, 18.f));
+		Xf.Add(FTransform(Rot, P + FVector(0.f, 0.f, H * 0.5f), FVector(0.14f, 0.03f, H / 100.f)));
+	}
+	Blades->AddInstances(Xf, false, true);
 }

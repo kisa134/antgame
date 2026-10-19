@@ -37,6 +37,9 @@ public:
 	UFUNCTION(Server, Reliable) void ServerToggleCreature(uint8 Kind);
 	void BecomeFly() { ServerToggleCreature(1); }
 	void BecomeSpider() { ServerToggleCreature(2); }
+	/** [P] play for the other colony (in your nest or while dead). */
+	UFUNCTION(Server, Reliable) void ServerSwitchTeam();
+	void SwitchTeam() { ServerSwitchTeam(); }
 
 	/** Console: HostGame  -> reopens the current map as a listen server. */
 	UFUNCTION(Exec) void HostGame();

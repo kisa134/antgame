@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "AntCharacter.h"
@@ -23,9 +23,13 @@ public:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
 	virtual FVector GetHoldPoint() const override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	bool bAscend = false;
 	bool bDescend = false;
+	/** Afterburner fuel (Shift). Refilled by eating dog poop / trash. */
+	UPROPERTY(Replicated) float Fuel = 100.f;
+	bool IsBoosting() const { return bSprinting && Fuel > 1.f && !bDead && !IsCrawling(); }
 
 protected:
 	virtual void BuildBody() override;
@@ -37,6 +41,7 @@ protected:
 	UPROPERTY() TArray<USceneComponent*> WingPivots;
 	UPROPERTY() UAudioComponent* BuzzAudio = nullptr;
 	float FlapTime = 0.f;
+	float BoostFov = 0.f;
 };
 
 /**
@@ -52,9 +57,27 @@ class ANTKITCHEN_API ASpiderCharacter : public AAntCharacter
 public:
 	ASpiderCharacter(const FObjectInitializer& ObjectInitializer);
 	virtual void Tick(float DeltaSeconds) override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	/** Spider-Man: shoot a silk line at a surface and swing on it. */
+	UPROPERTY(Replicated) bool bSwinging = false;
+	UPROPERTY(Replicated) FVector_NetQuantize SwingAnchor;
+	/** Local (owner / AI on the server): try to start a swing towards this point. */
+	bool StartSwing(const FVector& Target);
+	void StopSwing(bool bFling);
 
 protected:
 	virtual void BuildBody() override;
+	virtual void AltFirePressed() override;
+	virtual void AltFireReleased() override;
+	virtual void DoJump() override;
+	virtual void DoStopJump() override;
+	UFUNCTION(Server, Reliable) void ServerSetSwing(bool bOn, FVector_NetQuantize Anchor);
+	void SpiderBite() { Bite(); }
+	void TickSwing(float Dt);
+	float RopeLen = 0.f;
+	bool bReel = false;
 
 	UPROPERTY() UStaticMeshComponent* Silk = nullptr;
 	FVector SilkAnchor = FVector::ZeroVector;
@@ -81,6 +104,7 @@ private:
 	float LastHealth = -1.f;
 	float FleeUntil = 0.f;
 	float NextSteal = 8.f;
+	bool Hungry = false;
 	float Seed = 0.f;
 	FRotator Desired = FRotator::ZeroRotator;
 };

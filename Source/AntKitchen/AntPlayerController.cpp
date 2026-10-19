@@ -140,11 +140,20 @@ void AAntPlayerController::ServerToggleCreature_Implementation(uint8 Kind)
 	}
 }
 
+void AAntPlayerController::ServerSwitchTeam_Implementation()
+{
+	if (AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
+	{
+		GM->SwitchTeam(this);
+	}
+}
+
 void AAntPlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
 	InputComponent->BindKey(EKeys::J, IE_Pressed, this, &AAntPlayerController::BecomeFly);
 	InputComponent->BindKey(EKeys::K, IE_Pressed, this, &AAntPlayerController::BecomeSpider);
+	InputComponent->BindKey(EKeys::P, IE_Pressed, this, &AAntPlayerController::SwitchTeam);
 	InputComponent->BindAction("ToggleHuman", IE_Pressed, this, &AAntPlayerController::RequestToggleHuman);
 	InputComponent->BindAction("Scoreboard", IE_Pressed, this, &AAntPlayerController::ShowScores);
 	InputComponent->BindAction("Scoreboard", IE_Released, this, &AAntPlayerController::HideScores);

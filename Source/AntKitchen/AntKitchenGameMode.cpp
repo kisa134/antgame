@@ -12,6 +12,8 @@
 #include "AntBotController.h"
 #include "CreatureCharacters.h"
 #include "AntArmy.h"
+#include "AntChain.h"
+#include "WarMode.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "EngineUtils.h"
@@ -53,9 +55,23 @@ void AAntKitchenGameMode::BeginPlay()
 	Super::BeginPlay();
 	Rng.GenerateNewSeed();
 	AKitchenBuilder::LootSpots(SpotLocations, SpotTiers);
+	if (FParse::Param(FCommandLine::Get(), TEXT("AntClassic")))
+	{
+		bWar = false;
+	}
+	if (bWar)
+	{
+		TargetScore = 3000;
+		MatchLength = 900.f;
+		AllyBots = 11;    // + you = 12 per side, plus 128 army ants each
+		RivalBots = 12;
+	}
 
 	if (AAntGameState* GS = GetGameState<AAntGameState>())
 	{
+		GS->bWarMode = bWar;
+		GS->WarPool0 = 128;
+		GS->WarPool1 = 128;
 		GS->TargetScore = TargetScore;
 		GS->TimeRemaining = MatchLength;
 		GS->Phase = 0;
@@ -85,7 +101,17 @@ void AAntKitchenGameMode::BeginPlay()
 		SpawnFly();
 	}), 1.5f, false);
 
-	GetWorldTimerManager().SetTimer(WarTimer, this, &AAntKitchenGameMode::RivalWarTick, 50.f, true, 70.f);
+	if (bWar)
+	{
+		SpawnWarZones();
+		NextVault = GetWorld()->GetTimeSeconds() + 45.f;
+		GetWorldTimerManager().SetTimer(AntWarTimer, this, &AAntKitchenGameMode::WarTick, 1.f, true, 3.f);
+		Broadcast(TEXT("МУРАВЬИНАЯ ВОЙНА: держите территории, тащите сейф-сахарницу на кассу. P — сменить сторону (в муравейнике)"), Gold);
+	}
+	else
+	{
+		GetWorldTimerManager().SetTimer(WarTimer, this, &AAntKitchenGameMode::RivalWarTick, 50.f, true, 70.f);
+	}
 	GetWorldTimerManager().SetTimer(MatchTimer, this, &AAntKitchenGameMode::MatchTick, 1.f, true);
 	GetWorldTimerManager().SetTimer(RefillTimer, this, &AAntKitchenGameMode::RefillLoot, 10.f, true);
 	GetWorldTimerManager().SetTimer(LifeTimer, this, &AAntKitchenGameMode::KitchenLifeEvent, 38.f, true, 25.f);
@@ -142,6 +168,18 @@ void AAntKitchenGameMode::SpawnGadgets()
 	Passage(EPassageLook::Vent, FVector(3700.f, 4995.f, 3700.f), -90.f, FVector(6750.f, 400.f, 60.f), TEXT("вентиляция → в мусорный угол"));
 	Passage(EPassageLook::Drain, FVector(-3500.f, 4000.f, 1150.f), 0.f, FVector(-3500.f, 3600.f, 200.f), TEXT("слив раковины → под мойку"));
 	Passage(EPassageLook::Pipe, FVector(-3300.f, 4300.f, 140.f), 0.f, FVector(-3700.f, 3800.f, 1210.f), TEXT("труба → в раковину"));
+	// A crack under the window: the short way to the yard and back (or climb out over the sill).
+	Passage(EPassageLook::Hole, FVector(-4500.f, -4995.f, 0.f), 90.f, FVector(-4500.f, -5600.f, 60.f), TEXT("щель под окном → во двор"));
+	Passage(EPassageLook::Hole, FVector(-4500.f, -5205.f, 0.f), -90.f, FVector(-4500.f, -4700.f, 60.f), TEXT("щель под окном → на кухню"));
+
+	// Fly food: dog poop on the lawn, the outdoor bin, the kitchen trash.
+	auto Feeder = [&Spawn](uint8 Kind, const FVector& Loc)
+	{
+		Spawn(AFlyFeeder::StaticClass(), Loc, FRotator::ZeroRotator, [Kind](AActor* A) { CastChecked<AFlyFeeder>(A)->Kind = Kind; });
+	};
+	Feeder(0, AKitchenBuilder::YardPoop());
+	Feeder(1, AKitchenBuilder::YardBin() + FVector(0.f, 0.f, 2650.f));
+	Feeder(1, FVector(6000.f, -1500.f, 1600.f));
 
 	// Physics junk to push around and shoot at.
 	struct FPropDef { EAntShape Shape; FVector Loc; FVector Size; FLinearColor Color; float Mass; };
@@ -1005,7 +1043,13 @@ void AAntKitchenGameMode::ResetMatch()
 		GS->TeamScore = 0;
 		GS->RivalScore = 0;
 		GS->RivalWorkers = 1500;
+		GS->WarPool0 = 128;
+		GS->WarPool1 = 128;
+		for (TActorIterator<AAntChain> It(GetWorld()); It; ++It) { It->Dissolve(); It->Destroy(); }
 		for (TActorIterator<AAntArmy> It(GetWorld()); It; ++It) { It->Destroy(); }
+		for (AAntTerritory* T : Territories) { if (T) { T->ResetZone(); } }
+		for (AAntCashout* C : Cashouts) { if (C) { C->ResetStation(); } }
+		NextVault = GetWorld()->GetTimeSeconds() + 45.f;
 		GS->HumanRage = 0;
 		GS->TimeRemaining = MatchLength;
 		GS->Phase = 0;
@@ -1055,5 +1099,292 @@ void AAntKitchenGameMode::ResetMatch()
 		}
 		RestartPlayer(PC);
 	}
-	Broadcast(TEXT("Новый раунд! Тащите всё сладкое в муравейник!"), Gold);
+	Broadcast(bWar ? TEXT("Новый раунд войны! Захватывайте территории!") : TEXT("Новый раунд! Тащите всё сладкое в муравейник!"), Gold);
+}
+
+// ---------------------------------------------------------------------------------------------
+// "Муравьиная война": territories with supply lines, cashouts for the sugar-bowl safe,
+// commanders leading army columns out of the nests, switching sides.
+// ---------------------------------------------------------------------------------------------
+
+bool AAntKitchenGameMode::IsWar() const
+{
+	const AAntGameState* GS = GetGameState<AAntGameState>();
+	return GS && GS->bWarMode;
+}
+
+void AAntKitchenGameMode::AddPool(uint8 Team, int32 N)
+{
+	AAntGameState* GS = GetGameState<AAntGameState>();
+	if (!GS || Team > 1)
+	{
+		return;
+	}
+	int32& Pool = Team == 0 ? GS->WarPool0 : GS->WarPool1;
+	Pool = FMath::Clamp(Pool + N, 0, 400);
+}
+
+void AAntKitchenGameMode::ReturnWorkers(uint8 Team, int32 N, AAntCharacter* Builder)
+{
+	if (N <= 0 || Team > 1)
+	{
+		return;
+	}
+	if (AAntArmy* A = AAntArmy::FindFor(Builder))
+	{
+		A->Count += N;
+		return;
+	}
+	if (IsWar())
+	{
+		AddPool(Team, N);
+	}
+	else if (Team == 0)
+	{
+		if (AAntSwarm* S = AAntSwarm::Get(GetWorld())) { S->Idle += N; }
+	}
+	else if (AAntGameState* GS = GetGameState<AAntGameState>())
+	{
+		GS->RivalWorkers += N;
+	}
+}
+
+void AAntKitchenGameMode::SwitchTeam(AAntPlayerController* PC)
+{
+	if (!PC || PC == HumanPlayer)
+	{
+		return;
+	}
+	AAntPlayerState* PS = PC->GetPlayerState<AAntPlayerState>();
+	AAntCharacter* Ant = Cast<AAntCharacter>(PC->GetPawn());
+	if (!PS || (Ant && !Ant->CanSwitchTeam()))
+	{
+		if (Ant) { Ant->Toast(TEXT("Сменить сторону можно только в своём муравейнике (или пока мёртв)")); }
+		return;
+	}
+	if (AAntArmy* A = AAntArmy::FindFor(Ant))
+	{
+		A->Disband();
+	}
+	PS->Team = PS->Team == 0 ? 1 : 0;
+	PS->AntColor = AntKit::TeamColor(PS->Team, ColorIndex++);
+	if (Ant)
+	{
+		PC->UnPossess();
+		Ant->Destroy();
+	}
+	RestartPlayer(PC);
+	Broadcast(FString::Printf(TEXT("%s теперь воюет за %s"), *PS->GetPlayerName(), PS->Team == 0 ? TEXT("колонию (чёрные)") : TEXT("огненных муравьёв (красные)")),
+		PS->Team == 0 ? Good : Bad);
+}
+
+void AAntKitchenGameMode::SpawnWarZones()
+{
+	struct FZone { const TCHAR* Name; FVector Loc; float R; };
+	static const FZone Zones[] =
+	{
+		{ TEXT("Столешница"), FVector(-4000.f, 4200.f, 1710.f), 900.f },
+		{ TEXT("Двор"), FVector(-2500.f, -9000.f, 0.f), 1500.f },
+		{ TEXT("Стол"), FVector(500.f, -500.f, 1400.f), 800.f },
+		{ TEXT("Ковёр"), FVector(500.f, -2000.f, 0.f), 1000.f },
+		{ TEXT("Холодильник"), FVector(4000.f, 2700.f, 0.f), 900.f },
+		{ TEXT("Диван"), FVector(13500.f, -4000.f, 0.f), 1300.f },
+	};
+	for (const FZone& Z : Zones)
+	{
+		AAntTerritory* T = GetWorld()->SpawnActorDeferred<AAntTerritory>(AAntTerritory::StaticClass(), FTransform(Z.Loc), nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+		if (T)
+		{
+			T->ZoneName = Z.Name;
+			T->Radius = Z.R;
+			T->FinishSpawning(FTransform(Z.Loc));
+			Territories.Add(T);
+		}
+	}
+	static const FZone Stations[] =
+	{
+		{ TEXT("Касса у плиты"), FVector(-2500.f, -500.f, 0.f), 0.f },
+		{ TEXT("Касса под раковиной"), FVector(3000.f, -3500.f, 0.f), 0.f },
+	};
+	for (const FZone& Z : Stations)
+	{
+		AAntCashout* C = GetWorld()->SpawnActorDeferred<AAntCashout>(AAntCashout::StaticClass(), FTransform(Z.Loc), nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+		if (C)
+		{
+			C->ZoneName = Z.Name;
+			C->FinishSpawning(FTransform(Z.Loc));
+			Cashouts.Add(C);
+		}
+	}
+}
+
+void AAntKitchenGameMode::SpawnVault()
+{
+	static const FVector Spots[] =
+	{
+		FVector(800.f, 4300.f, 1760.f),     // counter, by the sugar jar
+		FVector(500.f, -500.f, 1460.f),     // dining table
+		FVector(-6500.f, -9500.f, 60.f),    // the lawn
+		FVector(15000.f, -2000.f, 60.f),    // living room
+		FVector(4000.f, -1500.f, 60.f),     // middle of the kitchen
+	};
+	const FVector Loc = Spots[Rng.RandRange(0, UE_ARRAY_COUNT(Spots) - 1)];
+	FAntFoodDef D;
+	D.Name = TEXT("Сейф-сахарница");
+	D.Value = AAntCashout::Reward;
+	D.Weight = 36;
+	D.Color = FLinearColor(0.95f, 0.85f, 0.35f);
+	D.Shape = EAntShape::Cylinder;
+	D.Scale = FVector(0.9f, 0.9f, 0.7f);
+	AKitchenLoot* L = GetWorld()->SpawnActorDeferred<AKitchenLoot>(AKitchenLoot::StaticClass(), FTransform(Loc), nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+	if (L)
+	{
+		L->InitFood(D);
+		L->bVault = true;
+		L->FinishSpawning(FTransform(Loc));
+		Broadcast(TEXT("СЕЙФ-САХАРНИЦА появилась! Тащите её на кассу (нужно 3 муравья)"), Gold);
+		AntSfx::Everyone(this, AntSfx::Legendary, Loc, 1.f);
+	}
+}
+
+void AAntKitchenGameMode::AssignWarRoles(uint8 Team)
+{
+	AAntGameState* GS = GetGameState<AAntGameState>();
+	TArray<AAntBotController*> Bots;
+	for (TActorIterator<AAntBotController> It(GetWorld()); It; ++It)
+	{
+		AAntCharacter* A = Cast<AAntCharacter>(It->GetPawn());
+		if (A && !A->bDead && A->Creature == 0 && A->Team == Team)
+		{
+			Bots.Add(*It);
+		}
+	}
+	if (Bots.Num() == 0 || !GS)
+	{
+		return;
+	}
+	Bots.Sort([](const AAntBotController& A, const AAntBotController& B) { return A.GetUniqueID() < B.GetUniqueID(); });
+	const int32 NumCmd = FMath::Clamp(Bots.Num() / 4, 1, 3);
+
+	// What is worth fighting for, most urgent first.
+	struct FObj { FVector P; AActor* A; float Score; };
+	TArray<FObj> Objs;
+	const FVector Nest = AKitchenBuilder::NestLocation(Team);
+	for (TActorIterator<AKitchenLoot> It(GetWorld()); It; ++It)
+	{
+		if (It->bVault && !(It->IsCarried() && It->CarryTeam() == Team))
+		{
+			Objs.Add({ It->GetActorLocation(), *It, 0.f });
+		}
+		else if (It->bVault)
+		{
+			// Ours is on the move: escort it.
+			Objs.Add({ It->GetActorLocation(), *It, 0.5f });
+		}
+	}
+	for (AAntCashout* C : Cashouts)
+	{
+		if (C && C->bActive)
+		{
+			Objs.Add({ C->GetActorLocation(), C, C->CashTeam == Team ? 2.f : 1.f });
+		}
+	}
+	for (AAntTerritory* T : Territories)
+	{
+		if (!T)
+		{
+			continue;
+		}
+		const float Far = (float)FVector::Dist(T->GetActorLocation(), Nest) / 10000.f;
+		if (T->OwnerTeam != Team)
+		{
+			Objs.Add({ T->GetActorLocation(), T, 3.f + Far });
+		}
+		else if (T->bContested || T->bLineCut)
+		{
+			Objs.Add({ T->GetActorLocation(), T, 2.5f + Far });
+		}
+	}
+	if (Objs.Num() == 0)
+	{
+		for (AAntTerritory* T : Territories)
+		{
+			if (T) { Objs.Add({ T->GetActorLocation(), T, 5.f }); }
+		}
+	}
+	Objs.Sort([](const FObj& A, const FObj& B) { return A.Score < B.Score; });
+
+	for (int32 i = 0; i < Bots.Num(); ++i)
+	{
+		AAntBotController* B = Bots[i];
+		AAntCharacter* Me = Cast<AAntCharacter>(B->GetPawn());
+		if (i < NumCmd)
+		{
+			const FObj& O = Objs.Num() > 0 ? Objs[FMath::Min(i, Objs.Num() - 1)] : FObj{ Nest, nullptr, 0.f };
+			B->SetWarRole(true, nullptr);
+			B->SetWarObjective(O.P, O.A);
+			// A commander leads an army column out of the nest.
+			if (!AAntArmy::FindFor(Me) && GS->WarPool(Team) >= 12 && Me->IsInNest())
+			{
+				const int32 N = FMath::Min(32, GS->WarPool(Team));
+				AddPool(Team, -N);
+				const FVector Start = Nest + FVector(0.f, 0.f, 10.f);
+				if (AAntArmy* A = GetWorld()->SpawnActorDeferred<AAntArmy>(AAntArmy::StaticClass(), FTransform(Start), nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn))
+				{
+					A->Team = Team;
+					A->Count = N;
+					A->Commander = Me;
+					A->Mode = EArmyMode::Follow;
+					A->FinishSpawning(FTransform(Start));
+				}
+			}
+		}
+		else
+		{
+			// Squads: the rest follow the commanders, round robin.
+			AAntBotController* Lead = Bots[(i - NumCmd) % NumCmd];
+			B->SetWarRole(false, Cast<AAntCharacter>(Lead->GetPawn()));
+		}
+	}
+}
+
+void AAntKitchenGameMode::WarTick()
+{
+	AAntGameState* GS = GetGameState<AAntGameState>();
+	if (!GS || !GS->bWarMode || GS->Phase != 0)
+	{
+		return;
+	}
+	const float Now = GetWorld()->GetTimeSeconds();
+	// Eggs hatch: a trickle of reinforcements for both sides.
+	if (FMath::FloorToInt(Now) % 5 == 0)
+	{
+		AddPool(0, 1);
+		AddPool(1, 1);
+	}
+	// The safe: one at a time, a new one some time after the last was cashed.
+	bool bVault = false;
+	for (TActorIterator<AKitchenLoot> It(GetWorld()); It; ++It)
+	{
+		if (It->bVault) { bVault = true; break; }
+	}
+	for (AAntCashout* C : Cashouts)
+	{
+		if (C && C->bActive) { bVault = true; }
+	}
+	if (bVault)
+	{
+		NextVault = Now + 150.f;
+	}
+	else if (Now > NextVault)
+	{
+		SpawnVault();
+		NextVault = Now + 150.f;
+	}
+	// Commanders re-think every few seconds.
+	if (FMath::FloorToInt(Now) % 4 == 0)
+	{
+		AssignWarRoles(0);
+		AssignWarRoles(1);
+	}
 }

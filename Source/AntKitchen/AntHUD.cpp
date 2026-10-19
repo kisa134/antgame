@@ -9,6 +9,9 @@
 #include "KitchenLoot.h"
 #include "KitchenBuilder.h"
 #include "AntArmy.h"
+#include "AntChain.h"
+#include "WarMode.h"
+#include "CreatureCharacters.h"
 #include "AntTypes.h"
 #include "Engine/Canvas.h"
 #include "Engine/Engine.h"
@@ -165,6 +168,7 @@ void AAntHUD::DrawHUD()
 	}
 
 	DrawTop(GS);
+	DrawWar(GS, Me);
 	DrawFeed(GS);
 	DrawToastsAndNumbers(PC);
 	DrawHelp(Me);
@@ -265,6 +269,7 @@ void AAntHUD::DrawAnt(AAntCharacter* Ant)
 	}
 
 	Crosshair();
+	DrawLinkState(Ant);
 
 	// Health + cargo (bottom left)
 	const float X = 30.f * S, Y = H - 140.f * S;
@@ -646,15 +651,155 @@ void AAntHUD::DrawHelp(APawn* Me)
 	}
 	else if (const AAntCharacter* C = Cast<AAntCharacter>(Me); C && C->Creature == 1)
 	{
-		Help = TEXT("МУХА: WASD — лететь куда смотришь | Пробел — вверх | E — схватить/бросить крошку | ЛКМ — плевок | ПКМ — укус | J — снова муравей");
+		Help = TEXT("МУХА: WASD — лететь | Shift — ФОРСАЖ | Пробел — вверх | E — съесть (какашка/мусор), схватить крошку или поднять муравья | ЛКМ — плевок | ПКМ — укус | J — снова муравей");
 	}
 	else if (const AAntCharacter* C2 = Cast<AAntCharacter>(Me); C2 && C2->Creature == 2)
 	{
-		Help = TEXT("ПАУК: по стенам и потолку | ЛКМ — паутина (опутывает) | ПКМ — укус | Пробел на потолке — спуск на нити | K — снова муравей");
+		Help = TEXT("ПАУК: по стенам и потолку | ПКМ (держать) — полёт на паутине, отпустить — бросок | Пробел — подтянуться | ЛКМ — паутина | Q — укус | K — снова муравей");
 	}
 	else
 	{
-		Help = TEXT("J — муха | K — паук | WASD — ползти | ЛКМ — плевок | E — схватить/отпустить еду, взять оружие, гаджет | ПКМ — укус / откусить кусок | V — bodycam | 1-4 — каста (в гнезде) | T — тропа роя | G — отозвать рой | Shift — спринт | Пробел — прыжок | H — Человек | Tab — счёт");
+		Help = TEXT("ЛКМ — плевок | ПКМ — укус | E — взять/отпустить | G — СЦЕПКА (мост, лестница, держать друга) | F/R — армия | Y — отозвать рой | T — тропа | P — сторона | J муха | K паук | H Человек | Tab счёт");
 	}
 	Txt(Help, Canvas->ClipX * 0.5f, Canvas->ClipY - 26.f * S, FLinearColor(1.f, 1.f, 1.f, 0.6f), GEngine->GetSmallFont(), 1.f * S, true);
+}
+
+void AAntHUD::DrawLinkState(AAntCharacter* Ant)
+{
+	UFont* Small = GEngine->GetSmallFont();
+	const float W = Canvas->ClipX, H = Canvas->ClipY;
+	FString Line;
+	FLinearColor C = Gold;
+	if (Ant->HeldBy)
+	{
+		Line = Ant->HeldBy->Creature == 1 ? TEXT("ТЕБЯ НЕСЁТ МУХА — G: вырваться") : TEXT("Тебя держат — G: вырваться");
+	}
+	else if (AAntChain* Ch = Ant->Chain)
+	{
+		const int32 I = Ch->IndexOf(Ant);
+		Line = Ch->bBridge
+			? FString::Printf(TEXT("ТЫ ЗВЕНО МОСТА (%d из %d)%s — G/Пробел: отпустить"), I + 1, Ch->NumLinks(), Ch->IsComplete() ? TEXT(", мост готов") : TEXT(", нужны ещё муравьи"))
+			: FString::Printf(TEXT("ТЫ ЗВЕНО ЛЕСТНИЦЫ (%d из %d) — G/Пробел: отпустить"), I + 1, Ch->NumLinks());
+	}
+	else if (Ant->HoldingAnt)
+	{
+		Line = FString::Printf(TEXT("ДЕРЖИШЬ: %s — G: отпустить, E: бросить"), *Ant->HoldingAnt->GetHumanReadableName());
+	}
+	else if (Ant->Creature == 0)
+	{
+		// What G would do right now (only when it is something to notice).
+		if (AAntChain* Tail = AAntChain::FindNearTail(GetWorld(), Ant->Team, Ant->GetActorLocation(), 190.f))
+		{
+			Line = TEXT("G — прицепиться к живой цепи");
+		}
+		else if (Ant->FindGrabbableAlly(AAntCharacter::InteractRadius))
+		{
+			Line = TEXT("G — взять муравья");
+			C = White;
+		}
+	}
+	else if (Ant->Creature == 1 && Ant->FindGrabbableAlly(AAntCharacter::InteractRadius * 1.5f))
+	{
+		Line = TEXT("E — поднять муравья");
+		C = White;
+	}
+	if (!Line.IsEmpty())
+	{
+		Txt(Line, W * 0.5f, H * 0.62f, C, Small, 1.25f * S, true);
+	}
+	// Fly afterburner.
+	if (const AFlyCharacter* Fly = Cast<AFlyCharacter>(Ant))
+	{
+		const float X = 30.f * S, Y = H - 196.f * S;
+		Txt(Fly->IsBoosting() ? TEXT("ФОРСАЖ!") : TEXT("ФОРСАЖ (Shift)"), X, Y - 24.f * S, Fly->Fuel < 20.f ? Red : White, Small, 1.1f * S);
+		Bar(X, Y, 240.f * S, 12.f * S, Fly->Fuel / 100.f, FLinearColor(0.3f, 0.8f, 1.f));
+		if (Fly->Fuel < 25.f || Fly->Health < Fly->MaxHealth * 0.4f)
+		{
+			Txt(TEXT("Голодно: лети к какашке во дворе или к мусорке (E)"), X, Y + 18.f * S, Gold, Small, 1.f * S);
+		}
+	}
+}
+
+void AAntHUD::DrawWar(AAntGameState* GS, APawn* Me)
+{
+	if (!GS || !GS->bWarMode)
+	{
+		return;
+	}
+	UFont* Small = GEngine->GetSmallFont();
+	const float W = Canvas->ClipX;
+	const FLinearColor Ours(0.35f, 0.75f, 1.f), Fire(1.f, 0.4f, 0.2f), Neutral(0.75f, 0.75f, 0.75f);
+	const AAntCharacter* Ant = Cast<AAntCharacter>(Me);
+	const uint8 MyTeam = Ant ? Ant->Team : 0;
+	auto TeamC = [&](uint8 T) { return T == 0 ? Ours : T == 1 ? Fire : Neutral; };
+
+	// Territory strip under the timer.
+	TArray<AAntTerritory*> Zones;
+	for (TActorIterator<AAntTerritory> It(GetWorld()); It; ++It)
+	{
+		Zones.Add(*It);
+	}
+	Zones.Sort([](const AAntTerritory& A, const AAntTerritory& B) { return A.GetActorLocation().X + A.GetActorLocation().Y * 0.1 < B.GetActorLocation().X + B.GetActorLocation().Y * 0.1; });
+	const float BoxW = 118.f * S, Gap = 6.f * S;
+	float X = W * 0.5f - (Zones.Num() * (BoxW + Gap) - Gap) * 0.5f;
+	const float Y = 150.f * S;
+	for (AAntTerritory* Z : Zones)
+	{
+		const FLinearColor C = TeamC(Z->OwnerTeam);
+		DrawRect(FLinearColor(C.R * 0.3f, C.G * 0.3f, C.B * 0.3f, 0.75f), X, Y, BoxW, 38.f * S);
+		// Capture bar: blue fills from the left, red from the right.
+		const float Cap = Z->Capture;
+		if (Cap > 0.f) { DrawRect(Ours, X, Y + 32.f * S, BoxW * 0.5f * Cap, 6.f * S); }
+		if (Cap < 0.f) { DrawRect(Fire, X + BoxW - BoxW * 0.5f * -Cap, Y + 32.f * S, BoxW * 0.5f * -Cap, 6.f * S); }
+		DrawRect(FLinearColor(1.f, 1.f, 1.f, 0.5f), X + BoxW * 0.5f - 1.f, Y + 30.f * S, 2.f, 10.f * S);
+		Txt(Z->ZoneName, X + BoxW * 0.5f, Y + 4.f * S, C, Small, 1.05f * S, true);
+		const FString Sub = Z->bContested ? TEXT("БОЙ") : (Z->OwnerTeam < 2 && Z->bLineCut) ? TEXT("снабжение перерезано") : TEXT("");
+		if (!Sub.IsEmpty())
+		{
+			Txt(Sub, X + BoxW * 0.5f, Y + 18.f * S, Gold, Small, 0.85f * S, true);
+		}
+		X += BoxW + Gap;
+	}
+	int32 Held[2] = { 0, 0 };
+	for (AAntTerritory* Z : Zones)
+	{
+		if (Z->OwnerTeam < 2) { ++Held[Z->OwnerTeam]; }
+	}
+	Txt(FString::Printf(TEXT("Резерв армии: наши %d  |  огненные %d     Территории %d : %d"),
+		MyTeam == 0 ? GS->WarPool0 : GS->WarPool1, MyTeam == 0 ? GS->WarPool1 : GS->WarPool0, Held[MyTeam], Held[1 - MyTeam]),
+		W * 0.5f, Y + 44.f * S, White, Small, 1.05f * S, true);
+
+	if (!Ant || Ant->bDead)
+	{
+		return;
+	}
+	// World markers: zones (only when far), the safe, counting cashouts.
+	for (AAntTerritory* Z : Zones)
+	{
+		if (FVector::Dist(Z->GetActorLocation(), Ant->GetActorLocation()) > Z->Radius)
+		{
+			Marker(Z->GetActorLocation() + FVector(0.f, 0.f, 300.f), Z->ZoneName, TeamC(Z->OwnerTeam), false);
+		}
+	}
+	for (TActorIterator<AKitchenLoot> It(GetWorld()); It; ++It)
+	{
+		if (It->bVault)
+		{
+			const FString L = It->IsCarried() ? (It->CarryTeam() == Ant->Team ? TEXT("СЕЙФ — наши несут на кассу") : TEXT("СЕЙФ — ОТБЕЙ!")) : TEXT("СЕЙФ-САХАРНИЦА");
+			Marker(It->GetActorLocation() + FVector(0.f, 0.f, 150.f), L, Gold, true);
+		}
+	}
+	const bool bCarryVault = Ant->Carrying && Ant->Carrying->bVault;
+	for (TActorIterator<AAntCashout> It(GetWorld()); It; ++It)
+	{
+		if (It->bActive)
+		{
+			Marker(It->GetActorLocation() + FVector(0.f, 0.f, 250.f), FString::Printf(TEXT("%s %d%%"), It->CashTeam == Ant->Team ? TEXT("КАССА (держим)") : TEXT("КАССА ВРАГА — укради!"),
+				FMath::RoundToInt(It->Progress * 100.f)), TeamC(It->CashTeam), true);
+		}
+		else if (bCarryVault)
+		{
+			Marker(It->GetActorLocation() + FVector(0.f, 0.f, 250.f), It->ZoneName, Gold, true);
+		}
+	}
 }

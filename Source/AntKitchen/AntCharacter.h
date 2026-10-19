@@ -13,6 +13,7 @@ class UMaterialInstanceDynamic;
 class AKitchenLoot;
 class AKitchenInteractable;
 class UAntMovementComponent;
+class AAntChain;
 
 /** Status bits replicated to everyone (HUD, visuals, client-side movement speed). */
 namespace AntStatus
@@ -187,6 +188,27 @@ public:
 	/** Server: damage from a kitchen hazard; Hazard is used in the kill feed ("попал в мышеловку"). */
 	void HurtBy(float Damage, const FString& Hazard);
 
+	// ---- Holding each other: carry a friend, fly with an ant, living chains and bridges ----
+	/** The chain/bridge this ant is a link of. */
+	UPROPERTY(ReplicatedUsing = OnRep_Link) AAntChain* Chain = nullptr;
+	/** Who carries this ant (an ant in its mandibles, a fly in its legs). */
+	UPROPERTY(ReplicatedUsing = OnRep_Link) AAntCharacter* HeldBy = nullptr;
+	/** The ant this one is carrying. */
+	UPROPERTY(Replicated) AAntCharacter* HoldingAnt = nullptr;
+	bool IsAttached() const { return Chain != nullptr || HeldBy != nullptr; }
+	/** How heavy this ant is to lift. */
+	float AntWeight() const;
+	/** Server. */
+	bool GrabAnt(AAntCharacter* Other);
+	void ReleaseAnt(bool bThrow);
+	void SetChain(AAntChain* NewChain);
+	/** Server: the [G] action (also used by bots). */
+	void DoLink(const FVector& Aim);
+	/** Ally ant close enough to grab, or null. */
+	AAntCharacter* FindGrabbableAlly(float Radius) const;
+	/** Server: switch colony (only in the nest or while dead). */
+	bool CanSwitchTeam() const;
+
 	/** Last kitchen hazard that hurt us (server), for the kill feed. */
 	FString LastHazard;
 	float LastHazardTime = -100.f;
@@ -213,6 +235,14 @@ protected:
 	UFUNCTION(Server, Reliable) void ServerRecallSwarm();
 	UFUNCTION(Server, Reliable) void ServerSetClass(uint8 NewClass);
 	UFUNCTION(Server, Reliable) void ServerBite();
+	UFUNCTION(Server, Reliable) void ServerLink(FVector_NetQuantize Aim);
+	void LinkPressed();
+	/** Right mouse: bite for ants and flies, web-swing for the spider. */
+	virtual void AltFirePressed();
+	virtual void AltFireReleased() {}
+	UFUNCTION() void OnRep_Link();
+	void ApplyAttachedPose();
+	bool StartChainHere(const FVector& Aim);
 	/** Commander: 0 summon/dismiss army, 1 army to point (or follow), 2 bots follow me, 3 bots attack point, 4 bots free. */
 	UFUNCTION(Server, Reliable) void ServerCommand(uint8 Cmd, FVector_NetQuantize Point);
 	void CmdArmy();
@@ -298,4 +328,7 @@ protected:
 	UPROPERTY() class UPointLightComponent* FlameLight = nullptr;
 	UPROPERTY() UStaticMeshComponent* WebShell = nullptr;
 	float WebTime = 0.f;            // server
+	FVector AttachedUp = FVector::UpVector;
+	FVector AttachedAlong = FVector::ForwardVector;
+	float AttachedSince = 0.f;
 };

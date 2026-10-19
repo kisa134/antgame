@@ -24,9 +24,16 @@ public:
 	virtual void OnPossess(APawn* InPawn) override;
 	/** Squad order from a player commander: 0 free, 1 follow him, 2 attack a point. */
 	void SetOrder(uint8 Mode, AAntCharacter* By, const FVector& Point);
+	/** War mode: a commander (leads an army column to an objective) or a squad member following one. */
+	void SetWarRole(bool bCommander, AAntCharacter* Leader);
+	void SetWarObjective(const FVector& Point, AActor* Obj);
+	bool IsWarCommander() const { return bWarCommander; }
+	bool IsFree() const { return OrderMode == 0 && !bWarCommander && !WarLeader.IsValid(); }
 
 private:
 	void Think(AAntCharacter* Ant);
+	bool ThinkWar(AAntCharacter* Ant);
+	bool ThinkChain(AAntCharacter* Ant);
 	void Steer(AAntCharacter* Ant, const FVector& Goal, float Dt);
 	void Shoot(AAntCharacter* Ant, float Dt);
 	AKitchenLoot* PickFood(AAntCharacter* Ant) const;
@@ -54,4 +61,10 @@ private:
 	FVector LastLootPos = FVector::ZeroVector;
 	float StrafeSign = 1.f;
 	float StrafeTimer = 0.f;
+	bool bWarCommander = false;
+	TWeakObjectPtr<AAntCharacter> WarLeader;
+	TWeakObjectPtr<AActor> WarObj;
+	FVector WarPoint = FVector::ZeroVector;
+	bool bHasWarPoint = false;
+	float AttachedFor = 0.f;
 };

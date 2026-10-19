@@ -28,6 +28,9 @@ void AAntGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	DOREPLIFETIME(AAntGameState, Phase);
 	DOREPLIFETIME(AAntGameState, AntsSquashed);
 	DOREPLIFETIME(AAntGameState, HumanKnockouts);
+	DOREPLIFETIME(AAntGameState, bWarMode);
+	DOREPLIFETIME(AAntGameState, WarPool0);
+	DOREPLIFETIME(AAntGameState, WarPool1);
 }
 
 void AAntGameState::MulticastSfx_Implementation(uint8 Id, FVector_NetQuantize Location, float Pitch)

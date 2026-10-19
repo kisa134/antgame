@@ -78,6 +78,7 @@ void AKitchenLoot::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	DOREPLIFETIME(AKitchenLoot, CarryStrength);
 	DOREPLIFETIME(AKitchenLoot, CarrierTeam);
 	DOREPLIFETIME(AKitchenLoot, bHeld);
+	DOREPLIFETIME(AKitchenLoot, bVault);
 }
 
 float AKitchenLoot::GetRadius() const
@@ -172,7 +173,7 @@ AKitchenLoot* AKitchenLoot::SpawnPiece(const FString& Name, int32 PieceValue, in
 
 void AKitchenLoot::Shatter(const FVector& At)
 {
-	if (!HasAuthority() || bIsGear || IsPendingKillPending())
+	if (!HasAuthority() || bIsGear || bVault || IsPendingKillPending())
 	{
 		return;
 	}
@@ -203,7 +204,7 @@ void AKitchenLoot::Shatter(const FVector& At)
 
 AKitchenLoot* AKitchenLoot::BiteOff(AAntCharacter* By)
 {
-	if (!HasAuthority() || bIsGear || Weight < 9)
+	if (!HasAuthority() || bIsGear || bVault || Weight < 9)
 	{
 		return nullptr;
 	}
@@ -585,7 +586,7 @@ void AKitchenLoot::ServerCarryTick(float Dt)
 
 	// Home?
 	const FVector L = GetActorLocation();
-	if (CarrierTeam < 2 && FVector::Dist2D(L, AKitchenBuilder::NestLocation(CarrierTeam)) < AKitchenBuilder::NestRadius(CarrierTeam) && L.Z < 500.f)
+	if (!bVault && CarrierTeam < 2 && FVector::Dist2D(L, AKitchenBuilder::NestLocation(CarrierTeam)) < AKitchenBuilder::NestRadius(CarrierTeam) && L.Z < 500.f)
 	{
 		if (AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
 		{

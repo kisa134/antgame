@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/HUD.h"
@@ -34,6 +34,8 @@ private:
 	void DrawToastsAndNumbers(AAntPlayerController* PC);
 	void DrawScoreboard(AAntGameState* GS);
 	void DrawHelp(APawn* Me);
+	void DrawWar(AAntGameState* GS, APawn* Me);
+	void DrawLinkState(AAntCharacter* Ant);
 
 	float S = 1.f;          // UI scale
 	float LastHealth = -1.f;

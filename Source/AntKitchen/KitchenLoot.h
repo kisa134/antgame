@@ -70,7 +70,9 @@ public:
 	void Shatter(const FVector& At);
 	/** Server: an ant bites a crumb off this. Returns the crumb (or null if too small). */
 	AKitchenLoot* BiteOff(AAntCharacter* By);
-	bool CanBreak() const { return !bIsGear && Weight >= 6; }
+	bool CanBreak() const { return !bIsGear && !bVault && Weight >= 6; }
+	/** War mode: the sugar-bowl safe. Not food: it goes to a cashout, never into a nest. */
+	UPROPERTY(Replicated) bool bVault = false;
 
 	/** Server: the Human picks it up (attached to his hand) / throws it. */
 	void PickUpBy(USceneComponent* Hand, const FVector& RelativeLocation);

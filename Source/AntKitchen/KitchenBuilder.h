@@ -44,8 +44,15 @@ public:
 	static FVector RandomFloorPoint(FRandomStream* Rng = nullptr);
 	/** The doorway between the kitchen and the living room. */
 	static FVector Doorway() { return FVector(7100.f, -4000.f, 0.f); }
-	/** Next point to walk to on the way From -> To (goes through the doorway between the rooms). */
-	static FVector Route(const FVector& From, const FVector& To);
+	/** Next point to walk to on the way From -> To (through the doorway / out the window into the yard). */
+	static FVector Route(const FVector& From, const FVector& To, bool bFlying = false);
+	/** 0 kitchen, 1 living room, 2 yard. */
+	static int32 Region(const FVector& P);
+	/** A random point on the lawn outside the window. */
+	static FVector RandomYardPoint(FRandomStream* Rng = nullptr);
+	/** Dog poop on the lawn / the outdoor trash bin (fly food). */
+	static FVector YardPoop() { return FVector(-3000.f, -9500.f, 0.f); }
+	static FVector YardBin() { return FVector(4200.f, -13000.f, 0.f); }
 	static void LootSpots(TArray<FVector>& OutLocations, TArray<int32>& OutTiers);
 
 	/** Static kitchen zones (burner, honey, jam, water bowls...) acting on an ant. */
@@ -70,6 +77,7 @@ private:
 	void BuildFridge();
 	void BuildSecrets();
 	void BuildLivingRoom();
+	void BuildYard();
 
 	UPROPERTY()
 	USceneComponent* Root = nullptr;
