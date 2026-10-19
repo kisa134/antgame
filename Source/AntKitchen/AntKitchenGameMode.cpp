@@ -11,6 +11,7 @@
 #include "AntSwarm.h"
 #include "AntBotController.h"
 #include "CreatureCharacters.h"
+#include "AntArmy.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "EngineUtils.h"
@@ -84,6 +85,7 @@ void AAntKitchenGameMode::BeginPlay()
 		SpawnFly();
 	}), 1.5f, false);
 
+	GetWorldTimerManager().SetTimer(WarTimer, this, &AAntKitchenGameMode::RivalWarTick, 50.f, true, 70.f);
 	GetWorldTimerManager().SetTimer(MatchTimer, this, &AAntKitchenGameMode::MatchTick, 1.f, true);
 	GetWorldTimerManager().SetTimer(RefillTimer, this, &AAntKitchenGameMode::RefillLoot, 10.f, true);
 	GetWorldTimerManager().SetTimer(LifeTimer, this, &AAntKitchenGameMode::KitchenLifeEvent, 38.f, true, 25.f);
@@ -225,6 +227,38 @@ void AAntKitchenGameMode::UpdateRage()
 		static const TCHAR* Lines[] = { TEXT(""), TEXT("Человек заметил пропажи и ЗЛИТСЯ (ярость 1)"), TEXT("Человек В БЕШЕНСТВЕ: быстрее топчет и дальше брызгает (ярость 2)"), TEXT("ЧЕЛОВЕК ОБЪЯВИЛ ВОЙНУ МУРАВЬЯМ! (ярость 3)") };
 		Broadcast(Lines[NewRage], Bad);
 		AntSfx::Everyone(this, AntSfx::Rage, Human->GetActorLocation(), 1.f - 0.1f * NewRage);
+	}
+}
+
+void AAntKitchenGameMode::RivalWarTick()
+{
+	AAntGameState* GS = GetGameState<AAntGameState>();
+	if (!GS || GS->Phase != 0 || GS->RivalWorkers < 400)
+	{
+		return;
+	}
+	for (TActorIterator<AAntArmy> It(GetWorld()); It; ++It)
+	{
+		if (It->Team == 1) { return; }   // one raid at a time
+	}
+	// The fire ants send an army: raid our nest, or hunt our army / our ants.
+	const int32 N = FMath::Min(GS->RivalWorkers / 2, 3500);
+	GS->RivalWorkers -= N;
+	FVector Target = AKitchenBuilder::NestLocation(0);
+	for (TActorIterator<AAntArmy> It(GetWorld()); It; ++It)
+	{
+		if (It->Team == 0 && FMath::RandBool()) { Target = It->GetActorLocation(); break; }
+	}
+	const FVector Start = AKitchenBuilder::NestLocation(1) + FVector(0.f, 0.f, 10.f);
+	AAntArmy* A = GetWorld()->SpawnActorDeferred<AAntArmy>(AAntArmy::StaticClass(), FTransform(Start), nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+	if (A)
+	{
+		A->Team = 1;
+		A->Count = N;
+		A->Mode = EArmyMode::Attack;
+		A->Target = Target;
+		A->FinishSpawning(FTransform(Start));
+		Broadcast(FString::Printf(TEXT("ОГНЕННЫЕ ВЫСТУПИЛИ: армия из %d муравьёв идёт на нас! (F — своя армия)"), N), Bad);
 	}
 }
 
@@ -778,6 +812,10 @@ void AAntKitchenGameMode::OnFoodDelivered(uint8 Team, AKitchenLoot* Food, const 
 			Swarm->AddPopulation(Value * 4);   // food feeds the brood: more workers hatch
 		}
 	}
+	else
+	{
+		GS->RivalWorkers += Value * 4;
+	}
 	Broadcast(FString::Printf(TEXT("%s: %s притащили «%s» (+%d)"), Team == 0 ? TEXT("КОЛОНИЯ") : TEXT("ОГНЕННЫЕ"), *Names, *Food->LootName, Value), Team == 0 ? Good : Bad);
 	AddScore(Team, Value);
 }
@@ -931,6 +969,7 @@ void AAntKitchenGameMode::MatchTick()
 		return;
 	}
 	GS->TimeRemaining = FMath::Max(0.f, GS->TimeRemaining - 1.f);
+	GS->RivalWorkers += 4;   // their queen keeps laying eggs
 	if (GS->TimeRemaining <= 0.f)
 	{
 		// Time's up: the richer colony wins; nobody ahead - the Human defended his kitchen.
@@ -966,6 +1005,8 @@ void AAntKitchenGameMode::ResetMatch()
 	{
 		GS->TeamScore = 0;
 		GS->RivalScore = 0;
+		GS->RivalWorkers = 1500;
+		for (TActorIterator<AAntArmy> It(GetWorld()); It; ++It) { It->Destroy(); }
 		GS->HumanRage = 0;
 		GS->TimeRemaining = MatchLength;
 		GS->Phase = 0;

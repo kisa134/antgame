@@ -1,4 +1,5 @@
 ﻿#include "KitchenBuilder.h"
+#include "AntGameState.h"
 #include "AntCharacter.h"
 #include "KitchenInteractables.h"
 #include "Components/StaticMeshComponent.h"
@@ -406,8 +407,10 @@ void AKitchenBuilder::Build()
 
 	// ---- The ant nest (hole in the west baseboard + dirt mound) ----
 	const FVector Nest = NestLocation();
-	Ball(FVector(-6900.f, Nest.Y, -40.f), FVector(700.f, 800.f, 380.f), Dirt);
-	Ball(FVector(-6990.f, Nest.Y, 150.f), FVector(120.f, 320.f, 240.f), Black);
+	AddMound(0, Ball(FVector(-6900.f, Nest.Y, -40.f), FVector(700.f, 800.f, 380.f), Dirt));
+	AddMound(0, Ball(FVector(-6990.f, Nest.Y, 150.f), FVector(120.f, 320.f, 240.f), Black));
+	AddMound(0, Ball(FVector(-6650.f, Nest.Y - 650.f, -30.f), FVector(380.f, 300.f, 200.f), Dirt));
+	AddMound(0, Ball(FVector(-6700.f, Nest.Y + 680.f, -30.f), FVector(340.f, 320.f, 180.f), Dirt));
 	Cyl(FVector(Nest.X, Nest.Y, 0.f), NestRadius(), 4.f, DarkDirt, false);
 	for (int32 i = 0; i < 6; ++i)
 	{
@@ -425,10 +428,10 @@ void AKitchenBuilder::Build()
 	{
 		const FVector R = NestLocation(1);
 		const FLinearColor Red = Hex(150, 45, 25), DarkRed = Hex(90, 25, 15);
-		Ball(FVector(R.X + 420.f, R.Y, -60.f), FVector(520.f, 600.f, 420.f), Red);
-		Ball(FVector(R.X + 420.f, R.Y, 260.f), FVector(110.f, 110.f, 90.f), Black);       // entrance on top
-		Ball(FVector(R.X + 150.f, R.Y + 420.f, -20.f), FVector(220.f, 200.f, 160.f), DarkRed);
-		Ball(FVector(R.X + 180.f, R.Y - 430.f, -20.f), FVector(200.f, 230.f, 150.f), DarkRed);
+		AddMound(1, Ball(FVector(R.X + 420.f, R.Y, -60.f), FVector(520.f, 600.f, 420.f), Red));
+		AddMound(1, Ball(FVector(R.X + 420.f, R.Y, 260.f), FVector(110.f, 110.f, 90.f), Black));       // entrance on top
+		AddMound(1, Ball(FVector(R.X + 150.f, R.Y + 420.f, -20.f), FVector(220.f, 200.f, 160.f), DarkRed));
+		AddMound(1, Ball(FVector(R.X + 180.f, R.Y - 430.f, -20.f), FVector(200.f, 230.f, 150.f), DarkRed));
 		Cyl(FVector(R.X, R.Y, 0.f), NestRadius(1), 4.f, Hex(70, 25, 15), false);
 		for (int32 i = 0; i < 18; ++i)   // their trail towards the middle
 		{
@@ -823,9 +826,49 @@ void AKitchenBuilder::SetMainLights(bool bOn)
 	if (WindowLight) { WindowLight->SetIntensity(bOn ? 3.f : 1.2f); WindowLight->SetLightColor(bOn ? FLinearColor(0.7f, 0.85f, 1.f) : FLinearColor(0.35f, 0.45f, 0.9f)); }
 }
 
+void AKitchenBuilder::AddMound(int32 Team, UStaticMeshComponent* C)
+{
+	if (C)
+	{
+		C->SetMobility(EComponentMobility::Movable);   // grows during the match
+		Mounds(Team).Add(C);
+		MoundBaseScale[Team].Add(C->GetRelativeScale3D());
+		MoundBaseLoc[Team].Add(C->GetRelativeLocation());
+	}
+}
+
+void AKitchenBuilder::UpdateMounds(float Dt)
+{
+	const AAntGameState* GS = GetWorld()->GetGameState<AAntGameState>();
+	if (!GS)
+	{
+		return;
+	}
+	const float Target = FMath::Max(1.f, (float)GS->TargetScore);
+	const float Want[2] = { FMath::Clamp(GS->TeamScore / Target, 0.f, 1.f), FMath::Clamp(GS->RivalScore / Target, 0.f, 1.f) };
+	for (int32 T = 0; T < 2; ++T)
+	{
+		MoundGrowth[T] = FMath::FInterpTo(MoundGrowth[T], Want[T], Dt, 0.8f);
+		// Up to ~2x wider and ~2.6x taller at the end of the match.
+		const FVector K(1.f + MoundGrowth[T], 1.f + MoundGrowth[T], 1.f + 1.6f * MoundGrowth[T]);
+		const FVector Home = NestLocation(T);
+		for (int32 i = 0; i < Mounds(T).Num(); ++i)
+		{
+			const FVector Base = MoundBaseLoc[T][i];
+			const FVector Off = Base - FVector(Home.X, Home.Y, 0.f);
+			Mounds(T)[i]->SetRelativeLocation(FVector(Home.X, Home.Y, 0.f) + FVector(Off.X * (0.6f + 0.4f * K.X), Off.Y * (0.6f + 0.4f * K.Y), Off.Z + MoundGrowth[T] * 120.f));
+			Mounds(T)[i]->SetRelativeScale3D(MoundBaseScale[T][i] * K);
+		}
+	}
+}
+
 void AKitchenBuilder::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	if (GetNetMode() != NM_DedicatedServer)
+	{
+		UpdateMounds(DeltaSeconds);
+	}
 	if (GetNetMode() == NM_Client)
 	{
 		return;

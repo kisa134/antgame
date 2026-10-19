@@ -22,6 +22,7 @@ void AAntGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	DOREPLIFETIME(AAntGameState, TeamScore);
 	DOREPLIFETIME(AAntGameState, RivalScore);
 	DOREPLIFETIME(AAntGameState, HumanRage);
+	DOREPLIFETIME(AAntGameState, RivalWorkers);
 	DOREPLIFETIME(AAntGameState, TargetScore);
 	DOREPLIFETIME(AAntGameState, TimeRemaining);
 	DOREPLIFETIME(AAntGameState, Phase);

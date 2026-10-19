@@ -1,4 +1,5 @@
 ﻿#include "AntSwarm.h"
+#include "AntArmy.h"
 #include "AntCharacter.h"
 #include "AntKitchenGameMode.h"
 #include "KitchenBuilder.h"
@@ -54,12 +55,12 @@ AAntSwarm* AAntSwarm::Get(const UWorld* World)
 }
 
 UInstancedStaticMeshComponent* AAntSwarm::MakePart(const TCHAR* Name, const FVector& Offset, const FVector& Size, float LegMode,
-	const FLinearColor& Color, const FLinearColor& Glow, bool bShadow)
+	const FLinearColor& Color, const FLinearColor& Glow, bool bShadow, UStaticMesh* Mesh, const TCHAR* MaterialPath)
 {
 	UInstancedStaticMeshComponent* C = NewObject<UInstancedStaticMeshComponent>(this, Name);
 	C->SetupAttachment(RootComponent);
 	C->SetMobility(EComponentMobility::Movable);
-	C->SetStaticMesh(AntKit::ShapeMesh(EAntShape::Cube));
+	C->SetStaticMesh(Mesh ? Mesh : AntKit::ShapeMesh(EAntShape::Cube));
 	C->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	C->SetGenerateOverlapEvents(false);
 	C->SetCanEverAffectNavigation(false);
@@ -69,7 +70,7 @@ UInstancedStaticMeshComponent* AAntSwarm::MakePart(const TCHAR* Name, const FVec
 	C->RegisterComponent();
 	AddInstanceComponent(C);
 
-	UMaterialInterface* Base = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Swarm/M_SwarmAnt.M_SwarmAnt"));
+	UMaterialInterface* Base = LoadObject<UMaterialInterface>(nullptr, MaterialPath ? MaterialPath : TEXT("/Game/Swarm/M_SwarmAnt.M_SwarmAnt"));
 	bHasMaterial = Base != nullptr;
 	if (Base)
 	{
@@ -99,13 +100,29 @@ void AAntSwarm::BeginPlay()
 		return;
 	}
 	using namespace SwarmLook;
-	// Minor workers: ~40 units long (the player ant is ~85).
-	BodyParts.Add(MakePart(TEXT("Abdomen"), FVector(-11.f, 0.f, 6.f), FVector(17.f, 11.f, 10.f), 0.f, Body, FLinearColor::Black, true));
-	BodyParts.Add(MakePart(TEXT("Thorax"), FVector(0.f, 0.f, 6.f), FVector(10.f, 6.f, 6.f), 0.f, Body, FLinearColor::Black, false));
-	BodyParts.Add(MakePart(TEXT("Head"), FVector(9.f, 0.f, 7.f), FVector(8.f, 8.f, 7.f), 0.f, Body, FLinearColor::Black, false));
-	BodyParts.Add(MakePart(TEXT("LegsA"), FVector(0.f, 0.f, 3.f), FVector(2.5f, 32.f, 2.f), 1.f, Legs, FLinearColor::Black, false));
-	BodyParts.Add(MakePart(TEXT("LegsB"), FVector(0.f, 0.f, 3.f), FVector(2.5f, 32.f, 2.f), 2.f, Legs, FLinearColor::Black, false));
-	Crumbs = MakePart(TEXT("Crumbs"), FVector(9.f, 0.f, 16.f), FVector(10.f, 10.f, 8.f), 0.f, Crumb, Crumb * 0.25f, false);
+	// Workers: the same ant as the player (low-poly copy of the Meshy body), a bit smaller.
+	constexpr float K = 0.7f;
+	// The Nanite ant body: Nanite draws tens of thousands of tiny instances cheaply.
+	UStaticMesh* ArtMesh = AntArt::Get(TEXT("SM_Ant_Body")).Mesh;
+	const bool bArtMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Swarm/M_SwarmAntArt.M_SwarmAntArt")) != nullptr;
+	if (ArtMesh && bArtMat)
+	{
+		const FBox B = ArtMesh->GetBoundingBox();
+		const float Len = 40.f * K;
+		const float S = Len / FMath::Max(1.f, (float)B.GetSize().X);
+		const FVector Off = FVector(0.f, 0.f, 6.f * K) - B.GetCenter() * S;
+		BodyParts.Add(MakePart(TEXT("Body"), Off, FVector(S * 100.f), 0.f, FLinearColor(1.f, 1.f, 1.f), FLinearColor::Black, true,
+			ArtMesh, TEXT("/Game/Swarm/M_SwarmAntArt.M_SwarmAntArt")));
+	}
+	else
+	{
+		BodyParts.Add(MakePart(TEXT("Abdomen"), FVector(-11.f, 0.f, 6.f) * K, FVector(17.f, 11.f, 10.f) * K, 0.f, Body, FLinearColor::Black, true));
+		BodyParts.Add(MakePart(TEXT("Thorax"), FVector(0.f, 0.f, 6.f) * K, FVector(10.f, 6.f, 6.f) * K, 0.f, Body, FLinearColor::Black, false));
+		BodyParts.Add(MakePart(TEXT("Head"), FVector(9.f, 0.f, 7.f) * K, FVector(8.f, 8.f, 7.f) * K, 0.f, Body, FLinearColor::Black, false));
+	}
+	BodyParts.Add(MakePart(TEXT("LegsA"), FVector(0.f, 0.f, 3.f) * K, FVector(1.6f, 30.f, 1.4f) * K, 1.f, Legs, FLinearColor::Black, false));
+	BodyParts.Add(MakePart(TEXT("LegsB"), FVector(0.f, 0.f, 3.f) * K, FVector(1.6f, 30.f, 1.4f) * K, 2.f, Legs, FLinearColor::Black, false));
+	Crumbs = MakePart(TEXT("Crumbs"), FVector(9.f, 0.f, 13.f) * K, FVector(10.f, 10.f, 8.f) * K, 0.f, Crumb, Crumb * 0.25f, false);
 
 	for (int32 i = 0; i < 8; ++i)
 	{
@@ -172,12 +189,18 @@ void AAntSwarm::Rebuild()
 
 			const FVector Mid = (A + B) * 0.5f;
 			const float Scale = (SegLen[i] + 160.f) / 100.f;
+			// Two-way traffic like real ants: going out on one side, coming back (with crumbs) on the other,
+			// each lane a column of ants walking one after another.
+			const int32 Out = (Here + 1) / 2;
+			const int32 Back = Here - Out;
 			for (int32 k = 0; k < Here; ++k)
 			{
-				const bool bBack = R.FRand() < 0.5f;
-				const float Speed = WorkerSpeed * R.FRandRange(0.85f, 1.15f) * (bBack ? -1.f : 1.f);
-				const float Phase = R.FRand();
-				const float Lat = R.FRandRange(-26.f, 26.f);
+				const bool bBack = k >= Out;
+				const int32 Idx = bBack ? k - Out : k;
+				const int32 InLane = FMath::Max(1, bBack ? Back : Out);
+				const float Speed = WorkerSpeed * R.FRandRange(0.97f, 1.03f) * (bBack ? -1.f : 1.f);
+				const float Phase = FMath::Frac((Idx + R.FRandRange(-0.25f, 0.25f)) / InLane);
+				const float Lat = (bBack ? 1.f : -1.f) * (13.f + R.FRandRange(-6.f, 6.f));
 				const float D[SwarmLook::NumData] = { (float)A.X, (float)A.Y, (float)A.Z, (float)B.X, (float)B.Y, (float)B.Z, (float)N.X, (float)N.Y, (float)N.Z, Speed, Phase, Lat, 0.f };
 
 				FTransform T;
@@ -570,7 +593,7 @@ void AAntSwarm::AddPopulation(int32 Amount)
 
 int32 AAntSwarm::KillInSphere(const FVector& Center, float Radius)
 {
-	int32 Total = 0;
+	int32 Total = AAntArmy::KillInSphere(GetWorld(), Center, Radius, 100000);
 	for (FSwarmStream& S : Streams)
 	{
 		float Killed = 0.f;
@@ -610,6 +633,7 @@ int32 AAntSwarm::KillInSphere(const FVector& Center, float Radius)
 
 int32 AAntSwarm::KillInCone(const FVector& Origin, const FVector& Dir, float Range, float CosHalfAngle, float Dt)
 {
+	AAntArmy::KillInCone(GetWorld(), Origin, Dir, Range, CosHalfAngle, Dt);
 	int32 Total = 0;
 	for (FSwarmStream& S : Streams)
 	{

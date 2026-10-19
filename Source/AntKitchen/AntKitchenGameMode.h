@@ -51,6 +51,7 @@ public:
 	/** The worker swarm brought food home. */
 	void OnSwarmIncome(int32 Value);
 	void Broadcast(const FString& Text, const FLinearColor& Color);
+	void AddScore(uint8 Team, int32 Value);
 
 	AKitchenLoot* SpawnFood(const FVector& Location, int32 Tier);
 	AKitchenLoot* SpawnGear(const FVector& Location, const FAntWeapon& Weapon);
@@ -59,8 +60,8 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Match") int32 TargetScore = 1500;
 	UPROPERTY(EditDefaultsOnly, Category = "Match") float MatchLength = 600.f;
 	UPROPERTY(EditDefaultsOnly, Category = "Match") float RespawnDelay = 5.f;
-	UPROPERTY(EditDefaultsOnly, Category = "Match") int32 AllyBots = 2;
-	UPROPERTY(EditDefaultsOnly, Category = "Match") int32 RivalBots = 3;
+	UPROPERTY(EditDefaultsOnly, Category = "Match") int32 AllyBots = 7;    // + you = 8 per colony
+	UPROPERTY(EditDefaultsOnly, Category = "Match") int32 RivalBots = 8;
 
 private:
 	void SpawnHuman();
@@ -72,9 +73,10 @@ private:
 	void MatchTick();
 	/** 1 colony won, 2 Human won, 3 fire ants won. */
 	void EndMatch(uint8 Winner);
-	void AddScore(uint8 Team, int32 Value);
 	void UpdateRage();
 	void SpawnHeavyLoot();
+	void RivalWarTick();
+	FTimerHandle WarTimer;
 	void ResetMatch();
 	void RespawnAnt(AController* C);
 	bool IsSpotFree(const FVector& Location) const;

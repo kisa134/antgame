@@ -9,6 +9,8 @@
 #include "Components/InputComponent.h"
 #include "InputCoreTypes.h"
 #include "Kismet/GameplayStatics.h"
+#include "Sound/SoundBase.h"
+#include "AntTypes.h"
 #include "Engine/World.h"
 
 void AAntPlayerController::BeginPlay()
@@ -16,6 +18,11 @@ void AAntPlayerController::BeginPlay()
 	Super::BeginPlay();
 	if (IsLocalController())
 	{
+		// Kitchen room tone: fridge hum and air, under everything.
+		if (USoundBase* Amb = AntSfx::Get(AntSfx::Ambience))
+		{
+			UGameplayStatics::SpawnSound2D(this, Amb, 0.35f, 1.f, 0.f, nullptr, true, false);
+		}
 		FInputModeGameOnly Mode;
 		SetInputMode(Mode);
 		bShowMouseCursor = false;

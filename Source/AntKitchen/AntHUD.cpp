@@ -8,6 +8,7 @@
 #include "AntPlayerController.h"
 #include "KitchenLoot.h"
 #include "KitchenBuilder.h"
+#include "AntArmy.h"
 #include "AntTypes.h"
 #include "Engine/Canvas.h"
 #include "Engine/Engine.h"
@@ -285,6 +286,29 @@ void AAntHUD::DrawAnt(AAntCharacter* Ant)
 	{
 		Txt(FString::Printf(TEXT("%s — сила %.0f"), Cls.Name, Cls.Strength), X, Y + 34.f * S, Gold, Small, 1.2f * S);
 	}
+	// Commander: army + squad.
+	if (Ant->Creature == 0)
+	{
+		const AAntArmy* Army = nullptr;
+		for (TActorIterator<AAntArmy> It(GetWorld()); It; ++It)
+		{
+			if (It->Commander == Ant) { Army = *It; }
+			else if (It->Team != Ant->Team)
+			{
+				Marker(It->GetActorLocation() + FVector(0.f, 0.f, 120.f), FString::Printf(TEXT("ВРАЖЕСКАЯ АРМИЯ %d"), It->Count), FLinearColor(1.f, 0.3f, 0.15f), true);
+			}
+		}
+		const FString ArmyLine = Army
+			? FString::Printf(TEXT("АРМИЯ: %d — %s   |  R — в атаку на прицел / ко мне   F — распустить"), Army->Count,
+				Army->Mode == EArmyMode::Follow ? TEXT("за тобой") : Army->Mode == EArmyMode::Attack ? TEXT("АТАКУЕТ") : TEXT("домой"))
+			: TEXT("F — вывести армию рабочих из муравейника   |   Z — отряд за мной   X — отряд в атаку на прицел   C — отряд свободен");
+		Txt(ArmyLine, X, Y - 112.f * S, Army ? FLinearColor(1.f, 0.8f, 0.3f) : Grey, Small, 1.1f * S);
+		if (Army && Army->Mode == EArmyMode::Attack)
+		{
+			Marker(FVector(Army->Target) + FVector(0.f, 0.f, 80.f), TEXT("цель армии"), FLinearColor(1.f, 0.8f, 0.3f), true);
+		}
+	}
+
 	if (Ant->IsInNest())
 	{
 		Txt(TEXT("В муравейнике безопасно.  Каста: 1 Фуражир (сила)  2 Солдат (броня, урон)  3 Разведчик (скорость, прыжок)  4 Бочка (лечит своих)"), X, Y + 84.f * S, Green, Small, 1.1f * S);

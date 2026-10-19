@@ -86,7 +86,8 @@ private:
 	void ServerTick();
 	void RemoveStream(int32 Index, bool bReturnToNest);
 	void Kill(FSwarmStream& S, int32 N);
-	UInstancedStaticMeshComponent* MakePart(const TCHAR* Name, const FVector& Offset, const FVector& Size, float LegMode, const FLinearColor& Color, const FLinearColor& Glow, bool bShadow);
+	UInstancedStaticMeshComponent* MakePart(const TCHAR* Name, const FVector& Offset, const FVector& Size, float LegMode, const FLinearColor& Color, const FLinearColor& Glow, bool bShadow,
+		class UStaticMesh* Mesh = nullptr, const TCHAR* MaterialPath = nullptr);
 
 	UPROPERTY() TArray<UInstancedStaticMeshComponent*> BodyParts;   // abdomen, thorax, head, legs A, legs B
 	UPROPERTY() UInstancedStaticMeshComponent* Crumbs = nullptr;

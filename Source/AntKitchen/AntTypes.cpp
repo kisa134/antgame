@@ -455,7 +455,7 @@ namespace AntSfx
 {
 static const TCHAR* Names[Count] = { TEXT("S_Spit"), TEXT("S_Splat"), TEXT("S_Hit"), TEXT("S_Crit"), TEXT("S_Kill"), TEXT("S_Grab"), TEXT("S_Drop"),
 	TEXT("S_Deliver"), TEXT("S_Crunch"), TEXT("S_Stomp"), TEXT("S_Spray"), TEXT("S_Squish"), TEXT("S_Jump"), TEXT("S_Zap"), TEXT("S_Sizzle"),
-	TEXT("S_Splash"), TEXT("S_Rage"), TEXT("S_Bite"), TEXT("S_Buzz"), TEXT("S_Web"), TEXT("S_Hiss") };
+	TEXT("S_Splash"), TEXT("S_Rage"), TEXT("S_Bite"), TEXT("S_Buzz"), TEXT("S_Web"), TEXT("S_Hiss"), TEXT("S_Step"), TEXT("S_Ambience") };
 
 USoundBase* Get(uint8 Id)
 {

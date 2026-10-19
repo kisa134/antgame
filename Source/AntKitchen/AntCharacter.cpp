@@ -24,6 +24,8 @@
 #include "Components/PointLightComponent.h"
 #include "HumanCharacter.h"
 #include "AntGameState.h"
+#include "AntArmy.h"
+#include "AntBotController.h"
 
 AAntCharacter::AAntCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<UAntMovementComponent>(ACharacter::CharacterMovementComponentName))
@@ -491,6 +493,11 @@ void AAntCharacter::SetupPlayerInputComponent(UInputComponent* Input)
 	// Caste selection, inside the nest.
 	Input->BindAction("AltFire", IE_Pressed, this, &AAntCharacter::Bite);
 	Input->BindKey(EKeys::V, IE_Pressed, this, &AAntCharacter::ToggleBodycam);
+	Input->BindKey(EKeys::F, IE_Pressed, this, &AAntCharacter::CmdArmy);
+	Input->BindKey(EKeys::R, IE_Pressed, this, &AAntCharacter::CmdArmyTarget);
+	Input->BindKey(EKeys::Z, IE_Pressed, this, &AAntCharacter::CmdFollow);
+	Input->BindKey(EKeys::X, IE_Pressed, this, &AAntCharacter::CmdAttack);
+	Input->BindKey(EKeys::C, IE_Pressed, this, &AAntCharacter::CmdFree);
 	Input->BindKey(EKeys::One, IE_Pressed, this, &AAntCharacter::PickClass1);
 	Input->BindKey(EKeys::Two, IE_Pressed, this, &AAntCharacter::PickClass2);
 	Input->BindKey(EKeys::Three, IE_Pressed, this, &AAntCharacter::PickClass3);
@@ -1300,6 +1307,108 @@ void AAntCharacter::ApplyCameraLook()
 	}
 }
 
+FVector AAntCharacter::AimPoint() const
+{
+	FVector CamLoc;
+	FRotator CamRot;
+	if (!Controller)
+	{
+		return GetActorLocation();
+	}
+	Controller->GetPlayerViewPoint(CamLoc, CamRot);
+	FHitResult Hit;
+	FCollisionQueryParams P(SCENE_QUERY_STAT(AntCmdAim), false, this);
+	if (GetWorld()->LineTraceSingleByChannel(Hit, CamLoc, CamLoc + CamRot.Vector() * 20000.f, ECC_Visibility, P))
+	{
+		return Hit.ImpactPoint;
+	}
+	return CamLoc + CamRot.Vector() * 3000.f;
+}
+
+void AAntCharacter::CmdArmy() { ServerCommand(0, GetActorLocation()); }
+void AAntCharacter::CmdArmyTarget() { ServerCommand(1, AimPoint()); }
+void AAntCharacter::CmdFollow() { ServerCommand(2, GetActorLocation()); }
+void AAntCharacter::CmdAttack() { ServerCommand(3, AimPoint()); }
+void AAntCharacter::CmdFree() { ServerCommand(4, GetActorLocation()); }
+
+void AAntCharacter::ServerCommand_Implementation(uint8 Cmd, FVector_NetQuantize Point)
+{
+	if (bDead || Creature != 0 || Team > 1)
+	{
+		return;
+	}
+	AAntArmy* Army = AAntArmy::FindFor(this);
+	if (Cmd == 0)
+	{
+		if (Army)
+		{
+			Army->Disband();
+			Toast(TEXT("Армия возвращается в муравейник"));
+			return;
+		}
+		// Take workers out of the nest.
+		int32 Avail = 0;
+		AAntSwarm* Swarm = AAntSwarm::Get(GetWorld());
+		AAntGameState* GS = GetWorld()->GetGameState<AAntGameState>();
+		if (Team == 0 && Swarm) { Avail = Swarm->Idle; }
+		else if (GS) { Avail = GS->RivalWorkers; }
+		const int32 N = FMath::Min(Avail, FMath::Clamp(Avail / 2, 150, 4000));
+		if (N < 30)
+		{
+			Toast(TEXT("В муравейнике почти нет свободных рабочих — тащите еду, они вылупятся"));
+			return;
+		}
+		if (Team == 0 && Swarm) { Swarm->Idle -= N; } else if (GS) { GS->RivalWorkers -= N; }
+		FActorSpawnParameters SP;
+		SP.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		const FVector Start = AKitchenBuilder::NestLocation(Team) + FVector(0.f, 0.f, 10.f);
+		AAntArmy* A = GetWorld()->SpawnActorDeferred<AAntArmy>(AAntArmy::StaticClass(), FTransform(Start), nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+		if (A)
+		{
+			A->Team = Team;
+			A->Count = N;
+			A->Commander = this;
+			A->Mode = EArmyMode::Follow;
+			A->FinishSpawning(FTransform(Start));
+		}
+		Toast(FString::Printf(TEXT("АРМИЯ: %d муравьёв вышли из муравейника за тобой! R — в атаку на прицел"), N));
+		AntSfx::Everyone(this, AntSfx::Rage, GetActorLocation(), 1.8f);
+		return;
+	}
+	if (Cmd == 1)
+	{
+		if (!Army)
+		{
+			Toast(TEXT("Нет армии — нажми F"));
+			return;
+		}
+		if (FVector::Dist(Point, GetActorLocation()) < 350.f)
+		{
+			Army->Mode = EArmyMode::Follow;
+			Toast(TEXT("Армия: за мной!"));
+		}
+		else
+		{
+			Army->Mode = EArmyMode::Attack;
+			Army->Target = Point;
+			Toast(TEXT("Армия: В АТАКУ!"));
+		}
+		return;
+	}
+	// Orders for the bots of my colony.
+	int32 N = 0;
+	for (TActorIterator<AAntBotController> It(GetWorld()); It; ++It)
+	{
+		AAntCharacter* B = Cast<AAntCharacter>(It->GetPawn());
+		if (B && B->Team == Team && B->Creature == 0)
+		{
+			It->SetOrder(Cmd == 2 ? 1 : Cmd == 3 ? 2 : 0, this, Point);
+			++N;
+		}
+	}
+	Toast(Cmd == 2 ? FString::Printf(TEXT("Отряд (%d): за мной!"), N) : Cmd == 3 ? FString::Printf(TEXT("Отряд (%d): атакуем точку!"), N) : TEXT("Отряд: свободная охота за едой"));
+}
+
 void AAntCharacter::DevInteract()
 {
 	ServerInteract_Implementation();
@@ -1685,6 +1794,13 @@ void AAntCharacter::UpdateVisuals(float DeltaSeconds)
 
 	if (bNear)
 	{
+		// Footsteps only for ants close to the listener.
+		FootstepVolume = 0.f;
+		if (const APlayerController* LPC = GetWorld()->GetFirstPlayerController(); LPC && LPC->PlayerCameraManager)
+		{
+			const float D = (float)FVector::Dist(LPC->PlayerCameraManager->GetCameraLocation(), GetActorLocation());
+			FootstepVolume = IsLocallyControlled() ? 0.35f : FMath::Clamp(1.f - D / 900.f, 0.f, 1.f) * 0.3f;
+		}
 		UpdateLegs(DeltaSeconds, VisNormal);
 	}
 }
@@ -1774,6 +1890,11 @@ void AAntCharacter::UpdateLegs(float Dt, const FVector& N)
 				L.From = L.Foot;
 				L.To = Desired + Vel * StepDur * 0.6f;
 				L.T = 0.f;
+				if (!GroupStepping[L.Group] && FootstepVolume > 0.f)
+				{
+					// One tiny chitin tick per tripod step (louder for your own ant, pitch by size).
+					AntSfx::Play(this, AntSfx::Step, L.To, FootstepVolume, FMath::Clamp(1.4f - VisScale(), 0.45f, 1.5f));
+				}
 				GroupStepping[L.Group] = true;
 			}
 		}

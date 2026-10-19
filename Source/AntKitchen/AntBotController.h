@@ -22,6 +22,8 @@ public:
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void UpdateControlRotation(float DeltaTime, bool bUpdatePawn = true) override;
 	virtual void OnPossess(APawn* InPawn) override;
+	/** Squad order from a player commander: 0 free, 1 follow him, 2 attack a point. */
+	void SetOrder(uint8 Mode, AAntCharacter* By, const FVector& Point);
 
 private:
 	void Think(AAntCharacter* Ant);
@@ -32,6 +34,10 @@ private:
 	bool CanSee(AAntCharacter* Ant, const AActor* Target) const;
 
 	TWeakObjectPtr<AKitchenLoot> FoodTarget;
+	uint8 OrderMode = 0;
+	TWeakObjectPtr<AAntCharacter> OrderBy;
+	FVector OrderPoint = FVector::ZeroVector;
+	float OrderUntil = 0.f;
 	TWeakObjectPtr<AKitchenLoot> LastCarried;
 	TWeakObjectPtr<AActor> ShootTarget;
 	TMap<TWeakObjectPtr<AKitchenLoot>, float> IgnoreUntil;   // gave up on these (too heavy alone)

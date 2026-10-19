@@ -29,6 +29,19 @@ void AAntBotController::OnPossess(APawn* InPawn)
 	}
 }
 
+void AAntBotController::SetOrder(uint8 Mode, AAntCharacter* By, const FVector& Point)
+{
+	OrderMode = Mode;
+	OrderBy = By;
+	OrderPoint = Point;
+	OrderUntil = GetWorld()->GetTimeSeconds() + (Mode == 2 ? 40.f : 180.f);
+	if (Mode != 0)
+	{
+		if (AAntCharacter* Me = Cast<AAntCharacter>(GetPawn()); Me && Me->Carrying && Mode == 2) { Me->LetGo(); }
+		FoodTarget = nullptr;
+	}
+}
+
 void AAntBotController::UpdateControlRotation(float DeltaTime, bool bUpdatePawn)
 {
 	if (APawn* P = GetPawn())
@@ -171,6 +184,25 @@ void AAntBotController::Think(AAntCharacter* Ant)
 			Goal = AKitchenBuilder::SpiderLair();
 			ShootTarget = nullptr;
 		}
+		bHasGoal = true;
+		return;
+	}
+
+	// Squad orders from the player commander.
+	if (OrderMode != 0 && (Now > OrderUntil || (OrderMode == 1 && (!OrderBy.IsValid() || OrderBy->bDead))))
+	{
+		OrderMode = 0;
+	}
+	if (OrderMode == 1 && OrderBy.IsValid() && !Ant->Carrying)
+	{
+		const float Ang = (GetUniqueID() % 8) * 0.785f;
+		Goal = OrderBy->GetActorLocation() + FVector(FMath::Cos(Ang), FMath::Sin(Ang), 0.f) * 180.f;
+		bHasGoal = true;
+		return;
+	}
+	if (OrderMode == 2)
+	{
+		Goal = OrderPoint + FVector(FMath::FRandRange(-200.f, 200.f), FMath::FRandRange(-200.f, 200.f), 0.f);
 		bHasGoal = true;
 		return;
 	}

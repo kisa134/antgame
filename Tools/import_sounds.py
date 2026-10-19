@@ -13,7 +13,7 @@ for f in sorted(glob.glob(os.path.join(PROJ, "SourceArt", "Sounds", "*.wav"))):
     t.set_editor_property("save", True)
     AT.import_asset_tasks([t])
     unreal.log("SOUND imported " + name)
-for loop in ("S_Spray", "S_Buzz"):
+for loop in ("S_Spray", "S_Buzz", "S_Ambience"):
     p = "/Game/Sounds/" + loop
     if unreal.EditorAssetLibrary.does_asset_exist(p):
         s = unreal.load_asset(p)

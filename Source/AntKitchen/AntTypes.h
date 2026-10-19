@@ -103,7 +103,7 @@ namespace AntKit
 /** Sound effects (generated WAVs in /Game/Sounds). */
 namespace AntSfx
 {
-	enum EId : uint8 { Spit, Splat, Hit, Crit, Kill, Grab, Drop, Deliver, Crunch, Stomp, Spray, Squish, Jump, Zap, Sizzle, Splash, Rage, Bite, Buzz, Web, Hiss, Count };
+	enum EId : uint8 { Spit, Splat, Hit, Crit, Kill, Grab, Drop, Deliver, Crunch, Stomp, Spray, Squish, Jump, Zap, Sizzle, Splash, Rage, Bite, Buzz, Web, Hiss, Step, Ambience, Count };
 	ANTKITCHEN_API class USoundBase* Get(uint8 Id);
 	/** Local: plays at a world location with distance falloff. */
 	ANTKITCHEN_API void Play(const UObject* WorldContext, uint8 Id, const FVector& Location, float Volume = 1.f, float Pitch = 1.f);

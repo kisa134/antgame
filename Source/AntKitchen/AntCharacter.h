@@ -213,6 +213,14 @@ protected:
 	UFUNCTION(Server, Reliable) void ServerRecallSwarm();
 	UFUNCTION(Server, Reliable) void ServerSetClass(uint8 NewClass);
 	UFUNCTION(Server, Reliable) void ServerBite();
+	/** Commander: 0 summon/dismiss army, 1 army to point (or follow), 2 bots follow me, 3 bots attack point, 4 bots free. */
+	UFUNCTION(Server, Reliable) void ServerCommand(uint8 Cmd, FVector_NetQuantize Point);
+	void CmdArmy();
+	void CmdArmyTarget();
+	void CmdFollow();
+	void CmdAttack();
+	void CmdFree();
+	FVector AimPoint() const;
 	void Bite();
 	void ToggleBodycam();
 	void ApplyCameraLook();
@@ -281,6 +289,7 @@ protected:
 	float DamageAccum = 0.f;
 	float NurseTimer = 0.f;
 	float Trauma = 0.f;
+	float FootstepVolume = 0.f;
 	float LastHealthSeen = -1.f;
 	float NextBiteTime = 0.f;
 	float ServerNextBiteTime = 0.f;

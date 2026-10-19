@@ -70,4 +70,13 @@ private:
 	UPROPERTY() UPointLightComponent* WindowLight = nullptr;
 
 	float HazardTimer = 0.f;
+	/** Nest mounds grow as each colony fills its stores (index = team). */
+	UPROPERTY() TArray<UStaticMeshComponent*> Mounds0;
+	UPROPERTY() TArray<UStaticMeshComponent*> Mounds1;
+	TArray<UStaticMeshComponent*>& Mounds(int32 Team) { return Team == 0 ? Mounds0 : Mounds1; }
+	TArray<FVector> MoundBaseScale[2];
+	TArray<FVector> MoundBaseLoc[2];
+	float MoundGrowth[2] = { 0.f, 0.f };
+	void AddMound(int32 Team, UStaticMeshComponent* C);
+	void UpdateMounds(float Dt);
 };

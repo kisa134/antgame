@@ -24,6 +24,7 @@ public:
 	UPROPERTY(Replicated) int32 TeamScore = 0;
 	UPROPERTY(Replicated) int32 RivalScore = 0;      // fire ants
 	UPROPERTY(Replicated) uint8 HumanRage = 0;       // 0..3
+	UPROPERTY(Replicated) int32 RivalWorkers = 1500; // fire ants' reserve for their armies
 	UPROPERTY(Replicated) int32 TargetScore = 1500;
 	UPROPERTY(Replicated) float TimeRemaining = 600.f;
 	UPROPERTY(Replicated) uint8 Phase = 0;            // 0 playing, 1 ants won, 2 human won, 3 fire ants won
