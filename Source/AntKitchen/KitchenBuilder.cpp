@@ -13,6 +13,7 @@
 #include "EngineUtils.h"
 #include "Engine/World.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "Engine/Texture.h"
 
 namespace KitchenPalette
 {
@@ -74,6 +75,36 @@ FVector AKitchenBuilder::HumanSpawn() { return FVector(3800.f, -3200.f, 1720.f);
 FVector AKitchenBuilder::HumanFleePoint() { return FVector(5600.f, -4200.f, 1720.f); }
 FBox AKitchenBuilder::HotBurner() { return FBox(FVector(-610.f, 3240.f, 1735.f), FVector(-90.f, 3760.f, 1900.f)); }
 FBox AKitchenBuilder::PlayArea() { return FBox(FVector(-6000.f, -4300.f, 0.f), FVector(6200.f, 2550.f, 0.f)); }
+
+FVector AKitchenBuilder::RandomFloorPoint(FRandomStream* Rng)
+{
+	auto R = [Rng](float A, float B) { return Rng ? Rng->FRandRange(A, B) : FMath::FRandRange(A, B); };
+	// ~60% kitchen, ~40% living room.
+	if (R(0.f, 1.f) < 0.6f)
+	{
+		const FBox A = PlayArea();
+		return FVector(R(A.Min.X, A.Max.X), R(A.Min.Y, A.Max.Y), 0.f);
+	}
+	return FVector(R(8000.f, 19000.f), R(-8300.f, -500.f), 0.f);
+}
+
+FVector AKitchenBuilder::Route(const FVector& From, const FVector& To)
+{
+	const bool bFromKitchen = From.X < 7100.f;
+	const bool bToKitchen = To.X < 7100.f;
+	if (bFromKitchen == bToKitchen)
+	{
+		return To;
+	}
+	const FVector D = Doorway();
+	const float Z = FMath::Clamp((float)FMath::Min(From.Z, To.Z), 0.f, 2800.f);
+	// At the door: step through to the other side. Otherwise head for our side of the door.
+	if (FMath::Abs(From.Y - D.Y) < 700.f && FMath::Abs(From.X - D.X) < 600.f)
+	{
+		return FVector(bToKitchen ? 6200.f : 8000.f, D.Y, Z);
+	}
+	return FVector(bFromKitchen ? 6500.f : 7700.f, D.Y, Z);
+}
 
 void AKitchenBuilder::LootSpots(TArray<FVector>& L, TArray<int32>& T)
 {
@@ -176,15 +207,110 @@ void AKitchenBuilder::LootSpots(TArray<FVector>& L, TArray<int32>& T)
 	Add(-6800.f, 4870.f, 0.f, 3);   Add(-1000.f, 4870.f, 0.f, 1);         // corridor behind the cabinets
 	Add(1500.f, 4870.f, 0.f, 2);    Add(2600.f, 4300.f, 0.f, 1);
 	Add(3700.f, 5300.f, 0.f, 3);    Add(4100.f, 5400.f, 0.f, 3);          // the mouse's room
+
+	// ---- Living room ----
+	FRandomStream R2(4242);
+	for (int32 i = 0; i < 16; ++i)   // crumbs on the wooden floor and the rug
+	{
+		Add(R2.FRandRange(8000.f, 19000.f), R2.FRandRange(-8300.f, -700.f), 0.f, i % 5 == 0 ? 1 : 0);
+	}
+	Add(11500.f, 100.f, 950.f, 2);  Add(13500.f, 200.f, 950.f, 1);  Add(15500.f, 100.f, 950.f, 2);   // sofa cushions
+	Add(12000.f, 900.f, 0.f, 3);    Add(15000.f, 800.f, 0.f, 3);    Add(13600.f, 700.f, 0.f, 2);     // under the sofa: lost treasure
+	Add(13000.f, -3800.f, 980.f, 2); Add(14500.f, -3000.f, 980.f, 2);                                // coffee table
+	Add(13700.f, -3400.f, 340.f, 1);                                                                  // coffee table shelf
+	Add(12200.f, -8300.f, 1100.f, 2); Add(15200.f, -8300.f, 1100.f, 2);                              // TV stand top
+	Add(13700.f, -8400.f, 120.f, 3);                                                                  // inside the TV stand
+	Add(19700.f, -6500.f, 4600.f, 3); Add(19700.f, -3500.f, 4600.f, 3);                              // top of the bookshelf
+	Add(19700.f, -5000.f, 2800.f, 2); Add(19700.f, -4000.f, 1900.f, 2); Add(19700.f, -6000.f, 1000.f, 1);
+	Add(9250.f, -5750.f, 800.f, 2);                                                                   // armchair seat
+	Add(18800.f, 900.f, 800.f, 1);                                                                    // plant pot soil
 }
 
 // ---------------------------------------------------------------------------------------------
 // Geometry helpers
 // ---------------------------------------------------------------------------------------------
 
+namespace
+{
+	// Real surfaces for the procedural kitchen: textured, world-projected (M_Surface).
+	struct FSurf { int32 Mode = -1; const TCHAR* Tex = nullptr; float Size = 400.f; float Tint = 1.f; float Rough = 0.6f; float Metal = 0.f; bool bUseColor = false; };
+
+	FSurf SurfaceFor(const FLinearColor& C)
+	{
+		auto Is = [&C](const FLinearColor& K) { return C.Equals(K, 0.002f); };
+		FSurf S;
+		if (Is(TileA) || Is(TileB)) { S.Mode = 0; S.Tex = TEXT("T_Floor_Tile"); S.Size = 1400.f; S.Tint = Is(TileA) ? 1.f : 0.93f; S.Rough = 0.22f; }
+		else if (Is(WallC)) { S.Mode = 4; S.bUseColor = true; S.Rough = 0.9f; }
+		else if (Is(Ceiling)) { S.Mode = 0; S.Tex = TEXT("T_Ceiling"); S.Size = 900.f; S.Rough = 0.95f; }
+		else if (Is(Backsplash)) { S.Mode = 0; S.Tex = TEXT("T_Subway_Tile"); S.Size = 700.f; S.Rough = 0.12f; }
+		else if (Is(CounterTop)) { S.Mode = 0; S.Tex = TEXT("T_Granite"); S.Size = 800.f; S.Rough = 0.2f; }
+		else if (Is(Cabinet)) { S.Mode = 0; S.Tex = TEXT("T_Cabinet_Sage"); S.Size = 900.f; S.Tint = 0.92f; S.Rough = 0.55f; }
+		else if (Is(CabinetDoor)) { S.Mode = 0; S.Tex = TEXT("T_Cabinet_Sage"); S.Size = 900.f; S.Rough = 0.5f; }
+		else if (Is(Wood)) { S.Mode = 0; S.Tex = TEXT("T_Wood_Oak"); S.Size = 1100.f; S.Rough = 0.5f; }
+		else if (Is(DarkWood)) { S.Mode = 0; S.Tex = TEXT("T_Wood_Walnut"); S.Size = 900.f; S.Rough = 0.45f; }
+		else if (Is(Baseboard)) { S.Mode = 0; S.Tex = TEXT("T_Wood_Oak"); S.Size = 700.f; S.Tint = 0.65f; S.Rough = 0.5f; }
+		else if (Is(Steel)) { S.Mode = 0; S.Tex = TEXT("T_Steel_Brushed"); S.Size = 500.f; S.Rough = 0.32f; S.Metal = 0.9f; }
+		else if (Is(DarkSteel)) { S.Mode = 0; S.Tex = TEXT("T_Steel_Brushed"); S.Size = 500.f; S.Tint = 0.4f; S.Rough = 0.38f; S.Metal = 0.85f; }
+		else if (Is(Dirt)) { S.Mode = 0; S.Tex = TEXT("T_Soil"); S.Size = 700.f; S.Rough = 0.95f; }
+		else if (Is(DarkDirt)) { S.Mode = 0; S.Tex = TEXT("T_Soil"); S.Size = 700.f; S.Tint = 0.6f; S.Rough = 0.95f; }
+		else if (Is(Hex(170, 40, 50))) { S.Mode = 0; S.Tex = TEXT("T_Rug_Red"); S.Size = 900.f; S.Rough = 0.95f; }
+		else if (Is(White)) { S.Mode = 0; S.Tex = TEXT("T_Enamel_White"); S.Size = 600.f; S.Rough = 0.2f; }
+		else if (Is(Hex(70, 92, 125)) || Is(Hex(52, 70, 98))) { S.Mode = 0; S.Tex = TEXT("T_Fabric_Grey"); S.Size = 300.f; S.bUseColor = true; S.Rough = 0.95f; }   // sofa fabric
+		else if (Is(Hex(196, 152, 104))) { S.Mode = 0; S.Tex = TEXT("T_Parquet_Oak"); S.Size = 1600.f; S.Rough = 0.45f; }
+		else if (Is(Hex(205, 160, 105))) { S.Mode = 0; S.Tex = TEXT("T_Wood_Oak"); S.Size = 600.f; S.Tint = 1.15f; S.Rough = 0.6f; }
+		return S;
+	}
+
+	void ApplySurface(UStaticMeshComponent* C, const FLinearColor& Color)
+	{
+		static UMaterialInterface* Base = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Textures/M_Surface.M_Surface"));
+		if (!Base || !C)
+		{
+			return;
+		}
+		const FSurf S = SurfaceFor(Color);
+		if (S.Mode < 0)
+		{
+			return;
+		}
+		UMaterialInstanceDynamic* M = UMaterialInstanceDynamic::Create(Base, C);
+		M->SetScalarParameterValue(TEXT("Mode"), (float)S.Mode);
+		M->SetScalarParameterValue(TEXT("TileSize"), S.Size);
+		M->SetScalarParameterValue(TEXT("Roughness"), S.Rough);
+		M->SetScalarParameterValue(TEXT("Metallic"), S.Metal);
+		M->SetVectorParameterValue(TEXT("Tint"), S.bUseColor ? (S.Tex ? Color * 2.2f : Color) : FLinearColor(S.Tint, S.Tint, S.Tint, 1.f));
+		if (S.Tex)
+		{
+			static TMap<FString, UTexture*> Cache;
+			UTexture*& T = Cache.FindOrAdd(S.Tex);
+			if (!T)
+			{
+				T = LoadObject<UTexture>(nullptr, *FString::Printf(TEXT("/Game/Textures/%s.%s"), S.Tex, S.Tex));
+			}
+			if (T)
+			{
+				M->SetTextureParameterValue(TEXT("Tex"), T);
+			}
+			else
+			{
+				M->SetScalarParameterValue(TEXT("Mode"), 4.f);
+				M->SetVectorParameterValue(TEXT("Tint"), Color);
+			}
+		}
+		C->SetMaterial(0, M);
+	}
+}
+
+void AKitchenBuilder::Surface(UStaticMeshComponent* C, const FLinearColor& Color)
+{
+	ApplySurface(C, Color);
+}
+
 UStaticMeshComponent* AKitchenBuilder::Part(EAntShape Shape, const FVector& Center, const FVector& Size, const FRotator& Rot, const FLinearColor& Color, bool bCollide)
 {
-	return AntKit::AddPart(this, Root, Shape, Center, Size / 100.f, Color, Rot, bCollide, true);
+	UStaticMeshComponent* C = AntKit::AddPart(this, Root, Shape, Center, Size / 100.f, Color, Rot, bCollide, true);
+	ApplySurface(C, Color);
+	return C;
 }
 
 UStaticMeshComponent* AKitchenBuilder::Box(const FVector& Min, const FVector& Max, const FLinearColor& Color, bool bCollide)
@@ -295,10 +421,17 @@ void AKitchenBuilder::Build()
 	// Outside: a lawn far below the window, so the view isn't a void.
 	Box(FVector(-40000.f, -60000.f, -900.f), FVector(40000.f, -5200.f, -800.f), Hex(70, 120, 50), false);
 	Box(FVector(-7200.f, -5000.f, 0.f), FVector(-7000.f, 5000.f, 5400.f), WallC);
-	Box(FVector(7000.f, -5000.f, 0.f), FVector(7200.f, 5000.f, 5400.f), WallC);
+	// East wall with a doorway into the living room (y -4800..-3200, 3800 high).
+	Box(FVector(7000.f, -5000.f, 0.f), FVector(7200.f, -4800.f, 5400.f), WallC);
+	Box(FVector(7000.f, -3200.f, 0.f), FVector(7200.f, 5000.f, 5400.f), WallC);
+	Box(FVector(7000.f, -4800.f, 3800.f), FVector(7200.f, -3200.f, 5400.f), WallC);
+	Box(FVector(6960.f, -4840.f, 0.f), FVector(7240.f, -4800.f, 3840.f), Wood);   // door frame
+	Box(FVector(6960.f, -3200.f, 0.f), FVector(7240.f, -3160.f, 3840.f), Wood);
+	Box(FVector(6960.f, -4840.f, 3800.f), FVector(7240.f, -3160.f, 3840.f), Wood);
 	Box(FVector(-7200.f, -5200.f, 5400.f), FVector(7200.f, 5600.f, 5600.f), Ceiling);
 	Box(FVector(-7000.f, -5000.f, 0.f), FVector(7000.f, -4970.f, 220.f), Baseboard, false);
-	Box(FVector(6970.f, -5000.f, 0.f), FVector(7000.f, 5000.f, 220.f), Baseboard, false);
+	Box(FVector(6970.f, -3160.f, 0.f), FVector(7000.f, 5000.f, 220.f), Baseboard, false);
+	Box(FVector(6970.f, -5000.f, 0.f), FVector(7000.f, -4840.f, 220.f), Baseboard, false);
 	Box(FVector(-7000.f, -5000.f, 0.f), FVector(-6970.f, -3200.f, 220.f), Baseboard, false);
 	Box(FVector(-7000.f, -1800.f, 0.f), FVector(-6970.f, 5000.f, 220.f), Baseboard, false);
 
@@ -487,6 +620,7 @@ void AKitchenBuilder::Build()
 	Lamp(FVector(3900.f, 5300.f, 330.f), 2.5f, FLinearColor(1.f, 0.6f, 0.25f), 800.f, false);      // candle in the mouse room
 
 	BuildSecrets();
+	BuildLivingRoom();
 
 	Fill = NewObject<UDirectionalLightComponent>(this);
 	Fill->SetMobility(EComponentMobility::Movable);
@@ -767,9 +901,141 @@ void AKitchenBuilder::BuildSecrets()
 // Environment (server only): every zone and gadget gets a say in what happens to each ant.
 // ---------------------------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------------------------
+// Living room east of the kitchen (x 7200..20200, y -9000..1500): sofa with a dark space under it,
+// coffee table, TV stand, a tall bookshelf to climb, armchair, plant, hot radiator.
+// ---------------------------------------------------------------------------------------------
+
+void AKitchenBuilder::BuildLivingRoom()
+{
+	const FLinearColor Fabric = Hex(70, 92, 125), FabricDark = Hex(52, 70, 98), Book[5] = { Hex(150, 40, 40), Hex(40, 90, 150), Hex(220, 190, 80), Hex(60, 120, 70), Hex(230, 230, 220) };
+	// Shell: floor, ceiling, walls, baseboards.
+	Box(FVector(7000.f, -9200.f, -100.f), FVector(20400.f, 1700.f, 0.f), Hex(196, 152, 104));   // parquet
+	Box(FVector(7000.f, -9200.f, 5400.f), FVector(20400.f, 1700.f, 5600.f), Ceiling);
+	Box(FVector(7200.f, 1500.f, 0.f), FVector(20400.f, 1700.f, 5400.f), WallC);       // north
+	Box(FVector(7000.f, -9200.f, 0.f), FVector(20400.f, -9000.f, 5400.f), WallC);     // south
+	Box(FVector(20200.f, -9000.f, 0.f), FVector(20400.f, 1500.f, 5400.f), WallC);     // east
+	Box(FVector(7000.f, -9000.f, 0.f), FVector(7200.f, -5000.f, 5400.f), WallC);      // west (below the kitchen)
+	Box(FVector(7200.f, 1470.f, 0.f), FVector(20200.f, 1500.f, 220.f), Baseboard, false);
+	Box(FVector(7200.f, -9000.f, 0.f), FVector(20200.f, -8970.f, 220.f), Baseboard, false);
+	Box(FVector(20170.f, -9000.f, 0.f), FVector(20200.f, 1500.f, 220.f), Baseboard, false);
+
+	// Rug.
+	Box(FVector(10500.f, -6800.f, 0.f), FVector(17500.f, -1300.f, 6.f), Hex(170, 40, 50), false);
+
+	// Sofa on legs along the north wall: ants run underneath, where lost treasure lies in the dark.
+	for (const FVector L : { FVector(10600.f, -200.f, 0.f), FVector(16400.f, -200.f, 0.f), FVector(10600.f, 1300.f, 0.f), FVector(16400.f, 1300.f, 0.f) })
+	{
+		Cyl(L, 70.f, 260.f, DarkWood);
+	}
+	Box(FVector(10200.f, -300.f, 260.f), FVector(16800.f, 1400.f, 700.f), FabricDark);              // base
+	for (int32 i = 0; i < 3; ++i)                                                                       // seat cushions
+	{
+		const float X0 = 10500.f + i * 2000.f;
+		Box(FVector(X0 + 20.f, -260.f, 700.f), FVector(X0 + 1980.f, 1000.f, 950.f), Fabric);
+	}
+	Box(FVector(10200.f, 1000.f, 700.f), FVector(16800.f, 1400.f, 2100.f), FabricDark);              // backrest
+	Box(FVector(9800.f, -300.f, 260.f), FVector(10200.f, 1400.f, 1350.f), FabricDark);               // armrests
+	Box(FVector(16800.f, -300.f, 260.f), FVector(17200.f, 1400.f, 1350.f), FabricDark);
+	Ball(FVector(12200.f, 900.f, 1300.f), FVector(380.f, 160.f, 330.f), Hex(230, 180, 70));            // throw pillows
+	Ball(FVector(15600.f, 880.f, 1300.f), FVector(360.f, 150.f, 320.f), Hex(200, 80, 60));
+	for (int32 i = 0; i < 5; ++i)                                                                       // dust under the sofa
+	{
+		Ball(FVector(11000.f + i * 1200.f, 600.f + (i % 2) * 300.f, 25.f), FVector(80.f, 60.f, 30.f), Hex(150, 145, 140));
+	}
+
+	// Coffee table with a lower shelf (magazines) - snacks on top.
+	for (const FVector L : { FVector(12600.f, -4100.f, 0.f), FVector(14900.f, -4100.f, 0.f), FVector(12600.f, -2700.f, 0.f), FVector(14900.f, -2700.f, 0.f) })
+	{
+		Cyl(L, 60.f, 900.f, Wood);
+	}
+	Box(FVector(12500.f, -4200.f, 900.f), FVector(15000.f, -2600.f, 980.f), Wood);
+	Box(FVector(12550.f, -4150.f, 300.f), FVector(14950.f, -2650.f, 340.f), Wood);
+	Box(FVector(12900.f, -3900.f, 340.f), FVector(13900.f, -3100.f, 380.f), Hex(200, 60, 60));          // magazines
+	Box(FVector(13000.f, -3800.f, 380.f), FVector(13950.f, -3150.f, 400.f), Hex(240, 230, 210));
+	Cyl(FVector(14300.f, -3500.f, 980.f), 330.f, 160.f, White);                                         // snack bowl
+	Cyl(FVector(13100.f, -3200.f, 980.f), 120.f, 380.f, Hex(200, 60, 40));                              // soda can
+	Box(FVector(12700.f, -4050.f, 980.f), FVector(13300.f, -3750.f, 1010.f), Black);                    // remote
+
+	// TV stand (hollow: ants go inside) and the TV.
+	Box(FVector(11000.f, -9000.f, 0.f), FVector(16500.f, -7700.f, 80.f), DarkWood);
+	Box(FVector(11000.f, -9000.f, 1050.f), FVector(16500.f, -7700.f, 1100.f), DarkWood);
+	Box(FVector(11000.f, -9000.f, 80.f), FVector(11080.f, -7700.f, 1050.f), DarkWood);
+	Box(FVector(16420.f, -9000.f, 80.f), FVector(16500.f, -7700.f, 1050.f), DarkWood);
+	Box(FVector(13700.f, -9000.f, 80.f), FVector(13780.f, -7700.f, 1050.f), DarkWood);
+	Box(FVector(11800.f, -8900.f, 1100.f), FVector(15700.f, -8750.f, 3300.f), Black);                   // TV
+	Box(FVector(11850.f, -8752.f, 1150.f), FVector(15650.f, -8748.f, 3250.f), Hex(40, 70, 130), false);  // glowing screen
+	Box(FVector(13500.f, -8900.f, 1100.f), FVector(14000.f, -8500.f, 1180.f), Black);                   // TV foot
+	Box(FVector(14300.f, -8600.f, 1100.f), FVector(14900.f, -8200.f, 1250.f), Hex(30, 30, 35));         // game console
+	Lamp(FVector(13750.f, -8000.f, 2200.f), 3.f, FLinearColor(0.4f, 0.6f, 1.f), 3000.f, false);         // TV light
+
+	// Tall bookshelf on the east wall: shelves to climb, books, a vase on top.
+	Box(FVector(20100.f, -7100.f, 0.f), FVector(20200.f, -1900.f, 4600.f), DarkWood);                   // back
+	Box(FVector(19200.f, -7100.f, 0.f), FVector(20200.f, -7000.f, 4600.f), DarkWood);                   // sides
+	Box(FVector(19200.f, -2000.f, 0.f), FVector(20200.f, -1900.f, 4600.f), DarkWood);
+	Box(FVector(19200.f, -4540.f, 0.f), FVector(20200.f, -4460.f, 4600.f), DarkWood);                   // middle divider
+	for (int32 k = 0; k <= 5; ++k)
+	{
+		const float Z = k * 900.f + (k == 5 ? 100.f : 0.f);
+		Box(FVector(19200.f, -7000.f, Z), FVector(20100.f, -2000.f, Z + 60.f), DarkWood);
+		if (k < 5)
+		{
+			FRandomStream BR(77 + k);
+			float Y = -6950.f;
+			while (Y < -2200.f)
+			{
+				const float W = BR.FRandRange(90.f, 220.f);
+				const float H = BR.FRandRange(450.f, 780.f);
+				if (BR.FRand() < 0.15f) { Y += 300.f; continue; }   // gaps to squeeze through
+				if (Y + W > -4540.f && Y < -4460.f) { Y = -4440.f; continue; }
+				Box(FVector(19350.f, Y, Z + 60.f), FVector(20050.f, Y + W, Z + 60.f + H), Book[BR.RandRange(0, 4)]);
+				Y += W + 8.f;
+			}
+		}
+	}
+	Cyl(FVector(19700.f, -5600.f, 4660.f), 220.f, 700.f, Hex(70, 130, 160));                          // vase
+
+	// Armchair.
+	Box(FVector(8500.f, -6700.f, 0.f), FVector(10000.f, -4900.f, 650.f), FabricDark);
+	Box(FVector(8550.f, -6650.f, 650.f), FVector(9950.f, -4950.f, 800.f), Fabric);
+	Box(FVector(8300.f, -6700.f, 0.f), FVector(8500.f, -4900.f, 1900.f), FabricDark);
+	Box(FVector(8500.f, -6900.f, 0.f), FVector(10000.f, -6700.f, 1200.f), FabricDark);
+	Box(FVector(8500.f, -4900.f, 0.f), FVector(10000.f, -4700.f, 1200.f), FabricDark);
+
+	// Floor lamp and a potted plant in the north-east corner.
+	Cyl(FVector(17800.f, 700.f, 0.f), 260.f, 60.f, DarkSteel);
+	Cyl(FVector(17800.f, 700.f, 60.f), 35.f, 3800.f, DarkSteel);
+	Cyl(FVector(17800.f, 700.f, 3700.f), 420.f, 500.f, Hex(240, 225, 190), false);
+	Lamp(FVector(17800.f, 700.f, 3600.f), 5.f, FLinearColor(1.f, 0.8f, 0.55f), 4500.f, true);
+	Cyl(FVector(18900.f, 900.f, 0.f), 450.f, 780.f, Hex(170, 90, 60));
+	Cyl(FVector(18900.f, 900.f, 700.f), 420.f, 80.f, Dirt);
+	for (int32 i = 0; i < 7; ++i)
+	{
+		const float A = i * 0.9f;
+		Ball(FVector(18900.f + FMath::Cos(A) * 260.f, 900.f + FMath::Sin(A) * 260.f, 1300.f + (i % 3) * 300.f), FVector(240.f, 120.f, 60.f), Hex(60, 130, 60));
+	}
+
+	// Radiator under where a window would be (north wall): hot!
+	for (int32 i = 0; i < 9; ++i)
+	{
+		Box(FVector(7800.f + i * 200.f, 1300.f, 300.f), FVector(7920.f + i * 200.f, 1470.f, 1400.f), White);
+	}
+	Box(FVector(7800.f, 1300.f, 300.f), FVector(9520.f, 1470.f, 360.f), White);
+
+	// Main lights of the living room (they follow the switch).
+	MainLamps.Add(Lamp(FVector(11000.f, -4000.f, 4950.f), 7.f, FLinearColor(1.f, 0.92f, 0.8f), 15000.f, true));
+	MainLamps.Add(Lamp(FVector(16500.f, -4000.f, 4950.f), 7.f, FLinearColor(1.f, 0.92f, 0.8f), 15000.f, true));
+	LampShades.Add(Cyl(FVector(11000.f, -4000.f, 5150.f), 350.f, 250.f, White, false));
+	LampShades.Add(Cyl(FVector(16500.f, -4000.f, 5150.f), 350.f, 250.f, White, false));
+}
+
 void AKitchenBuilder::EnvironmentFor(const AAntCharacter* Ant, FAntEnv& Env)
 {
 	const FVector P = Ant->GetActorLocation();
+	if (FBox(FVector(7700.f, 1150.f, 250.f), FVector(9600.f, 1500.f, 1500.f)).IsInside(P))
+	{
+		Env.Temp(70.f, 12.f);   // the radiator
+	}
 
 	if (HotBurner().IsInside(P))
 	{

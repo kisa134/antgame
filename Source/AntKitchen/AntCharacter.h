@@ -86,8 +86,8 @@ public:
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
 	/** Ants are small: everything about the body is scaled by this (the kitchen stays the same). */
-	static constexpr float AntScale = 0.62f;
-	static constexpr float InteractRadius = 165.f;
+	static constexpr float AntScale = 0.48f;
+	static constexpr float InteractRadius = 140.f;
 	static constexpr float BodyRadius = 26.f * AntScale;
 	// Orientation of the generated (Meshy) parts: flip if a part shows up backwards.
 	static constexpr bool ArtFlipBody = false;

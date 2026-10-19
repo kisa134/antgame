@@ -86,7 +86,7 @@ float AKitchenLoot::GetRadius() const
 	{
 		return 30.f;
 	}
-	return 0.5f * (40.f + Weight * 4.5f);
+	return 0.5f * (32.f + Weight * 3.6f);   // ants got smaller: so did the crumbs
 }
 
 void AKitchenLoot::InitFood(const FAntFoodDef& Def)

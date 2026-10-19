@@ -5,6 +5,9 @@
 #include "Components/StaticMeshComponent.h"
 #include "Components/PointLightComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "Components/AudioComponent.h"
+#include "Sound/SoundBase.h"
+#include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
 #include "EngineUtils.h"
 #include "Engine/World.h"
@@ -59,7 +62,9 @@ float AKitchenInteractable::DistanceTo(const FVector& P) const
 UStaticMeshComponent* AKitchenInteractable::Part(USceneComponent* Parent, EAntShape Shape, const FVector& Center, const FVector& Size,
 	const FLinearColor& Color, bool bCollide, const FRotator& Rot)
 {
-	return AntKit::AddPart(this, Parent ? Parent : Root, Shape, Center, Size / 100.f, Color, Rot, bCollide, false);
+	UStaticMeshComponent* C = AntKit::AddPart(this, Parent ? Parent : Root, Shape, Center, Size / 100.f, Color, Rot, bCollide, false);
+	AKitchenBuilder::Surface(C, Color);
+	return C;
 }
 
 UStaticMeshComponent* AKitchenInteractable::BoxPart(USceneComponent* Parent, const FVector& Min, const FVector& Max, const FLinearColor& Color, bool bCollide)
@@ -262,7 +267,12 @@ void AKitchenDoor::Tick(float DeltaSeconds)
 
 void AKitchenDoor::SetOpen(bool bInOpen, float AutoClose)
 {
+	const bool bWasOpen = bOpen;
 	bOpen = bInOpen;
+	if (HasAuthority() && bOpen && !bWasOpen && Kind == EKitchenDoorKind::Fridge)
+	{
+		AntSfx::Everyone(this, AntSfx::FridgeDoor, GetActorLocation(), 1.f);
+	}
 	AutoCloseAt = (bInOpen && AutoClose > 0.f) ? Now() + AutoClose : -1.f;
 
 	if (bOpen && Kind == EKitchenDoorKind::Drawer && !bLootSpawned && HasAuthority())
@@ -387,6 +397,23 @@ void AKitchenFaucet::Tick(float DeltaSeconds)
 		WaterLevel = FMath::Clamp(WaterLevel + (bOn ? 32.f : -14.f) * DeltaSeconds, BasinFloor, BasinTop);
 	}
 	ShownLevel = FMath::FInterpTo(ShownLevel, WaterLevel, DeltaSeconds, 4.f);
+
+	if (GetNetMode() != NM_DedicatedServer)
+	{
+		if (bOn && !FlowAudio)
+		{
+			if (USoundBase* S = AntSfx::Get(AntSfx::Faucet))
+			{
+				FlowAudio = UGameplayStatics::SpawnSoundAtLocation(this, S, GetActorTransform().TransformPosition(Spout()),
+					FRotator::ZeroRotator, 0.8f, 1.f, 0.f, AntSfx::Attenuation(), nullptr, true);
+			}
+		}
+		else if (!bOn && FlowAudio)
+		{
+			FlowAudio->FadeOut(0.5f, 0.f);
+			FlowAudio = nullptr;
+		}
+	}
 
 	if (Water)
 	{
@@ -716,6 +743,7 @@ void AKitchenToaster::Pop()
 	bArmed = false;
 	ReadyAt = Now() + 6.f;
 	MulticastPop();
+	AntSfx::Everyone(this, AntSfx::Toaster, FVector(-6000.f, 4200.f, 1900.f), 1.f);
 
 	int32 Launched = 0;
 	FString Who;

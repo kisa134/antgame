@@ -40,10 +40,19 @@ public:
 	static FVector HumanFleePoint();
 	static FBox HotBurner();
 	static FBox PlayArea();
+	/** A random walkable point on the floor of the kitchen or the living room. */
+	static FVector RandomFloorPoint(FRandomStream* Rng = nullptr);
+	/** The doorway between the kitchen and the living room. */
+	static FVector Doorway() { return FVector(7100.f, -4000.f, 0.f); }
+	/** Next point to walk to on the way From -> To (goes through the doorway between the rooms). */
+	static FVector Route(const FVector& From, const FVector& To);
 	static void LootSpots(TArray<FVector>& OutLocations, TArray<int32>& OutTiers);
 
 	/** Static kitchen zones (burner, honey, jam, water bowls...) acting on an ant. */
 	static void EnvironmentFor(const AAntCharacter* Ant, FAntEnv& Env);
+
+	/** Gives a shape the real textured surface for its palette color (wood, tiles, steel...). */
+	static void Surface(UStaticMeshComponent* C, const FLinearColor& Color);
 
 	/** Ceiling lamps on/off (light switch). */
 	void SetMainLights(bool bOn);
@@ -60,6 +69,7 @@ private:
 	void BuildNorthRun();
 	void BuildFridge();
 	void BuildSecrets();
+	void BuildLivingRoom();
 
 	UPROPERTY()
 	USceneComponent* Root = nullptr;

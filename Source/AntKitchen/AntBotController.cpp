@@ -270,11 +270,10 @@ void AAntBotController::Think(AAntCharacter* Ant)
 		}
 	}
 
-	// Nothing to do: patrol the middle of the kitchen.
+	// Nothing to do: patrol the kitchen and the living room.
 	if (!bHasGoal || FVector::Dist2D(Goal, Ant->GetActorLocation()) < 300.f)
 	{
-		const FBox A = AKitchenBuilder::PlayArea();
-		Goal = FVector(FMath::FRandRange(A.Min.X, A.Max.X), FMath::FRandRange(A.Min.Y, A.Max.Y), 30.f);
+		Goal = AKitchenBuilder::RandomFloorPoint() + FVector(0.f, 0.f, 30.f);
 		bHasGoal = true;
 	}
 }
@@ -299,9 +298,10 @@ void AAntBotController::Shoot(AAntCharacter* Ant, float Dt)
 	Ant->BotFire(Dir);
 }
 
-void AAntBotController::Steer(AAntCharacter* Ant, const FVector& Target, float Dt)
+void AAntBotController::Steer(AAntCharacter* Ant, const FVector& FinalTarget, float Dt)
 {
 	const FVector Me = Ant->GetActorLocation();
+	const FVector Target = AKitchenBuilder::Route(Me, FinalTarget);   // via the doorway between the rooms
 	const FVector N = Ant->GetVisualUp();
 	FVector To = Target - Me;
 

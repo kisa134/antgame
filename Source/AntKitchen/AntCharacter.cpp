@@ -41,7 +41,7 @@ AAntCharacter::AAntCharacter(const FObjectInitializer& ObjectInitializer)
 	bUseControllerRotationRoll = false;
 
 	UCharacterMovementComponent* CM = GetCharacterMovement();
-	CM->MaxWalkSpeed = 520.f;
+	CM->MaxWalkSpeed = 480.f;
 	CM->MaxAcceleration = 4000.f;
 	CM->JumpZVelocity = 560.f;
 	CM->AirControl = 0.7f;
@@ -58,7 +58,7 @@ AAntCharacter::AAntCharacter(const FObjectInitializer& ObjectInitializer)
 
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 	SpringArm->SetupAttachment(RootComponent);
-	SpringArm->TargetArmLength = 150.f;
+	SpringArm->TargetArmLength = 125.f;
 	SpringArm->SocketOffset = FVector(0.f, 0.f, 45.f);
 	SpringArm->bUsePawnControlRotation = true;
 	SpringArm->ProbeSize = 6.f;
@@ -1132,6 +1132,7 @@ void AAntCharacter::ServerInteract_Implementation()
 		const FAntWeapon Old = Weapon;
 		Weapon = Loot->Gear;
 		OnRep_Weapon();
+		AntSfx::Everyone(this, Weapon.Rarity >= 3 ? AntSfx::Legendary : AntSfx::PickupGear, GetActorLocation(), 1.f);
 		const FVector DropAt = Loot->GetActorLocation();
 		Loot->Destroy();
 		if (GM)
@@ -1372,7 +1373,7 @@ void AAntCharacter::ServerCommand_Implementation(uint8 Cmd, FVector_NetQuantize 
 			A->FinishSpawning(FTransform(Start));
 		}
 		Toast(FString::Printf(TEXT("АРМИЯ: %d муравьёв вышли из муравейника за тобой! R — в атаку на прицел"), N));
-		AntSfx::Everyone(this, AntSfx::Rage, GetActorLocation(), 1.8f);
+		AntSfx::Everyone(this, AntSfx::ArmyCharge, GetActorLocation(), 1.f);
 		return;
 	}
 	if (Cmd == 1)
@@ -1392,6 +1393,7 @@ void AAntCharacter::ServerCommand_Implementation(uint8 Cmd, FVector_NetQuantize 
 			Army->Mode = EArmyMode::Attack;
 			Army->Target = Point;
 			Toast(TEXT("Армия: В АТАКУ!"));
+			AntSfx::Everyone(this, AntSfx::ArmyCharge, GetActorLocation(), 1.1f);
 		}
 		return;
 	}
@@ -1618,7 +1620,7 @@ void AAntCharacter::UpdateSpeed()
 		bHeavy = R < 1.4f;
 	}
 	const float ClassSpeed = GetClassDef().Speed * SpeedScale;
-	M->MaxWalkSpeed = (bSprinting && !Carrying ? 820.f : 520.f) * Load * ClassSpeed;
+	M->MaxWalkSpeed = (bSprinting && !Carrying ? 760.f : 480.f) * Load * ClassSpeed;
 
 	float Mult = 1.f;
 	if (HasStatus(AntStatus::Sticky)) { Mult *= 0.35f; }
@@ -1764,8 +1766,8 @@ void AAntCharacter::UpdateVisuals(float DeltaSeconds)
 		SpringArm->SocketOffset = FVector::ZeroVector;
 		// Bodycam: camera on the ant's head, shaky and wide. Normal: close third person.
 		const FVector Head = VisNormal * 14.f + VisHeading * 16.f;
-		SpringArm->TargetOffset = FMath::VInterpTo(SpringArm->TargetOffset, bBodycam ? Head : VisNormal * 36.f, DeltaSeconds, 8.f);
-		const float WantLen = bBodycam ? 0.f : (VisNormal.Z < 0.6f ? 210.f : 150.f);
+		SpringArm->TargetOffset = FMath::VInterpTo(SpringArm->TargetOffset, bBodycam ? Head * 0.8f : VisNormal * 30.f, DeltaSeconds, 8.f);
+		const float WantLen = bBodycam ? 0.f : (VisNormal.Z < 0.6f ? 175.f : 125.f);
 		SpringArm->TargetArmLength = FMath::FInterpTo(SpringArm->TargetArmLength, WantLen, DeltaSeconds, bBodycam ? 12.f : 4.f);
 		// Handheld feel: footsteps, breathing, and trauma from hits / stomps.
 		if (LastHealthSeen >= 0.f && Health < LastHealthSeen - 0.5f)
@@ -1893,7 +1895,7 @@ void AAntCharacter::UpdateLegs(float Dt, const FVector& N)
 				if (!GroupStepping[L.Group] && FootstepVolume > 0.f)
 				{
 					// One tiny chitin tick per tripod step (louder for your own ant, pitch by size).
-					AntSfx::Play(this, AntSfx::Step, L.To, FootstepVolume, FMath::Clamp(1.4f - VisScale(), 0.45f, 1.5f));
+					AntSfx::Play(this, Creature == 2 ? AntSfx::SpiderStep : AntSfx::Step, L.To, FootstepVolume, FMath::Clamp(1.4f - VisScale(), 0.45f, 1.5f));
 				}
 				GroupStepping[L.Group] = true;
 			}

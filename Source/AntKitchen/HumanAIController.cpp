@@ -70,7 +70,7 @@ AAntCharacter* AHumanAIController::PickTarget(const AHumanCharacter* H) const
 
 void AHumanAIController::MoveTowards(AHumanCharacter* H, const FVector& Goal, float Scale)
 {
-	const FVector D = (Goal - H->GetActorLocation()).GetSafeNormal2D();
+	const FVector D = (AKitchenBuilder::Route(H->GetActorLocation(), Goal) - H->GetActorLocation()).GetSafeNormal2D();
 	if (!D.IsNearlyZero())
 	{
 		H->AddMovementInput(D, Scale);
@@ -207,7 +207,7 @@ void AHumanAIController::Tick(float DeltaSeconds)
 		if (WanderTimer <= 0.f || FVector::Dist2D(MyLoc, WanderPoint) < 400.f)
 		{
 			WanderTimer = 6.f;
-			WanderPoint = FVector(FMath::FRandRange(Area.Min.X, Area.Max.X), FMath::FRandRange(Area.Min.Y, Area.Max.Y), MyLoc.Z);
+			WanderPoint = AKitchenBuilder::RandomFloorPoint() + FVector(0.f, 0.f, MyLoc.Z);
 		}
 		DesiredRotation.Pitch = -15.f;
 		MoveTowards(H, WanderPoint, 0.5f);
@@ -255,8 +255,9 @@ void AHumanAIController::Tick(float DeltaSeconds)
 			UnstickTimer = 1.6f;
 			const FVector Dir = FRotator(0.f, FMath::FRandRange(0.f, 360.f), 0.f).Vector();
 			FVector P = MyLoc + Dir * 2500.f;
-			P.X = FMath::Clamp(P.X, Area.Min.X, Area.Max.X);
-			P.Y = FMath::Clamp(P.Y, Area.Min.Y, Area.Max.Y);
+			const bool bLiving = MyLoc.X > 7100.f;
+			P.X = bLiving ? FMath::Clamp((float)P.X, 8000.f, 19000.f) : FMath::Clamp((float)P.X, (float)Area.Min.X, (float)Area.Max.X);
+			P.Y = bLiving ? FMath::Clamp((float)P.Y, -8300.f, -500.f) : FMath::Clamp((float)P.Y, (float)Area.Min.Y, (float)Area.Max.Y);
 			WanderPoint = P;
 		}
 	}

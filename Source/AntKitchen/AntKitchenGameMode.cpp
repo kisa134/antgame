@@ -268,8 +268,7 @@ void AAntKitchenGameMode::SpawnFly()
 	{
 		return;
 	}
-	const FBox A = AKitchenBuilder::PlayArea();
-	const FVector L(FMath::FRandRange(A.Min.X, A.Max.X), FMath::FRandRange(A.Min.Y, A.Max.Y), 2500.f);
+	const FVector L = AKitchenBuilder::RandomFloorPoint() + FVector(0.f, 0.f, 2500.f);
 	FActorSpawnParameters P;
 	P.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 	AFlyCharacter* Fly = GetWorld()->SpawnActor<AFlyCharacter>(AFlyCharacter::StaticClass(), L, FRotator::ZeroRotator, P);

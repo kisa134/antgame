@@ -1,4 +1,4 @@
-#include "CreatureCharacters.h"
+﻿#include "CreatureCharacters.h"
 #include "AntMovementComponent.h"
 #include "KitchenLoot.h"
 #include "KitchenBuilder.h"
@@ -438,8 +438,7 @@ void AFlyAIController::UpdateControlRotation(float DeltaTime, bool bUpdatePawn)
 
 void AFlyAIController::PickWander(const FVector& From)
 {
-	const FBox A = AKitchenBuilder::PlayArea();
-	Goal = FVector(FMath::FRandRange(A.Min.X, A.Max.X), FMath::FRandRange(A.Min.Y, A.Max.Y), FMath::FRandRange(500.f, 3600.f));
+	Goal = AKitchenBuilder::RandomFloorPoint() + FVector(0.f, 0.f, FMath::FRandRange(500.f, 3400.f));
 	StateTime = 0.f;
 }
 
@@ -531,8 +530,8 @@ void AFlyAIController::Tick(float DeltaSeconds)
 		}
 	}
 
-	// Fly there in an erratic zig-zag, avoid walls.
-	FVector To = Goal - Me;
+	// Fly there in an erratic zig-zag, avoid walls (through the doorway between rooms).
+	FVector To = AKitchenBuilder::Route(Me, Goal) - Me;
 	const float T = Now + Seed;
 	const FVector Jitter(FMath::Sin(T * 3.1f), FMath::Cos(T * 2.3f), FMath::Sin(T * 4.7f) * 0.6f);
 	FVector Dir = To.GetSafeNormal() + Jitter * (To.Size() > 300.f ? 0.45f : 0.15f);

@@ -60,6 +60,7 @@ private:
 	FVector GroundAt(const FVector& P) const;
 
 	UPROPERTY() UInstancedStaticMeshComponent* Bodies = nullptr;
+	UPROPERTY() class UAudioComponent* March = nullptr;
 	TArray<FVector> Offsets;    // client: spot of each drawn ant in the blob
 	TArray<float> Phases;
 	int32 DrawnFor = -1;

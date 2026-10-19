@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
@@ -128,6 +128,7 @@ private:
 	UPROPERTY() UStaticMeshComponent* Water = nullptr;
 	UPROPERTY() UStaticMeshComponent* StreamMesh = nullptr;
 	UPROPERTY() UMaterialInstanceDynamic* WaterMID = nullptr;
+	UPROPERTY() class UAudioComponent* FlowAudio = nullptr;
 	float ShownLevel = 1150.f;
 	mutable TMap<TWeakObjectPtr<AAntCharacter>, float> LastKnock;
 };

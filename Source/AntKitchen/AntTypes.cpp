@@ -275,6 +275,17 @@ const FPart& Get(const TCHAR* Name)
 	{
 		return *Found;
 	}
+	// Generated furniture that didn't fit the kitchen (wrong proportions, odd collision):
+	// the clean, textured procedural versions are used instead.
+	static const TCHAR* Disabled[] = { TEXT("SM_Fridge_Body"), TEXT("SM_Fridge_Door"), TEXT("SM_Oven_Body"), TEXT("SM_Oven_Door"),
+		TEXT("SM_Drawer"), TEXT("SM_CerealBox"), TEXT("SM_Cabinet_Door"), TEXT("SM_Cabinet_Base") };
+	for (const TCHAR* D : Disabled)
+	{
+		if (FCString::Stricmp(D, Name) == 0)
+		{
+			return Cache.Add(Name, FPart());
+		}
+	}
 	FPart P;
 	const FString N(Name);
 	const FString Short = N.StartsWith(TEXT("SM_")) ? N.Mid(3) : N;
@@ -455,11 +466,14 @@ namespace AntSfx
 {
 static const TCHAR* Names[Count] = { TEXT("S_Spit"), TEXT("S_Splat"), TEXT("S_Hit"), TEXT("S_Crit"), TEXT("S_Kill"), TEXT("S_Grab"), TEXT("S_Drop"),
 	TEXT("S_Deliver"), TEXT("S_Crunch"), TEXT("S_Stomp"), TEXT("S_Spray"), TEXT("S_Squish"), TEXT("S_Jump"), TEXT("S_Zap"), TEXT("S_Sizzle"),
-	TEXT("S_Splash"), TEXT("S_Rage"), TEXT("S_Bite"), TEXT("S_Buzz"), TEXT("S_Web"), TEXT("S_Hiss"), TEXT("S_Step"), TEXT("S_Ambience") };
+	TEXT("S_Splash"), TEXT("S_Rage"), TEXT("S_Bite"), TEXT("S_Buzz"), TEXT("S_Web"), TEXT("S_Hiss"), TEXT("S_Step"), TEXT("S_Ambience"),
+	TEXT("S_Swat"), TEXT("S_HumanStep"), TEXT("S_Faucet"), TEXT("S_FridgeDoor"), TEXT("S_Toaster"), TEXT("S_ArmyMarch"), TEXT("S_ArmyCharge"),
+	TEXT("S_Pickup_Gear"), TEXT("S_Legendary"), TEXT("S_SpiderStep"), TEXT("S_HumanPanic") };
 
 USoundBase* Get(uint8 Id)
 {
-	static TArray<TWeakObjectPtr<USoundBase>> Cache;
+	// Each id can have variants: S_Name, S_Name_1 .. S_Name_4 (a random one plays every time).
+	static TArray<TArray<TWeakObjectPtr<USoundBase>>> Cache;
 	static TArray<bool> Tried;
 	if (Id >= Count)
 	{
@@ -470,15 +484,27 @@ USoundBase* Get(uint8 Id)
 		Cache.SetNum(Count);
 		Tried.SetNumZeroed(Count);
 	}
-	if (!Cache[Id].IsValid() && !Tried[Id])
+	if (!Tried[Id])
 	{
 		Tried[Id] = true;
-		const FString Path = FString::Printf(TEXT("/Game/Sounds/%s.%s"), Names[Id], Names[Id]);
-		USoundBase* S = LoadObject<USoundBase>(nullptr, *Path, nullptr, LOAD_NoWarn | LOAD_Quiet);
-		if (S) { S->AddToRoot(); }
-		Cache[Id] = S;
+		// Only real (generated/recorded) sounds live in /Game/SoundsReal; the old synth placeholders are ignored.
+		auto Load = [Id](const FString& N)
+		{
+			const FString Path = FString::Printf(TEXT("/Game/SoundsReal/%s.%s"), *N, *N);
+			if (USoundBase* S = LoadObject<USoundBase>(nullptr, *Path, nullptr, LOAD_NoWarn | LOAD_Quiet))
+			{
+				S->AddToRoot();
+				Cache[Id].Add(S);
+			}
+		};
+		Load(Names[Id]);
+		for (int32 V = 1; V <= 4; ++V)
+		{
+			Load(FString::Printf(TEXT("%s_%d"), Names[Id], V));
+		}
 	}
-	return Cache[Id].Get();
+	const TArray<TWeakObjectPtr<USoundBase>>& L = Cache[Id];
+	return L.Num() > 0 ? L[FMath::RandRange(0, L.Num() - 1)].Get() : nullptr;
 }
 
 static USoundAttenuation* Falloff()
@@ -496,6 +522,8 @@ static USoundAttenuation* Falloff()
 	}
 	return A;
 }
+
+USoundAttenuation* Attenuation() { return Falloff(); }
 
 void Play(const UObject* Ctx, uint8 Id, const FVector& Location, float Volume, float Pitch)
 {

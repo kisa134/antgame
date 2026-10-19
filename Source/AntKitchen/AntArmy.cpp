@@ -11,6 +11,8 @@
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Engine/StaticMesh.h"
 #include "Kismet/GameplayStatics.h"
+#include "Components/AudioComponent.h"
+#include "Sound/SoundBase.h"
 #include "GameFramework/DamageType.h"
 #include "Net/UnrealNetwork.h"
 #include "EngineUtils.h"
@@ -233,6 +235,19 @@ void AAntArmy::Tick(float Dt)
 	}
 	const float T = GetWorld()->GetTimeSeconds();
 	const bool bMoving = Vel.SizeSquared2D() > 400.f;
+	// The rustling carpet of thousands of legs.
+	if (!March)
+	{
+		if (USoundBase* S = AntSfx::Get(AntSfx::ArmyMarch))
+		{
+			March = UGameplayStatics::SpawnSoundAttached(S, RootComponent, NAME_None, FVector::ZeroVector, EAttachLocation::KeepRelativeOffset,
+				true, 0.5f, 1.f, 0.f, AntSfx::Attenuation(), nullptr, true);
+		}
+	}
+	if (March)
+	{
+		March->SetVolumeMultiplier(FMath::Clamp(0.25f + Count / 1500.f, 0.25f, 1.f) * (bMoving ? 1.f : 0.4f));
+	}
 	TArray<FTransform> Xf;
 	Xf.SetNum(Offsets.Num());
 	const float R = Radius();

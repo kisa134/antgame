@@ -278,7 +278,7 @@ void AHumanCharacter::TrySwat(const FVector& InPoint)
 	FTimerHandle H;
 	GetWorldTimerManager().SetTimer(H, FTimerDelegate::CreateWeakLambda(this, [this, Point]()
 	{
-		AntSfx::Everyone(this, AntSfx::Stomp, Point, 1.5f);
+		AntSfx::Everyone(this, AntSfx::Swat, Point, FMath::FRandRange(0.9f, 1.05f));
 		if (AAntSwarm* Swarm = AAntSwarm::Get(GetWorld()))
 		{
 			Swarm->KillInSphere(Point, SwatRadius);
@@ -520,6 +520,7 @@ void AHumanCharacter::KnockOut(AController* By)
 	bSpraying = false;
 	bStompPending = false;
 	KnockoutEnd = GetWorld()->GetTimeSeconds() + 12.f;
+	AntSfx::Everyone(this, AntSfx::HumanPanic, GetActorLocation() + FVector(0.f, 0.f, 600.f), 1.f);
 	OnRep_KnockedOut();
 	if (AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
 	{
@@ -623,7 +624,14 @@ void AHumanCharacter::UpdateVisuals(float DeltaSeconds)
 	}
 	const float Now = GetWorld()->GetTimeSeconds();
 	const float Speed = GetVelocity().Size2D();
+	const float OldPhase = WalkPhase;
 	WalkPhase += DeltaSeconds * Speed / 140.f;
+	if (Speed > 80.f && FMath::FloorToInt(OldPhase / PI) != FMath::FloorToInt(WalkPhase / PI))
+	{
+		// Heavy slipper footfall, heard from the floor.
+		AntSfx::Play(this, AntSfx::HumanStep, GetActorLocation() - FVector(0.f, 0.f, GetSimpleCollisionHalfHeight()),
+			FMath::Min(1.f, Speed / 400.f) * 0.9f, FMath::FRandRange(0.9f, 1.05f));
+	}
 	const float Swing = FMath::Sin(WalkPhase) * 18.f * FMath::Min(1.f, Speed / 300.f);
 
 	float LegPitch[2] = { Swing, -Swing };

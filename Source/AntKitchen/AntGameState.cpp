@@ -38,7 +38,7 @@ void AAntGameState::MulticastSfx_Implementation(uint8 Id, FVector_NetQuantize Lo
 	}
 	AntSfx::Play(this, Id, Location, Id == AntSfx::Stomp ? 1.6f : 1.f, Pitch);
 	// Big hits shake the local camera.
-	if (Id == AntSfx::Stomp || Id == AntSfx::Crunch || Id == AntSfx::Zap)
+	if (Id == AntSfx::Stomp || Id == AntSfx::Crunch || Id == AntSfx::Zap || Id == AntSfx::Swat)
 	{
 		if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
 		{
