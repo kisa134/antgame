@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Engine/NetSerialization.h"
+#include "AntTypes.h"
 #include "AntArmy.generated.h"
 
 class UInstancedStaticMeshComponent;
@@ -52,13 +53,13 @@ public:
 	UPROPERTY(Replicated) bool bSwarming = true;
 
 	static constexpr int32 TrailMax = 128;
-	static constexpr float TrailStep = 40.f;
+	static constexpr float TrailStep = 40.f * AntKit::AntShrink;
 
-	float Radius() const { return 60.f + FMath::Sqrt((float)FMath::Max(Count, 1)) * 9.f; }
+	float Radius() const { return (60.f + FMath::Sqrt((float)FMath::Max(Count, 1)) * 9.f) * AntKit::AntShrink; }
 	/** Where ant #i of N stands (no wobble). Valid after PrepareLayout(). */
 	FVector SlotPos(int32 i, int32 N, FVector* OutDir = nullptr) const;
 	/** Server: about how many of this army's ants are inside the sphere. */
-	int32 CountNear(const FVector& C, float R, float ZTol = 300.f);
+	int32 CountNear(const FVector& C, float R, float ZTol = 100.f);
 	/** Server: pour a living bridge From -> To out of the workers. */
 	AAntChain* BuildBridge(const FVector& From, const FVector& To);
 

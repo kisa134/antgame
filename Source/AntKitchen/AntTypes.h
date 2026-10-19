@@ -76,6 +76,12 @@ struct FAntFoodDef
 
 namespace AntKit
 {
+	/** The ant is ~8 mm: a second shrink of the 0.48 ant. Body-sized distances tuned for it are multiplied by this. */
+	constexpr float AntShrink = 0.33f;
+	/** Speeds shrink less than the body (~2x a real ant), jumps by sqrt (height ~ v^2). */
+	constexpr float SpeedK = 0.6f;
+	constexpr float JumpK = 0.58f;
+
 	ANTKITCHEN_API UStaticMesh* ShapeMesh(EAntShape Shape);
 	ANTKITCHEN_API UMaterialInstanceDynamic* Paint(UStaticMeshComponent* Comp, const FLinearColor& Color);
 

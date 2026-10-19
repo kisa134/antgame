@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Engine/NetSerialization.h"
+#include "AntTypes.h"
 #include "AntSwarm.generated.h"
 
 class UInstancedStaticMeshComponent;
@@ -53,7 +54,7 @@ public:
 	static constexpr int32 MaxStreams = 6;
 	static constexpr int32 MaxStreamsPerPlayer = 2;
 	static constexpr float AntsPerUnit = 0.45f;       // density along a trail
-	static constexpr float WorkerSpeed = 260.f;
+	static constexpr float WorkerSpeed = 260.f * AntKit::SpeedK;
 
 	/** Server: lay a new trail. Returns ants sent (0 = failed, Why explains). */
 	int32 CreateStream(const TArray<FVector>& Points, const TArray<FVector>& Normals, AKitchenLoot* Food, AAntCharacter* By, FString& Why);

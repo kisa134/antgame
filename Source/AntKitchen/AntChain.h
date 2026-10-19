@@ -1,8 +1,9 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Engine/NetSerialization.h"
+#include "AntTypes.h"
 #include "AntChain.generated.h"
 
 class AAntCharacter;
@@ -27,8 +28,8 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	/** One ant ~ this long (scaled ant body). */
-	static constexpr float LinkLen = 44.f;
-	static constexpr int32 MaxLinks = 90;
+	static constexpr float LinkLen = 44.f * AntKit::AntShrink;
+	static constexpr int32 MaxLinks = 220;
 
 	UPROPERTY(Replicated) uint8 Team = 0;
 	UPROPERTY(Replicated) FVector_NetQuantize Anchor;

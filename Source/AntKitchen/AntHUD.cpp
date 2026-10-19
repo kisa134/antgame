@@ -688,7 +688,7 @@ void AAntHUD::DrawLinkState(AAntCharacter* Ant)
 	else if (Ant->Creature == 0)
 	{
 		// What G would do right now (only when it is something to notice).
-		if (AAntChain* Tail = AAntChain::FindNearTail(GetWorld(), Ant->Team, Ant->GetActorLocation(), 190.f))
+		if (AAntChain* Tail = AAntChain::FindNearTail(GetWorld(), Ant->Team, Ant->GetActorLocation(), 190.f * AAntCharacter::AntShrink))
 		{
 			Line = TEXT("G — прицепиться к живой цепи");
 		}

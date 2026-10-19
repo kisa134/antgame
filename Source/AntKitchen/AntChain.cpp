@@ -1,4 +1,4 @@
-#include "AntChain.h"
+﻿#include "AntChain.h"
 #include "AntCharacter.h"
 #include "AntArmy.h"
 #include "AntKitchenGameMode.h"
@@ -279,7 +279,7 @@ void AAntChain::UpdateCollision()
 	const FVector D = B - A;
 	const float Len = FMath::Max(10.f, (float)D.Size());
 	Walk->SetWorldLocationAndRotation((A + B) * 0.5f, FRotationMatrix::MakeFromXZ(D, FVector::UpVector).ToQuat());
-	Walk->SetBoxExtent(FVector(Len * 0.5f, 16.f, 12.f));
+	Walk->SetBoxExtent(FVector(Len * 0.5f, 16.f * AAntCharacter::AntShrink, 12.f * AAntCharacter::AntShrink));
 	Walk->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 }
 

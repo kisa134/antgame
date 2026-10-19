@@ -87,8 +87,12 @@ public:
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
 	/** Ants are small: everything about the body is scaled by this (the kitchen stays the same). */
-	static constexpr float AntScale = 0.48f;
-	static constexpr float InteractRadius = 140.f;
+	/** Second shrink (a real ~8 mm ant): every body-sized distance tuned for the 0.48 ant is multiplied by this. */
+	static constexpr float AntShrink = AntKit::AntShrink;
+	static constexpr float AntScale = 0.48f * AntShrink;
+	static constexpr float SpeedK = AntKit::SpeedK;
+	static constexpr float JumpK = AntKit::JumpK;
+	static constexpr float InteractRadius = 140.f * AntShrink;
 	static constexpr float BodyRadius = 26.f * AntScale;
 	// Orientation of the generated (Meshy) parts: flip if a part shows up backwards.
 	static constexpr bool ArtFlipBody = false;

@@ -101,7 +101,7 @@ void AAntSwarm::BeginPlay()
 	}
 	using namespace SwarmLook;
 	// Workers: the same ant as the player (low-poly copy of the Meshy body), a bit smaller.
-	constexpr float K = 0.7f;
+	constexpr float K = 0.7f * AAntCharacter::AntShrink;
 	// The Nanite ant body: Nanite draws tens of thousands of tiny instances cheaply.
 	UStaticMesh* ArtMesh = AntArt::Get(TEXT("SM_Ant_Body")).Mesh;
 	const bool bArtMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Swarm/M_SwarmAntArt.M_SwarmAntArt")) != nullptr;
@@ -200,7 +200,7 @@ void AAntSwarm::Rebuild()
 				const int32 InLane = FMath::Max(1, bBack ? Back : Out);
 				const float Speed = WorkerSpeed * R.FRandRange(0.97f, 1.03f) * (bBack ? -1.f : 1.f);
 				const float Phase = FMath::Frac((Idx + R.FRandRange(-0.25f, 0.25f)) / InLane);
-				const float Lat = (bBack ? 1.f : -1.f) * (13.f + R.FRandRange(-6.f, 6.f));
+				const float Lat = (bBack ? 1.f : -1.f) * (13.f + R.FRandRange(-6.f, 6.f)) * AAntCharacter::AntShrink;
 				const float D[SwarmLook::NumData] = { (float)A.X, (float)A.Y, (float)A.Z, (float)B.X, (float)B.Y, (float)B.Z, (float)N.X, (float)N.Y, (float)N.Z, Speed, Phase, Lat, 0.f };
 
 				FTransform T;

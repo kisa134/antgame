@@ -74,9 +74,9 @@ AFlyCharacter::AFlyCharacter(const FObjectInitializer& ObjectInitializer)
 
 	UCharacterMovementComponent* CM = GetCharacterMovement();
 	CM->DefaultLandMovementMode = MOVE_Flying;
-	CM->MaxFlySpeed = 950.f;
+	CM->MaxFlySpeed = 950.f * SpeedK;
 	CM->BrakingDecelerationFlying = 2200.f;
-	CM->MaxAcceleration = 3200.f;
+	CM->MaxAcceleration = 3200.f * SpeedK;
 }
 
 void AFlyCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -191,8 +191,8 @@ void AFlyCharacter::Tick(float DeltaSeconds)
 	UCharacterMovementComponent* CM = GetCharacterMovement();
 	// Afterburner: Shift. Burns fuel, refills slowly (or at once on poop / trash).
 	const bool bBoost = IsBoosting();
-	CM->MaxFlySpeed = (bBoost ? 2600.f : 950.f) * (HoldingAnt ? 0.65f : 1.f);
-	CM->MaxAcceleration = bBoost ? 7500.f : 3200.f;
+	CM->MaxFlySpeed = (bBoost ? 2600.f : 950.f) * SpeedK * (HoldingAnt ? 0.65f : 1.f);
+	CM->MaxAcceleration = (bBoost ? 7500.f : 3200.f) * SpeedK;
 	if (HasAuthority())
 	{
 		if (bBoost && GetVelocity().SizeSquared() > FMath::Square(250.f))
@@ -252,7 +252,7 @@ void AFlyCharacter::Tick(float DeltaSeconds)
 	}
 	if (BuzzAudio)
 	{
-		BuzzAudio->SetPitchMultiplier(0.9f + FMath::Min(Speed / 900.f, 1.f) * 0.35f + (bBoost ? 0.35f : 0.f));
+		BuzzAudio->SetPitchMultiplier(0.9f + FMath::Min(Speed / (900.f * SpeedK), 1.f) * 0.35f + (bBoost ? 0.35f : 0.f));
 		if (bDead && BuzzAudio->IsPlaying()) { BuzzAudio->Stop(); }
 		if (!bDead && !BuzzAudio->IsPlaying()) { BuzzAudio->Play(); }
 	}
@@ -261,7 +261,7 @@ void AFlyCharacter::Tick(float DeltaSeconds)
 FVector AFlyCharacter::GetHoldPoint() const
 {
 	// Food dangles under the fly's legs.
-	return GetActorLocation() - FVector(0.f, 0.f, BodyRadius * 1.5f + 22.f);
+	return GetActorLocation() - FVector(0.f, 0.f, BodyRadius * 1.5f + 22.f * AntShrink);
 }
 
 void AFlyCharacter::MoveForward(float Value)
@@ -394,12 +394,12 @@ bool ASpiderCharacter::StartSwing(const FVector& Target)
 	}
 	const FVector Me = GetActorLocation();
 	const float D = (float)FVector::Dist(Me, Target);
-	if (D < 150.f || D > 6000.f)
+	if (D < 150.f * AntShrink || D > 6000.f)
 	{
 		return false;
 	}
 	SwingAnchor = Target;
-	RopeLen = FMath::Clamp(D * 0.9f, 150.f, 6000.f);
+	RopeLen = FMath::Clamp(D * 0.9f, 150.f * AntShrink, 6000.f);
 	bSwinging = true;
 	UCharacterMovementComponent* CM = GetCharacterMovement();
 	if (UAntMovementComponent* M = GetAntMovement())
@@ -432,7 +432,7 @@ void ASpiderCharacter::StopSwing(bool bFling)
 	if (bFling && !bDead)
 	{
 		// Let go at the bottom of the arc = fly like a superhero.
-		CM->Velocity += CM->Velocity.GetSafeNormal() * 300.f + FVector(0.f, 0.f, 420.f);
+		CM->Velocity += (CM->Velocity.GetSafeNormal() * 300.f + FVector(0.f, 0.f, 420.f)) * SpeedK;
 	}
 	if (!HasAuthority())
 	{
@@ -465,7 +465,7 @@ void ASpiderCharacter::TickSwing(float Dt)
 	}
 	if (bReel)
 	{
-		RopeLen = FMath::Max(140.f, RopeLen - 1100.f * Dt);
+		RopeLen = FMath::Max(140.f * AntShrink, RopeLen - 1100.f * SpeedK * Dt);
 	}
 	const FVector A = SwingAnchor;
 	const FVector P = GetActorLocation();
@@ -713,7 +713,7 @@ void AFlyAIController::Tick(float DeltaSeconds)
 			{
 				Target = nullptr;
 			}
-			else if (FVector::Dist(Me, L->GetActorLocation()) < 90.f + L->GetRadius())
+			else if (FVector::Dist(Me, L->GetActorLocation()) < 90.f * AntKit::AntShrink + L->GetRadius())
 			{
 				if (Fly->GrabLoot(L))
 				{

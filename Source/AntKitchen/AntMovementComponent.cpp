@@ -1,5 +1,6 @@
-#include "AntMovementComponent.h"
+﻿#include "AntMovementComponent.h"
 #include "GameFramework/Character.h"
+#include "AntTypes.h"
 #include "Components/CapsuleComponent.h"
 #include "Engine/World.h"
 #include "PhysicsEngine/BodySetup.h"
@@ -185,11 +186,11 @@ bool UAntMovementComponent::DoJump(bool bReplayingMoves, float DeltaTime)
 	}
 	else if (N.Z < -0.5f)
 	{
-		Push = N * 150.f;                                                // ceiling: just let go
+		Push = N * 150.f * AntKit::JumpK;                         // ceiling: just let go
 	}
 	else
 	{
-		Push = N * JumpZVelocity * 0.8f + FVector::UpVector * 280.f;    // wall: kick off and up
+		Push = N * JumpZVelocity * 0.8f + FVector::UpVector * 280.f * AntKit::JumpK;    // wall: kick off and up
 	}
 	Velocity = FVector::VectorPlaneProject(Velocity, N) + Push;
 	SetMovementMode(MOVE_Falling);
@@ -262,7 +263,7 @@ void UAntMovementComponent::PhysCrawl(float DeltaTime)
 	// Frozen / no-climb ants can't hold on to walls and ceilings.
 	if ((bNoClimb && N.Z < 0.5f) || (bHeavyLoad && N.Z < -0.5f))
 	{
-		Detach(N * 80.f);
+		Detach(N * 80.f * AntKit::JumpK);
 		return;
 	}
 
@@ -273,7 +274,7 @@ void UAntMovementComponent::PhysCrawl(float DeltaTime)
 	const FVector InDir = In.GetSafeNormal();
 	const FVector Target = InDir * GetMaxSpeed() * InMag;
 	FVector V = FVector::VectorPlaneProject(Velocity, N);
-	V = FMath::VInterpConstantTo(V, Target, DeltaTime, InMag > 0.05f ? 4500.f : 6000.f);
+	V = FMath::VInterpConstantTo(V, Target, DeltaTime, InMag > 0.05f ? 4500.f * AntKit::SpeedK : 6000.f * AntKit::SpeedK);
 	Velocity = V;
 
 	const FQuat Rot = UpdatedComponent->GetComponentQuat();
@@ -303,7 +304,7 @@ void UAntMovementComponent::PhysCrawl(float DeltaTime)
 	// 3. Stay glued to the surface, or wrap around a convex edge.
 	const FVector Loc = UpdatedComponent->GetComponentLocation();
 	FHitResult G;
-	if (TraceSurface(Loc + N * 2.f, Loc - N * (R + 28.f), G) && IsStickable(G))
+	if (TraceSurface(Loc + N * 2.f, Loc - N * (R + 28.f * AntKit::AntShrink), G) && IsStickable(G))
 	{
 		if (FVector::DotProduct(G.ImpactNormal, N) > 0.3f)
 		{
@@ -323,9 +324,9 @@ void UAntMovementComponent::PhysCrawl(float DeltaTime)
 		const FVector MoveDir = Velocity.GetSafeNormal();
 		if (!MoveDir.IsNearlyZero() && !bNoClimb)
 		{
-			const FVector Below = Loc - N * (R + 14.f);
+			const FVector Below = Loc - N * (R + 14.f * AntKit::AntShrink);
 			FHitResult W;
-			if (TraceSurface(Below, Below - MoveDir * (R * 2.f + 40.f), W) && IsStickable(W)
+			if (TraceSurface(Below, Below - MoveDir * (R * 2.f + 40.f * AntKit::AntShrink), W) && IsStickable(W)
 				&& FVector::DotProduct(W.ImpactNormal, N) < 0.8f)
 			{
 				const FVector NewN = W.ImpactNormal;
@@ -339,7 +340,7 @@ void UAntMovementComponent::PhysCrawl(float DeltaTime)
 		if (!bWrapped)
 		{
 			SurfaceNormal = N;
-			Detach(N * 40.f);
+			Detach(N * 40.f * AntKit::JumpK);
 			return;
 		}
 	}

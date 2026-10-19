@@ -108,6 +108,7 @@ FAntWeapon StarterWeapon()
 {
 	FAntWeapon W;
 	W.Name = TEXT("Кислотный плевок [Обычный]");
+	W.ProjectileSpeed *= AntKit::SpeedK;
 	return W;
 }
 
@@ -143,6 +144,8 @@ FAntWeapon RollWeapon(int32 Rarity, FRandomStream& R)
 		break;
 	}
 
+	W.ProjectileSpeed *= AntKit::SpeedK;
+	W.Splash *= AntKit::AntShrink;
 	const float Mult = 1.f + 0.3f * Rarity + R.FRandRange(-0.08f, 0.12f);
 	W.Damage *= Mult;
 	W.FireRate *= 1.f + 0.1f * Rarity + R.FRandRange(-0.05f, 0.05f);

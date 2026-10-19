@@ -42,12 +42,12 @@ AAntCharacter::AAntCharacter(const FObjectInitializer& ObjectInitializer)
 	bUseControllerRotationRoll = false;
 
 	UCharacterMovementComponent* CM = GetCharacterMovement();
-	CM->MaxWalkSpeed = 480.f;
-	CM->MaxAcceleration = 4000.f;
-	CM->JumpZVelocity = 560.f;
+	CM->MaxWalkSpeed = 480.f * SpeedK;
+	CM->MaxAcceleration = 4000.f * SpeedK;
+	CM->JumpZVelocity = 560.f * JumpK;
 	CM->AirControl = 0.7f;
 	CM->GravityScale = 1.4f;
-	CM->MaxStepHeight = 12.f;
+	CM->MaxStepHeight = 12.f * AntShrink;
 	CM->SetWalkableFloorAngle(55.f);
 	CM->bOrientRotationToMovement = false;
 	CM->bEnablePhysicsInteraction = true;
@@ -59,10 +59,10 @@ AAntCharacter::AAntCharacter(const FObjectInitializer& ObjectInitializer)
 
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 	SpringArm->SetupAttachment(RootComponent);
-	SpringArm->TargetArmLength = 125.f;
-	SpringArm->SocketOffset = FVector(0.f, 0.f, 45.f);
+	SpringArm->TargetArmLength = 125.f * AntShrink;
+	SpringArm->SocketOffset = FVector(0.f, 0.f, 45.f * AntShrink);
 	SpringArm->bUsePawnControlRotation = true;
-	SpringArm->ProbeSize = 6.f;
+	SpringArm->ProbeSize = 2.f;
 	SpringArm->bEnableCameraLag = true;
 	SpringArm->CameraLagSpeed = 18.f;
 
@@ -151,7 +151,7 @@ void AAntCharacter::ApplyClassStats()
 	{
 		Health = FMath::Clamp(Frac, 0.05f, 1.f) * MaxHealth;
 	}
-	GetCharacterMovement()->JumpZVelocity = D.JumpZ * 0.9f;
+	GetCharacterMovement()->JumpZVelocity = D.JumpZ * 0.9f * JumpK;
 	if (VisualRoot)
 	{
 		VisualRoot->SetRelativeScale3D(FVector(D.BodyScale * AntScale * ExtraScale));
@@ -1043,7 +1043,7 @@ void AAntCharacter::ServerFire_Implementation(FVector_NetQuantize Origin, FVecto
 	ServerNextFireTime = Now + 0.8f / FMath::Max(0.2f, Weapon.FireRate);
 
 	FVector Start = Origin;
-	if (FVector::Dist(Start, GetActorLocation()) > 200.f)
+	if (FVector::Dist(Start, GetActorLocation()) > 200.f * AntShrink)
 	{
 		Start = GetMuzzleLocation();
 	}
@@ -1138,9 +1138,9 @@ void AAntCharacter::ServerInteract_Implementation()
 	// A fly picks up ants of its colony (and drops them wherever).
 	if (Creature == 1)
 	{
-		if (AAntCharacter* Ally = FindGrabbableAlly(InteractRadius + 80.f))
+		if (AAntCharacter* Ally = FindGrabbableAlly(InteractRadius + 80.f * AntShrink))
 		{
-			AKitchenLoot* L = FindNearestLoot(InteractRadius + 30.f);
+			AKitchenLoot* L = FindNearestLoot(InteractRadius + 30.f * AntShrink);
 			if (!L || FVector::Dist(Ally->GetActorLocation(), GetActorLocation()) < FVector::Dist(L->GetActorLocation(), GetActorLocation()))
 			{
 				GrabAnt(Ally);
@@ -1151,7 +1151,7 @@ void AAntCharacter::ServerInteract_Implementation()
 
 	float GadgetDist = 0.f;
 	AKitchenInteractable* Gadget = FindNearestInteractable(&GadgetDist);
-	AKitchenLoot* Loot = FindNearestLoot(InteractRadius + 30.f);
+	AKitchenLoot* Loot = FindNearestLoot(InteractRadius + 30.f * AntShrink);
 	UE_LOG(LogTemp, Display, TEXT("ANTCARRY interact loot=%s gadget=%s"), Loot ? *Loot->LootName : TEXT("-"), Gadget ? *Gadget->GetName() : TEXT("-"));
 	const float LootDist = Loot ? FVector::Dist(Loot->GetActorLocation(), GetActorLocation()) : TNumericLimits<float>::Max();
 
@@ -1267,7 +1267,7 @@ void AAntCharacter::ServerBite_Implementation()
 	AntSfx::Everyone(this, AntSfx::Bite, GetActorLocation(), FMath::FRandRange(0.9f, 1.2f));
 	const FVector Me = GetActorLocation();
 	FVector Fwd = Controller ? Controller->GetControlRotation().Vector() : GetActorForwardVector();
-	const float Reach = 95.f;
+	const float Reach = 95.f * AntShrink;
 	const float Dmg = 30.f * DamageMult();
 	bool bHit = false;
 	AAntPlayerController* PC = Cast<AAntPlayerController>(GetController());
@@ -1284,7 +1284,7 @@ void AAntCharacter::ServerBite_Implementation()
 		if (To.Size() < Reach && FVector::DotProduct(To.GetSafeNormal(), Fwd) > 0.2f)
 		{
 			UGameplayStatics::ApplyDamage(O, Dmg, GetController(), this, UDamageType::StaticClass());
-			O->ApplyLaunch(To.GetSafeNormal() * 520.f + O->GetVisualUp() * 260.f);
+			O->ApplyLaunch((To.GetSafeNormal() * 520.f + O->GetVisualUp() * 260.f) * SpeedK);
 			if (O->Carrying) { O->LetGo(); O->Toast(TEXT("Тебя укусили — груз выпал!")); }
 			if (PC) { PC->ClientDamageNumber(O->GetActorLocation(), FMath::RoundToInt(Dmg), false); }
 			bHit = true;
@@ -1295,7 +1295,7 @@ void AAntCharacter::ServerBite_Implementation()
 	if (Ridden && !Ridden->IsKnockedOut())
 	{
 		UGameplayStatics::ApplyDamage(Ridden, Dmg * 1.5f, GetController(), this, UDamageType::StaticClass());
-		if (PC) { PC->ClientDamageNumber(Me + Fwd * 40.f, FMath::RoundToInt(Dmg * 1.5f), false); }
+		if (PC) { PC->ClientDamageNumber(Me + Fwd * 40.f * AntShrink, FMath::RoundToInt(Dmg * 1.5f), false); }
 		bHit = true;
 	}
 	// The Human's ankles.
@@ -1307,10 +1307,10 @@ void AAntCharacter::ServerBite_Implementation()
 			continue;
 		}
 		const FVector Foot = H->GetActorLocation() - FVector(0.f, 0.f, H->GetSimpleCollisionHalfHeight());
-		if (FVector::Dist2D(Foot, Me) < H->GetSimpleCollisionRadius() + 140.f && Me.Z - Foot.Z < 400.f)
+		if (FVector::Dist2D(Foot, Me) < H->GetSimpleCollisionRadius() + 140.f * AntShrink && Me.Z - Foot.Z < 400.f)
 		{
 			UGameplayStatics::ApplyDamage(H, Dmg * 0.8f, GetController(), this, UDamageType::StaticClass());
-			if (PC) { PC->ClientDamageNumber(Me + Fwd * 40.f, FMath::RoundToInt(Dmg * 0.8f), false); }
+			if (PC) { PC->ClientDamageNumber(Me + Fwd * 40.f * AntShrink, FMath::RoundToInt(Dmg * 0.8f), false); }
 			bHit = true;
 		}
 	}
@@ -1691,7 +1691,7 @@ void AAntCharacter::UpdateSpeed()
 		Load *= 0.6f;   // a friend in the mandibles
 	}
 	const float ClassSpeed = GetClassDef().Speed * SpeedScale;
-	M->MaxWalkSpeed = (bSprinting && !Carrying ? 760.f : 480.f) * Load * ClassSpeed;
+	M->MaxWalkSpeed = (bSprinting && !Carrying ? 760.f : 480.f) * SpeedK * Load * ClassSpeed;
 
 	float Mult = 1.f;
 	if (HasStatus(AntStatus::Sticky)) { Mult *= 0.35f; }
@@ -1718,13 +1718,13 @@ FVector AAntCharacter::EstimateSurfaceNormal() const
 	static const FVector Dirs[6] = { -FVector::UpVector, FVector::UpVector, FVector::ForwardVector, -FVector::ForwardVector, FVector::RightVector, -FVector::RightVector };
 	const FVector Me = GetActorLocation();
 	FCollisionQueryParams Params(SCENE_QUERY_STAT(AntVisNormal), false, this);
-	float Best = BodyRadius + 22.f;
+	float Best = BodyRadius + 22.f * AntShrink;
 	FVector N = FVector::UpVector;
 	bool bAny = false;
 	for (const FVector& D : Dirs)
 	{
 		FHitResult Hit;
-		if (GetWorld()->LineTraceSingleByObjectType(Hit, Me, Me + D * (BodyRadius + 22.f), UAntMovementComponent::SurfaceObjects(), Params))
+		if (GetWorld()->LineTraceSingleByObjectType(Hit, Me, Me + D * (BodyRadius + 22.f * AntShrink), UAntMovementComponent::SurfaceObjects(), Params))
 		{
 			const float Dist = Hit.Distance - (FVector::DotProduct(D, -VisNormal) > 0.7f ? 4.f : 0.f);   // prefer the current surface
 			if (Dist < Best)
@@ -1843,9 +1843,9 @@ void AAntCharacter::UpdateVisuals(float DeltaSeconds)
 	{
 		SpringArm->SocketOffset = FVector::ZeroVector;
 		// Bodycam: camera on the ant's head, shaky and wide. Normal: close third person.
-		const FVector Head = VisNormal * 14.f + VisHeading * 16.f;
-		SpringArm->TargetOffset = FMath::VInterpTo(SpringArm->TargetOffset, bBodycam ? Head * 0.8f : VisNormal * 30.f, DeltaSeconds, 8.f);
-		const float WantLen = bBodycam ? 0.f : (VisNormal.Z < 0.6f ? 175.f : 125.f);
+		const FVector Head = (VisNormal * 14.f + VisHeading * 16.f) * AntShrink;
+		SpringArm->TargetOffset = FMath::VInterpTo(SpringArm->TargetOffset, bBodycam ? Head * 0.8f : VisNormal * 30.f * AntShrink, DeltaSeconds, 8.f);
+		const float WantLen = bBodycam ? 0.f : (VisNormal.Z < 0.6f ? 175.f : 125.f) * AntShrink;
 		SpringArm->TargetArmLength = FMath::FInterpTo(SpringArm->TargetArmLength, WantLen, DeltaSeconds, bBodycam ? 12.f : 4.f);
 		// Handheld feel: footsteps, breathing, and trauma from hits / stomps.
 		if (LastHealthSeen >= 0.f && Health < LastHealthSeen - 0.5f)
@@ -1855,7 +1855,7 @@ void AAntCharacter::UpdateVisuals(float DeltaSeconds)
 		LastHealthSeen = Health;
 		Trauma = FMath::Max(0.f, Trauma - DeltaSeconds * 1.4f);
 		const float CamSh = Trauma * Trauma;
-		const float CamWalk = FMath::Min(1.f, Speed / 400.f) * (bBodycam ? 1.f : 0.35f);
+		const float CamWalk = FMath::Min(1.f, Speed / (400.f * SpeedK)) * (bBodycam ? 1.f : 0.35f);
 		const float CamT = AnimTime;
 		const FRotator Shake(
 			CamSh * 9.f * FMath::PerlinNoise1D(CamT * 23.f) + CamWalk * 1.6f * FMath::Sin(CamT * 21.f) + (bBodycam ? 0.5f * FMath::Sin(CamT * 1.3f) : 0.f),
@@ -2267,7 +2267,7 @@ void AAntCharacter::DoLink(const FVector& Aim)
 	}
 	if (Creature == 1)
 	{
-		if (AAntCharacter* A = FindGrabbableAlly(InteractRadius + 80.f)) { GrabAnt(A); }
+		if (AAntCharacter* A = FindGrabbableAlly(InteractRadius + 80.f * AntShrink)) { GrabAnt(A); }
 		else { Toast(TEXT("Рядом нет муравьёв твоей колонии")); }
 		return;
 	}
@@ -2281,7 +2281,7 @@ void AAntCharacter::DoLink(const FVector& Aim)
 		return;
 	}
 	// 1. Someone is building a chain right here: become the next link.
-	if (AAntChain* C = AAntChain::FindNearTail(GetWorld(), Team, GetActorLocation(), 190.f))
+	if (AAntChain* C = AAntChain::FindNearTail(GetWorld(), Team, GetActorLocation(), 190.f * AntShrink))
 	{
 		if (C->Join(this))
 		{
@@ -2301,7 +2301,7 @@ void AAntCharacter::DoLink(const FVector& Aim)
 	if (AAntArmy* Army = AAntArmy::FindFor(this))
 	{
 		const float D = (float)FVector::Dist(Aim, GetActorLocation());
-		if (D > 250.f && D < AAntChain::LinkLen * AAntChain::MaxLinks)
+		if (D > 250.f * AntShrink && D < AAntChain::LinkLen * AAntChain::MaxLinks)
 		{
 			Army->BuildBridge(GetActorLocation() - EstimateSurfaceNormal() * BodyRadius, Aim);
 			return;
@@ -2326,14 +2326,14 @@ bool AAntCharacter::StartChainHere(const FVector& Aim)
 	FCollisionQueryParams Q(SCENE_QUERY_STAT(AntChainProbe), false, this);
 
 	// Bridge: aim at the far bank across a gap or up/down to another level.
-	if (D > 220.f && D < AAntChain::LinkLen * AAntChain::MaxLinks && FVector::DotProduct(ToAim / D, N) < 0.85f)
+	if (D > 220.f * AntShrink && D < AAntChain::LinkLen * AAntChain::MaxLinks && FVector::DotProduct(ToAim / D, N) < 0.85f)
 	{
-		bool bGap = FMath::Abs(Aim.Z - S.Z) > 120.f;
+		bool bGap = FMath::Abs(Aim.Z - S.Z) > 120.f * AntShrink;
 		if (!bGap)
 		{
 			FHitResult Hit;
 			const FVector Mid = (S + Aim) * 0.5f;
-			bGap = !GetWorld()->LineTraceSingleByObjectType(Hit, Mid + FVector(0.f, 0.f, 20.f), Mid - FVector(0.f, 0.f, 160.f), FCollisionObjectQueryParams(ECC_WorldStatic), Q);
+			bGap = !GetWorld()->LineTraceSingleByObjectType(Hit, Mid + FVector(0.f, 0.f, 20.f * AntShrink), Mid - FVector(0.f, 0.f, 160.f * AntShrink), FCollisionObjectQueryParams(ECC_WorldStatic), Q);
 		}
 		if (bGap)
 		{
@@ -2354,13 +2354,13 @@ bool AAntCharacter::StartChainHere(const FVector& Aim)
 	FVector F = FVector::VectorPlaneProject(Controller ? Controller->GetControlRotation().Vector() : GetActorForwardVector(), N).GetSafeNormal();
 	if (N.Z > 0.6f && !F.IsNearlyZero())
 	{
-		for (float Ahead = 50.f; Ahead <= 130.f; Ahead += 40.f)
+		for (float Ahead = 50.f * AntShrink; Ahead <= 130.f * AntShrink; Ahead += 40.f * AntShrink)
 		{
 			const FVector Probe = Me + F * Ahead;
 			FHitResult Hit;
-			if (!GetWorld()->LineTraceSingleByObjectType(Hit, Probe + N * 10.f, Probe - N * 350.f, FCollisionObjectQueryParams(ECC_WorldStatic), Q))
+			if (!GetWorld()->LineTraceSingleByObjectType(Hit, Probe + N * 10.f * AntShrink, Probe - N * 350.f * AntShrink, FCollisionObjectQueryParams(ECC_WorldStatic), Q))
 			{
-				const FVector Anchor = Me + F * (Ahead - 20.f) - N * BodyRadius;
+				const FVector Anchor = Me + F * (Ahead - 20.f * AntShrink) - N * BodyRadius;
 				AAntChain::Start(GetWorld(), Team, this, Anchor, FVector(0.f, 0.f, -1.f), false, Anchor);
 				Toast(TEXT("Свесился с края — начало живой лестницы вниз. Свои цепляются снизу (G)"));
 				return true;

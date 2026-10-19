@@ -20,7 +20,7 @@ AAcidProjectile::AAcidProjectile()
 	InitialLifeSpan = 4.f;
 
 	Sphere = CreateDefaultSubobject<USphereComponent>(TEXT("Sphere"));
-	Sphere->InitSphereRadius(6.f);
+	Sphere->InitSphereRadius(6.f * AAntCharacter::AntShrink);
 	Sphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	Sphere->SetCollisionObjectType(ECC_WorldDynamic);
 	Sphere->SetCollisionResponseToAllChannels(ECR_Ignore);
@@ -104,7 +104,7 @@ void AAcidProjectile::BeginPlay()
 	if (GetNetMode() != NM_DedicatedServer)
 	{
 		Visual->SetStaticMesh(AntKit::ShapeMesh(EAntShape::Sphere));
-		Visual->SetRelativeScale3D(FVector(VisualSize));
+		Visual->SetRelativeScale3D(FVector(VisualSize * AAntCharacter::AntShrink));
 		AntKit::Paint(Visual, Color);
 	}
 }

@@ -522,7 +522,7 @@ void AKitchenLoot::ServerCarryTick(float Dt)
 		return;
 	}
 	const FTransform TM = GetActorTransform();
-	const float Leash = 260.f + GetRadius();
+	const float Leash = 260.f * AAntCharacter::AntShrink + GetRadius();
 
 	// Drop ants that died, let go or got pulled too far away.
 	for (int32 i = Carriers.Num() - 1; i >= 0; --i)

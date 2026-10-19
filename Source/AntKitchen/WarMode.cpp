@@ -1,4 +1,4 @@
-#include "WarMode.h"
+﻿#include "WarMode.h"
 #include "AntCharacter.h"
 #include "CreatureCharacters.h"
 #include "AntArmy.h"
@@ -297,13 +297,13 @@ void AAntTerritory::UpdateVisual(float Dt)
 			if (Art.Material) { Lane->SetMaterial(0, Art.Material); }
 			LaneMID = Lane->CreateDynamicMaterialInstance(0);
 			const float L = (float)Art.Mesh->GetBoundingBox().GetSize().GetMax();
-			InstScale = L > 0.f ? 26.f / L : 0.3f;
+			InstScale = L > 0.f ? 26.f * AAntCharacter::AntShrink / L : 0.1f;
 		}
 		else
 		{
 			Lane->SetStaticMesh(AntKit::ShapeMesh(EAntShape::Sphere));
 			LaneMID = AntKit::Paint(Lane, FLinearColor(0.05f, 0.02f, 0.015f));
-			InstScale = 0.12f;
+			InstScale = 0.12f * AAntCharacter::AntShrink;
 		}
 		Crumbs = MakeISM(TEXT("Crumbs"));
 		Crumbs->SetStaticMesh(AntKit::ShapeMesh(EAntShape::Cube));
@@ -359,7 +359,7 @@ void AAntTerritory::UpdateVisual(float Dt)
 		return;
 	}
 	const float T = GetWorld()->GetTimeSeconds();
-	const float Speed = bLineCut ? 60.f : 230.f;
+	const float Speed = (bLineCut ? 60.f : 230.f) * AAntCharacter::SpeedK;
 	TArray<FTransform> Xf, Xc;
 	Xf.SetNum(Want);
 	Xc.SetNum(Want / 2);
@@ -384,7 +384,7 @@ void AAntTerritory::UpdateVisual(float Dt)
 		if (bBack) { Dir = -Dir; }
 		const FVector Side = FVector::CrossProduct(Dir, FVector::UpVector).GetSafeNormal() * (bBack ? -9.f : 9.f);
 		const FRotator R = FRotationMatrix::MakeFromXZ(Dir.IsNearlyZero() ? FVector::ForwardVector : Dir, FVector::UpVector).Rotator();
-		Xf[i] = FTransform(R, P + Side + FVector(0.f, 0.f, 3.f), FVector(InstScale));
+		Xf[i] = FTransform(R, P + Side * AAntCharacter::AntShrink + FVector(0.f, 0.f, 3.f * AAntCharacter::AntShrink), FVector(InstScale));
 		if (bBack)
 		{
 			Xc[i / 2] = FTransform(R, P + Side + Dir * 14.f + FVector(0.f, 0.f, 10.f), FVector(0.07f));

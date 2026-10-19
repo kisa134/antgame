@@ -181,7 +181,7 @@ void AAntBotController::Think(AAntCharacter* Ant)
 		{
 			Goal = Prey->GetActorLocation();
 			if (!ShootTarget.IsValid() && Best < 1600.f) { ShootTarget = Prey; }
-			if (Best < 130.f + AAntCharacter::BodyRadius * 2.f) { Ant->BotBite(); }
+			if (Best < 130.f * AAntCharacter::AntShrink + AAntCharacter::BodyRadius * 2.f) { Ant->BotBite(); }
 		}
 		else
 		{
@@ -206,13 +206,13 @@ void AAntBotController::Think(AAntCharacter* Ant)
 	if (OrderMode == 1 && OrderBy.IsValid() && !Ant->Carrying)
 	{
 		const float Ang = (GetUniqueID() % 8) * 0.785f;
-		Goal = OrderBy->GetActorLocation() + FVector(FMath::Cos(Ang), FMath::Sin(Ang), 0.f) * 180.f;
+		Goal = OrderBy->GetActorLocation() + FVector(FMath::Cos(Ang), FMath::Sin(Ang), 0.f) * 180.f * AAntCharacter::AntShrink;
 		bHasGoal = true;
 		return;
 	}
 	if (OrderMode == 2)
 	{
-		Goal = OrderPoint + FVector(FMath::FRandRange(-200.f, 200.f), FMath::FRandRange(-200.f, 200.f), 0.f);
+		Goal = OrderPoint + FVector(FMath::FRandRange(-200.f, 200.f), FMath::FRandRange(-200.f, 200.f), 0.f) * AAntCharacter::AntShrink;
 		bHasGoal = true;
 		return;
 	}
@@ -229,7 +229,7 @@ void AAntBotController::Think(AAntCharacter* Ant)
 		// Dragging home. Give up if it doesn't move at all for a while.
 		const float Moved = (float)FVector::Dist(Carry->GetActorLocation(), LastLootPos);
 		LastLootPos = Carry->GetActorLocation();
-		HeavyTimer = Moved < 25.f ? HeavyTimer + 0.5f : 0.f;
+		HeavyTimer = Moved < 25.f * AAntCharacter::AntShrink ? HeavyTimer + 0.5f : 0.f;
 		if (HeavyTimer > 7.f)
 		{
 			IgnoreUntil.Add(Carry, Now + 20.f);
@@ -302,7 +302,7 @@ void AAntBotController::Think(AAntCharacter* Ant)
 	}
 
 	// Nothing to do: patrol the kitchen and the living room.
-	if (!bHasGoal || FVector::Dist2D(Goal, Ant->GetActorLocation()) < 300.f)
+	if (!bHasGoal || FVector::Dist2D(Goal, Ant->GetActorLocation()) < 300.f * AAntCharacter::AntShrink)
 	{
 		Goal = AKitchenBuilder::RandomFloorPoint() + FVector(0.f, 0.f, 30.f);
 		bHasGoal = true;
@@ -359,14 +359,14 @@ void AAntBotController::Steer(AAntCharacter* Ant, const FVector& FinalTarget, fl
 
 	const bool bOnWall = Ant->IsCrawling() && N.Z < 0.6f;
 	const float Below = (float)(Me.Z - Target.Z);
-	if (bOnWall && Below > 250.f && (N.Z < -0.4f || FVector::Dist2D(Me, Target) < Below * 1.5f) && !Ant->IsCarrying()
+	if (bOnWall && Below > 250.f * AAntCharacter::AntShrink && (N.Z < -0.4f || FVector::Dist2D(Me, Target) < Below * 1.5f) && !Ant->IsCarrying()
 		&& (Ant->Creature != 2 || FVector::Dist2D(Me, Target) < 900.f))
 	{
 		Ant->Jump();   // let go of the wall / ceiling and fall towards the target
 	}
 
 	FVector D = To - N * FVector::DotProduct(To, N);
-	if (bOnWall && FVector::DotProduct(To, N) < -40.f)
+	if (bOnWall && FVector::DotProduct(To, N) < -40.f * AAntCharacter::AntShrink)
 	{
 		// The target is behind this wall: climb over it.
 		FVector UpOnWall = FVector::UpVector - N * N.Z;
@@ -398,7 +398,7 @@ void AAntBotController::Steer(AAntCharacter* Ant, const FVector& FinalTarget, fl
 	if (StuckCheckTimer > 1.2f)
 	{
 		const bool bSlowOnPurpose = Ant->IsCarrying() && Ant->Carrying && Ant->Carrying->CarryRatio() < 1.f;
-		if (!bSlowOnPurpose && FVector::Dist(Me, LastCheckPos) < 70.f && UnstickTime <= 0.f)
+		if (!bSlowOnPurpose && FVector::Dist(Me, LastCheckPos) < 70.f * AAntCharacter::AntShrink && UnstickTime <= 0.f)
 		{
 			UnstickTime = 1.f;
 			UnstickDir = FVector::CrossProduct(N, D.GetSafeNormal()) * (FMath::RandBool() ? 1.f : -1.f) + N * 0.2f;
@@ -542,7 +542,7 @@ bool AAntBotController::ThinkWar(AAntCharacter* Ant)
 		}
 		const FVector Me = Ant->GetActorLocation();
 		// Walk slowly enough for the column to keep up; once there, send the army in.
-		Goal = WarPoint + FVector(FMath::Cos(GetUniqueID() * 1.3f), FMath::Sin(GetUniqueID() * 1.3f), 0.f) * 250.f + FVector(0.f, 0.f, 30.f);
+		Goal = WarPoint + FVector(FMath::Cos(GetUniqueID() * 1.3f), FMath::Sin(GetUniqueID() * 1.3f), 0.f) * 250.f * AAntCharacter::AntShrink + FVector(0.f, 0.f, 30.f);
 		bHasGoal = true;
 		if (AAntArmy* A = AAntArmy::FindFor(Ant))
 		{
@@ -557,7 +557,7 @@ bool AAntBotController::ThinkWar(AAntCharacter* Ant)
 				A->Mode = EArmyMode::Follow;
 			}
 			// Don't outrun the column.
-			if (!bNear && FVector::Dist(Me, A->GetActorLocation()) > 1400.f)
+			if (!bNear && FVector::Dist(Me, A->GetActorLocation()) > 1400.f * AAntCharacter::AntShrink)
 			{
 				Goal = A->GetActorLocation();
 			}
@@ -566,7 +566,7 @@ bool AAntBotController::ThinkWar(AAntCharacter* Ant)
 	}
 	// Squad member: stay around the leader, in a loose ring behind him.
 	const float Ang = (GetUniqueID() % 8) * 0.785f;
-	Goal = Lead->GetActorLocation() - Lead->GetActorForwardVector() * 200.f + FVector(FMath::Cos(Ang), FMath::Sin(Ang), 0.f) * 220.f;
+	Goal = Lead->GetActorLocation() - Lead->GetActorForwardVector() * 200.f * AAntCharacter::AntShrink + FVector(FMath::Cos(Ang), FMath::Sin(Ang), 0.f) * 220.f * AAntCharacter::AntShrink;
 	bHasGoal = true;
 	return true;
 }
@@ -593,7 +593,7 @@ bool AAntBotController::ThinkChain(AAntCharacter* Ant)
 		{
 			continue;
 		}
-		if (ToTail < 180.f)
+		if (ToTail < 180.f * AAntCharacter::AntShrink)
 		{
 			Ant->DoLink(FVector(C->EndPoint));
 		}
