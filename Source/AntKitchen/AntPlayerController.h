@@ -31,7 +31,12 @@ public:
 
 	UFUNCTION(Client, Reliable) void ClientToast(const FString& Text);
 	UFUNCTION(Client, Unreliable) void ClientDamageNumber(FVector_NetQuantize Location, int32 Amount, bool bCrit);
+	/** You killed someone: sound + big marker + streak name ("" if none). */
+	UFUNCTION(Client, Reliable) void ClientKillConfirm(const FString& Victim, const FString& Streak);
 	UFUNCTION(Server, Reliable) void ServerToggleHuman();
+	UFUNCTION(Server, Reliable) void ServerToggleCreature(uint8 Kind);
+	void BecomeFly() { ServerToggleCreature(1); }
+	void BecomeSpider() { ServerToggleCreature(2); }
 
 	/** Console: HostGame  -> reopens the current map as a listen server. */
 	UFUNCTION(Exec) void HostGame();
@@ -46,8 +51,18 @@ public:
 	/** Dev console: SwarmTest 30000 -> lays test trails with that many worker ants. */
 	UFUNCTION(Exec) void SwarmTest(int32 Ants);
 	UFUNCTION(Server, Reliable) void ServerSwarmTest(int32 Ants);
+	/** Dev console: AddBot 0 2 -> two more teammates; AddBot 1 3 -> three more fire ants. */
+	UFUNCTION(Exec) void AddBot(int32 Team, int32 Count);
+	/** Dev console: Grab -> same as pressing E (also -AntGrabAt=seconds). */
+	UFUNCTION(Exec) void Grab();
+	UFUNCTION(Server, Reliable) void ServerGrab();
+	UFUNCTION(Server, Reliable) void ServerAddBot(int32 Team, int32 Count);
 
 	bool bShowScores = false;
+	float HitMarkerTime = -100.f;
+	bool bHitCrit = false;
+	float KillMarkerTime = -100.f;
+	FString KillText;
 	TArray<FAntToast> Toasts;
 	TArray<FAntDamageNumber> DamageNumbers;
 

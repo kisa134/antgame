@@ -96,6 +96,39 @@ void AAntHUD::Crosshair()
 	DrawRect(C, CX - 1.f, CY + 4.f * S, 2.f, 6.f * S);
 	DrawRect(C, CX - 10.f * S, CY - 1.f, 6.f * S, 2.f);
 	DrawRect(C, CX + 4.f * S, CY - 1.f, 6.f * S, 2.f);
+
+	// Hit / kill markers.
+	if (const AAntPlayerController* PC = Cast<AAntPlayerController>(PlayerOwner))
+	{
+		const float Now = GetWorld()->GetTimeSeconds();
+		const float HitAge = Now - PC->HitMarkerTime;
+		const float KillAge = Now - PC->KillMarkerTime;
+		auto Cross = [this, CX, CY](float R, float Th, const FLinearColor& Col)
+		{
+			for (int32 sx = -1; sx <= 1; sx += 2)
+			{
+				for (int32 sy = -1; sy <= 1; sy += 2)
+				{
+					for (float k = 0.45f; k <= 1.f; k += 0.08f)
+					{
+						DrawRect(Col, CX + sx * R * k - Th * 0.5f, CY + sy * R * k - Th * 0.5f, Th, Th);
+					}
+				}
+			}
+		};
+		if (KillAge < 0.45f)
+		{
+			Cross(30.f * S * (1.f + KillAge), 4.f * S, FLinearColor(1.f, 0.15f, 0.1f, 1.f - KillAge / 0.45f));
+		}
+		else if (HitAge < 0.18f)
+		{
+			Cross(18.f * S, 3.f * S, PC->bHitCrit ? FLinearColor(1.f, 0.85f, 0.1f, 1.f) : FLinearColor(1.f, 1.f, 1.f, 1.f - HitAge / 0.18f));
+		}
+		if (KillAge < 2.f)
+		{
+			Txt(PC->KillText, CX, CY + 60.f * S, FLinearColor(1.f, 0.3f, 0.2f, FMath::Clamp(2.f - KillAge, 0.f, 1.f)), GEngine->GetMediumFont(), 1.3f * S, true);
+		}
+	}
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -150,8 +183,17 @@ void AAntHUD::DrawTop(AAntGameState* GS)
 	UFont* Med = GEngine->GetMediumFont();
 	UFont* Big = GEngine->GetLargeFont();
 
-	Txt(FString::Printf(TEXT("КОЛОНИЯ: %d / %d сладости"), GS->TeamScore, GS->TargetScore), W * 0.5f, 12.f * S, Gold, Med, 1.3f * S, true);
-	Bar(W * 0.5f - 260.f * S, 48.f * S, 520.f * S, 16.f * S, GS->TargetScore > 0 ? (float)GS->TeamScore / GS->TargetScore : 0.f, Gold);
+	const FLinearColor Fire(1.f, 0.4f, 0.2f);
+	Txt(FString::Printf(TEXT("КОЛОНИЯ %d"), GS->TeamScore), W * 0.5f - 140.f * S, 12.f * S, Gold, Med, 1.3f * S, true);
+	Txt(FString::Printf(TEXT("ОГНЕННЫЕ %d"), GS->RivalScore), W * 0.5f + 140.f * S, 12.f * S, Fire, Med, 1.3f * S, true);
+	Txt(FString::Printf(TEXT("до %d"), GS->TargetScore), W * 0.5f, 16.f * S, Grey, GEngine->GetSmallFont(), 1.1f * S, true);
+	const float Tg = FMath::Max(1, GS->TargetScore);
+	Bar(W * 0.5f - 270.f * S, 48.f * S, 260.f * S, 16.f * S, GS->TeamScore / Tg, Gold);
+	Bar(W * 0.5f + 10.f * S, 48.f * S, 260.f * S, 16.f * S, GS->RivalScore / Tg, Fire);
+	if (GS->HumanRage > 0)
+	{
+		Txt(FString::Printf(TEXT("ЯРОСТЬ ЧЕЛОВЕКА: %d / 3"), GS->HumanRage), W * 0.5f, 128.f * S, Red, GEngine->GetSmallFont(), 1.15f * S, true);
+	}
 
 	const int32 T = FMath::Max(0, FMath::CeilToInt(GS->TimeRemaining));
 	Txt(FString::Printf(TEXT("%d:%02d"), T / 60, T % 60), W * 0.5f, 70.f * S, T < 60 ? Red : White, Med, 1.3f * S, true);
@@ -159,7 +201,7 @@ void AAntHUD::DrawTop(AAntGameState* GS)
 
 	if (GS->Phase != 0)
 	{
-		const FString Banner = GS->Phase == 1 ? TEXT("МУРАВЬИ ПОБЕДИЛИ!") : TEXT("ЧЕЛОВЕК ПОБЕДИЛ!");
+		const FString Banner = GS->Phase == 1 ? TEXT("КОЛОНИЯ ПОБЕДИЛА!") : GS->Phase == 3 ? TEXT("ОГНЕННЫЕ МУРАВЬИ ПОБЕДИЛИ...") : TEXT("ЧЕЛОВЕК ПОБЕДИЛ!");
 		DrawRect(Panel, 0.f, Canvas->ClipY * 0.3f, W, 140.f * S);
 		Txt(Banner, W * 0.5f, Canvas->ClipY * 0.3f + 20.f * S, Gold, Big, 2.5f * S, true);
 		Txt(TEXT("Новый раунд через несколько секунд..."), W * 0.5f, Canvas->ClipY * 0.3f + 95.f * S, White, Med, 1.f * S, true);
@@ -229,11 +271,23 @@ void AAntHUD::DrawAnt(AAntCharacter* Ant)
 	Txt(FString::Printf(TEXT("ЗДОРОВЬЕ %d"), FMath::CeilToInt(Ant->Health)), X, Y - 28.f * S, White, Small, 1.2f * S);
 	Bar(X, Y, 340.f * S, 24.f * S, HFrac, FMath::Lerp(Red, Green, HFrac));
 
-	Txt(FString::Printf(TEXT("ГРУЗ %d / %d   сладость: %d"), Ant->CarriedWeight, AAntCharacter::MaxCarry, Ant->CarriedValue), X, Y + 34.f * S, Gold, Small, 1.2f * S);
-	Bar(X, Y + 62.f * S, 340.f * S, 14.f * S, (float)Ant->CarriedWeight / AAntCharacter::MaxCarry, Gold);
+	const FAntClassDef& Cls = Ant->GetClassDef();
+	if (AKitchenLoot* C = Ant->Carrying)
+	{
+		const float R = C->CarryRatio();
+		const bool bTug = C->CarryTeam() != Ant->Team;
+		const FString State = bTug ? TEXT("ПЕРЕТЯГИВАНИЕ — враги сильнее!") : R >= 1.f ? TEXT("несём") : R >= 0.5f ? TEXT("волочём, тяжело") : TEXT("НЕ СДВИНУТЬ — нужна помощь");
+		Txt(FString::Printf(TEXT("ТАЩИШЬ: %s (+%d)  вес %d, держат %d  — %s"), *C->LootName, C->Value, C->Weight, C->NumCarriers(), *State), X, Y + 34.f * S, bTug || R < 0.5f ? Red : Gold, Small, 1.2f * S);
+		Bar(X, Y + 62.f * S, 340.f * S, 14.f * S, bTug ? 0.f : FMath::Min(1.f, R), R >= 1.f ? Gold : Red);
+		Marker(AKitchenBuilder::NestLocation(Ant->Team) + FVector(0.f, 0.f, 200.f), TEXT("МУРАВЕЙНИК"), Gold, true);
+	}
+	else
+	{
+		Txt(FString::Printf(TEXT("%s — сила %.0f"), Cls.Name, Cls.Strength), X, Y + 34.f * S, Gold, Small, 1.2f * S);
+	}
 	if (Ant->IsInNest())
 	{
-		Txt(TEXT("Ты в муравейнике: тут безопасно"), X, Y + 84.f * S, Green, Small, 1.1f * S);
+		Txt(TEXT("В муравейнике безопасно.  Каста: 1 Фуражир (сила)  2 Солдат (броня, урон)  3 Разведчик (скорость, прыжок)  4 Бочка (лечит своих)"), X, Y + 84.f * S, Green, Small, 1.1f * S);
 	}
 
 	// Weapon card (bottom right)
@@ -278,6 +332,7 @@ void AAntHUD::DrawAnt(AAntCharacter* Ant)
 		if (Ant->HasStatus(AntStatus::Sticky)) { St += TEXT("  | липкий: медленно, без прыжков"); SC = Gold; }
 		if (Ant->HasStatus(AntStatus::Wet)) { St += TEXT("  | мокрый"); }
 		if (Ant->HasStatus(AntStatus::Drowning)) { St += TEXT("  | ТОНЕШЬ!"); SC = Red; }
+		if (Ant->IsBurning()) { St += TEXT("  | ГОРИШЬ! в воду / поджигай врагов"); SC = FLinearColor(1.f, 0.5f, 0.1f); }
 		Txt(St, X, Y - 56.f * S, SC, Small, 1.15f * S);
 	}
 
@@ -315,11 +370,17 @@ void AAntHUD::DrawAnt(AAntCharacter* Ant)
 		}
 		else
 		{
-			const bool bFits = Ant->CarriedWeight + L->Weight <= AAntCharacter::MaxCarry;
-			Txt(FString::Printf(TEXT("[E] Подобрать: %s  +%d  (вес %d)"), *L->LootName, L->Value, L->Weight), PX, PY, bFits ? White : Red, Med, 1.05f * S, true);
-			if (!bFits)
+			const int32 Need = L->AntsNeeded(Ant->GetStrength());
+			const bool bMine = Ant->Carrying == L;
+			const FString What = bMine ? FString::Printf(TEXT("[E] Отпустить: %s"), *L->LootName)
+				: FString::Printf(TEXT("[E] Схватить: %s  +%d  (вес %d)"), *L->LootName, L->Value, L->Weight);
+			Txt(What, PX, PY, Need <= 1 ? White : Gold, Med, 1.05f * S, true);
+			if (!bMine)
 			{
-				Txt(TEXT("Не влезет! Отнеси груз в муравейник"), PX, PY + 34.f * S, Red, Small, 1.1f * S, true);
+				const FString Hint = L->IsCarried()
+					? (L->CarryTeam() == Ant->Team ? FString::Printf(TEXT("Свои тащат (%d) — помоги!"), L->NumCarriers()) : TEXT("Это тащат ЧУЖИЕ — хватай и тяни к себе!"))
+					: Need <= 1 ? TEXT("Унесёшь один") : FString::Printf(TEXT("Тяжело: нужно %d таких муравья (один — только волочить или никак)"), Need);
+				Txt(Hint, PX, PY + 34.f * S, Need <= 1 ? Green : Gold, Small, 1.1f * S, true);
 			}
 			if (!Ant->bLayingTrail)
 			{
@@ -333,11 +394,8 @@ void AAntHUD::DrawAnt(AAntCharacter* Ant)
 		Txt(Ant->GetVisualUp().Z < -0.5f ? TEXT("~ ползёшь по потолку ~  (Пробел — отцепиться)") : TEXT("~ ползёшь по стене ~  (Пробел — оттолкнуться)"), W * 0.5f, H * 0.5f + 140.f * S, Grey, Small, 1.1f * S, true);
 	}
 
-	// Nest marker while carrying
-	if (Ant->CarriedWeight > 0)
-	{
-		Marker(AKitchenBuilder::NestLocation() + FVector(0.f, 0.f, 200.f), TEXT("МУРАВЕЙНИК"), Gold, true);
-	}
+	// Rival nest marker
+	Marker(AKitchenBuilder::NestLocation(1 - Ant->Team) + FVector(0.f, 0.f, 300.f), Ant->Team == 0 ? TEXT("гнездо огненных") : TEXT("гнездо чёрных"), FLinearColor(1.f, 0.4f, 0.2f), false);
 
 	// Loot radar: gear and juicy food nearby
 	const FVector Me = Ant->GetActorLocation();
@@ -357,7 +415,9 @@ void AAntHUD::DrawAnt(AAntCharacter* Ant)
 		}
 		else if (L->Value >= 60)
 		{
-			Marker(L->GetActorLocation() + FVector(0.f, 0.f, 40.f), FString::Printf(TEXT("+%d"), L->Value), Gold, false);
+			Marker(L->GetActorLocation() + FVector(0.f, 0.f, 40.f + L->GetRadius()),
+				L->IsCarried() ? FString::Printf(TEXT("+%d (тащат %d)"), L->Value, L->NumCarriers()) : FString::Printf(TEXT("+%d  x%d"), L->Value, L->AntsNeeded(Ant->GetStrength())),
+				L->IsCarried() && L->CarryTeam() != Ant->Team ? FLinearColor(1.f, 0.4f, 0.2f) : Gold, false);
 			++Count;
 		}
 	}
@@ -385,6 +445,14 @@ void AAntHUD::DrawHuman(AHumanCharacter* H, AAntGameState* GS)
 	const float ServerNow = GS ? GS->GetServerWorldTimeSeconds() : GetWorld()->GetTimeSeconds();
 	const bool bStompReady = ServerNow >= H->StompReadyTime;
 	Txt(bStompReady ? TEXT("ЛКМ — ТОПНУТЬ: готово") : TEXT("ЛКМ — ТОПНУТЬ: замах..."), X, Y + 106.f * S, bStompReady ? Green : Grey, Small, 1.2f * S);
+	const bool bSwatReady = ServerNow >= H->SwatReadyTime;
+	Txt(bSwatReady ? TEXT("Q — ГАЗЕТОЙ по прицелу (стены, столы): готово") : TEXT("Q — газета: замах..."), X, Y + 130.f * S, bSwatReady ? Green : Grey, Small, 1.2f * S);
+	Txt(H->Held ? TEXT("E — ШВЫРНУТЬ еду (разобьётся!)") : TEXT("E — схватить еду у прицела"), X, Y + 154.f * S, H->Held ? Gold : White, Small, 1.2f * S);
+	// Where the slippers will land.
+	for (int32 Leg = 0; Leg < 2; ++Leg)
+	{
+		Marker(H->GetStompPoint(Leg) + FVector(0.f, 0.f, 20.f), TEXT("тапок"), bStompReady ? FLinearColor(1.f, 0.5f, 0.2f) : Grey, false);
+	}
 
 	if (H->IsKnockedOut())
 	{
@@ -395,7 +463,7 @@ void AAntHUD::DrawHuman(AHumanCharacter* H, AAntGameState* GS)
 	for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
 	{
 		AAntCharacter* Ant = *It;
-		if (Ant && !Ant->bDead && Ant->CarriedWeight > 0 && FVector::Dist(Ant->GetActorLocation(), H->GetActorLocation()) < 7000.f)
+		if (Ant && !Ant->bDead && Ant->IsCarrying() && FVector::Dist(Ant->GetActorLocation(), H->GetActorLocation()) < 7000.f)
 		{
 			Marker(Ant->GetActorLocation() + FVector(0.f, 0.f, 60.f), TEXT("сладкое!"), FLinearColor(1.f, 0.6f, 0.1f), false);
 		}
@@ -431,7 +499,13 @@ void AAntHUD::DrawWorldTags(APawn* Me)
 			continue;
 		}
 		const FVector S2 = Project(P);
-		Txt(Ant->GetDisplayName(), S2.X, S2.Y - 18.f * S, FLinearColor(0.8f, 0.9f, 1.f), Small, 1.f * S, true);
+		const AAntCharacter* MyAnt = Cast<AAntCharacter>(Me);
+		const bool bEnemy = MyAnt ? MyAnt->IsEnemy(Ant) : Ant->Team != 0;
+		Txt(Ant->GetDisplayName(), S2.X, S2.Y - 18.f * S, bEnemy ? FLinearColor(1.f, 0.4f, 0.25f) : FLinearColor(0.8f, 0.9f, 1.f), Small, 1.f * S, true);
+		if (bEnemy)
+		{
+			Bar(S2.X - 40.f * S, S2.Y + 2.f * S, 80.f * S, 6.f * S, Ant->Health / FMath::Max(1.f, Ant->MaxHealth), FLinearColor(1.f, 0.3f, 0.2f));
+		}
 	}
 
 	for (TActorIterator<AHumanCharacter> It(GetWorld()); It; ++It)
@@ -530,7 +604,8 @@ void AAntHUD::DrawScoreboard(AAntGameState* GS)
 		}
 		DrawRect(PS->AntColor, X + 6.f * S, Y + 6.f * S, 8.f * S, 16.f * S);
 		Txt(PS->GetPlayerName(), X + 20.f * S, Y, White, Small, 1.15f * S);
-		Txt(PS->bIsHuman ? TEXT("Человек") : TEXT("Муравей"), X + 300.f * S, Y, PS->bIsHuman ? Red : Green, Small, 1.15f * S);
+		Txt(PS->bIsHuman ? TEXT("Человек") : PS->Team == 0 ? AntKit::ClassDef(PS->AntClass).Name : *FString::Printf(TEXT("огн. %s"), AntKit::ClassDef(PS->AntClass).Name),
+			X + 300.f * S, Y, PS->bIsHuman ? Red : PS->Team == 0 ? Green : FLinearColor(1.f, 0.4f, 0.2f), Small, 1.15f * S);
 		Txt(FString::FromInt(PS->Delivered), X + 430.f * S, Y, White, Small, 1.15f * S);
 		Txt(FString::FromInt(PS->Deaths), X + 550.f * S, Y, White, Small, 1.15f * S);
 		Txt(FString::FromInt(PS->Kills), X + 660.f * S, Y, White, Small, 1.15f * S);
@@ -543,11 +618,19 @@ void AAntHUD::DrawHelp(APawn* Me)
 	FString Help;
 	if (Cast<AHumanCharacter>(Me))
 	{
-		Help = TEXT("WASD — ходить | Мышь — смотреть | ЛКМ — топнуть | ПКМ (держать) — дихлофос | H — снова муравей | Tab — счёт");
+		Help = TEXT("WASD — ходить | ЛКМ — топнуть | ПКМ (держать) — дихлофос | Q — газета по прицелу | E — схватить/швырнуть еду | H — снова муравей | Tab — счёт");
+	}
+	else if (const AAntCharacter* C = Cast<AAntCharacter>(Me); C && C->Creature == 1)
+	{
+		Help = TEXT("МУХА: WASD — лететь куда смотришь | Пробел — вверх | E — схватить/бросить крошку | ЛКМ — плевок | ПКМ — укус | J — снова муравей");
+	}
+	else if (const AAntCharacter* C2 = Cast<AAntCharacter>(Me); C2 && C2->Creature == 2)
+	{
+		Help = TEXT("ПАУК: по стенам и потолку | ЛКМ — паутина (опутывает) | ПКМ — укус | Пробел на потолке — спуск на нити | K — снова муравей");
 	}
 	else
 	{
-		Help = TEXT("WASD — ползти (по стенам и потолку тоже) | ЛКМ — плевок | E — взять / использовать | T — тропа для роя | G — отозвать рой | Shift — спринт | Пробел — прыжок | H — Человек | Tab — счёт");
+		Help = TEXT("J — муха | K — паук | WASD — ползти | ЛКМ — плевок | E — схватить/отпустить еду, взять оружие, гаджет | ПКМ — укус / откусить кусок | V — bodycam | 1-4 — каста (в гнезде) | T — тропа роя | G — отозвать рой | Shift — спринт | Пробел — прыжок | H — Человек | Tab — счёт");
 	}
 	Txt(Help, Canvas->ClipX * 0.5f, Canvas->ClipY - 26.f * S, FLinearColor(1.f, 1.f, 1.f, 0.6f), GEngine->GetSmallFont(), 1.f * S, true);
 }

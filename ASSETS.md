@@ -147,6 +147,31 @@
 
 ---
 
+## Муха и паук (новое)
+
+Та же схема, что у муравья: **тело отдельно, лапы — отдельные сегменты** (код сам ставит их на IK и сгибает), крылья отдельно (код машет ими).
+Стиль тот же: realistic macro insect, chitin, PBR, без подставки и без земли, нейтральная поза, один объект на файл.
+Имена файлов — ровно как в таблице, код подхватит модели сам; пока их нет, муха и паук собраны из примитивов.
+
+| Имя | Промпт для Meshy | Размер (см) |
+|---|---|---|
+| `SM_Fly_Body` | `realistic housefly body without wings and without legs, big red compound eyes, short proboscis, grey thorax with dark stripes, bristly hairs, striped grey-brown abdomen, three pairs of small leg sockets under the thorax, two wing sockets on top, top-down symmetric, macro photo look` | 95 × 50 × 45 |
+| `SM_Fly_Wing` | `single housefly wing, thin flat transparent membrane with dark veins, slightly iridescent, isolated, flat on the ground` | 50 × 20 × 1 |
+| `SM_Fly_LegUpper` | `housefly upper leg segment, thin straight black chitin rod covered with fine bristles, ball joint at one end` | 25 × 4 × 4 |
+| `SM_Fly_LegLower` | `housefly lower leg segment, thin black bristly rod tapering to a tiny foot with two claws and a hairy pad` | 30 × 3 × 3 |
+| `SM_Food_DeadFly` | `dead housefly lying on its back, legs curled up, wings folded, realistic` | 60 × 40 × 25 |
+| `SM_Spider_Body` | `realistic house spider body without legs: cephalothorax with eight small glossy black eyes in two rows, two fangs (chelicerae) and two short pedipalps, big round hairy abdomen with light brown chevron pattern, eight leg sockets around the cephalothorax, top-down symmetric` | 100 × 60 × 50 |
+| `SM_Spider_LegUpper` | `house spider upper leg segment, long straight hairy brown chitin rod with darker bands, knee joint knob at one end` | 50 × 6 × 6 |
+| `SM_Spider_LegLower` | `house spider lower leg segment, long thin hairy brown rod with dark bands, tapering to a tiny claw tip` | 60 × 4 × 4 |
+| `SM_Food_SpiderLeg` | `severed hairy spider leg, bent at the knee, realistic` | 80 × 15 × 15 |
+
+Как это в игре:
+- **Муха** (ИИ, 2 штуки): ворует лёгкую еду (вес ≤ 10), поднимает под потолок и **бросает — еда разбивается**; жужжит над головой Человека.
+  Сбить кислотой — падает «Дохлая муха» (+70, вес 12). Игрок может стать мухой: **J** (летаешь, таскаешь крошки по воздуху в своё гнездо).
+- **Паук** (ИИ, 1): живёт в паутине высоко на восточной стене над мусоркой. Ползает по стенам и потолку, спускается на нити,
+  **плюётся паутиной — опутанный муравей почти не может двигаться ~2.5 с**, кусает очень больно. Охотится на обе колонии.
+  Убили — 3 «Паучьи лапки» (+90, вес 14), **легендарное оружие** и +200 колонии. Игрок может стать пауком: **K**.
+
 ## P2 — потом (новые карты и боссы)
 
 | Файл | Промпт |

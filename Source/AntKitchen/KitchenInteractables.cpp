@@ -139,11 +139,15 @@ void AKitchenDoor::Build()
 	case EKitchenDoorKind::Fridge:
 	{
 		// Hinge = east-front-bottom corner of the fridge; the door extends west (-X), outside is -Y.
-		BoxPart(Hinge, FVector(-2000.f, -100.f, 0.f), FVector(0.f, 0.f, 2380.f), White, true);
-		BoxPart(Hinge, FVector(-1910.f, -150.f, 1300.f), FVector(-1850.f, -100.f, 2200.f), Steel, true);   // handle
-		BoxPart(Hinge, FVector(-1200.f, -104.f, 1880.f), FVector(-1050.f, -100.f, 2030.f), Hex(240, 60, 60), false);  // magnets
-		BoxPart(Hinge, FVector(-800.f, -104.f, 1680.f), FVector(-700.f, -100.f, 1780.f), Hex(60, 160, 240), false);
-		BoxPart(Hinge, FVector(-1400.f, -103.f, 1530.f), FVector(-1000.f, -100.f, 1830.f), White * 0.9f, false);       // a note
+		UStaticMeshComponent* Slab = BoxPart(Hinge, FVector(-2000.f, -100.f, 0.f), FVector(0.f, 0.f, 2380.f), White, true);
+		UStaticMeshComponent* Handle = BoxPart(Hinge, FVector(-1910.f, -150.f, 1300.f), FVector(-1850.f, -100.f, 2200.f), Steel, true);   // handle
+		UStaticMeshComponent* M1 = BoxPart(Hinge, FVector(-1200.f, -104.f, 1880.f), FVector(-1050.f, -100.f, 2030.f), Hex(240, 60, 60), false);  // magnets
+		UStaticMeshComponent* M2 = BoxPart(Hinge, FVector(-800.f, -104.f, 1680.f), FVector(-700.f, -100.f, 1780.f), Hex(60, 160, 240), false);
+		UStaticMeshComponent* Note = BoxPart(Hinge, FVector(-1400.f, -103.f, 1530.f), FVector(-1000.f, -100.f, 1830.f), White * 0.9f, false);       // a note
+		if (AntArt::DressAuto(this, Hinge, TEXT("SM_Fridge_Door"), FVector(-2000.f, -160.f, 0.f), FVector(0.f, -2.f, 2380.f), 0.f, 4.f))
+		{
+			AntArt::HideAll({ Slab, Handle, M1, M2, Note });
+		}
 		// Door bins on the inside
 		for (float Z : { 500.f, 1300.f })
 		{
@@ -159,19 +163,37 @@ void AKitchenDoor::Build()
 	case EKitchenDoorKind::Oven:
 	{
 		// Hinge = bottom-front edge; the door folds down into a ramp.
-		BoxPart(Hinge, FVector(-700.f, -14.f, 0.f), FVector(700.f, 0.f, 1200.f), Hex(35, 35, 38), true);
-		BoxPart(Hinge, FVector(-450.f, -17.f, 420.f), FVector(450.f, -14.f, 980.f), Hex(45, 30, 20), false);    // window
-		BoxPart(Hinge, FVector(-550.f, -70.f, 1080.f), FVector(550.f, -40.f, 1130.f), Steel, true);           // handle
-		BoxPart(Hinge, FVector(-540.f, -40.f, 1090.f), FVector(-500.f, -14.f, 1120.f), Steel, false);
-		BoxPart(Hinge, FVector(500.f, -40.f, 1090.f), FVector(540.f, -14.f, 1120.f), Steel, false);
+		UStaticMeshComponent* Slab = BoxPart(Hinge, FVector(-700.f, -14.f, 0.f), FVector(700.f, 0.f, 1200.f), Hex(35, 35, 38), true);
+		UStaticMeshComponent* Win = BoxPart(Hinge, FVector(-450.f, -17.f, 420.f), FVector(450.f, -14.f, 980.f), Hex(45, 30, 20), false);    // window
+		UStaticMeshComponent* Handle = BoxPart(Hinge, FVector(-550.f, -70.f, 1080.f), FVector(550.f, -40.f, 1130.f), Steel, true);           // handle
+		UStaticMeshComponent* H1 = BoxPart(Hinge, FVector(-540.f, -40.f, 1090.f), FVector(-500.f, -14.f, 1120.f), Steel, false);
+		UStaticMeshComponent* H2 = BoxPart(Hinge, FVector(500.f, -40.f, 1090.f), FVector(540.f, -14.f, 1120.f), Steel, false);
+		if (AntArt::DressAuto(this, Hinge, TEXT("SM_Oven_Door"), FVector(-700.f, -75.f, 0.f), FVector(700.f, 0.f, 1200.f), 0.f, 3.f))
+		{
+			AntArt::HideAll({ Slab, Win, Handle, H1, H2 });
+		}
 		UsePointsLocal = { FVector(0.f, -150.f, -274.f), FVector(0.f, 500.f, 26.f), FVector(0.f, -700.f, 26.f) };
 		InnerLight = MakeLight(this, Root, FVector(0.f, 900.f, 1000.f), 3.f, FLinearColor(1.f, 0.45f, 0.1f), 1500.f);
 		break;
 	}
 	case EKitchenDoorKind::Drawer:
 	{
-		BoxPart(Hinge, FVector(-650.f, -20.f, 0.f), FVector(650.f, 0.f, 270.f), Cabinet, true);      // front
-		BoxPart(Hinge, FVector(-120.f, -50.f, 150.f), FVector(120.f, -20.f, 185.f), Steel, true);    // handle
+		UStaticMeshComponent* Front = BoxPart(Hinge, FVector(-650.f, -20.f, 0.f), FVector(650.f, 0.f, 270.f), Cabinet, true);      // front
+		UStaticMeshComponent* Handle = BoxPart(Hinge, FVector(-120.f, -50.f, 150.f), FVector(120.f, -20.f, 185.f), Steel, true);    // handle
+		{
+			// The generated drawer: a flat front panel, or a whole box (then it covers the tray too).
+			const AntArt::FPart& DA = AntArt::Get(TEXT("SM_Drawer"));
+			if (DA.IsValid())
+			{
+				const FVector E = DA.Bounds.GetSize();
+				const bool bFlat = FMath::Min(E.X, E.Y) < 0.3f * FMath::Max(E.X, E.Y);
+				const FVector Max = bFlat ? FVector(650.f, 0.f, 270.f) : FVector(650.f, 1600.f, 270.f);
+				if (AntArt::DressAuto(this, Hinge, TEXT("SM_Drawer"), FVector(-650.f, -55.f, 0.f), Max, 0.f, 3.f))
+				{
+					AntArt::HideAll({ Front, Handle });
+				}
+			}
+		}
 		BoxPart(Hinge, FVector(-630.f, 0.f, 0.f), FVector(630.f, 1600.f, 20.f), LightWood, true);    // bottom
 		BoxPart(Hinge, FVector(-650.f, 0.f, 0.f), FVector(-630.f, 1600.f, 240.f), LightWood, true);
 		BoxPart(Hinge, FVector(630.f, 0.f, 0.f), FVector(650.f, 1600.f, 240.f), LightWood, true);
@@ -483,8 +505,12 @@ void AKitchenSwitch::BeginPlay()
 {
 	Super::BeginPlay();
 	// Local +X points out of the wall.
-	BoxPart(Root, FVector(0.f, -70.f, -100.f), FVector(10.f, 70.f, 100.f), Hex(235, 230, 215), true);
-	BoxPart(Root, FVector(8.f, -25.f, -45.f), FVector(14.f, 25.f, 45.f), Hex(190, 185, 170), false);
+	UStaticMeshComponent* Plate = BoxPart(Root, FVector(0.f, -70.f, -100.f), FVector(10.f, 70.f, 100.f), Hex(235, 230, 215), true);
+	UStaticMeshComponent* Frame = BoxPart(Root, FVector(8.f, -25.f, -45.f), FVector(14.f, 25.f, 45.f), Hex(190, 185, 170), false);
+	if (AntArt::Dress(this, Root, TEXT("SM_LightSwitch"), FVector(0.f, -80.f, -110.f), FVector(18.f, 80.f, 110.f), -90.f))
+	{
+		AntArt::HideAll({ Plate, Frame });
+	}
 	Toggle = AntKit::AddPivot(this, Root, FVector(12.f, 0.f, 0.f));
 	BoxPart(Toggle, FVector(0.f, -18.f, -12.f), FVector(34.f, 18.f, 12.f), Hex(250, 248, 240), true);
 	OnRep_Lights();
@@ -557,6 +583,10 @@ void AKitchenPassage::BeginPlay()
 	case EPassageLook::Vent:
 		// Local +X points out of the wall; the bottom of the grille is at the actor.
 		BoxPart(Root, FVector(0.f, -170.f, 10.f), FVector(6.f, 170.f, 230.f), Hex(15, 15, 15), false);
+		if (AntArt::Dress(this, Root, TEXT("SM_WallVent"), FVector(0.f, -190.f, -5.f), FVector(20.f, 190.f, 245.f), -90.f))
+		{
+			break;   // generated grille
+		}
 		BoxPart(Root, FVector(6.f, -180.f, 0.f), FVector(16.f, 180.f, 16.f), Grille, false);
 		BoxPart(Root, FVector(6.f, -180.f, 224.f), FVector(16.f, 180.f, 240.f), Grille, false);
 		BoxPart(Root, FVector(6.f, -180.f, 0.f), FVector(16.f, -164.f, 240.f), Grille, false);
@@ -584,7 +614,7 @@ void AKitchenPassage::BeginPlay()
 
 FString AKitchenPassage::GetPrompt(const AAntCharacter* Ant) const
 {
-	if (Ant && Ant->CarriedWeight > 6)
+	if (Ant && Ant->IsCarrying())
 	{
 		return FString::Printf(TEXT("%s (с таким грузом не пролезешь!)"), *RouteName);
 	}
@@ -597,7 +627,7 @@ void AKitchenPassage::Interact(AAntCharacter* Ant)
 	{
 		return;
 	}
-	if (Ant->CarriedWeight > 6)
+	if (Ant->IsCarrying())
 	{
 		Ant->Toast(TEXT("Слишком толстый с таким грузом. Сбрось часть или тащи в обход"));
 		return;
@@ -627,7 +657,11 @@ void AKitchenToaster::BeginPlay()
 	Super::BeginPlay();
 	BoxPart(Root, FVector(-5902.f, 4185.f, 1780.f), FVector(-5898.f, 4215.f, 2090.f), Black, false);   // lever slot
 	Lever = AntKit::AddPivot(this, Root, FVector(-5900.f, 4200.f, 2060.f));
-	BoxPart(Lever, FVector(0.f, -45.f, -22.f), FVector(55.f, 45.f, 22.f), Black, true);
+	UStaticMeshComponent* Knob = BoxPart(Lever, FVector(0.f, -45.f, -22.f), FVector(55.f, 45.f, 22.f), Black, true);
+	if (AntArt::DressAuto(this, Lever, TEXT("SM_Toaster_Lever"), FVector(0.f, -55.f, -30.f), FVector(80.f, 55.f, 30.f)))
+	{
+		AntArt::HideAll({ Knob });
+	}
 	for (float Y : { 4085.f, 4315.f })
 	{
 		Toasts.Add(BoxPart(Root, FVector(-6420.f, Y - 25.f, 1950.f), FVector(-6080.f, Y + 25.f, 2140.f), Hex(215, 150, 70), false));
@@ -751,7 +785,11 @@ void AKitchenWire::BeginPlay()
 		return M;
 	};
 	Cable(Outlet + FVector(0.f, -15.f, -40.f), Floor, 26.f, Hex(30, 30, 30), true);
-	Cable(Floor, End, 26.f, Hex(30, 30, 30), true);
+	UStaticMeshComponent* FloorCable = Cable(Floor, End, 26.f, Hex(30, 30, 30), true);
+	if (AntArt::Dress(this, Root, TEXT("SM_Wire_Exposed"), FVector(3150.f, 4790.f, 0.f), FVector(3620.f, 4975.f, 70.f), 0.f))
+	{
+		AntArt::HideAll({ FloorCable });
+	}
 	for (int32 i = 0; i < 4; ++i)
 	{
 		const FVector Tip = End + FVector(60.f, FMath::Sin(i * 1.6f) * 40.f, 8.f + i * 6.f);
@@ -802,6 +840,8 @@ void AKitchenWire::Tick(float DeltaSeconds)
 void AKitchenWire::Spark()
 {
 	MulticastSpark();
+	AntSfx::Everyone(this, AntSfx::Zap, WireSpot::End, 1.f);
+	TArray<AAntCharacter*> Shocked;
 	for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
 	{
 		AAntCharacter* Ant = *It;
@@ -813,15 +853,42 @@ void AKitchenWire::Spark()
 		const float D = FVector::Dist(P, WireSpot::End);
 		if (D < 280.f)
 		{
+			Shocked.Add(Ant);
 			Ant->HurtBy(35.f, TEXT("получил разряд током"));
 			Ant->ApplyLaunch((P - WireSpot::End).GetSafeNormal2D() * 450.f + FVector(0.f, 0.f, 350.f));
 			Ant->Toast(TEXT("БЗЗЗТ! Оголённый провод!"));
 		}
 		else if (Puddle().IsInside(P))
 		{
+			Shocked.Add(Ant);
 			Ant->HurtBy(40.f, TEXT("поджарился током в луже"));
 			Ant->ApplyLaunch(FVector(0.f, 0.f, 300.f));
 			Ant->Toast(TEXT("Лужа под током! Не стой в воде у провода"));
+		}
+	}
+	// Electricity jumps between wet ants that touch each other (a chain!).
+	for (int32 i = 0; i < Shocked.Num() && i < 24; ++i)
+	{
+		for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
+		{
+			AAntCharacter* O = *It;
+			if (O && !O->bDead && !Shocked.Contains(O) && O->HasStatus(AntStatus::Wet)
+				&& FVector::Dist(O->GetActorLocation(), Shocked[i]->GetActorLocation()) < 260.f)
+			{
+				Shocked.Add(O);
+				O->HurtBy(30.f, TEXT("ударило током по цепочке мокрых муравьёв"));
+				O->ApplyLaunch(FVector(0.f, 0.f, 280.f));
+				O->Toast(TEXT("ЦЕПНАЯ МОЛНИЯ! Мокрые муравьи проводят ток"));
+				AntSfx::Everyone(this, AntSfx::Zap, O->GetActorLocation(), 1.3f);
+			}
+		}
+	}
+	// Burning ants near the sparks... and sparks set dry ants on fire.
+	for (AAntCharacter* A : Shocked)
+	{
+		if (A && !A->HasStatus(AntStatus::Wet) && FMath::FRand() < 0.5f)
+		{
+			A->Ignite(4.f);
 		}
 	}
 }
@@ -857,8 +924,12 @@ void AKitchenTrap::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 void AKitchenTrap::BeginPlay()
 {
 	Super::BeginPlay();
-	BoxPart(Root, FVector(-190.f, -90.f, 0.f), FVector(190.f, 90.f, 16.f), LightWood, true);             // base
-	BoxPart(Root, FVector(40.f, -35.f, 16.f), FVector(110.f, 35.f, 22.f), Hex(200, 190, 60), false);      // bait plate
+	UStaticMeshComponent* Base = BoxPart(Root, FVector(-190.f, -90.f, 0.f), FVector(190.f, 90.f, 16.f), LightWood, true);             // base
+	UStaticMeshComponent* Bait = BoxPart(Root, FVector(40.f, -35.f, 16.f), FVector(110.f, 35.f, 22.f), Hex(200, 190, 60), false);      // bait plate
+	if (AntArt::Dress(this, Root, TEXT("SM_MouseTrap"), FVector(-195.f, -95.f, 0.f), FVector(195.f, 95.f, 75.f), 0.f))
+	{
+		AntArt::HideAll({ Base, Bait });
+	}
 	Part(Root, EAntShape::Cylinder, FVector(0.f, 0.f, 22.f), FVector(16.f, 150.f, 16.f), Steel, false, FRotator(0.f, 0.f, 90.f));   // spring axis
 	Bar = AntKit::AddPivot(this, Root, FVector(0.f, 0.f, 22.f));
 	BoxPart(Bar, FVector(-175.f, -88.f, 0.f), FVector(0.f, -78.f, 8.f), Steel, false);

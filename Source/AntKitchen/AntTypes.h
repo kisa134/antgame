@@ -37,6 +37,30 @@ struct FAntWeapon
 	UPROPERTY(BlueprintReadOnly) float Splash = 0.f;       // radius, 0 = none
 	UPROPERTY(BlueprintReadOnly) float Size = 0.12f;       // visual scale of the blob
 	UPROPERTY(BlueprintReadOnly) bool bBounce = false;
+	UPROPERTY(BlueprintReadOnly) bool bWeb = false;        // spider silk: sticks targets in place
+};
+
+/** Ant classes (castes). */
+UENUM(BlueprintType)
+enum class EAntClass : uint8
+{
+	Worker,     // Фуражир: strong carrier, fast trails
+	Soldier,    // Солдат: tanky, hits hard
+	Scout,      // Разведчик: fast, jumps high, weak
+	Nurse,      // Бочка: heals nearby allies
+};
+
+struct FAntClassDef
+{
+	const TCHAR* Name = TEXT("");
+	float Strength = 10.f;     // how much weight it can carry alone
+	float Health = 100.f;
+	float Speed = 1.f;         // walk speed multiplier
+	float JumpZ = 620.f;
+	float Damage = 1.f;        // weapon damage multiplier
+	float BodyScale = 1.f;
+	float HealRadius = 0.f;    // > 0: heals allies around
+	float HealPerSec = 0.f;
 };
 
 /** A piece of food lying in the kitchen. */
@@ -69,6 +93,24 @@ namespace AntKit
 	ANTKITCHEN_API FAntWeapon RollWeapon(int32 Rarity, FRandomStream& Rng);
 	ANTKITCHEN_API FAntFoodDef RollFood(int32 Tier, FRandomStream& Rng);
 	ANTKITCHEN_API float WeaponDps(const FAntWeapon& W);
+	/** Big prizes placed between the nests: need 2-4 ants to carry (Index wraps). */
+	ANTKITCHEN_API FAntFoodDef HeavyFood(int32 Index);
+	ANTKITCHEN_API const FAntClassDef& ClassDef(EAntClass C);
+	/** Team colors: 0 = player colony (black), 1 = rival fire ants (red). */
+	ANTKITCHEN_API FLinearColor TeamColor(uint8 Team, int32 Index);
+}
+
+/** Sound effects (generated WAVs in /Game/Sounds). */
+namespace AntSfx
+{
+	enum EId : uint8 { Spit, Splat, Hit, Crit, Kill, Grab, Drop, Deliver, Crunch, Stomp, Spray, Squish, Jump, Zap, Sizzle, Splash, Rage, Bite, Buzz, Web, Hiss, Count };
+	ANTKITCHEN_API class USoundBase* Get(uint8 Id);
+	/** Local: plays at a world location with distance falloff. */
+	ANTKITCHEN_API void Play(const UObject* WorldContext, uint8 Id, const FVector& Location, float Volume = 1.f, float Pitch = 1.f);
+	/** Local: plays without position (UI). */
+	ANTKITCHEN_API void Play2D(const UObject* WorldContext, uint8 Id, float Volume = 1.f, float Pitch = 1.f);
+	/** Server: everyone hears it. */
+	ANTKITCHEN_API void Everyone(const UObject* WorldContext, uint8 Id, const FVector& Location, float Pitch = 1.f);
 }
 
 /**
@@ -102,8 +144,24 @@ namespace AntArt
 	/** Relative transform that fits the part centered at Center with its longest side = Length, long axis along +X. */
 	ANTKITCHEN_API FTransform Fit(const FPart& P, const FVector& Center, float Length, bool bFlip, const FRotator& Extra = FRotator::ZeroRotator);
 
+	/** Transform that stretches the part to fill the box Min..Max (parent space), after turning it by Yaw (multiples of 90). */
+	ANTKITCHEN_API FTransform FitBox(const FPart& P, const FVector& Min, const FVector& Max, float Yaw = 0.f);
+
 	/** Creates a static mesh component showing the part (no collision). */
 	ANTKITCHEN_API UStaticMeshComponent* AddArt(AActor* Owner, USceneComponent* Parent, const FPart& P);
+
+	/** Adds the art stretched into the box (parent space). nullptr if the asset is missing. */
+	ANTKITCHEN_API UStaticMeshComponent* Dress(AActor* Owner, USceneComponent* Parent, const TCHAR* Name, const FVector& Min, const FVector& Max, float Yaw = 0.f, bool bSolid = true);
+	/** Real collision from the model's own triangles: ants crawl on exactly what you see. */
+	ANTKITCHEN_API void MakeSolid(UStaticMeshComponent* C);
+
+	/**
+	 * Like Dress, but turns the part (0 or 90 degrees) so its thin side matches the box's thin side
+	 * (doors, panels), then by ExtraYaw (use 180 if it faces the wrong way). Inflate grows the box.
+	 */
+	ANTKITCHEN_API UStaticMeshComponent* DressAuto(AActor* Owner, USceneComponent* Parent, const TCHAR* Name, const FVector& Min, const FVector& Max, float ExtraYaw = 0.f, float Inflate = 0.f, bool bSolid = true);
+	/** Hides the given placeholder shapes and turns their collision off (the solid art replaces them). */
+	ANTKITCHEN_API void HideAll(std::initializer_list<UStaticMeshComponent*> Comps);
 
 	/** Food art by loot name, or nullptr name if none. */
 	ANTKITCHEN_API const TCHAR* FoodArtName(const FString& LootName);

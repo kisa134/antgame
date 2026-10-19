@@ -77,6 +77,13 @@ for folder in sorted(glob.glob(os.path.join(SRC, "*"))):
             EAL.save_asset(dest + "/" + tname)
             textures[key] = tx
 
+    # Kitchen models collide with their own triangles (ants crawl on exactly what is drawn).
+    if not name.startswith(("SM_Ant_", "SM_Food_", "SM_Human_", "SM_Slipper", "SM_BugSpray", "SM_RolledNewspaper")):
+        bs = mesh.get_editor_property("body_setup")
+        if bs:
+            bs.set_editor_property("collision_trace_flag", unreal.CollisionTraceFlag.CTF_USE_COMPLEX_AS_SIMPLE)
+            EAL.save_loaded_asset(mesh)
+
     imported.append((name, dest, mesh, textures))
     unreal.log("MESHY: imported " + name)
 

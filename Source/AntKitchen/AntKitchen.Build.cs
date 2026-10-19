@@ -10,7 +10,7 @@ public class AntKitchen : ModuleRules
 
 		PublicDependencyModuleNames.AddRange(new string[]
 		{
-			"Core", "CoreUObject", "Engine", "InputCore", "AIModule", "NetCore"
+			"Core", "CoreUObject", "Engine", "InputCore", "AIModule", "NetCore", "PhysicsCore"
 		});
 	}
 }

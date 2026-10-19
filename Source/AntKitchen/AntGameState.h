@@ -1,7 +1,8 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameStateBase.h"
+#include "Engine/NetSerialization.h"
 #include "AntGameState.generated.h"
 
 struct FAntFeedLine
@@ -21,14 +22,24 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UPROPERTY(Replicated) int32 TeamScore = 0;
+	UPROPERTY(Replicated) int32 RivalScore = 0;      // fire ants
+	UPROPERTY(Replicated) uint8 HumanRage = 0;       // 0..3
 	UPROPERTY(Replicated) int32 TargetScore = 1500;
 	UPROPERTY(Replicated) float TimeRemaining = 600.f;
-	UPROPERTY(Replicated) uint8 Phase = 0;            // 0 playing, 1 ants won, 2 human won
+	UPROPERTY(Replicated) uint8 Phase = 0;            // 0 playing, 1 ants won, 2 human won, 3 fire ants won
 	UPROPERTY(Replicated) int32 AntsSquashed = 0;
 	UPROPERTY(Replicated) int32 HumanKnockouts = 0;
 
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastMessage(const FString& Text, FLinearColor Color);
+
+	/** A sound everyone hears (AntSfx::EId). */
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastSfx(uint8 Id, FVector_NetQuantize Location, float Pitch);
+
+	/** Food broke: cosmetic crumbs fly everywhere. */
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastCrumbs(FVector_NetQuantize Location, FLinearColor Color, uint8 Count, float Size);
 
 	/** Local kill feed, filled by MulticastMessage. */
 	TArray<FAntFeedLine> Feed;

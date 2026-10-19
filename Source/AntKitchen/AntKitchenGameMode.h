@@ -38,7 +38,15 @@ public:
 	void HandleHumanPlayerLeft(AAntPlayerController* PC);
 
 	void OnAntKilled(AAntCharacter* Ant, AController* Killer, AActor* Causer);
-	void OnLootDelivered(AAntCharacter* Ant, int32 Value, int32 Items);
+	/** A piece of food reached a nest (Team 0 = colony, 1 = fire ants). */
+	void OnFoodDelivered(uint8 Team, AKitchenLoot* Food, const TArray<AAntCharacter*>& Carriers);
+	/** Spawns an AI fly / the AI spider. */
+	void SpawnFly();
+	void SpawnSpider();
+	/** A player becomes a fly (Kind 1) or takes over the spider (Kind 2); again = back to ant. */
+	void ToggleCreature(AAntPlayerController* PC, uint8 Kind);
+	/** Adds bot ants (Team 0 teammates, 1 rivals). */
+	void AddBots(uint8 Team, int32 Count);
 	void OnHumanKnockedOut(AController* By);
 	/** The worker swarm brought food home. */
 	void OnSwarmIncome(int32 Value);
@@ -51,6 +59,8 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Match") int32 TargetScore = 1500;
 	UPROPERTY(EditDefaultsOnly, Category = "Match") float MatchLength = 600.f;
 	UPROPERTY(EditDefaultsOnly, Category = "Match") float RespawnDelay = 5.f;
+	UPROPERTY(EditDefaultsOnly, Category = "Match") int32 AllyBots = 2;
+	UPROPERTY(EditDefaultsOnly, Category = "Match") int32 RivalBots = 3;
 
 private:
 	void SpawnHuman();
@@ -60,7 +70,11 @@ private:
 	void SpawnInitialLoot();
 	void RefillLoot();
 	void MatchTick();
-	void EndMatch(bool bAntsWin);
+	/** 1 colony won, 2 Human won, 3 fire ants won. */
+	void EndMatch(uint8 Winner);
+	void AddScore(uint8 Team, int32 Value);
+	void UpdateRage();
+	void SpawnHeavyLoot();
 	void ResetMatch();
 	void RespawnAnt(AController* C);
 	bool IsSpotFree(const FVector& Location) const;
@@ -76,6 +90,10 @@ private:
 	TArray<int32> SpotTiers;
 	FRandomStream Rng;
 	int32 ColorIndex = 0;
+	int32 BotCounter[2] = { 0, 0 };
+	UPROPERTY() class ASpiderCharacter* Spider = nullptr;
+	int32 FlyCount = 0;
+	TMap<TWeakObjectPtr<AController>, FVector2D> Streaks;   // X = kills in a row, Y = last kill time
 
 	FTimerHandle MatchTimer;
 	FTimerHandle RefillTimer;

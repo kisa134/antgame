@@ -9,4 +9,6 @@ void AAntPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME(AAntPlayerState, Kills);
 	DOREPLIFETIME(AAntPlayerState, bIsHuman);
 	DOREPLIFETIME(AAntPlayerState, AntColor);
+	DOREPLIFETIME(AAntPlayerState, Team);
+	DOREPLIFETIME(AAntPlayerState, AntClass);
 }

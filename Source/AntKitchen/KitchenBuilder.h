@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
@@ -29,9 +29,14 @@ public:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
 
-	static FVector NestLocation();
-	static float NestRadius() { return 650.f; }
+	/** Team 0: our colony (west baseboard). Team 1: rival fire ants (east, by the trash). */
+	static FVector NestLocation(uint8 Team = 0);
+	static float NestRadius(uint8 Team = 0) { return Team == 0 ? 650.f : 560.f; }
+	/** Where the big prizes lie: they need several ants. */
+	static void HeavySpots(TArray<FVector>& Out);
 	static FVector HumanSpawn();
+	/** The spider's web: high on the east wall, above the fire ants' nest. */
+	static FVector SpiderLair() { return FVector(6980.f, 2600.f, 4300.f); }
 	static FVector HumanFleePoint();
 	static FBox HotBurner();
 	static FBox PlayArea();

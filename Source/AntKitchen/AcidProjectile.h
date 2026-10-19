@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
@@ -23,6 +23,9 @@ public:
 	/** Server: call between SpawnActorDeferred and FinishSpawning. */
 	void Setup(const FAntWeapon& Weapon, const FVector& Direction);
 
+	/** Colony of the shooter: hurts the Human and ants of the other colony. */
+	uint8 Team = 0;
+
 protected:
 	UPROPERTY(VisibleAnywhere) USphereComponent* Sphere;
 	UPROPERTY(VisibleAnywhere) UProjectileMovementComponent* Movement;
@@ -42,6 +45,7 @@ protected:
 	void Explode(AActor* DirectHit);
 
 	float Damage = 10.f;
+	UPROPERTY(Replicated) bool bWeb = false;
 	float Splash = 0.f;
 	int32 Bounces = 0;
 	bool bExploded = false;

@@ -33,6 +33,8 @@ private:
 	FVector SwarmPoint = FVector::ZeroVector;
 	float RetargetTimer = 0.f;
 	float WanderTimer = 0.f;
+	float HeldSince = 0.f;
+	float NextStealTime = 20.f;
 	float StuckTimer = 0.f;
 	float UnstickTimer = 0.f;
 	bool bMovedThisTick = false;

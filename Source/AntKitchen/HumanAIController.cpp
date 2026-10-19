@@ -4,6 +4,9 @@
 #include "KitchenBuilder.h"
 #include "KitchenInteractables.h"
 #include "AntSwarm.h"
+#include "KitchenLoot.h"
+#include "AntKitchenGameMode.h"
+#include "EngineUtils.h"
 #include "Components/CapsuleComponent.h"
 #include "EngineUtils.h"
 
@@ -50,11 +53,11 @@ AAntCharacter* AHumanAIController::PickTarget(const AHumanCharacter* H) const
 			continue;
 		}
 		float Score = FVector::Dist2D(Me, AL);
-		if (bDark && Score > (Ant->CarriedWeight > 0 ? 3200.f : 2200.f))
+		if (bDark && Score > (Ant->IsCarrying() ? 3200.f : 2200.f))
 		{
 			continue;   // lights are off: only notices ants close by
 		}
-		if (Ant->CarriedWeight > 0) { Score -= 2500.f; }   // smells the sugar
+		if (Ant->IsCarrying()) { Score -= 2500.f; }   // smells the sugar
 		if (Ant->GetActorLocation().Z > 300.f) { Score += 800.f; }
 		if (Score < BestScore)
 		{
@@ -164,7 +167,17 @@ void AHumanAIController::Tick(float DeltaSeconds)
 				bMovedThisTick = true;
 			}
 			DesiredRotation.Yaw = TargetYaw;
-			H->SetSpraying(FVector::Dist(Origin, TL) < AHumanCharacter::SprayRange - 100.f && YawErr < 15.f && H->SprayFuel > 10.f);
+			// Ant on a wall or a table: newspaper slap when ready, spray otherwise.
+			const float Now = GetWorld()->GetTimeSeconds();
+			if (Now >= H->SwatReadyTime && YawErr < 35.f && FVector::Dist(TL, MyLoc + FVector(0.f, 0.f, 600.f)) < AHumanCharacter::SwatRange)
+			{
+				H->SetSpraying(false);
+				H->TrySwat(TL);
+			}
+			else
+			{
+				H->SetSpraying(FVector::Dist(Origin, TL) < H->GetSprayRange() - 100.f && YawErr < 15.f && H->SprayFuel > 10.f);
+			}
 		}
 	}
 	else if (AAntSwarm* Swarm = AAntSwarm::Get(GetWorld()); Swarm && Swarm->FindStompTarget(MyLoc, 7000.f, SwarmPoint))
@@ -198,6 +211,38 @@ void AHumanAIController::Tick(float DeltaSeconds)
 		}
 		DesiredRotation.Pitch = -15.f;
 		MoveTowards(H, WanderPoint, 0.5f);
+	}
+
+	// Steal food the ants are dragging home and throw it across the kitchen.
+	{
+		const float Now = GetWorld()->GetTimeSeconds();
+		if (H->Held && Now - HeldSince > 1.2f)
+		{
+			const FVector Away = FRotator(0.f, FMath::FRandRange(0.f, 360.f), 0.f).Vector();
+			H->GrabOrThrow(MyLoc, (Away + FVector(0.f, 0.f, 0.35f)).GetSafeNormal());
+		}
+		else if (!H->Held && Now > NextStealTime)
+		{
+			NextStealTime = Now + 2.f;
+			for (TActorIterator<AKitchenLoot> It(GetWorld()); It; ++It)
+			{
+				AKitchenLoot* L = *It;
+				if (L && L->IsCarried() && L->Value >= 50 && FVector::Dist2D(L->GetActorLocation(), MyLoc) < 1800.f && L->GetActorLocation().Z < 2000.f)
+				{
+					H->GrabOrThrow(L->GetActorLocation(), FVector::UpVector);
+					if (H->Held)
+					{
+						HeldSince = Now;
+						NextStealTime = Now + 14.f;
+						if (AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
+						{
+							GM->Broadcast(FString::Printf(TEXT("Человек отобрал «%s» и швыряет его!"), *L->LootName), FLinearColor(1.f, 0.35f, 0.3f));
+						}
+					}
+					break;
+				}
+			}
+		}
 	}
 
 	// Bumped into furniture? Walk somewhere random for a moment.

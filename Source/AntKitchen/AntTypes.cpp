@@ -1,5 +1,10 @@
 ﻿#include "AntTypes.h"
 #include "Engine/StaticMesh.h"
+#include "Sound/SoundBase.h"
+#include "Sound/SoundAttenuation.h"
+#include "Kismet/GameplayStatics.h"
+#include "AntGameState.h"
+#include "Engine/World.h"
 #include "Engine/CollisionProfile.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/SceneComponent.h"
@@ -184,39 +189,78 @@ FAntFoodDef RollFood(int32 Tier, FRandomStream& R)
 	case 0:
 		switch (R.RandRange(0, 2))
 		{
-		case 0: return MakeFood(TEXT("Хлебная крошка"), 5, 1, FLinearColor(0.75f, 0.55f, 0.30f), EAntShape::Sphere, FVector(0.18f));
-		case 1: return MakeFood(TEXT("Крошка печенья"), 8, 1, FLinearColor(0.45f, 0.25f, 0.10f), EAntShape::Cube, FVector(0.15f));
-		default: return MakeFood(TEXT("Рисинка"), 6, 1, FLinearColor(0.95f, 0.95f, 0.90f), EAntShape::Sphere, FVector(0.22f, 0.10f, 0.10f));
+		case 0: return MakeFood(TEXT("Хлебная крошка"), 5, 3, FLinearColor(0.75f, 0.55f, 0.30f), EAntShape::Sphere, FVector(0.18f));
+		case 1: return MakeFood(TEXT("Крошка печенья"), 8, 4, FLinearColor(0.45f, 0.25f, 0.10f), EAntShape::Cube, FVector(0.15f));
+		default: return MakeFood(TEXT("Рисинка"), 6, 2, FLinearColor(0.95f, 0.95f, 0.90f), EAntShape::Sphere, FVector(0.22f, 0.10f, 0.10f));
 		}
 	case 1:
 		switch (R.RandRange(0, 3))
 		{
-		case 0: return MakeFood(TEXT("Кубик сахара"), 25, 2, FLinearColor(1.f, 1.f, 1.f), EAntShape::Cube, FVector(0.3f));
-		case 1: return MakeFood(TEXT("Кусочек сыра"), 35, 3, FLinearColor(1.f, 0.80f, 0.15f), EAntShape::Cube, FVector(0.4f, 0.3f, 0.2f));
-		case 2: return MakeFood(TEXT("Кошачий корм"), 20, 2, FLinearColor(0.40f, 0.20f, 0.08f), EAntShape::Sphere, FVector(0.3f));
-		default: return MakeFood(TEXT("Хлопья"), 15, 1, FLinearColor(1.f, 0.55f, 0.10f), EAntShape::Sphere, FVector(0.3f, 0.3f, 0.12f));
+		case 0: return MakeFood(TEXT("Кубик сахара"), 25, 9, FLinearColor(1.f, 1.f, 1.f), EAntShape::Cube, FVector(0.3f));
+		case 1: return MakeFood(TEXT("Кусочек сыра"), 45, 22, FLinearColor(1.f, 0.80f, 0.15f), EAntShape::Cube, FVector(0.4f, 0.3f, 0.2f));
+		case 2: return MakeFood(TEXT("Кошачий корм"), 20, 8, FLinearColor(0.40f, 0.20f, 0.08f), EAntShape::Sphere, FVector(0.3f));
+		default: return MakeFood(TEXT("Хлопья"), 15, 5, FLinearColor(1.f, 0.55f, 0.10f), EAntShape::Sphere, FVector(0.3f, 0.3f, 0.12f));
 		}
 	case 2:
 		switch (R.RandRange(0, 3))
 		{
-		case 0: return MakeFood(TEXT("Мармеладка"), 60, 2, FLinearColor(R.FRand(), 0.2f, R.FRand()), EAntShape::Sphere, FVector(0.35f));
-		case 1: return MakeFood(TEXT("Капля мёда"), 50, 2, FLinearColor(1.f, 0.55f, 0.05f), EAntShape::Sphere, FVector(0.32f));
-		case 2: return MakeFood(TEXT("Кусочек торта"), 90, 5, FLinearColor(1.f, 0.55f, 0.70f), EAntShape::Cube, FVector(0.5f));
-		default: return MakeFood(TEXT("Чипсина"), 40, 1, FLinearColor(1.f, 0.85f, 0.30f), EAntShape::Cube, FVector(0.5f, 0.4f, 0.05f));
+		case 0: return MakeFood(TEXT("Мармеладка"), 60, 12, FLinearColor(R.FRand(), 0.2f, R.FRand()), EAntShape::Sphere, FVector(0.35f));
+		case 1: return MakeFood(TEXT("Капля мёда"), 50, 10, FLinearColor(1.f, 0.55f, 0.05f), EAntShape::Sphere, FVector(0.32f));
+		case 2: return MakeFood(TEXT("Кусочек торта"), 140, 36, FLinearColor(1.f, 0.55f, 0.70f), EAntShape::Cube, FVector(0.5f));
+		default: return MakeFood(TEXT("Чипсина"), 40, 6, FLinearColor(1.f, 0.85f, 0.30f), EAntShape::Cube, FVector(0.5f, 0.4f, 0.05f));
 		}
 	default:
 		switch (R.RandRange(0, 2))
 		{
-		case 0: return MakeFood(TEXT("Золотой мармеладный мишка"), 200, 5, FLinearColor(1.f, 0.75f, 0.10f), EAntShape::Sphere, FVector(0.55f));
-		case 1: return MakeFood(TEXT("Карамелька"), 140, 3, FLinearColor(0.9f, 0.10f, 0.10f), EAntShape::Sphere, FVector(0.45f));
-		default: return MakeFood(TEXT("Долька шоколада"), 160, 4, FLinearColor(0.25f, 0.12f, 0.05f), EAntShape::Cube, FVector(0.6f, 0.4f, 0.15f));
+		case 0: return MakeFood(TEXT("Золотой мармеладный мишка"), 260, 48, FLinearColor(1.f, 0.75f, 0.10f), EAntShape::Sphere, FVector(0.55f));
+		case 1: return MakeFood(TEXT("Карамелька"), 120, 18, FLinearColor(0.9f, 0.10f, 0.10f), EAntShape::Sphere, FVector(0.45f));
+		default: return MakeFood(TEXT("Долька шоколада"), 180, 30, FLinearColor(0.25f, 0.12f, 0.05f), EAntShape::Cube, FVector(0.6f, 0.4f, 0.15f));
 		}
+	}
+}
+
+FAntFoodDef HeavyFood(int32 Index)
+{
+	switch (((Index % 4) + 4) % 4)
+	{
+	case 0: return MakeFood(TEXT("Кусочек торта"), 140, 36, FLinearColor(1.f, 0.55f, 0.70f), EAntShape::Cube, FVector(0.5f));
+	case 1: return MakeFood(TEXT("Золотой мармеладный мишка"), 260, 48, FLinearColor(1.f, 0.75f, 0.10f), EAntShape::Sphere, FVector(0.55f));
+	case 2: return MakeFood(TEXT("Долька шоколада"), 180, 30, FLinearColor(0.25f, 0.12f, 0.05f), EAntShape::Cube, FVector(0.6f, 0.4f, 0.15f));
+	default: return MakeFood(TEXT("Кусочек сыра"), 45, 22, FLinearColor(1.f, 0.80f, 0.15f), EAntShape::Cube, FVector(0.4f, 0.3f, 0.2f));
 	}
 }
 
 float WeaponDps(const FAntWeapon& W)
 {
 	return W.Damage * (float)FMath::Max<int32>(1, W.Pellets) * W.FireRate;
+}
+
+const FAntClassDef& ClassDef(EAntClass C)
+{
+	static FAntClassDef Defs[4];
+	static bool bInit = false;
+	if (!bInit)
+	{
+		bInit = true;
+		Defs[0] = { TEXT("Фуражир"), 14.f, 100.f, 1.0f, 620.f, 1.0f, 1.0f, 0.f, 0.f };
+		Defs[1] = { TEXT("Солдат"), 20.f, 170.f, 0.85f, 560.f, 1.5f, 1.2f, 0.f, 0.f };
+		Defs[2] = { TEXT("Разведчик"), 7.f, 70.f, 1.35f, 950.f, 0.85f, 0.85f, 0.f, 0.f };
+		Defs[3] = { TEXT("Бочка"), 10.f, 110.f, 0.95f, 600.f, 0.8f, 1.05f, 300.f, 7.f };
+	}
+	return Defs[FMath::Clamp((int32)C, 0, 3)];
+}
+
+FLinearColor TeamColor(uint8 Team, int32 Index)
+{
+	static const FLinearColor Colony[] =
+	{
+		FLinearColor(0.12f, 0.04f, 0.03f), FLinearColor(0.10f, 0.20f, 0.45f), FLinearColor(0.15f, 0.40f, 0.10f), FLinearColor(0.40f, 0.10f, 0.45f),
+	};
+	static const FLinearColor Fire[] =
+	{
+		FLinearColor(0.75f, 0.12f, 0.04f), FLinearColor(0.85f, 0.25f, 0.05f), FLinearColor(0.65f, 0.08f, 0.06f), FLinearColor(0.90f, 0.35f, 0.08f),
+	};
+	return Team == 0 ? Colony[Index % 4] : Fire[Index % 4];
 }
 
 } // namespace AntKit
@@ -296,6 +340,83 @@ FTransform Fit(const FPart& P, const FVector& Center, float Length, bool bFlip, 
 	return FTransform(Q, Center - Q.RotateVector(P.Bounds.GetCenter() * S), FVector(S));
 }
 
+FTransform FitBox(const FPart& P, const FVector& Min, const FVector& Max, float Yaw)
+{
+	const FVector Target = (Max - Min).ComponentMax(FVector(1.f));
+	const FVector Center = (Min + Max) * 0.5f;
+	if (!P.IsValid())
+	{
+		return FTransform(Center);
+	}
+	const FVector E = P.Bounds.GetSize().ComponentMax(FVector(0.01f));
+	const int32 Quarter = ((FMath::RoundToInt(Yaw / 90.f) % 4) + 4) % 4;
+	const bool bSwap = (Quarter % 2) == 1;
+	// Size the mesh has to have along its own axes so that, once turned, it fills the box.
+	const FVector WantLocal(bSwap ? Target.Y : Target.X, bSwap ? Target.X : Target.Y, Target.Z);
+	const FVector S(WantLocal.X / E.X, WantLocal.Y / E.Y, WantLocal.Z / E.Z);
+	const FQuat Q = FRotator(0.f, Quarter * 90.f, 0.f).Quaternion();
+	return FTransform(Q, Center - Q.RotateVector(S * P.Bounds.GetCenter()), S);
+}
+
+void MakeSolid(UStaticMeshComponent* C)
+{
+	if (!C)
+	{
+		return;
+	}
+	C->SetCollisionObjectType(ECC_WorldStatic);
+	C->SetCollisionResponseToAllChannels(ECR_Block);
+	C->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	C->bReturnMaterialOnMove = true;
+}
+
+UStaticMeshComponent* Dress(AActor* Owner, USceneComponent* Parent, const TCHAR* Name, const FVector& Min, const FVector& Max, float Yaw, bool bSolid)
+{
+	const FPart& P = Get(Name);
+	if (!P.IsValid())
+	{
+		return nullptr;
+	}
+	UStaticMeshComponent* C = AddArt(Owner, Parent, P);
+	if (C)
+	{
+		C->SetRelativeTransform(FitBox(P, Min, Max, Yaw));
+		if (bSolid)
+		{
+			MakeSolid(C);
+		}
+	}
+	return C;
+}
+
+UStaticMeshComponent* DressAuto(AActor* Owner, USceneComponent* Parent, const TCHAR* Name, const FVector& InMin, const FVector& InMax, float ExtraYaw, float Inflate, bool bSolid)
+{
+	const FPart& P = Get(Name);
+	if (!P.IsValid())
+	{
+		return nullptr;
+	}
+	const FVector Min = InMin - FVector(Inflate), Max = InMax + FVector(Inflate);
+	const FVector E = P.Bounds.GetSize();
+	const FVector T = Max - Min;
+	const bool bMeshThinX = E.X < E.Y;
+	const bool bBoxThinX = T.X < T.Y;
+	const float Yaw = (bMeshThinX == bBoxThinX ? 0.f : 90.f) + ExtraYaw;
+	return Dress(Owner, Parent, Name, Min, Max, Yaw, bSolid);
+}
+
+void HideAll(std::initializer_list<UStaticMeshComponent*> Comps)
+{
+	for (UStaticMeshComponent* C : Comps)
+	{
+		if (C)
+		{
+			C->SetVisibility(false);
+			C->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		}
+	}
+}
+
 UStaticMeshComponent* AddArt(AActor* Owner, USceneComponent* Parent, const FPart& P)
 {
 	UStaticMeshComponent* C = NewObject<UStaticMeshComponent>(Owner);
@@ -323,7 +444,91 @@ const TCHAR* FoodArtName(const FString& LootName)
 	if (LootName.Contains(TEXT("торт"))) return TEXT("SM_Food_CakePiece");
 	if (LootName.Contains(TEXT("шоколад"))) return TEXT("SM_Food_Chocolate");
 	if (LootName.Contains(TEXT("сахар"))) return TEXT("SM_Food_SugarCube");
+	if (LootName.Contains(TEXT("муха"))) return TEXT("SM_Food_DeadFly");
+	if (LootName.Contains(TEXT("Паучья"))) return TEXT("SM_Food_SpiderLeg");
 	return nullptr;
 }
 
 } // namespace AntArt
+
+namespace AntSfx
+{
+static const TCHAR* Names[Count] = { TEXT("S_Spit"), TEXT("S_Splat"), TEXT("S_Hit"), TEXT("S_Crit"), TEXT("S_Kill"), TEXT("S_Grab"), TEXT("S_Drop"),
+	TEXT("S_Deliver"), TEXT("S_Crunch"), TEXT("S_Stomp"), TEXT("S_Spray"), TEXT("S_Squish"), TEXT("S_Jump"), TEXT("S_Zap"), TEXT("S_Sizzle"),
+	TEXT("S_Splash"), TEXT("S_Rage"), TEXT("S_Bite"), TEXT("S_Buzz"), TEXT("S_Web"), TEXT("S_Hiss") };
+
+USoundBase* Get(uint8 Id)
+{
+	static TArray<TWeakObjectPtr<USoundBase>> Cache;
+	static TArray<bool> Tried;
+	if (Id >= Count)
+	{
+		return nullptr;
+	}
+	if (Cache.Num() == 0)
+	{
+		Cache.SetNum(Count);
+		Tried.SetNumZeroed(Count);
+	}
+	if (!Cache[Id].IsValid() && !Tried[Id])
+	{
+		Tried[Id] = true;
+		const FString Path = FString::Printf(TEXT("/Game/Sounds/%s.%s"), Names[Id], Names[Id]);
+		USoundBase* S = LoadObject<USoundBase>(nullptr, *Path, nullptr, LOAD_NoWarn | LOAD_Quiet);
+		if (S) { S->AddToRoot(); }
+		Cache[Id] = S;
+	}
+	return Cache[Id].Get();
+}
+
+static USoundAttenuation* Falloff()
+{
+	static USoundAttenuation* A = nullptr;
+	if (!A)
+	{
+		A = NewObject<USoundAttenuation>(GetTransientPackage(), TEXT("AntSfxFalloff"));
+		A->AddToRoot();
+		A->Attenuation.bAttenuate = true;
+		A->Attenuation.bSpatialize = true;
+		A->Attenuation.AttenuationShape = EAttenuationShape::Sphere;
+		A->Attenuation.AttenuationShapeExtents = FVector(500.f);
+		A->Attenuation.FalloffDistance = 6500.f;
+	}
+	return A;
+}
+
+void Play(const UObject* Ctx, uint8 Id, const FVector& Location, float Volume, float Pitch)
+{
+	UWorld* W = Ctx ? Ctx->GetWorld() : nullptr;
+	if (!W || W->GetNetMode() == NM_DedicatedServer)
+	{
+		return;
+	}
+	if (USoundBase* S = Get(Id))
+	{
+		UGameplayStatics::PlaySoundAtLocation(W, S, Location, Volume, Pitch * FMath::FRandRange(0.93f, 1.07f), 0.f, Falloff());
+	}
+}
+
+void Play2D(const UObject* Ctx, uint8 Id, float Volume, float Pitch)
+{
+	UWorld* W = Ctx ? Ctx->GetWorld() : nullptr;
+	if (!W || W->GetNetMode() == NM_DedicatedServer)
+	{
+		return;
+	}
+	if (USoundBase* S = Get(Id))
+	{
+		UGameplayStatics::PlaySound2D(W, S, Volume, Pitch);
+	}
+}
+
+void Everyone(const UObject* Ctx, uint8 Id, const FVector& Location, float Pitch)
+{
+	UWorld* W = Ctx ? Ctx->GetWorld() : nullptr;
+	if (AAntGameState* GS = W ? W->GetGameState<AAntGameState>() : nullptr)
+	{
+		GS->MulticastSfx(Id, Location, Pitch);
+	}
+}
+}

@@ -323,7 +323,7 @@ void AAntSwarm::ServerTick()
 		if (S.bHasFood)
 		{
 			AKitchenLoot* F = S.Food.Get();
-			if (!F || F->bIsGear)
+			if (!F || F->bIsGear || F->IsCarried() || FVector::Dist(F->GetActorLocation(), FVector(S.Points.Last())) > 450.f)
 			{
 				S.bHasFood = false;
 				bDirty = true;

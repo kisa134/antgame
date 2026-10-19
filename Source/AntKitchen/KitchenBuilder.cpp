@@ -1,9 +1,12 @@
-#include "KitchenBuilder.h"
+﻿#include "KitchenBuilder.h"
 #include "AntCharacter.h"
 #include "KitchenInteractables.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/PointLightComponent.h"
 #include "Components/DirectionalLightComponent.h"
+#include "Components/SkyLightComponent.h"
+#include "Components/SkyAtmosphereComponent.h"
+#include "Components/ExponentialHeightFogComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/DamageType.h"
 #include "EngineUtils.h"
@@ -54,7 +57,18 @@ void AKitchenBuilder::BeginPlay()
 // Layout data shared with the GameMode (server) so loot sits on real surfaces.
 // ---------------------------------------------------------------------------------------------
 
-FVector AKitchenBuilder::NestLocation() { return FVector(-6650.f, -2500.f, 0.f); }
+FVector AKitchenBuilder::NestLocation(uint8 Team) { return Team == 0 ? FVector(-6650.f, -2500.f, 0.f) : FVector(6300.f, 1250.f, 0.f); }
+
+void AKitchenBuilder::HeavySpots(TArray<FVector>& Out)
+{
+	Out.Reset();
+	Out.Add(FVector(0.f, -2600.f, 0.f));        // middle of the floor, between the nests
+	Out.Add(FVector(1800.f, -3900.f, 0.f));     // under the window
+	Out.Add(FVector(-1600.f, 1900.f, 0.f));     // by the stove
+	Out.Add(FVector(3600.f, -400.f, 0.f));      // near the fire ants
+	Out.Add(FVector(1000.f, -900.f, 1430.f));   // on the table: drop it down!
+	Out.Add(FVector(-4000.f, -1600.f, 0.f));    // near our nest
+}
 FVector AKitchenBuilder::HumanSpawn() { return FVector(3800.f, -3200.f, 1720.f); }
 FVector AKitchenBuilder::HumanFleePoint() { return FVector(5600.f, -4200.f, 1720.f); }
 FBox AKitchenBuilder::HotBurner() { return FBox(FVector(-610.f, 3240.f, 1735.f), FVector(-90.f, 3760.f, 1900.f)); }
@@ -76,7 +90,8 @@ void AKitchenBuilder::LootSpots(TArray<FVector>& L, TArray<int32>& T)
 	for (int32 Guard = 0; Placed < 36 && Guard < 500; ++Guard)
 	{
 		const FVector P(R.FRandRange(-6000.f, 6500.f), R.FRandRange(-4600.f, 2700.f), 0.f);
-		if (FVector::Dist2D(P, NestLocation()) < 1100.f) continue;
+		if (FVector::Dist2D(P, NestLocation(0)) < 1100.f) continue;
+		if (FVector::Dist2D(P, NestLocation(1)) < 1000.f) continue;
 		if (FVector::Dist2D(P, FVector(6000.f, -1500.f, 0.f)) < 800.f) continue;   // trash can
 		if (FVector::Dist2D(P, FVector(6000.f, -2700.f, 0.f)) < 750.f) continue;   // trash lid
 		if (FVector::Dist2D(P, FVector(6200.f, 3900.f, 0.f)) < 550.f) continue;    // bucket
@@ -96,7 +111,7 @@ void AKitchenBuilder::LootSpots(TArray<FVector>& L, TArray<int32>& T)
 	Add(-5000.f, 3600.f, 1760.f, 1);   // cutting board
 	Add(-6250.f, 4200.f, 2150.f, 2);   // toaster top
 	Add(-2200.f, 3400.f, 1710.f, 1);
-	Add(-2200.f, 4600.f, 1710.f, 1);
+	Add(-2250.f, 4400.f, 2040.f, 2);   // on the cereal box on the counter
 	Add(600.f, 3300.f, 1710.f, 1);
 	Add(1800.f, 3400.f, 1710.f, 1);
 	Add(1850.f, 4450.f, 2350.f, 2);    // microwave top
@@ -193,9 +208,13 @@ void AKitchenBuilder::Doors(float X0, float X1, int32 Count, const FLinearColor&
 	for (int32 i = 0; i < Count; ++i)
 	{
 		const float A = X0 + W * i;
-		Box(FVector(A + 15.f, 2988.f, 170.f), FVector(A + W - 15.f, 3000.f, 1600.f), DoorColor, false);
+		UStaticMeshComponent* D = Box(FVector(A + 15.f, 2988.f, 170.f), FVector(A + W - 15.f, 3000.f, 1600.f), DoorColor, false);
 		const float Mid = A + W * 0.5f;
-		Box(FVector(Mid - 80.f, 2970.f, 1420.f), FVector(Mid + 80.f, 2988.f, 1460.f), HandleColor, false);
+		UStaticMeshComponent* H = Box(FVector(Mid - 80.f, 2970.f, 1420.f), FVector(Mid + 80.f, 2988.f, 1460.f), HandleColor, false);
+		if (AntArt::DressAuto(this, Root, TEXT("SM_Cabinet_Door"), FVector(A + 15.f, 2960.f, 170.f), FVector(A + W - 15.f, 3000.f, 1600.f)))
+		{
+			AntArt::HideAll({ D, H });
+		}
 	}
 }
 
@@ -267,7 +286,13 @@ void AKitchenBuilder::Build()
 	Box(FVector(3960.f, 5000.f, 0.f), FVector(4300.f, 5050.f, 450.f), WallC);
 	Box(FVector(3800.f, 5000.f, 140.f), FVector(3960.f, 5050.f, 450.f), WallC);
 	Box(FVector(3500.f, 5000.f, -100.f), FVector(4300.f, 5600.f, 0.f), Hex(120, 95, 70));   // mouse room floor
-	Box(FVector(-7200.f, -5200.f, 0.f), FVector(7200.f, -5000.f, 5400.f), WallC);
+	// South wall with a real window opening: the sun shines in.
+	Box(FVector(-7200.f, -5200.f, 0.f), FVector(-1500.f, -5000.f, 5400.f), WallC);
+	Box(FVector(1500.f, -5200.f, 0.f), FVector(7200.f, -5000.f, 5400.f), WallC);
+	Box(FVector(-1500.f, -5200.f, 0.f), FVector(1500.f, -5000.f, 2200.f), WallC);
+	Box(FVector(-1500.f, -5200.f, 4200.f), FVector(1500.f, -5000.f, 5400.f), WallC);
+	// Outside: a lawn far below the window, so the view isn't a void.
+	Box(FVector(-40000.f, -60000.f, -900.f), FVector(40000.f, -5200.f, -800.f), Hex(70, 120, 50), false);
 	Box(FVector(-7200.f, -5000.f, 0.f), FVector(-7000.f, 5000.f, 5400.f), WallC);
 	Box(FVector(7000.f, -5000.f, 0.f), FVector(7200.f, 5000.f, 5400.f), WallC);
 	Box(FVector(-7200.f, -5200.f, 5400.f), FVector(7200.f, 5600.f, 5600.f), Ceiling);
@@ -288,7 +313,13 @@ void AKitchenBuilder::Build()
 	Box(FVector(-1000.f, 4600.f, 3600.f), FVector(-500.f, 5000.f, 5400.f), Steel);
 
 	// Things on the counters
-	Box(FVector(-6600.f, 3900.f, 1710.f), FVector(-5900.f, 4500.f, 2150.f), Hex(200, 40, 40));   // toaster
+	{
+		UStaticMeshComponent* T = Box(FVector(-6600.f, 3900.f, 1710.f), FVector(-5900.f, 4500.f, 2150.f), Hex(200, 40, 40));   // toaster
+		if (AntArt::DressAuto(this, Root, TEXT("SM_Toaster_Body"), FVector(-6600.f, 3900.f, 1710.f), FVector(-5900.f, 4500.f, 2160.f), 0.f, 4.f))
+		{
+			AntArt::HideAll({ T });
+		}
+	}
 	Box(FVector(-6450.f, 4050.f, 2150.f), FVector(-6050.f, 4120.f, 2153.f), Black, false);
 	Box(FVector(-6450.f, 4280.f, 2150.f), FVector(-6050.f, 4350.f, 2153.f), Black, false);
 	Box(FVector(-5600.f, 3250.f, 1710.f), FVector(-4500.f, 3950.f, 1760.f), Wood);               // cutting board
@@ -361,7 +392,7 @@ void AKitchenBuilder::Build()
 	}
 
 	// Window on the south wall
-	Box(FVector(-1500.f, -5000.f, 2200.f), FVector(1500.f, -4988.f, 4200.f), Hex(150, 200, 255), false);
+	// (no glass: the opening lets sunlight and sky in)
 	Box(FVector(-30.f, -4990.f, 2200.f), FVector(30.f, -4980.f, 4200.f), White, false);
 	Box(FVector(-1500.f, -4990.f, 3170.f), FVector(1500.f, -4980.f, 3230.f), White, false);
 	Box(FVector(-1650.f, -5000.f, 2120.f), FVector(1650.f, -4820.f, 2200.f), White);                  // sill
@@ -390,6 +421,56 @@ void AKitchenBuilder::Build()
 		Ball(P + FVector(0.f, FMath::Sin(T * 9.f) * 120.f, 0.f), FVector(22.f, 14.f, 3.f), Hex(40, 25, 20));
 	}
 
+	// ---- Rival fire-ant nest: red mound by the trash ----
+	{
+		const FVector R = NestLocation(1);
+		const FLinearColor Red = Hex(150, 45, 25), DarkRed = Hex(90, 25, 15);
+		Ball(FVector(R.X + 420.f, R.Y, -60.f), FVector(520.f, 600.f, 420.f), Red);
+		Ball(FVector(R.X + 420.f, R.Y, 260.f), FVector(110.f, 110.f, 90.f), Black);       // entrance on top
+		Ball(FVector(R.X + 150.f, R.Y + 420.f, -20.f), FVector(220.f, 200.f, 160.f), DarkRed);
+		Ball(FVector(R.X + 180.f, R.Y - 430.f, -20.f), FVector(200.f, 230.f, 150.f), DarkRed);
+		Cyl(FVector(R.X, R.Y, 0.f), NestRadius(1), 4.f, Hex(70, 25, 15), false);
+		for (int32 i = 0; i < 18; ++i)   // their trail towards the middle
+		{
+			const float T = i / 17.f;
+			const FVector P = FMath::Lerp(FVector(R.X - 600.f, R.Y, 3.f), FVector(1500.f, -1400.f, 3.f), T);
+			Ball(P + FVector(0.f, FMath::Sin(T * 11.f) * 140.f, 0.f), FVector(22.f, 14.f, 3.f), Hex(140, 30, 15));
+		}
+		Lamp(FVector(R.X - 300.f, R.Y, 500.f), 3.f, FLinearColor(1.f, 0.3f, 0.15f), 1500.f, false);
+	}
+
+	// ---- Spider web on the east wall (the spider's lair) ----
+	{
+		const FVector C = SpiderLair() + FVector(10.f, 0.f, 0.f);
+		const FLinearColor SilkC(0.85f, 0.85f, 0.9f);
+		const int32 Spokes = 14;
+		TArray<FVector> Ends;
+		for (int32 i = 0; i < Spokes; ++i)
+		{
+			const float A = 2.f * PI * i / Spokes;
+			const float R = 650.f + 120.f * FMath::Sin(i * 2.3f);
+			Ends.Add(C + FVector(0.f, FMath::Cos(A) * R, FMath::Sin(A) * R));
+		}
+		auto Thread = [this, &SilkC](const FVector& A, const FVector& B)
+		{
+			const FVector D = B - A;
+			UStaticMeshComponent* T = Part(EAntShape::Cylinder, (A + B) * 0.5f, FVector(3.f, 3.f, (float)D.Size()), FRotationMatrix::MakeFromZ(D).Rotator(), SilkC, false);
+			T->SetCastShadow(false);
+		};
+		for (const FVector& E : Ends) { Thread(C, E); }
+		for (int32 Ring = 1; Ring <= 6; ++Ring)
+		{
+			const float K = Ring / 6.5f;
+			for (int32 i = 0; i < Spokes; ++i)
+			{
+				Thread(FMath::Lerp(C, Ends[i], K), FMath::Lerp(C, Ends[(i + 1) % Spokes], K));
+			}
+		}
+		// Wrapped-up prey: little silk cocoons.
+		Ball(C + FVector(-20.f, 260.f, -330.f), FVector(30.f, 40.f, 70.f), FLinearColor(0.9f, 0.9f, 0.85f));
+		Ball(C + FVector(-20.f, -310.f, 120.f), FVector(30.f, 35.f, 60.f), FLinearColor(0.9f, 0.9f, 0.85f));
+	}
+
 	// ---- Lights ----
 	const FVector LampSpots[3] = { FVector(-3500.f, 0.f, 0.f), FVector(2200.f, -1500.f, 0.f), FVector(1000.f, 2800.f, 0.f) };
 	for (const FVector& S : LampSpots)
@@ -407,11 +488,42 @@ void AKitchenBuilder::Build()
 	Fill = NewObject<UDirectionalLightComponent>(this);
 	Fill->SetMobility(EComponentMobility::Movable);
 	Fill->SetupAttachment(Root);
-	Fill->SetRelativeRotation(FRotator(-55.f, 35.f, 0.f));
-	Fill->Intensity = 1.5f;
-	Fill->CastShadows = false;
+	// The sun: low, from the south, through the window. Casts real shadows and light shafts.
+	Fill->SetRelativeRotation(FRotator(-32.f, 82.f, 0.f));
+	Fill->Intensity = 7.f;
+	Fill->CastShadows = true;
+	Fill->SetLightColor(FLinearColor(1.f, 0.9f, 0.75f));
+	Fill->bAtmosphereSunLight = true;
+	Fill->VolumetricScatteringIntensity = 3.f;
 	Fill->RegisterComponent();
 	AddInstanceComponent(Fill);
+
+	// Sky (seen through the window and bounced around by Lumen).
+	USkyAtmosphereComponent* Sky = NewObject<USkyAtmosphereComponent>(this);
+	Sky->SetupAttachment(Root);
+	Sky->RegisterComponent();
+	AddInstanceComponent(Sky);
+
+	USkyLightComponent* SkyL = NewObject<USkyLightComponent>(this);
+	SkyL->SetMobility(EComponentMobility::Movable);
+	SkyL->SetupAttachment(Root);
+	SkyL->bRealTimeCapture = true;
+	SkyL->Intensity = 1.2f;
+	SkyL->RegisterComponent();
+	AddInstanceComponent(SkyL);
+
+	// Dust in the air: visible sun beams.
+	UExponentialHeightFogComponent* Fog = NewObject<UExponentialHeightFogComponent>(this);
+	Fog->SetupAttachment(Root);
+	Fog->SetRelativeLocation(FVector(0.f, 0.f, 0.f));
+	Fog->FogDensity = 0.0025f;
+	Fog->FogHeightFalloff = 0.02f;
+	Fog->bEnableVolumetricFog = true;
+	Fog->VolumetricFogScatteringDistribution = 0.75f;
+	Fog->VolumetricFogExtinctionScale = 0.6f;
+	Fog->VolumetricFogDistance = 12000.f;
+	Fog->RegisterComponent();
+	AddInstanceComponent(Fog);
 
 	SetMainLights(AKitchenSwitch::AreLightsOn(GetWorld()));
 }
@@ -438,8 +550,12 @@ void AKitchenBuilder::BuildNorthRun()
 	for (int32 i = 0; i < 4; ++i)   // decorative doors under the drawer
 	{
 		const float A = -7000.f + 700.f * i;
-		Box(FVector(A + 15.f, 2988.f, 170.f), FVector(A + 685.f, 3000.f, 1290.f), CabinetDoor, false);
-		Box(FVector(A + 270.f, 2970.f, 1180.f), FVector(A + 430.f, 2988.f, 1220.f), Steel, false);
+		UStaticMeshComponent* D = Box(FVector(A + 15.f, 2988.f, 170.f), FVector(A + 685.f, 3000.f, 1290.f), CabinetDoor, false);
+		UStaticMeshComponent* H = Box(FVector(A + 270.f, 2970.f, 1180.f), FVector(A + 430.f, 2988.f, 1220.f), Steel, false);
+		if (AntArt::DressAuto(this, Root, TEXT("SM_Cabinet_Door"), FVector(A + 15.f, 2960.f, 170.f), FVector(A + 685.f, 3000.f, 1290.f)))
+		{
+			AntArt::HideAll({ D, H });
+		}
 	}
 	Box(FVector(-6985.f, 2988.f, 1350.f), FVector(-5615.f, 3000.f, 1590.f), CabinetDoor, false);   // fake drawer fronts
 	Box(FVector(-6380.f, 2970.f, 1450.f), FVector(-6220.f, 2988.f, 1490.f), Steel, false);
@@ -451,8 +567,14 @@ void AKitchenBuilder::BuildNorthRun()
 	Box(FVector(-4180.f, Back - 20.f, 140.f), FVector(-3600.f, Back, 1100.f), Hex(110, 150, 135));     // back panel with a hole
 	Box(FVector(-3400.f, Back - 20.f, 140.f), FVector(-2820.f, Back, 1100.f), Hex(110, 150, 135));
 	Box(FVector(-3600.f, Back - 20.f, 330.f), FVector(-3400.f, Back, 1100.f), Hex(110, 150, 135));
-	Box(FVector(-4200.f, 2985.f, 140.f), FVector(-3500.f, 3000.f, 1100.f), CabinetDoor);
-	Box(FVector(-3700.f, 2970.f, 600.f), FVector(-3660.f, 2985.f, 760.f), Steel, false);
+	{
+		UStaticMeshComponent* D = Box(FVector(-4200.f, 2985.f, 140.f), FVector(-3500.f, 3000.f, 1100.f), CabinetDoor);
+		UStaticMeshComponent* H = Box(FVector(-3700.f, 2970.f, 600.f), FVector(-3660.f, 2985.f, 760.f), Steel, false);
+		if (AntArt::DressAuto(this, Root, TEXT("SM_Cabinet_Door"), FVector(-4200.f, 2960.f, 140.f), FVector(-3500.f, 3000.f, 1100.f)))
+		{
+			AntArt::HideAll({ D, H });
+		}
+	}
 	Part(EAntShape::Cube, FVector(-2920.f, 2671.f, 620.f), FVector(700.f, 15.f, 940.f), FRotator(0.f, -110.f, 0.f), CabinetDoor, true);
 	Box(FVector(-4200.f, 3000.f, 0.f), FVector(-3500.f, 3100.f, 120.f), Black);                       // plinth under the shut door
 	// Pipes: drain going down from the sink, U-trap into the wall.
@@ -507,6 +629,8 @@ void AKitchenBuilder::BuildNorthRun()
 		Cyl(FVector(Burners[i].X, Burners[i].Y, 1765.f), 120.f, 6.f, bHot ? Hex(255, 160, 40) : Black, false);
 	}
 	Box(FVector(-1450.f, 2950.f, 1560.f), FVector(-50.f, 2990.f, 1640.f), Steel, false);   // oven control strip
+	// Generated oven shell around the hollow oven (the inside stays our box so ants can crawl in).
+	AntArt::DressAuto(this, Root, TEXT("SM_Oven_Body"), FVector(-1500.f, 2990.f, 120.f), FVector(0.f, 4750.f, 1740.f), 0.f, 6.f, false);   // shell only: the oven stays hollow inside
 	for (int32 i = 0; i < 4; ++i)
 	{
 		Part(EAntShape::Cylinder, FVector(-1250.f + i * 330.f, 2945.f, 1600.f), FVector(70.f, 70.f, 30.f), FRotator(90.f, 0.f, 0.f), Black, false);
@@ -549,8 +673,14 @@ void AKitchenBuilder::BuildFridge()
 	Box(FVector(2780.f, 4450.f, 2500.f), FVector(3500.f, 4670.f, 2560.f), Inside);
 	Box(FVector(3800.f, 4450.f, 2500.f), FVector(4620.f, 4670.f, 2560.f), Inside);
 	// Freezer front (fixed) and handle.
-	Box(FVector(2700.f, 3000.f, 2500.f), FVector(4700.f, 3100.f, 3700.f), White);
-	Box(FVector(2800.f, 2950.f, 2650.f), FVector(2860.f, 3000.f, 3400.f), Steel, false);
+	UStaticMeshComponent* FreezerFront = Box(FVector(2700.f, 3000.f, 2500.f), FVector(4700.f, 3100.f, 3700.f), White);
+	UStaticMeshComponent* FreezerHandle = Box(FVector(2800.f, 2950.f, 2650.f), FVector(2860.f, 3000.f, 3400.f), Steel, false);
+	// Generated fridge shell (outside only; the inside stays our boxes so ants can explore it).
+	if (AntArt::DressAuto(this, Root, TEXT("SM_Fridge_Body"), FVector(2700.f, 2990.f, 0.f), FVector(4700.f, 4750.f, 3700.f), 0.f, 8.f, false))   // shell only: hollow inside
+	{
+		AntArt::HideAll({ FreezerHandle });
+	}
+	(void)FreezerFront;
 	// Shelves (gap at the front so ants can climb past them).
 	Box(FVector(2780.f, 3300.f, 900.f), FVector(4620.f, 4670.f, 930.f), Hex(200, 220, 230));
 	Box(FVector(2780.f, 3300.f, 1700.f), FVector(4620.f, 4670.f, 1730.f), Hex(200, 220, 230));
@@ -558,8 +688,14 @@ void AKitchenBuilder::BuildFridge()
 	Box(FVector(2900.f, 4100.f, 200.f), FVector(3300.f, 4500.f, 900.f), Hex(250, 250, 250));      // milk carton
 	Box(FVector(2900.f, 4100.f, 700.f), FVector(3300.f, 4500.f, 760.f), Hex(60, 120, 220), false);
 	Cyl(FVector(4200.f, 4200.f, 200.f), 220.f, 380.f, Hex(240, 200, 120));                       // butter tub
-	Cyl(FVector(3600.f, 4000.f, 930.f), 170.f, 260.f, Hex(200, 30, 50));                         // jam jar
-	Cyl(FVector(3600.f, 4000.f, 1190.f), 180.f, 40.f, Hex(230, 230, 230));
+	{   // jam jar, tipped over
+		UStaticMeshComponent* J = Cyl(FVector(3600.f, 4000.f, 930.f), 170.f, 260.f, Hex(200, 30, 50));
+		UStaticMeshComponent* Lid = Cyl(FVector(3600.f, 4000.f, 1190.f), 180.f, 40.f, Hex(230, 230, 230));
+		if (AntArt::Dress(this, Root, TEXT("SM_JamJar"), FVector(3380.f, 3840.f, 930.f), FVector(3820.f, 4160.f, 1150.f), 0.f))
+		{
+			AntArt::HideAll({ J, Lid });
+		}
+	}
 	Ball(FVector(3600.f, 4000.f, 935.f), FVector(330.f, 300.f, 10.f), Hex(170, 20, 40));          // spilled jam
 	Box(FVector(4000.f, 3600.f, 1730.f), FVector(4500.f, 4000.f, 1950.f), Hex(250, 210, 60));     // cheese block
 	Cyl(FVector(3200.f, 3700.f, 1730.f), 260.f, 120.f, Hex(240, 240, 235));                       // plate of leftovers
@@ -581,13 +717,30 @@ void AKitchenBuilder::BuildSecrets()
 	const FLinearColor Honey = Hex(235, 150, 20);
 
 	// Honey jar tipped over on the shelf, dripping down the wall into a sticky puddle.
-	Part(EAntShape::Cylinder, FVector(-6760.f, 260.f, 2780.f), FVector(340.f, 340.f, 300.f), FRotator(90.f, 0.f, 0.f), Hex(230, 150, 30), true);
+	UStaticMeshComponent* HoneyJar = Part(EAntShape::Cylinder, FVector(-6760.f, 260.f, 2780.f), FVector(340.f, 340.f, 300.f), FRotator(90.f, 0.f, 0.f), Hex(230, 150, 30), true);
+	if (AntArt::Dress(this, Root, TEXT("SM_HoneyJar"), FVector(-6950.f, 70.f, 2680.f), FVector(-6560.f, 460.f, 3000.f), 0.f))
+	{
+		AntArt::HideAll({ HoneyJar });
+	}
 	Box(FVector(-6950.f, 90.f, 2680.f), FVector(-6560.f, 430.f, 2686.f), Honey, false);
 	Box(FVector(-7000.f, 190.f, 0.f), FVector(-6994.f, 360.f, 2680.f), Honey, false);
 	Cyl(FVector(-6780.f, 280.f, 0.f), 280.f, 4.f, Honey, false);
 
 	// Jam jar knocked over on the table.
-	Part(EAntShape::Cylinder, FVector(980.f, 520.f, 1530.f), FVector(240.f, 240.f, 260.f), FRotator(0.f, 20.f, 90.f), Hex(200, 30, 50), true);
+	UStaticMeshComponent* JamJar = Part(EAntShape::Cylinder, FVector(980.f, 520.f, 1530.f), FVector(240.f, 240.f, 260.f), FRotator(0.f, 20.f, 90.f), Hex(200, 30, 50), true);
+	if (AntArt::Dress(this, Root, TEXT("SM_JamJar"), FVector(860.f, 360.f, 1400.f), FVector(1100.f, 680.f, 1610.f), 90.f))
+	{
+		AntArt::HideAll({ JamJar });
+	}
+
+	// Cereal box on the counter (climbable, a prize on top).
+	{
+		UStaticMeshComponent* Shell = Box(FVector(-2700.f, 4150.f, 1710.f), FVector(-1800.f, 4650.f, 2030.f), Hex(230, 70, 40));
+		if (AntArt::Dress(this, Root, TEXT("SM_CerealBox"), FVector(-2700.f, 4150.f, 1710.f), FVector(-1800.f, 4650.f, 2030.f), 90.f))
+		{
+			AntArt::HideAll({ Shell });
+		}
+	}
 	Cyl(FVector(610.f, 250.f, 1400.f), 290.f, 5.f, Hex(170, 20, 40), false);
 
 	// Mouse hole (behind the fridge) and the room in the wall.
@@ -666,7 +819,7 @@ void AKitchenBuilder::SetMainLights(bool bOn)
 			M->SetVectorParameterValue(TEXT("Color"), bOn ? FLinearColor(3.f, 2.8f, 2.4f) : FLinearColor(0.2f, 0.2f, 0.2f));
 		}
 	}
-	if (Fill) { Fill->SetIntensity(bOn ? 1.5f : 0.12f); }
+	// The sun doesn't care about the light switch.
 	if (WindowLight) { WindowLight->SetIntensity(bOn ? 3.f : 1.2f); WindowLight->SetLightColor(bOn ? FLinearColor(0.7f, 0.85f, 1.f) : FLinearColor(0.35f, 0.45f, 0.9f)); }
 }
 

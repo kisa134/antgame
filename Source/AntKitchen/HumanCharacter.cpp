@@ -1,4 +1,9 @@
 ﻿#include "HumanCharacter.h"
+#include "KitchenLoot.h"
+#include "InputCoreTypes.h"
+#include "TimerManager.h"
+#include "Components/AudioComponent.h"
+#include "Sound/SoundBase.h"
 #include "AntSwarm.h"
 #include "HumanAIController.h"
 #include "AntCharacter.h"
@@ -45,7 +50,7 @@ AHumanCharacter::AHumanCharacter()
 	bUseControllerRotationRoll = false;
 
 	UCharacterMovementComponent* CM = GetCharacterMovement();
-	CM->MaxWalkSpeed = 650.f;
+	CM->MaxWalkSpeed = 720.f;
 	CM->MaxStepHeight = 250.f;
 	CM->JumpZVelocity = 0.f;
 	CM->NavAgentProps.bCanJump = false;
@@ -75,6 +80,9 @@ void AHumanCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME(AHumanCharacter, SprayFuel);
 	DOREPLIFETIME(AHumanCharacter, bSpraying);
 	DOREPLIFETIME(AHumanCharacter, bKnockedOut);
+	DOREPLIFETIME(AHumanCharacter, Rage);
+	DOREPLIFETIME(AHumanCharacter, Held);
+	DOREPLIFETIME(AHumanCharacter, SwatReadyTime);
 	DOREPLIFETIME(AHumanCharacter, StompReadyTime);
 }
 
@@ -132,6 +140,58 @@ void AHumanCharacter::BuildBody()
 		ArmPivots.Add(Shoulder);
 	}
 
+	// Generated model: replaces the shapes (they stay as a fallback when the asset is missing).
+	const AntArt::FPart& Dad = AntArt::Get(TEXT("SM_Human_Dad"));
+	if (Dad.IsValid())
+	{
+		TArray<USceneComponent*> Old;
+		R->GetChildrenComponents(true, Old);
+		for (USceneComponent* C : Old)
+		{
+			if (UPrimitiveComponent* Prim = Cast<UPrimitiveComponent>(C))
+			{
+				Prim->SetVisibility(false);
+			}
+		}
+		ModelPivot = AntKit::AddPivot(this, R, FVector(0.f, 0.f, -HalfHeight));   // feet
+		UStaticMeshComponent* Body = AntArt::AddArt(this, ModelPivot, Dad);
+		const FVector E = Dad.Bounds.GetSize();
+		const float S = 3350.f / FMath::Max(1.f, (float)E.Z);
+		// Shoulders are the wide side: they go across (Y).
+		const float Yaw = (E.X > E.Y ? 90.f : 0.f) + ModelYaw;
+		const FQuat Q = FRotator(0.f, Yaw, 0.f).Quaternion();
+		const FVector C = Dad.Bounds.GetCenter();
+		const FVector FeetCenter(C.X, C.Y, Dad.Bounds.Min.Z);
+		Body->SetRelativeTransform(FTransform(Q, -Q.RotateVector(FeetCenter * S), FVector(S)));
+
+		const AntArt::FPart& Slip = AntArt::Get(TEXT("SM_Slipper"));
+		if (Slip.IsValid())
+		{
+			SlipperArt = AntArt::AddArt(this, R, Slip);
+			SlipperFit = AntArt::Fit(Slip, FVector::ZeroVector, 950.f, false);
+			SlipperArt->SetVisibility(false);
+			SlipperArt->SetCastShadow(true);
+		}
+		const AntArt::FPart& Can = AntArt::Get(TEXT("SM_BugSpray"));
+		if (Can.IsValid())
+		{
+			SprayArt = AntArt::AddArt(this, R, Can);
+			// Upright can in front of the chest, nozzle where the spray comes out.
+			FTransform T = AntArt::Fit(Can, FVector(1000.f, 470.f, 640.f), 380.f, false, FRotator(90.f, 0.f, 0.f));
+			SprayArt->SetRelativeTransform(T);
+			SprayArt->SetVisibility(false);
+		}
+		const AntArt::FPart& Paper = AntArt::Get(TEXT("SM_RolledNewspaper"));
+		if (Paper.IsValid())
+		{
+			PaperArt = AntArt::AddArt(this, R, Paper);
+			PaperArt->SetUsingAbsoluteLocation(true);
+			PaperArt->SetUsingAbsoluteRotation(true);
+			PaperArt->SetUsingAbsoluteScale(true);
+			PaperArt->SetVisibility(false);
+		}
+	}
+
 	// Spray cloud puffs (only visible while spraying).
 	for (int32 i = 0; i < 16; ++i)
 	{
@@ -159,6 +219,130 @@ void AHumanCharacter::SetupPlayerInputComponent(UInputComponent* Input)
 	Input->BindAction("Fire", IE_Pressed, this, &AHumanCharacter::OnStompPressed);
 	Input->BindAction("AltFire", IE_Pressed, this, &AHumanCharacter::OnSprayPressed);
 	Input->BindAction("AltFire", IE_Released, this, &AHumanCharacter::OnSprayReleased);
+	Input->BindAction("Interact", IE_Pressed, this, &AHumanCharacter::OnGrabPressed);
+	Input->BindKey(EKeys::Q, IE_Pressed, this, &AHumanCharacter::OnSwatPressed);
+}
+
+bool AHumanCharacter::AimPoint(FVector& OutPoint, FVector& OutDir) const
+{
+	if (!Controller)
+	{
+		return false;
+	}
+	FVector CamLoc;
+	FRotator CamRot;
+	Controller->GetPlayerViewPoint(CamLoc, CamRot);
+	OutDir = CamRot.Vector();
+	FHitResult Hit;
+	FCollisionQueryParams P(SCENE_QUERY_STAT(HumanAim), false, this);
+	if (GetWorld()->LineTraceSingleByChannel(Hit, CamLoc, CamLoc + OutDir * 9000.f, ECC_Visibility, P))
+	{
+		OutPoint = Hit.ImpactPoint;
+		return true;
+	}
+	OutPoint = CamLoc + OutDir * 2000.f;
+	return true;
+}
+
+void AHumanCharacter::OnSwatPressed()
+{
+	FVector P, D;
+	if (AimPoint(P, D)) { ServerSwat(P); }
+}
+
+void AHumanCharacter::OnGrabPressed()
+{
+	FVector P, D;
+	if (AimPoint(P, D)) { ServerGrabOrThrow(P, D); }
+}
+
+void AHumanCharacter::ServerSwat_Implementation(FVector_NetQuantize Point) { TrySwat(Point); }
+void AHumanCharacter::ServerGrabOrThrow_Implementation(FVector_NetQuantize Point, FVector_NetQuantizeNormal Dir) { GrabOrThrow(Point, Dir); }
+
+void AHumanCharacter::TrySwat(const FVector& InPoint)
+{
+	const float Now = GetWorld()->GetTimeSeconds();
+	if (!HasAuthority() || bKnockedOut || Now < SwatReadyTime)
+	{
+		return;
+	}
+	// Out of reach: slap as far as the arm goes.
+	FVector Point = InPoint;
+	const FVector Chest = GetActorLocation() + FVector(0.f, 0.f, 600.f);
+	if (FVector::Dist(Point, Chest) > SwatRange)
+	{
+		Point = Chest + (Point - Chest).GetSafeNormal() * SwatRange;
+	}
+	SwatReadyTime = Now + 2.6f * (1.f - 0.15f * Rage);
+	MulticastSwat(Point);
+	FTimerHandle H;
+	GetWorldTimerManager().SetTimer(H, FTimerDelegate::CreateWeakLambda(this, [this, Point]()
+	{
+		AntSfx::Everyone(this, AntSfx::Stomp, Point, 1.5f);
+		if (AAntSwarm* Swarm = AAntSwarm::Get(GetWorld()))
+		{
+			Swarm->KillInSphere(Point, SwatRadius);
+		}
+		for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
+		{
+			AAntCharacter* Ant = *It;
+			if (Ant && !Ant->bDead && !Ant->IsInNest() && FVector::Dist(Ant->GetActorLocation(), Point) < SwatRadius + AAntCharacter::BodyRadius)
+			{
+				UGameplayStatics::ApplyDamage(Ant, 150.f, GetController(), this, UDamageType::StaticClass());
+			}
+		}
+		for (TActorIterator<AKitchenLoot> It(GetWorld()); It; ++It)
+		{
+			const FVector To = It->GetActorLocation() - Point;
+			if (To.Size() < SwatRadius * 1.6f)
+			{
+				It->Kick(To.GetSafeNormal() * 500.f + FVector(0.f, 0.f, 300.f), It->GetActorLocation());
+			}
+		}
+	}), 0.28f, false);
+}
+
+void AHumanCharacter::GrabOrThrow(const FVector& Point, const FVector& Dir)
+{
+	if (!HasAuthority() || bKnockedOut)
+	{
+		return;
+	}
+	if (Held)
+	{
+		// Throw it: food smashes when it lands hard (and bowls ants over).
+		AKitchenLoot* L = Held;
+		Held = nullptr;
+		L->Throw(Dir.GetSafeNormal() * 2600.f + FVector(0.f, 0.f, 300.f));
+		return;
+	}
+	AKitchenLoot* Best = nullptr;
+	float BestD = 700.f;
+	for (TActorIterator<AKitchenLoot> It(GetWorld()); It; ++It)
+	{
+		AKitchenLoot* L = *It;
+		if (!L || L->bIsGear || L->bHeld || FVector::Dist2D(L->GetActorLocation(), GetActorLocation()) > 2600.f)
+		{
+			continue;
+		}
+		const float D = (float)FVector::Dist(L->GetActorLocation(), Point);
+		if (D < BestD)
+		{
+			BestD = D;
+			Best = L;
+		}
+	}
+	if (Best)
+	{
+		Held = Best;
+		Best->PickUpBy(VisualRoot, FVector(700.f, 420.f, 500.f));
+	}
+}
+
+void AHumanCharacter::MulticastSwat_Implementation(FVector_NetQuantize Point)
+{
+	SwatPoint = Point;
+	SwatLocalStart = GetWorld()->GetTimeSeconds();
 }
 
 void AHumanCharacter::MoveForward(float Value)
@@ -208,7 +392,7 @@ void AHumanCharacter::TryStomp(int32 Leg)
 	NextLeg = 1 - PendingLeg;
 	bStompPending = true;
 	StompImpactTime = Now + 0.55f;
-	StompReadyTime = Now + 1.25f;
+	StompReadyTime = Now + 1.05f * (1.f - 0.18f * Rage);
 	MulticastStomp(PendingLeg);
 }
 
@@ -229,6 +413,16 @@ void AHumanCharacter::DoStompImpact()
 	if (AAntSwarm* Swarm = AAntSwarm::Get(GetWorld()))
 	{
 		Swarm->KillInSphere(P, StompRadius * 1.15f);
+	}
+	// The floor shakes: food nearby jumps (and carriers often lose it).
+	for (TActorIterator<AKitchenLoot> It(GetWorld()); It; ++It)
+	{
+		const FVector To = It->GetActorLocation() - P;
+		if (To.Size2D() < StompRadius * 2.f && FMath::Abs(To.Z) < 300.f)
+		{
+			const float K = 1.f - (float)To.Size2D() / (StompRadius * 2.f);
+			It->Kick(To.GetSafeNormal2D() * 350.f * K + FVector(0.f, 0.f, 650.f * K), It->GetActorLocation() + FMath::VRand() * 10.f);
+		}
 	}
 	for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
 	{
@@ -274,7 +468,7 @@ void AHumanCharacter::DoSprayDamage(float Dt)
 	const float CosCone = FMath::Cos(FMath::DegreesToRadians(20.f));
 	if (AAntSwarm* Swarm = AAntSwarm::Get(GetWorld()))
 	{
-		Swarm->KillInCone(Origin, Dir, SprayRange, CosCone, Dt);
+		Swarm->KillInCone(Origin, Dir, GetSprayRange(), CosCone, Dt);
 	}
 
 	for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
@@ -286,7 +480,7 @@ void AHumanCharacter::DoSprayDamage(float Dt)
 		}
 		const FVector To = Ant->GetActorLocation() - Origin;
 		const float Dist = To.Size();
-		if (Dist > SprayRange || Dist < 1.f || FVector::DotProduct(To / Dist, Dir) < CosCone)
+		if (Dist > GetSprayRange() || Dist < 1.f || FVector::DotProduct(To / Dist, Dir) < CosCone)
 		{
 			continue;
 		}
@@ -296,7 +490,7 @@ void AHumanCharacter::DoSprayDamage(float Dt)
 		{
 			continue;  // hiding behind something
 		}
-		UGameplayStatics::ApplyDamage(Ant, 55.f * Dt, GetController(), this, UDamageType::StaticClass());
+		UGameplayStatics::ApplyDamage(Ant, 60.f * (1.f + 0.3f * Rage) * Dt, GetController(), this, UDamageType::StaticClass());
 	}
 }
 
@@ -335,7 +529,18 @@ void AHumanCharacter::KnockOut(AController* By)
 
 void AHumanCharacter::OnRep_KnockedOut()
 {
-	GetCharacterMovement()->MaxWalkSpeed = bKnockedOut ? 260.f : 650.f;
+	GetCharacterMovement()->MaxWalkSpeed = GetWalkSpeed();
+}
+
+void AHumanCharacter::OnRep_Rage()
+{
+	GetCharacterMovement()->MaxWalkSpeed = GetWalkSpeed();
+}
+
+void AHumanCharacter::SetRage(uint8 NewRage)
+{
+	Rage = FMath::Min<uint8>(NewRage, 3);
+	OnRep_Rage();
 }
 
 void AHumanCharacter::ResetHuman(const FVector& Location)
@@ -373,6 +578,7 @@ void AHumanCharacter::Tick(float DeltaSeconds)
 		{
 			bStompPending = false;
 			DoStompImpact();
+			AntSfx::Everyone(this, AntSfx::Stomp, GetStompPoint(PendingLeg), FMath::FRandRange(0.9f, 1.1f));
 		}
 
 		if (bSpraying && (SprayFuel <= 0.f || bKnockedOut))
@@ -438,6 +644,83 @@ void AHumanCharacter::UpdateVisuals(float DeltaSeconds)
 
 	VisualRoot->SetRelativeRotation(FRotator(0.f, 0.f, bKnockedOut ? FMath::Sin(Now * 2.5f) * 10.f : 0.f));
 
+	// Newspaper slap: swings down onto the target point.
+	if (PaperArt)
+	{
+		const float ST = Now - SwatLocalStart;
+		if (ST >= 0.f && ST < 0.8f)
+		{
+			const AntArt::FPart& Paper = AntArt::Get(TEXT("SM_RolledNewspaper"));
+			const FVector Shoulder = GetActorLocation() + GetActorRightVector() * 470.f + FVector(0.f, 0.f, 900.f);
+			const float K = ST < 0.28f ? FMath::Square(ST / 0.28f) : 1.f;
+			const FVector Up = Shoulder + FVector(0.f, 0.f, 900.f);
+			const FVector Tip = FMath::Lerp(Up, SwatPoint, K);
+			const FVector Side = GetActorRightVector() * 120.f;
+			FTransform TM = AntArt::Fit(Paper, (Tip + Side), 1500.f, false);
+			const FVector Axis = (Tip - Shoulder).GetSafeNormal();
+			TM.SetRotation(FRotationMatrix::MakeFromX(Axis).ToQuat() * AntArt::AxisFix(Paper, false));
+			TM.SetLocation(Tip - Axis * 750.f + Side);
+			PaperArt->SetWorldTransform(TM);
+			PaperArt->SetVisibility(true);
+		}
+		else
+		{
+			PaperArt->SetVisibility(false);
+		}
+	}
+
+	if (ModelPivot)
+	{
+		// Static model: waddle while walking, lean into stomps.
+		const float Walk = FMath::Min(1.f, Speed / 300.f);
+		float Lean = 0.f, Lift = FMath::Abs(FMath::Sin(WalkPhase)) * 35.f * Walk;
+		if (T >= 0.f && T < 1.1f)
+		{
+			Lean = T < 0.45f ? -6.f * (T / 0.45f) : T < 0.6f ? FMath::Lerp(-6.f, 9.f, (T - 0.45f) / 0.15f) : FMath::Lerp(9.f, 0.f, (T - 0.6f) / 0.5f);
+		}
+		ModelPivot->SetRelativeLocation(FVector(0.f, 0.f, -HalfHeight + Lift));
+		ModelPivot->SetRelativeRotation(FRotator(-Lean, 0.f, FMath::Sin(WalkPhase) * 3.f * Walk));
+		if (SprayArt)
+		{
+			SprayArt->SetVisibility(bSpraying);
+		}
+		if (SlipperArt)
+		{
+			// A giant slipper comes down where the stomp lands.
+			if (T >= 0.f && T < 1.1f)
+			{
+				float H;
+				if (T < 0.4f) { H = FMath::Lerp(400.f, 1500.f, T / 0.4f); }
+				else if (T < 0.55f) { H = FMath::Lerp(1500.f, 0.f, FMath::Square((T - 0.4f) / 0.15f)); }
+				else if (T < 0.85f) { H = 0.f; }
+				else { H = FMath::Lerp(0.f, 900.f, (T - 0.85f) / 0.25f); }
+				const FVector Foot(480.f, LocalStompLeg == 0 ? -180.f : 180.f, -HalfHeight + 70.f + H);
+				FTransform TM = SlipperFit;
+				TM.AddToTranslation(Foot);
+				SlipperArt->SetRelativeTransform(TM);
+				SlipperArt->SetVisibility(true);
+			}
+			else
+			{
+				SlipperArt->SetVisibility(false);
+			}
+		}
+	}
+
+	// Hiss while spraying.
+	if (bSpraying && !SprayAudio)
+	{
+		if (USoundBase* Hiss = AntSfx::Get(AntSfx::Spray))
+		{
+			SprayAudio = UGameplayStatics::SpawnSoundAttached(Hiss, VisualRoot, NAME_None, FVector(1000.f, 470.f, 700.f), EAttachLocation::KeepRelativeOffset, false, 1.2f);
+		}
+	}
+	if (SprayAudio)
+	{
+		if (bSpraying && !SprayAudio->IsPlaying()) { SprayAudio->Play(); }
+		if (!bSpraying && SprayAudio->IsPlaying()) { SprayAudio->Stop(); }
+	}
+
 	const FVector Origin = GetSprayOrigin();
 	const FVector Dir = GetSprayDirection();
 	const FVector Side = FVector::CrossProduct(Dir, FVector::UpVector).GetSafeNormal();
@@ -452,8 +735,8 @@ void AHumanCharacter::UpdateVisuals(float DeltaSeconds)
 		}
 		const float Frac = FMath::Fmod(Now * 1.6f + i / (float)Puffs.Num(), 1.f);
 		const float Ang = i * 2.399f;
-		const float Spread = Frac * SprayRange * 0.33f;
-		const FVector Pos = Origin + Dir * Frac * SprayRange + (Side * FMath::Cos(Ang) + Up * FMath::Sin(Ang)) * Spread * 0.6f;
+		const float Spread = Frac * GetSprayRange() * 0.33f;
+		const FVector Pos = Origin + Dir * Frac * GetSprayRange() + (Side * FMath::Cos(Ang) + Up * FMath::Sin(Ang)) * Spread * 0.6f;
 		Puff->SetVisibility(true);
 		Puff->SetWorldLocation(Pos);
 		Puff->SetWorldScale3D(FVector(0.4f + Frac * 4.f));

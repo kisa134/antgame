@@ -22,6 +22,8 @@ namespace AntStatus
 	constexpr uint8 Drowning = 1 << 2;
 	constexpr uint8 Shocked = 1 << 3;
 	constexpr uint8 Stream = 1 << 4;
+	constexpr uint8 Burning = 1 << 5;
+	constexpr uint8 Webbed = 1 << 6;
 }
 
 /** What the kitchen does to an ant right now (filled on the server by the zones and hazards). */
@@ -79,12 +81,14 @@ public:
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void PossessedBy(AController* NewController) override;
+	virtual void PawnClientRestart() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
-	static constexpr int32 MaxCarry = 10;
-	static constexpr float InteractRadius = 190.f;
-	static constexpr float BodyRadius = 26.f;
+	/** Ants are small: everything about the body is scaled by this (the kitchen stays the same). */
+	static constexpr float AntScale = 0.62f;
+	static constexpr float InteractRadius = 165.f;
+	static constexpr float BodyRadius = 26.f * AntScale;
 	// Orientation of the generated (Meshy) parts: flip if a part shows up backwards.
 	static constexpr bool ArtFlipBody = false;
 	static constexpr bool ArtFlipFemur = false;
@@ -93,9 +97,11 @@ public:
 
 	UPROPERTY(Replicated, BlueprintReadOnly) float Health = 100.f;
 	UPROPERTY(BlueprintReadOnly) float MaxHealth = 100.f;
-	UPROPERTY(ReplicatedUsing = OnRep_Carry) int32 CarriedValue = 0;
-	UPROPERTY(ReplicatedUsing = OnRep_Carry) int32 CarriedWeight = 0;
-	UPROPERTY(Replicated) int32 CarriedItems = 0;
+	/** Food this ant is holding in its mandibles (dragged together with other ants). */
+	UPROPERTY(ReplicatedUsing = OnRep_Carry) AKitchenLoot* Carrying = nullptr;
+	/** 0 = our colony, 1 = rival fire ants. */
+	UPROPERTY(Replicated) uint8 Team = 0;
+	UPROPERTY(ReplicatedUsing = OnRep_Class) EAntClass AntClass = EAntClass::Worker;
 	UPROPERTY(ReplicatedUsing = OnRep_Dead) bool bDead = false;
 	UPROPERTY(ReplicatedUsing = OnRep_Weapon) FAntWeapon Weapon;
 	UPROPERTY(ReplicatedUsing = OnRep_BodyColor) FLinearColor BodyColor = FLinearColor(0.12f, 0.04f, 0.03f);
@@ -117,6 +123,50 @@ public:
 	bool IsFrozen() const { return Temperature < -5.f; }
 	bool HasStatus(uint8 Bit) const { return (StatusFlags & Bit) != 0; }
 	bool IsInNest() const;
+	bool IsCarrying() const { return Carrying != nullptr; }
+	/** 0 when not carrying; the load's weight otherwise. */
+	int32 CarriedWeight() const;
+	bool IsEnemy(const AAntCharacter* Other) const { return Other && Other->Team != Team; }
+	const FAntClassDef& GetClassDef() const { return AntKit::ClassDef(AntClass); }
+	float GetStrength() const { return StrengthOverride >= 0.f ? StrengthOverride : GetClassDef().Strength; }
+
+	// ---- Creatures (fly, spider) reuse the ant: same health, teams, legs, crawling, AI ----
+	/** 0 ant, 1 fly, 2 spider. Set by the subclass. */
+	uint8 Creature = 0;
+	bool IsMonster() const { return Team >= 2; }
+	float ExtraScale = 1.f;        // body size on top of the caste
+	float SpeedScale = 1.f;
+	float DamageScale = 1.f;
+	float HealthOverride = 0.f;    // > 0: ignores the caste
+	float StrengthOverride = -1.f; // >= 0: ignores the caste (0 = can't carry)
+	float LegLength = 1.f;
+	float LegThickness = 1.f;
+	const TCHAR* LegUpperArt = TEXT("SM_Ant_Femur");
+	const TCHAR* LegLowerArt = TEXT("SM_Ant_Tibia");
+	float DamageMult() const { return GetClassDef().Damage * DamageScale; }
+	/** Where carried food is held (mandibles; under the body for a fly). */
+	virtual FVector GetHoldPoint() const;
+	/** Server: stuck in spider silk for a while. */
+	void Webbed(float Seconds);
+	/** Server: bite (players: right mouse; AI calls this directly). */
+	void BotBite();
+	/** Server: AI shoots in this direction (same rate limits as players). */
+	void BotFire(const FVector& Direction);
+	/** Server: change caste (only inside the own nest unless bForce). */
+	void SetClass(EAntClass NewClass, bool bForce);
+	/** Server, called by the loot. */
+	void SetCarrying(AKitchenLoot* Loot);
+	/** Server: grab / let go of the nearest food (bots use this too). */
+	bool GrabLoot(AKitchenLoot* Loot);
+	void LetGo();
+	void DevInteract();
+	/** Local camera shake (0..1, adds up, decays). */
+	void AddTrauma(float Amount) { Trauma = FMath::Min(1.f, Trauma + Amount); }
+	/** Server: set on fire for a few seconds (spreads to ants nearby, water puts it out). */
+	void Ignite(float Seconds);
+	bool IsBurning() const { return HasStatus(AntStatus::Burning); }
+	float VisScale() const { return AntScale * GetClassDef().BodyScale * ExtraScale; }
+	bool bBodycam = false;
 	AKitchenLoot* FindNearestLoot(float Radius) const;
 	AKitchenInteractable* FindNearestInteractable(float* OutDistance = nullptr) const;
 	FVector GetMuzzleLocation() const;
@@ -142,8 +192,8 @@ public:
 	float LastHazardTime = -100.f;
 
 protected:
-	void MoveForward(float Value);
-	void MoveRight(float Value);
+	virtual void MoveForward(float Value);
+	virtual void MoveRight(float Value);
 	void TurnRate(float Value);
 	void LookUpRate(float Value);
 	void StartFire();
@@ -151,8 +201,8 @@ protected:
 	void Interact();
 	void StartSprint();
 	void StopSprint();
-	void DoJump();
-	void DoStopJump();
+	virtual void DoJump();
+	virtual void DoStopJump();
 	void ToggleTrail();
 	void RecallSwarm();
 
@@ -161,6 +211,15 @@ protected:
 	UFUNCTION(Server, Reliable) void ServerSetSprint(bool bNewSprint);
 	UFUNCTION(Server, Reliable) void ServerToggleTrail();
 	UFUNCTION(Server, Reliable) void ServerRecallSwarm();
+	UFUNCTION(Server, Reliable) void ServerSetClass(uint8 NewClass);
+	UFUNCTION(Server, Reliable) void ServerBite();
+	void Bite();
+	void ToggleBodycam();
+	void ApplyCameraLook();
+	void PickClass1();
+	void PickClass2();
+	void PickClass3();
+	void PickClass4();
 	UFUNCTION(Client, Reliable) void ClientLaunch(FVector_NetQuantize10 Velocity);
 	UFUNCTION(Client, Reliable) void ClientTeleport(FVector_NetQuantize Location);
 
@@ -168,9 +227,14 @@ protected:
 	UFUNCTION() void OnRep_Dead();
 	UFUNCTION() void OnRep_Weapon();
 	UFUNCTION() void OnRep_BodyColor();
+	UFUNCTION() void OnRep_Class();
 
-private:
-	void BuildBody();
+protected:
+	virtual void BuildBody();
+	/** Frost / fire / web shells and the old carry chunk (every creature needs them). */
+	void BuildStatusFx();
+	virtual void ApplyClassStats();
+	void TickNurse(float Dt);
 	void SurfaceAxes(FVector& OutForward, FVector& OutRight) const;
 	void TickFire();
 	void UpdateSpeed();
@@ -215,4 +279,14 @@ private:
 	float LastDamageTime = -100.f;
 	float LastEnvToast = -100.f;
 	float DamageAccum = 0.f;
+	float NurseTimer = 0.f;
+	float Trauma = 0.f;
+	float LastHealthSeen = -1.f;
+	float NextBiteTime = 0.f;
+	float ServerNextBiteTime = 0.f;
+	float BurnTime = 0.f;           // server
+	UPROPERTY() UStaticMeshComponent* FlameShell = nullptr;
+	UPROPERTY() class UPointLightComponent* FlameLight = nullptr;
+	UPROPERTY() UStaticMeshComponent* WebShell = nullptr;
+	float WebTime = 0.f;            // server
 };

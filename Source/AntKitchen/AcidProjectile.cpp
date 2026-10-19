@@ -10,6 +10,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
 #include "EngineUtils.h"
+#include "KitchenLoot.h"
 
 AAcidProjectile::AAcidProjectile()
 {
@@ -59,16 +60,18 @@ void AAcidProjectile::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME(AAcidProjectile, VisualSize);
 	DOREPLIFETIME(AAcidProjectile, GravityScale);
 	DOREPLIFETIME(AAcidProjectile, bBounce);
+	DOREPLIFETIME(AAcidProjectile, bWeb);
 }
 
 void AAcidProjectile::Setup(const FAntWeapon& Weapon, const FVector& Direction)
 {
 	Damage = Weapon.Damage;
 	Splash = Weapon.Splash;
+	bWeb = Weapon.bWeb;
 	bBounce = Weapon.bBounce;
 	GravityScale = Weapon.Gravity;
 	VisualSize = Weapon.Size;
-	Color = FMath::Lerp(FLinearColor(0.4f, 1.f, 0.15f), AntKit::RarityColor(Weapon.Rarity), Weapon.Rarity > 0 ? 0.7f : 0.f);
+	Color = Weapon.bWeb ? FLinearColor(0.95f, 0.95f, 1.f) : FMath::Lerp(FLinearColor(0.4f, 1.f, 0.15f), AntKit::RarityColor(Weapon.Rarity), Weapon.Rarity > 0 ? 0.7f : 0.f);
 	InitialVelocity = Direction.GetSafeNormal() * Weapon.ProjectileSpeed;
 
 	Movement->InitialSpeed = Weapon.ProjectileSpeed;
@@ -92,6 +95,10 @@ void AAcidProjectile::BeginPlay()
 	if (APawn* Inst = GetInstigator())
 	{
 		Sphere->IgnoreActorWhenMoving(Inst, true);
+		if (const AAntCharacter* Ant = Cast<AAntCharacter>(Inst); Ant && Ant->Carrying)
+		{
+			Sphere->IgnoreActorWhenMoving(Ant->Carrying, true);   // don't spit into your own food
+		}
 	}
 
 	if (GetNetMode() != NM_DedicatedServer)
@@ -111,8 +118,8 @@ void AAcidProjectile::OnStop(const FHitResult& Hit)
 		{
 			if (C->IsSimulatingPhysics())
 			{
-				const FVector Dir = (Hit.ImpactPoint - GetActorLocation()).GetSafeNormal();
-				C->AddImpulseAtLocation((Dir.IsNearlyZero() ? GetActorForwardVector() : Dir) * (300.f + Damage * 40.f), Hit.ImpactPoint);
+				const FVector Dir = GetActorForwardVector();   // rotation follows the flight
+				C->AddImpulseAtLocation(Dir * (2500.f + Damage * 300.f), Hit.ImpactPoint);   // food & junk fly
 			}
 		}
 		Explode(nullptr);
@@ -142,7 +149,11 @@ void AAcidProjectile::OnOverlap(UPrimitiveComponent* OverlappedComponent, AActor
 	{
 		Explode(Human);
 	}
-	// Other ants: no friendly fire, the blob flies through.
+	else if (AAntCharacter* Ant = Cast<AAntCharacter>(OtherActor); Ant && !Ant->bDead && Ant->Team != Team)
+	{
+		Explode(Ant);
+	}
+	// Ants of the own colony: no friendly fire, the blob flies through.
 }
 
 void AAcidProjectile::Explode(AActor* DirectHit)
@@ -152,6 +163,7 @@ void AAcidProjectile::Explode(AActor* DirectHit)
 		return;
 	}
 	bExploded = true;
+	AntSfx::Everyone(this, AntSfx::Splat, GetActorLocation(), DirectHit ? 1.2f : FMath::Clamp(1.1f - Splash * 0.002f, 0.6f, 1.1f));
 
 	AController* InstController = GetInstigatorController();
 	AAntPlayerController* PC = Cast<AAntPlayerController>(InstController);
@@ -172,6 +184,18 @@ void AAcidProjectile::Explode(AActor* DirectHit)
 	{
 		Hurt(DirectHit, Damage);
 	}
+	if (bWeb)
+	{
+		// Silk: everyone of the other side caught in the blob is stuck.
+		for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
+		{
+			AAntCharacter* A = *It;
+			if (A && !A->bDead && A->Team != Team && (A == DirectHit || FVector::Dist(A->GetActorLocation(), Here) < Splash + AAntCharacter::BodyRadius))
+			{
+				A->Webbed(2.6f);
+			}
+		}
+	}
 
 	if (Splash > 0.f)
 	{
@@ -188,6 +212,22 @@ void AAcidProjectile::Explode(AActor* DirectHit)
 			if (FVector::Dist(Here, Closest) - Cap->GetScaledCapsuleRadius() < Splash)
 			{
 				Hurt(H, Damage * 0.6f);
+			}
+		}
+		for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
+		{
+			AAntCharacter* A = *It;
+			if (A && A != DirectHit && !A->bDead && A->Team != Team && FVector::Dist(A->GetActorLocation(), Here) < Splash + AAntCharacter::BodyRadius)
+			{
+				Hurt(A, Damage * 0.6f);
+			}
+		}
+		for (TActorIterator<AKitchenLoot> It(GetWorld()); It; ++It)
+		{
+			const FVector To = It->GetActorLocation() - Here;
+			if (To.Size() < Splash + It->GetRadius())
+			{
+				It->Kick(To.GetSafeNormal() * 300.f + FVector(0.f, 0.f, 250.f), Here);   // blast throws food
 			}
 		}
 	}
