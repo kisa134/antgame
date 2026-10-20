@@ -10,6 +10,6 @@
 5. **Claude:**
    - Settings → Connectors → **Atlassian** (на экране согласия выбери сайт **antgame**) и **GitHub**;
    - в Claude Desktop дай доступ к папке с репо;
-   - первое сообщение: «Прочитай CLAUDE.md, README.md, docs/ и покажи мои задачи в Jira ANT».
+   - первое сообщение: «Прочитай CLAUDE.md, README.md, docs/ и покажи мои задачи в Jira KAN».
 
 Правила работы — в `CLAUDE.md`. Коротко: задача в Jira → ветка → `git lfs lock` перед правкой `.uasset` → PR с ключом задачи → отчёт в Jira.
