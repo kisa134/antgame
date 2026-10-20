@@ -20,7 +20,7 @@
 
 ## Как запустить
 
-1. `git clone https://github.com/kisa134/antgame` и переключись на ветку `claude/happy-volta-gwuaqo`.
+1. `git clone https://github.com/kisa134/antgame` (основная ветка — `main`). Правила команды — в `CLAUDE.md`, онбординг — в `docs/ONBOARDING.md`.
 2. Дважды кликни `AntKitchen.uproject`. На вопрос *«Modules are missing or built with a different
    engine version. Rebuild?»* жми **Yes**: движок сам скомпилирует C++.
    - Если компиляция упала: правый клик по `.uproject` → *Generate Visual Studio project files*,
