@@ -60,7 +60,7 @@ void AKitchenBuilder::BeginPlay()
 // Layout data shared with the GameMode (server) so loot sits on real surfaces.
 // ---------------------------------------------------------------------------------------------
 
-FVector AKitchenBuilder::NestLocation(uint8 Team) { return Team == 0 ? FVector(-6650.f, -2500.f, 0.f) : FVector(6300.f, 1250.f, 0.f); }
+FVector AKitchenBuilder::NestLocation(uint8 Team) { return Team == 0 ? FVector(-7900.f, -2500.f, 0.f) : FVector(6300.f, 1250.f, 0.f); }
 
 void AKitchenBuilder::HeavySpots(TArray<FVector>& Out)
 {
@@ -93,7 +93,11 @@ int32 AKitchenBuilder::Region(const FVector& P)
 {
 	if (P.Y < -5150.f && (P.X < 7000.f || P.Y < -9150.f))
 	{
-		return 2;   // outside, on the lawn
+		return 2;   // the back yard
+	}
+	if (P.X < -7050.f)
+	{
+		return 3;   // west lawn, sidewalk, street
 	}
 	return P.X < 7100.f ? 0 : 1;
 }
@@ -106,15 +110,14 @@ FVector AKitchenBuilder::RandomYardPoint(FRandomStream* Rng)
 
 namespace
 {
-	/** Out of the kitchen window and down the outside wall (reversed: back in). */
-	FVector WindowPath(const FVector& From, bool bToYard)
+	/** Walk a fixed chain of points (Fwd order, or reversed): the next point from where you are. */
+	FVector Along(const FVector& From, const FVector* Fwd, int32 N, bool bReverse)
 	{
-		static const FVector Out[] = { FVector(0.f, -4870.f, 0.f), FVector(0.f, -4870.f, 2240.f), FVector(0.f, -5500.f, 2240.f), FVector(0.f, -5500.f, 0.f), FVector(0.f, -5900.f, 0.f) };
-		constexpr int32 N = UE_ARRAY_COUNT(Out);
-		FVector Pts[N];
+		FVector Pts[8];
+		N = FMath::Min(N, 8);
 		for (int32 i = 0; i < N; ++i)
 		{
-			Pts[i] = bToYard ? Out[i] : Out[N - 1 - i];
+			Pts[i] = bReverse ? Fwd[N - 1 - i] : Fwd[i];
 		}
 		// Which leg of the path are we on?
 		int32 Best = -1;
@@ -140,6 +143,25 @@ namespace
 		}
 		return Pts[Next];
 	}
+
+	/** Kitchen -> back yard through the crack under the window (walkers). */
+	FVector WindowPath(const FVector& From, bool bToYard)
+	{
+		static const FVector Out[] = { FVector(-4500.f, -4800.f, 0.f), FVector(-4500.f, -5400.f, 0.f), FVector(-4500.f, -5800.f, 0.f) };
+		return Along(From, Out, UE_ARRAY_COUNT(Out), !bToYard);
+	}
+	/** Kitchen -> the nest outside through the crack in the west wall. */
+	FVector CrackPath(const FVector& From, bool bToWest)
+	{
+		static const FVector Out[] = { FVector(-6700.f, -2500.f, 0.f), FVector(-7500.f, -2500.f, 0.f) };
+		return Along(From, Out, UE_ARRAY_COUNT(Out), !bToWest);
+	}
+	/** West lawn -> back yard around the corner of the house. */
+	FVector CornerPath(const FVector& From, bool bToYard)
+	{
+		static const FVector Out[] = { FVector(-8300.f, -4700.f, 0.f), FVector(-8300.f, -5700.f, 0.f) };
+		return Along(From, Out, UE_ARRAY_COUNT(Out), !bToYard);
+	}
 }
 
 FVector AKitchenBuilder::Route(const FVector& From, const FVector& To, bool bFlying)
@@ -149,21 +171,46 @@ FVector AKitchenBuilder::Route(const FVector& From, const FVector& To, bool bFly
 	{
 		return To;
 	}
+	if (bFlying && (RF == 2 || RT == 2 || RF == 3 || RT == 3))
+	{
+		// Flyers use the window; from the west lawn they go round the corner first.
+		if (RF == 3 || RT == 3)
+		{
+			const FVector C(-8300.f, -5600.f, 1500.f);
+			if (FVector::Dist2D(From, C) < 400.f) { return RT == 3 ? FVector(-8300.f, -2500.f, 800.f) : FVector(-4000.f, -6500.f, 1500.f); }
+			if (RF == 3 || RT == 3) { return C; }
+		}
+		if (RF == 1)
+		{
+			return Route(From, FVector(0.f, -4300.f, 1000.f), bFlying);
+		}
+		const FVector W(0.f, -5100.f, 3200.f);
+		if (FVector::Dist(From, W) < 350.f)
+		{
+			return FVector(0.f, RT == 2 ? -5900.f : -4300.f, 3200.f);
+		}
+		return W;
+	}
+	if (RF == 3 || RT == 3)
+	{
+		// The west lawn: through the crack from the kitchen, round the corner from the yard.
+		const int32 Other = RF == 3 ? RT : RF;
+		if (Other == 1)
+		{
+			return Route(From, FVector(-6000.f, -2500.f, 0.f), bFlying);   // living room -> kitchen first
+		}
+		if (Other == 0)
+		{
+			return CrackPath(From, RT == 3);
+		}
+		return CornerPath(From, RT == 2);
+	}
 	if (RF == 2 || RT == 2)
 	{
-		// The yard is reached through the kitchen window only.
+		// The back yard is reached through the crack under the kitchen window.
 		if (RF == 1)
 		{
 			return Route(From, FVector(0.f, -4300.f, 0.f), bFlying);   // living room -> kitchen first
-		}
-		if (bFlying)
-		{
-			const FVector W(0.f, -5100.f, 3200.f);
-			if (FVector::Dist(From, W) < 350.f)
-			{
-				return FVector(0.f, RT == 2 ? -5900.f : -4300.f, 3200.f);
-			}
-			return W;
 		}
 		return WindowPath(From, RT == 2);
 	}
@@ -297,6 +344,26 @@ void AKitchenBuilder::LootSpots(TArray<FVector>& L, TArray<int32>& T)
 	Add(19700.f, -5000.f, 2800.f, 2); Add(19700.f, -4000.f, 1900.f, 2); Add(19700.f, -6000.f, 1000.f, 1);
 	Add(9250.f, -5750.f, 800.f, 2);                                                                   // armchair seat
 	Add(18800.f, 900.f, 800.f, 1);                                                                    // plant pot soil
+
+	// ---- Back yard ----
+	Add(-6600.f, -7800.f, 0.f, 1);  Add(-5200.f, -10800.f, 0.f, 1);  Add(-1200.f, -8600.f, 0.f, 0);  Add(2400.f, -11800.f, 0.f, 1);
+	Add(2900.f, -12700.f, 30.f, 2);  Add(2500.f, -12500.f, 0.f, 2);   Add(3300.f, -14100.f, 0.f, 1);   // spilled by the bin
+	Add(4200.f, -13000.f, 2700.f, 3);                                                                  // inside the bin, on the bag
+	Add(-8400.f, -12500.f, 160.f, 1); Add(-7100.f, -12500.f, 5200.f, 3);                              // under the tree / on the branch
+	Add(-1000.f, -5300.f, 2200.f, 2);                                                                  // outer window sill
+	// ---- West lawn, sidewalk, street ----
+	Add(-8900.f, 1500.f, 0.f, 1);  Add(-8200.f, 3900.f, 0.f, 1);  Add(-8800.f, -4200.f, 0.f, 0);
+	Add(-10400.f, -1500.f, 260.f, 3); Add(-10100.f, -1300.f, 120.f, 2);                               // the ice cream
+	Add(-9900.f, 4000.f, 0.f, 1);  Add(-10500.f, 800.f, 0.f, 1);                                      // sidewalk
+	Add(-13500.f, 0.f, -230.f, 2); Add(-12300.f, 2600.f, -220.f, 2);                                  // under the car, on the manhole
+	Add(-7350.f, 0.f, 8960.f, 3);  Add(-7350.f, -4200.f, 8960.f, 3);                                  // the roof gutter: climb the downspout
+	// ---- Inside the house: new hiding places ----
+	Add(5000.f, 2000.f, -400.f, 3); Add(4850.f, 2150.f, -400.f, 2);                                   // the pit under the loose tile
+	Add(-3100.f, -5100.f, 100.f, 1); Add(-3100.f, 1500.f, 5420.f, 3); Add(5200.f, 400.f, 5420.f, 3); // in the air ducts
+	Add(-1850.f, 2600.f, 10.f, 2);                                                                    // the matchbox
+	Add(1200.f, -4300.f, 0.f, 1);  Add(6550.f, -4150.f, 320.f, 2);                                    // under the newspaper, in the shoe
+	Add(9000.f, -2000.f, 0.f, 2);  Add(13800.f, -8400.f, 80.f, 2);                                    // the sock, behind the TV
+	Add(9250.f, -4800.f, 1245.f, 2); Add(13500.f, -700.f, 0.f, 1); Add(13900.f, -500.f, 0.f, 1);     // grandma's cookie, under the kid's feet
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -334,8 +401,43 @@ namespace
 		return S;
 	}
 
+	/** What an ant's feet hear on this color (see AntSfx::StepFor). None = hard: tile, stone, enamel, glass, plaster. */
+	FName SurfaceTag(const FLinearColor& C)
+	{
+		auto Is = [&C](const FLinearColor& K) { return C.Equals(K, 0.002f); };
+		if (Is(Wood) || Is(DarkWood) || Is(Baseboard) || Is(Cabinet) || Is(CabinetDoor) || Is(Hex(196, 152, 104)) || Is(Hex(205, 160, 105)) || Is(Hex(160, 120, 78)) || Is(Hex(95, 68, 45)))
+		{
+			return TEXT("Surf_Wood");
+		}
+		if (Is(Steel) || Is(DarkSteel) || Is(Hex(40, 92, 55)) || Is(Hex(30, 70, 42)))
+		{
+			return TEXT("Surf_Metal");
+		}
+		if (Is(Hex(170, 40, 50)) || Is(Hex(70, 92, 125)) || Is(Hex(52, 70, 98)) || Is(Hex(230, 180, 70)))
+		{
+			return TEXT("Surf_Fabric");
+		}
+		if (Is(Dirt) || Is(DarkDirt) || Is(Hex(110, 80, 50)))
+		{
+			return TEXT("Surf_Soil");
+		}
+		if (Is(Hex(86, 142, 60)) || Is(Hex(52, 104, 38)) || Is(Hex(70, 120, 50)) || Is(Hex(60, 120, 50)))
+		{
+			return TEXT("Surf_Grass");
+		}
+		return NAME_None;
+	}
+
 	void ApplySurface(UStaticMeshComponent* C, const FLinearColor& Color)
 	{
+		if (C)
+		{
+			const FName Tag = SurfaceTag(Color);
+			if (!Tag.IsNone())
+			{
+				C->ComponentTags.AddUnique(Tag);
+			}
+		}
 		static UMaterialInterface* Base = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Textures/M_Surface.M_Surface"));
 		if (!Base || !C)
 		{
@@ -398,8 +500,8 @@ UStaticMeshComponent* AKitchenBuilder::Cyl(const FVector& Base, float Radius, fl
 
 UStaticMeshComponent* AKitchenBuilder::Ball(const FVector& Center, const FVector& Radii, const FLinearColor& Color)
 {
-	// Non-uniform spheres get no collision (scaled sphere collision is unreliable).
-	return Part(EAntShape::Sphere, Center, Radii * 2.f, FRotator::ZeroRotator, Color, false);
+	// Big blobs (mounds, pillows, bags) collide as a sphere of the smallest radius; crumbs and dust don't.
+	return Part(EAntShape::Sphere, Center, Radii * 2.f, FRotator::ZeroRotator, Color, Radii.GetMin() >= 100.f);
 }
 
 void AKitchenBuilder::Doors(float X0, float X1, int32 Count, const FLinearColor& DoorColor, const FLinearColor& HandleColor)
@@ -464,52 +566,26 @@ UPointLightComponent* AKitchenBuilder::Lamp(const FVector& Loc, float Intensity,
 
 void AKitchenBuilder::Build()
 {
-	// ---- Floor (one collision slab + checker tiles on top) ----
-	Box(FVector(-7000.f, -5000.f, -100.f), FVector(7000.f, 5000.f, 0.f), TileA);
-	for (int32 i = 0; i < 14; ++i)
+	// ---- Floor, walls, ceiling, baseboards: the shell with all its real holes (KitchenHouse.cpp) ----
+	BuildShell();
+	for (int32 i = 0; i < 14; ++i)   // checker tiles on top of the slab
 	{
 		for (int32 j = 0; j < 10; ++j)
 		{
 			if ((i + j) % 2 == 0) continue;
 			const float X = -7000.f + i * 1000.f, Y = -5000.f + j * 1000.f;
+			if (X < 5300.f && X + 1000.f > 4700.f && Y < 2300.f && Y + 1000.f > 1700.f) continue;   // the loose tile's pit
 			Box(FVector(X + 5.f, Y + 5.f, 0.f), FVector(X + 995.f, Y + 995.f, 2.f), TileB, false);
 		}
 	}
 
-	// ---- Walls, ceiling, baseboards ----
-	// North wall is thick: a mouse room hides inside it behind the fridge (x 3500..4300).
-	Box(FVector(-7200.f, 5000.f, 0.f), FVector(3500.f, 5600.f, 5400.f), WallC);
-	Box(FVector(4300.f, 5000.f, 0.f), FVector(7200.f, 5600.f, 5400.f), WallC);
-	Box(FVector(3500.f, 5000.f, 450.f), FVector(4300.f, 5600.f, 5400.f), WallC);
-	Box(FVector(3500.f, 5550.f, 0.f), FVector(4300.f, 5600.f, 450.f), WallC);
-	Box(FVector(3500.f, 5000.f, 0.f), FVector(3800.f, 5050.f, 450.f), WallC);       // front slab with the mouse hole
-	Box(FVector(3960.f, 5000.f, 0.f), FVector(4300.f, 5050.f, 450.f), WallC);
-	Box(FVector(3800.f, 5000.f, 140.f), FVector(3960.f, 5050.f, 450.f), WallC);
-	Box(FVector(3500.f, 5000.f, -100.f), FVector(4300.f, 5600.f, 0.f), Hex(120, 95, 70));   // mouse room floor
-	// South wall with a real window opening: the sun shines in.
-	Box(FVector(-7200.f, -5200.f, 0.f), FVector(-1500.f, -5000.f, 5400.f), WallC);
-	Box(FVector(1500.f, -5200.f, 0.f), FVector(7200.f, -5000.f, 5400.f), WallC);
-	Box(FVector(-1500.f, -5200.f, 0.f), FVector(1500.f, -5000.f, 2200.f), WallC);
-	Box(FVector(-1500.f, -5200.f, 4200.f), FVector(1500.f, -5000.f, 5400.f), WallC);
-	// Outside: the yard (lawn at floor level, see BuildYard) and fields beyond the fence.
-	Box(FVector(-40000.f, -60000.f, -400.f), FVector(40000.f, -5200.f, -300.f), Hex(70, 120, 50), false);
-	Box(FVector(-7200.f, -5000.f, 0.f), FVector(-7000.f, 5000.f, 5400.f), WallC);
-	// East wall with a doorway into the living room (y -4800..-3200, 3800 high).
-	Box(FVector(7000.f, -5000.f, 0.f), FVector(7200.f, -4800.f, 5400.f), WallC);
-	Box(FVector(7000.f, -3200.f, 0.f), FVector(7200.f, 5000.f, 5400.f), WallC);
-	Box(FVector(7000.f, -4800.f, 3800.f), FVector(7200.f, -3200.f, 5400.f), WallC);
-	Box(FVector(6960.f, -4840.f, 0.f), FVector(7240.f, -4800.f, 3840.f), Wood);   // door frame
-	Box(FVector(6960.f, -3200.f, 0.f), FVector(7240.f, -3160.f, 3840.f), Wood);
-	Box(FVector(6960.f, -4840.f, 3800.f), FVector(7240.f, -3160.f, 3840.f), Wood);
-	Box(FVector(-7200.f, -5200.f, 5400.f), FVector(7200.f, 5600.f, 5600.f), Ceiling);
-	Box(FVector(-7000.f, -5000.f, 0.f), FVector(7000.f, -4970.f, 220.f), Baseboard, false);
-	Box(FVector(6970.f, -3160.f, 0.f), FVector(7000.f, 5000.f, 220.f), Baseboard, false);
-	Box(FVector(6970.f, -5000.f, 0.f), FVector(7000.f, -4840.f, 220.f), Baseboard, false);
-	Box(FVector(-7000.f, -5000.f, 0.f), FVector(-6970.f, -3200.f, 220.f), Baseboard, false);
-	Box(FVector(-7000.f, -1800.f, 0.f), FVector(-6970.f, 5000.f, 220.f), Baseboard, false);
+	// Fields beyond the fences, far below everything: the view isn't a void.
+	Box(FVector(-40000.f, -60000.f, -400.f), FVector(40000.f, 30000.f, -300.f), Hex(70, 120, 50), false);
 
 	BuildNorthRun();
 	BuildYard();
+	BuildWestStreet();
+	BuildClutter();
 
 	// Backsplash
 	Box(FVector(-7000.f, 4970.f, 1710.f), FVector(2500.f, 5000.f, 2900.f), Backsplash, false);
@@ -575,16 +651,18 @@ void AKitchenBuilder::Build()
 	Cyl(FVector(-1000.f, 300.f, 1400.f), 300.f, 300.f, White);                                       // sugar bowl
 	Cyl(FVector(-1450.f, -1200.f, 1400.f), 80.f, 260.f, Hex(230, 230, 230));                         // salt
 	Cyl(FVector(-1250.f, -1200.f, 1400.f), 80.f, 260.f, Hex(60, 50, 45));                            // pepper
-	Box(FVector(-2500.f, -2600.f, 0.f), FVector(3500.f, 1600.f, 6.f), Hex(170, 40, 50), false);      // rug
+	Box(FVector(-2500.f, -2600.f, 0.f), FVector(3500.f, 1600.f, 4.f), Hex(170, 40, 50));             // rug (real collision: ants walk ON it)
 
 	Chair(FVector(0.f, -2750.f, 0.f), true, DarkWood);
 	Chair(FVector(1200.f, 1650.f, 0.f), false, DarkWood);
 
-	// ---- South-west: pet corner and spilled cereal ----
+	// ---- South-west: the dog's corner (bowls on a mat) and spilled cereal ----
+	Box(FVector(-4500.f, -4500.f, 0.f), FVector(-1800.f, -3200.f, 4.f), Hex(60, 80, 70));            // rubber mat
 	Cyl(FVector(-3800.f, -3800.f, 0.f), 480.f, 170.f, Hex(240, 140, 40));
-	Ball(FVector(-3800.f, -3800.f, 170.f), FVector(380.f, 380.f, 60.f), Hex(110, 60, 25));
+	Cyl(FVector(-3800.f, -3800.f, 170.f), 340.f, 55.f, Hex(110, 60, 25));                           // kibble heap (walkable)
+	Ball(FVector(-3800.f, -3800.f, 225.f), FVector(300.f, 300.f, 40.f), Hex(110, 60, 25));
 	Cyl(FVector(-2500.f, -3900.f, 0.f), 420.f, 140.f, Hex(120, 140, 170));
-	Cyl(FVector(-2500.f, -3900.f, 140.f), 380.f, 4.f, Hex(150, 200, 255), false);
+	Cyl(FVector(-2500.f, -3900.f, 136.f), 380.f, 4.f, Hex(150, 200, 255));                          // water surface (wet, walkable)
 
 	// Cereal box lying on its side, open end facing east: a cozy tunnel.
 	Box(FVector(-5800.f, 500.f, 0.f), FVector(-4600.f, 1300.f, 20.f), Hex(230, 70, 40));
@@ -612,22 +690,12 @@ void AKitchenBuilder::Build()
 	Cyl(FVector(-6780.f, -150.f, 2680.f), 110.f, 280.f, Hex(170, 40, 30));
 	Cyl(FVector(-6780.f, -1000.f + 50.f, 2680.f), 60.f, 220.f, Hex(60, 140, 60));
 
-	// ---- The ant nest (hole in the west baseboard + dirt mound) ----
+	// ---- The ant nest is OUTSIDE now (BuildWestStreet): here only the worn trail from the crack ----
 	const FVector Nest = NestLocation();
-	AddMound(0, Ball(FVector(-6900.f, Nest.Y, -40.f), FVector(700.f, 800.f, 380.f), Dirt));
-	AddMound(0, Ball(FVector(-6990.f, Nest.Y, 150.f), FVector(120.f, 320.f, 240.f), Black));
-	AddMound(0, Ball(FVector(-6650.f, Nest.Y - 650.f, -30.f), FVector(380.f, 300.f, 200.f), Dirt));
-	AddMound(0, Ball(FVector(-6700.f, Nest.Y + 680.f, -30.f), FVector(340.f, 320.f, 180.f), Dirt));
-	Cyl(FVector(Nest.X, Nest.Y, 0.f), NestRadius(), 4.f, DarkDirt, false);
-	for (int32 i = 0; i < 6; ++i)
-	{
-		const float A = i * 1.05f;
-		Part(EAntShape::Cube, FVector(Nest.X + FMath::Cos(A) * 420.f, Nest.Y + FMath::Sin(A) * 420.f, 12.f), FVector(260.f, 18.f, 18.f), FRotator(0.f, i * 37.f, 0.f), DarkWood, false);
-	}
 	for (int32 i = 0; i < 14; ++i)   // little ant trail painted on the tiles
 	{
 		const float T = i / 13.f;
-		const FVector P = FMath::Lerp(FVector(-5900.f, -2500.f, 3.f), FVector(-1800.f, -900.f, 3.f), T);
+		const FVector P = FMath::Lerp(FVector(-6400.f, -2500.f, 3.f), FVector(-1800.f, -900.f, 3.f), T);
 		Ball(P + FVector(0.f, FMath::Sin(T * 9.f) * 120.f, 0.f), FVector(22.f, 14.f, 3.f), Hex(40, 25, 20));
 	}
 
@@ -689,7 +757,7 @@ void AKitchenBuilder::Build()
 		MainLamps.Add(Lamp(FVector(S.X, S.Y, 4950.f), 8.f, FLinearColor(1.f, 0.93f, 0.8f), 16000.f, true));
 	}
 	Lamp(FVector(-350.f, 3500.f, 1950.f), 4.f, FLinearColor(1.f, 0.25f, 0.05f), 1100.f, false);   // hot burner glow
-	Lamp(FVector(-6200.f, Nest.Y, 500.f), 3.f, FLinearColor(1.f, 0.7f, 0.4f), 1600.f, false);      // nest glow
+	Lamp(FVector(-6800.f, Nest.Y, 300.f), 2.f, FLinearColor(1.f, 0.7f, 0.4f), 1400.f, false);      // daylight through the crack
 	WindowLight = Lamp(FVector(0.f, -4500.f, 3200.f), 3.f, FLinearColor(0.7f, 0.85f, 1.f), 6000.f, false);       // window daylight
 	Lamp(FVector(3900.f, 5300.f, 330.f), 2.5f, FLinearColor(1.f, 0.6f, 0.25f), 800.f, false);      // candle in the mouse room
 
@@ -990,12 +1058,12 @@ void AKitchenBuilder::BuildLivingRoom()
 	Box(FVector(7000.f, -9200.f, 0.f), FVector(20400.f, -9000.f, 5400.f), WallC);     // south
 	Box(FVector(20200.f, -9000.f, 0.f), FVector(20400.f, 1500.f, 5400.f), WallC);     // east
 	Box(FVector(7000.f, -9000.f, 0.f), FVector(7200.f, -5000.f, 5400.f), WallC);      // west (below the kitchen)
-	Box(FVector(7200.f, 1470.f, 0.f), FVector(20200.f, 1500.f, 220.f), Baseboard, false);
-	Box(FVector(7200.f, -9000.f, 0.f), FVector(20200.f, -8970.f, 220.f), Baseboard, false);
-	Box(FVector(20170.f, -9000.f, 0.f), FVector(20200.f, 1500.f, 220.f), Baseboard, false);
+	Box(FVector(7200.f, 1470.f, 0.f), FVector(20200.f, 1500.f, 220.f), Baseboard);
+	Box(FVector(7200.f, -9000.f, 0.f), FVector(20200.f, -8970.f, 220.f), Baseboard);
+	Box(FVector(20170.f, -9000.f, 0.f), FVector(20200.f, 1500.f, 220.f), Baseboard);
 
 	// Rug.
-	Box(FVector(10500.f, -6800.f, 0.f), FVector(17500.f, -1300.f, 6.f), Hex(170, 40, 50), false);
+	Box(FVector(10500.f, -6800.f, 0.f), FVector(17500.f, -1300.f, 4.f), Hex(170, 40, 50));
 
 	// Sofa on legs along the north wall: ants run underneath, where lost treasure lies in the dark.
 	for (const FVector L : { FVector(10600.f, -200.f, 0.f), FVector(16400.f, -200.f, 0.f), FVector(10600.f, 1300.f, 0.f), FVector(16400.f, 1300.f, 0.f) })
@@ -1127,6 +1195,8 @@ void AKitchenBuilder::EnvironmentFor(const AAntCharacter* Ant, FAntEnv& Env)
 		FBox(FVector(-6950.f, 80.f, 2660.f), FVector(-6560.f, 440.f, 2760.f)),     // honey on the shelf
 		FBox(FVector(280.f, -60.f, 1380.f), FVector(940.f, 560.f, 1470.f)),        // jam on the table
 		FBox(FVector(3300.f, 3700.f, 900.f), FVector(3900.f, 4300.f, 990.f)),      // jam spilled in the fridge
+		FBox(FVector(-10180.f, 2320.f, 0.f), FVector(-9820.f, 2680.f, 60.f)),       // chewing gum on the sidewalk
+		FBox(FVector(-10780.f, -1880.f, 0.f), FVector(-10020.f, -1120.f, 50.f)),    // melted ice cream puddle
 	};
 	for (const FBox& B : Sticky)
 	{
@@ -1208,6 +1278,24 @@ void AKitchenBuilder::Tick(float DeltaSeconds)
 	if (GetNetMode() != NM_DedicatedServer)
 	{
 		UpdateMounds(DeltaSeconds);
+	}
+	// Drafts in the air ducts carry whoever crawls inside (movement is owner-authoritative: push locally).
+	for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
+	{
+		AAntCharacter* A = *It;
+		if (!A || A->bDead || A->Creature != 0 || !(A->IsLocallyControlled() || (HasAuthority() && !A->IsPlayerControlled())))
+		{
+			continue;
+		}
+		const FVector P = A->GetActorLocation();
+		for (const FDuctWind& W : DuctWind)
+		{
+			if (W.Box.IsInside(P))
+			{
+				A->AddMovementInput(W.Dir, 1.f);
+				break;
+			}
+		}
 	}
 	if (GetNetMode() == NM_Client)
 	{

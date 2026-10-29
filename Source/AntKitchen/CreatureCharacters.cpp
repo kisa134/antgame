@@ -75,8 +75,10 @@ AFlyCharacter::AFlyCharacter(const FObjectInitializer& ObjectInitializer)
 	UCharacterMovementComponent* CM = GetCharacterMovement();
 	CM->DefaultLandMovementMode = MOVE_Flying;
 	CM->MaxFlySpeed = 950.f * SpeedK;
-	CM->BrakingDecelerationFlying = 2200.f;
-	CM->MaxAcceleration = 3200.f * SpeedK;
+	// Inertia: slow to wind up, glides when you let go, leans into turns.
+	CM->BrakingDecelerationFlying = 260.f * SpeedK;
+	CM->BrakingFrictionFactor = 0.6f;
+	CM->MaxAcceleration = 1300.f * SpeedK;
 }
 
 void AFlyCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -93,7 +95,8 @@ void AFlyCharacter::BeginPlay()
 	{
 		if (USoundBase* Buzz = AntSfx::Get(AntSfx::Buzz))
 		{
-			BuzzAudio = UGameplayStatics::SpawnSoundAttached(Buzz, RootComponent, NAME_None, FVector::ZeroVector, EAttachLocation::KeepRelativeOffset, false, 0.7f);
+			BuzzAudio = UGameplayStatics::SpawnSoundAttached(Buzz, RootComponent, NAME_None, FVector::ZeroVector, EAttachLocation::KeepRelativeOffset, false, 0.f, 1.f, 0.f, nullptr, nullptr, false);
+			if (BuzzAudio) { BuzzAudio->Stop(); }
 		}
 	}
 }
@@ -192,7 +195,7 @@ void AFlyCharacter::Tick(float DeltaSeconds)
 	// Afterburner: Shift. Burns fuel, refills slowly (or at once on poop / trash).
 	const bool bBoost = IsBoosting();
 	CM->MaxFlySpeed = (bBoost ? 2600.f : 950.f) * SpeedK * (HoldingAnt ? 0.65f : 1.f);
-	CM->MaxAcceleration = (bBoost ? 7500.f : 3200.f) * SpeedK;
+	CM->MaxAcceleration = (bBoost ? 5000.f : 1300.f) * SpeedK;
 	if (HasAuthority())
 	{
 		if (bBoost && GetVelocity().SizeSquared() > FMath::Square(250.f))
@@ -250,11 +253,25 @@ void AFlyCharacter::Tick(float DeltaSeconds)
 		const FVector Wobble(0.f, 0.f, FMath::Sin(FlapTime * 7.f) * 2.f);
 		VisualRoot->SetWorldLocationAndRotation(GetActorLocation() + Wobble, FRotator(Pitch, GetActorRotation().Yaw, Roll));
 	}
+	// Wings are heard only when working hard: afterburner, or picking up speed. Cruising and hovering are quiet.
+	const float Accel = (Speed - PrevSpeed) / FMath::Max(DeltaSeconds, 0.001f);
+	PrevSpeed = Speed;
+	float Want = 0.f;
+	if (!bDead && !IsCrawling())
+	{
+		Want = bBoost ? 1.f : FMath::Clamp(Accel / (700.f * SpeedK), 0.f, 0.7f) * FMath::Clamp(Speed / (300.f * SpeedK), 0.f, 1.f);
+	}
+	BuzzLevel = FMath::FInterpTo(BuzzLevel, Want, DeltaSeconds, Want > BuzzLevel ? 6.f : 2.5f);
 	if (BuzzAudio)
 	{
-		BuzzAudio->SetPitchMultiplier(0.9f + FMath::Min(Speed / (900.f * SpeedK), 1.f) * 0.35f + (bBoost ? 0.35f : 0.f));
-		if (bDead && BuzzAudio->IsPlaying()) { BuzzAudio->Stop(); }
-		if (!bDead && !BuzzAudio->IsPlaying()) { BuzzAudio->Play(); }
+		const bool bOn = BuzzLevel > 0.04f;
+		if (bOn && !BuzzAudio->IsPlaying()) { BuzzAudio->FadeIn(0.15f, 1.f); }
+		if (!bOn && BuzzAudio->IsPlaying()) { BuzzAudio->FadeOut(0.35f, 0.f); }
+		if (bOn)
+		{
+			BuzzAudio->SetVolumeMultiplier(0.55f * BuzzLevel);
+			BuzzAudio->SetPitchMultiplier(0.95f + FMath::Min(Speed / (900.f * SpeedK), 1.f) * 0.2f + (bBoost ? 0.25f : 0.f));
+		}
 	}
 }
 

@@ -80,6 +80,7 @@ void AAntCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(AAntCharacter, Health);
+	DOREPLIFETIME(AAntCharacter, Acid);
 	DOREPLIFETIME(AAntCharacter, Carrying);
 	DOREPLIFETIME(AAntCharacter, Team);
 	DOREPLIFETIME(AAntCharacter, AntClass);
@@ -498,6 +499,7 @@ void AAntCharacter::SetupPlayerInputComponent(UInputComponent* Input)
 	Input->BindAction("Fire", IE_Released, this, &AAntCharacter::StopFire);
 	Input->BindAction("Interact", IE_Pressed, this, &AAntCharacter::Interact);
 	Input->BindAction("Sprint", IE_Pressed, this, &AAntCharacter::StartSprint);
+	Input->BindKey(EKeys::LeftControl, IE_Pressed, this, &AAntCharacter::Dash);
 	Input->BindAction("Sprint", IE_Released, this, &AAntCharacter::StopSprint);
 	Input->BindAction("LayTrail", IE_Pressed, this, &AAntCharacter::ToggleTrail);
 	Input->BindAction("RecallSwarm", IE_Pressed, this, &AAntCharacter::RecallSwarm);
@@ -812,6 +814,51 @@ void AAntCharacter::ApplyLaunch(const FVector& V)
 	}
 }
 
+void AAntCharacter::Stagger(float Seconds, const FVector& Knock)
+{
+	if (!HasAuthority() || bDead || IsAttached())
+	{
+		return;
+	}
+	StaggerTime = FMath::Max(StaggerTime, Seconds);
+	StatusFlags |= AntStatus::Staggered;
+	if (!Knock.IsNearlyZero())
+	{
+		ApplyLaunch(Knock);
+	}
+}
+
+void AAntCharacter::Dash()
+{
+	const float Now = GetWorld()->GetTimeSeconds();
+	if (bDead || Now < NextDash || IsAttached() || Carrying || HoldingAnt || Creature == 1 || HasStatus(AntStatus::Webbed) || HasStatus(AntStatus::Sticky))
+	{
+		return;
+	}
+	NextDash = Now + 1.6f;
+	// Along the movement input (or forward), in the plane of the surface you stand on.
+	FVector Dir = GetLastMovementInputVector();
+	if (Dir.IsNearlyZero())
+	{
+		Dir = GetActorForwardVector();
+	}
+	const FVector Up = IsCrawling() ? GetVisualUp() : FVector::UpVector;
+	Dir = FVector::VectorPlaneProject(Dir, Up).GetSafeNormal();
+	ApplyLaunch(Dir * 1500.f * SpeedK + Up * 180.f * SpeedK);
+	AddTrauma(0.12f);
+	AntSfx::Play(this, AntSfx::Jump, GetActorLocation(), 0.5f, 1.4f);
+	if (!HasAuthority())
+	{
+		ServerDash();
+	}
+}
+
+void AAntCharacter::ServerDash_Implementation()
+{
+	// The client already moved itself (owner-authoritative); the server just marks the cooldown for bots' sake.
+	NextDash = GetWorld()->GetTimeSeconds() + 1.6f;
+}
+
 void AAntCharacter::ClientLaunch_Implementation(FVector_NetQuantize10 V)
 {
 	if (UAntMovementComponent* M = GetAntMovement())
@@ -903,6 +950,11 @@ void AAntCharacter::ApplyEnvironment(const FAntEnv& Env, float Dt)
 		WebTime -= Dt;
 		E.Flags |= AntStatus::Webbed;
 	}
+	if (StaggerTime > 0.f)
+	{
+		StaggerTime -= Dt;
+		E.Flags |= AntStatus::Staggered;
+	}
 	StatusFlags = E.Flags;
 
 	float Dps = E.Dps;
@@ -965,6 +1017,12 @@ void AAntCharacter::Tick(float DeltaSeconds)
 			if (GetWorld()->GetTimeSeconds() - LastDamageTime > 5.f && Health < MaxHealth)
 			{
 				Health = FMath::Min(MaxHealth, Health + 6.f * DeltaSeconds);
+			}
+			if (Acid < MaxAcid)
+			{
+				// The glands refill: quickly when you hold your fire for a moment.
+				const bool bResting = GetWorld()->GetTimeSeconds() > ServerNextFireTime + 1.2f;
+				Acid = FMath::Min(MaxAcid, Acid + (bResting ? 30.f : 12.f) * DeltaSeconds);
 			}
 
 			if (GetActorLocation().Z < -800.f)
@@ -1040,6 +1098,18 @@ void AAntCharacter::ServerFire_Implementation(FVector_NetQuantize Origin, FVecto
 	{
 		return;
 	}
+	const float Cost = AcidCost();
+	if (Acid < Cost)
+	{
+		if (Now > NextDryToast)
+		{
+			NextDryToast = Now + 1.5f;
+			Toast(TEXT("Кислота кончилась — пару секунд без стрельбы, железы наполнятся"));
+		}
+		ServerNextFireTime = Now + 0.25f;
+		return;
+	}
+	Acid -= Cost;
 	ServerNextFireTime = Now + 0.8f / FMath::Max(0.2f, Weapon.FireRate);
 
 	FVector Start = Origin;
@@ -1702,6 +1772,7 @@ void AAntCharacter::UpdateSpeed()
 	}
 	if (IsFrozen()) { Mult *= 0.5f; }
 	if (HasStatus(AntStatus::Webbed)) { Mult *= 0.08f; }
+	if (HasStatus(AntStatus::Staggered)) { Mult *= 0.45f; }
 	M->SpeedMultiplier = Mult;
 	M->bNoJump = HasStatus(AntStatus::Sticky) || IsFrozen() || Carrying != nullptr || HoldingAnt != nullptr || HasStatus(AntStatus::Webbed);
 	M->bNoClimb = IsFrozen() || bVeryHeavy;
@@ -1879,7 +1950,7 @@ void AAntCharacter::UpdateVisuals(float DeltaSeconds)
 		if (const APlayerController* LPC = GetWorld()->GetFirstPlayerController(); LPC && LPC->PlayerCameraManager)
 		{
 			const float D = (float)FVector::Dist(LPC->PlayerCameraManager->GetCameraLocation(), GetActorLocation());
-			FootstepVolume = IsLocallyControlled() ? 0.35f : FMath::Clamp(1.f - D / 900.f, 0.f, 1.f) * 0.3f;
+			FootstepVolume = IsLocallyControlled() ? 0.3f : FMath::Clamp(1.f - D / 600.f, 0.f, 1.f) * 0.15f;
 		}
 		UpdateLegs(DeltaSeconds, VisNormal);
 	}
@@ -1935,6 +2006,7 @@ void AAntCharacter::UpdateLegs(float Dt, const FVector& N)
 			{
 				Desired = Hit.ImpactPoint;
 				bHit = true;
+				FootSurface = Hit.GetComponent();
 			}
 		}
 
@@ -1973,7 +2045,8 @@ void AAntCharacter::UpdateLegs(float Dt, const FVector& N)
 				if (!GroupStepping[L.Group] && FootstepVolume > 0.f)
 				{
 					// One tiny chitin tick per tripod step (louder for your own ant, pitch by size).
-					AntSfx::Play(this, Creature == 2 ? AntSfx::SpiderStep : AntSfx::Step, L.To, FootstepVolume, FMath::Clamp(1.4f - VisScale(), 0.45f, 1.5f));
+					// Each surface has its own tick: tile, wood, metal, fabric, soil, grass.
+					AntSfx::Play(this, Creature == 2 ? AntSfx::SpiderStep : AntSfx::StepFor(FootSurface.Get()), L.To, FootstepVolume, FMath::Clamp(1.1f - VisScale() * 2.f, 0.8f, 1.3f));
 				}
 				GroupStepping[L.Group] = true;
 			}

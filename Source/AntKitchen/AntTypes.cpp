@@ -190,33 +190,44 @@ FAntFoodDef RollFood(int32 Tier, FRandomStream& R)
 	switch (FMath::Clamp(Tier, 0, 3))
 	{
 	case 0:
-		switch (R.RandRange(0, 2))
+		switch (R.RandRange(0, 5))
 		{
 		case 0: return MakeFood(TEXT("Хлебная крошка"), 5, 3, FLinearColor(0.75f, 0.55f, 0.30f), EAntShape::Sphere, FVector(0.18f));
 		case 1: return MakeFood(TEXT("Крошка печенья"), 8, 4, FLinearColor(0.45f, 0.25f, 0.10f), EAntShape::Cube, FVector(0.15f));
+		case 2: return MakeFood(TEXT("Семечка"), 9, 3, FLinearColor(0.35f, 0.33f, 0.30f), EAntShape::Cone, FVector(0.14f, 0.09f, 0.3f));
+		case 3: return MakeFood(TEXT("Макаронина"), 9, 4, FLinearColor(0.95f, 0.85f, 0.45f), EAntShape::Cylinder, FVector(0.1f, 0.1f, 0.5f));
+		case 4: return MakeFood(TEXT("Горошина"), 6, 3, FLinearColor(0.35f, 0.70f, 0.25f), EAntShape::Sphere, FVector(0.16f));
 		default: return MakeFood(TEXT("Рисинка"), 6, 2, FLinearColor(0.95f, 0.95f, 0.90f), EAntShape::Sphere, FVector(0.22f, 0.10f, 0.10f));
 		}
 	case 1:
-		switch (R.RandRange(0, 3))
+		switch (R.RandRange(0, 6))
 		{
 		case 0: return MakeFood(TEXT("Кубик сахара"), 25, 9, FLinearColor(1.f, 1.f, 1.f), EAntShape::Cube, FVector(0.3f));
 		case 1: return MakeFood(TEXT("Кусочек сыра"), 45, 22, FLinearColor(1.f, 0.80f, 0.15f), EAntShape::Cube, FVector(0.4f, 0.3f, 0.2f));
 		case 2: return MakeFood(TEXT("Кошачий корм"), 20, 8, FLinearColor(0.40f, 0.20f, 0.08f), EAntShape::Sphere, FVector(0.3f));
+		case 3: return MakeFood(TEXT("Изюминка"), 22, 6, FLinearColor(0.25f, 0.10f, 0.20f), EAntShape::Sphere, FVector(0.24f, 0.18f, 0.18f));
+		case 4: return MakeFood(TEXT("Собачий корм"), 18, 9, FLinearColor(0.45f, 0.28f, 0.12f), EAntShape::Cylinder, FVector(0.3f, 0.3f, 0.18f));
+		case 5: return MakeFood(TEXT("Попкорн"), 20, 4, FLinearColor(0.98f, 0.95f, 0.80f), EAntShape::Sphere, FVector(0.36f, 0.32f, 0.30f));   // big and light
 		default: return MakeFood(TEXT("Хлопья"), 15, 5, FLinearColor(1.f, 0.55f, 0.10f), EAntShape::Sphere, FVector(0.3f, 0.3f, 0.12f));
 		}
 	case 2:
-		switch (R.RandRange(0, 3))
+		switch (R.RandRange(0, 6))
 		{
 		case 0: return MakeFood(TEXT("Мармеладка"), 60, 12, FLinearColor(R.FRand(), 0.2f, R.FRand()), EAntShape::Sphere, FVector(0.35f));
 		case 1: return MakeFood(TEXT("Капля мёда"), 50, 10, FLinearColor(1.f, 0.55f, 0.05f), EAntShape::Sphere, FVector(0.32f));
 		case 2: return MakeFood(TEXT("Кусочек торта"), 140, 36, FLinearColor(1.f, 0.55f, 0.70f), EAntShape::Cube, FVector(0.5f));
+		case 3: return MakeFood(TEXT("Кусочек яблока"), 55, 16, FLinearColor(0.85f, 0.95f, 0.60f), EAntShape::Cube, FVector(0.4f, 0.4f, 0.22f));
+		case 4: return MakeFood(TEXT("Зефирка"), 45, 7, FLinearColor(1.f, 0.90f, 0.93f), EAntShape::Cylinder, FVector(0.42f, 0.42f, 0.36f));       // fluffy: huge, weighs nothing
+		case 5: return MakeFood(TEXT("Орех в шоколаде"), 70, 15, FLinearColor(0.30f, 0.15f, 0.08f), EAntShape::Sphere, FVector(0.3f));
 		default: return MakeFood(TEXT("Чипсина"), 40, 6, FLinearColor(1.f, 0.85f, 0.30f), EAntShape::Cube, FVector(0.5f, 0.4f, 0.05f));
 		}
 	default:
-		switch (R.RandRange(0, 2))
+		switch (R.RandRange(0, 4))
 		{
 		case 0: return MakeFood(TEXT("Золотой мармеладный мишка"), 260, 48, FLinearColor(1.f, 0.75f, 0.10f), EAntShape::Sphere, FVector(0.55f));
 		case 1: return MakeFood(TEXT("Карамелька"), 120, 18, FLinearColor(0.9f, 0.10f, 0.10f), EAntShape::Sphere, FVector(0.45f));
+		case 2: return MakeFood(TEXT("Леденец"), 150, 20, FLinearColor(0.95f, 0.15f, 0.35f), EAntShape::Sphere, FVector(0.5f, 0.5f, 0.2f));
+		case 3: return MakeFood(TEXT("Кусок мороженого"), 200, 40, FLinearColor(1.f, 0.85f, 0.90f), EAntShape::Cube, FVector(0.55f, 0.55f, 0.4f));
 		default: return MakeFood(TEXT("Долька шоколада"), 180, 30, FLinearColor(0.25f, 0.12f, 0.05f), EAntShape::Cube, FVector(0.6f, 0.4f, 0.15f));
 		}
 	}
@@ -471,7 +482,26 @@ static const TCHAR* Names[Count] = { TEXT("S_Spit"), TEXT("S_Splat"), TEXT("S_Hi
 	TEXT("S_Deliver"), TEXT("S_Crunch"), TEXT("S_Stomp"), TEXT("S_Spray"), TEXT("S_Squish"), TEXT("S_Jump"), TEXT("S_Zap"), TEXT("S_Sizzle"),
 	TEXT("S_Splash"), TEXT("S_Rage"), TEXT("S_Bite"), TEXT("S_Buzz"), TEXT("S_Web"), TEXT("S_Hiss"), TEXT("S_Step"), TEXT("S_Ambience"),
 	TEXT("S_Swat"), TEXT("S_HumanStep"), TEXT("S_Faucet"), TEXT("S_FridgeDoor"), TEXT("S_Toaster"), TEXT("S_ArmyMarch"), TEXT("S_ArmyCharge"),
-	TEXT("S_Pickup_Gear"), TEXT("S_Legendary"), TEXT("S_SpiderStep"), TEXT("S_HumanPanic") };
+	TEXT("S_Pickup_Gear"), TEXT("S_Legendary"), TEXT("S_SpiderStep"), TEXT("S_HumanPanic"),
+	TEXT("S_Step_Wood"), TEXT("S_Step_Metal"), TEXT("S_Step_Fabric"), TEXT("S_Step_Soil"), TEXT("S_Step_Grass") };
+
+uint8 StepFor(const UPrimitiveComponent* Surface)
+{
+	if (!Surface)
+	{
+		return Step;
+	}
+	static const FName Wood(TEXT("Surf_Wood")), Metal(TEXT("Surf_Metal")), Fabric(TEXT("Surf_Fabric")), Soil(TEXT("Surf_Soil")), Grass(TEXT("Surf_Grass"));
+	for (const FName& T : Surface->ComponentTags)
+	{
+		if (T == Wood) { return StepWood; }
+		if (T == Metal) { return StepMetal; }
+		if (T == Fabric) { return StepFabric; }
+		if (T == Soil) { return StepSoil; }
+		if (T == Grass) { return StepGrass; }
+	}
+	return Step;
+}
 
 USoundBase* Get(uint8 Id)
 {
@@ -507,6 +537,10 @@ USoundBase* Get(uint8 Id)
 		}
 	}
 	const TArray<TWeakObjectPtr<USoundBase>>& L = Cache[Id];
+	if (L.Num() == 0 && Id >= StepWood && Id <= StepGrass)
+	{
+		return Get(Step);   // no recording for this surface yet: the plain tick
+	}
 	return L.Num() > 0 ? L[FMath::RandRange(0, L.Num() - 1)].Get() : nullptr;
 }
 

@@ -31,7 +31,7 @@ public:
 
 	/** Team 0: our colony (west baseboard). Team 1: rival fire ants (east, by the trash). */
 	static FVector NestLocation(uint8 Team = 0);
-	static float NestRadius(uint8 Team = 0) { return Team == 0 ? 650.f : 560.f; }
+	static float NestRadius(uint8 Team = 0) { return Team == 0 ? 950.f : 560.f; }
 	/** Where the big prizes lie: they need several ants. */
 	static void HeavySpots(TArray<FVector>& Out);
 	static FVector HumanSpawn();
@@ -46,7 +46,7 @@ public:
 	static FVector Doorway() { return FVector(7100.f, -4000.f, 0.f); }
 	/** Next point to walk to on the way From -> To (through the doorway / out the window into the yard). */
 	static FVector Route(const FVector& From, const FVector& To, bool bFlying = false);
-	/** 0 kitchen, 1 living room, 2 yard. */
+	/** 0 kitchen, 1 living room, 2 back yard (south), 3 the west lawn / sidewalk / street (the colony's nest is there). */
 	static int32 Region(const FVector& P);
 	/** A random point on the lawn outside the window. */
 	static FVector RandomYardPoint(FRandomStream* Rng = nullptr);
@@ -78,6 +78,14 @@ private:
 	void BuildSecrets();
 	void BuildLivingRoom();
 	void BuildYard();
+	void BuildShell();
+	void BuildDucts();
+	void BuildWestStreet();
+	void BuildClutter();
+
+	/** Air moving through a duct: ants inside are carried along. */
+	struct FDuctWind { FBox Box; FVector Dir; };
+	TArray<FDuctWind> DuctWind;
 
 	UPROPERTY()
 	USceneComponent* Root = nullptr;

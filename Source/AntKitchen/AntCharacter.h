@@ -25,6 +25,7 @@ namespace AntStatus
 	constexpr uint8 Stream = 1 << 4;
 	constexpr uint8 Burning = 1 << 5;
 	constexpr uint8 Webbed = 1 << 6;
+	constexpr uint8 Staggered = 1 << 7;   // just took a hard hit: slow for a moment
 }
 
 /** What the kitchen does to an ant right now (filled on the server by the zones and hazards). */
@@ -101,6 +102,15 @@ public:
 	static constexpr bool ArtFlipFlagellum = false;
 
 	UPROPERTY(Replicated, BlueprintReadOnly) float Health = 100.f;
+	/** Acid in the glands: every spit costs some, it refills by itself (faster when you hold fire). */
+	UPROPERTY(Replicated) float Acid = 100.f;
+	static constexpr float MaxAcid = 100.f;
+	/** Server: a hard hit (from behind, a crit) knocks the ant about and staggers it for a moment. */
+	void Stagger(float Seconds, const FVector& Knock);
+	/** Server: what this spit would cost. */
+	float AcidCost() const { return Weapon.bWeb ? 18.f : 7.f + Weapon.Damage * 0.25f; }
+	/** [Ctrl] a short dash in the direction you move: dodge the spit, close the gap (bots use it too). */
+	void Dash();
 	UPROPERTY(BlueprintReadOnly) float MaxHealth = 100.f;
 	/** Food this ant is holding in its mandibles (dragged together with other ants). */
 	UPROPERTY(ReplicatedUsing = OnRep_Carry) AKitchenLoot* Carrying = nullptr;
@@ -228,6 +238,10 @@ protected:
 	void StopFire();
 	void Interact();
 	void StartSprint();
+	UFUNCTION(Server, Unreliable) void ServerDash();
+	float NextDash = -100.f;
+	float NextDryToast = -100.f;
+	float StaggerTime = 0.f;
 	void StopSprint();
 	virtual void DoJump();
 	virtual void DoStopJump();
@@ -322,6 +336,8 @@ protected:
 	float ServerNextFireTime = 0.f;
 	float LastDamageTime = -100.f;
 	float LastEnvToast = -100.f;
+	/** What the feet stand on (for per-surface footsteps). */
+	TWeakObjectPtr<UPrimitiveComponent> FootSurface;
 	float DamageAccum = 0.f;
 	float NurseTimer = 0.f;
 	float Trauma = 0.f;

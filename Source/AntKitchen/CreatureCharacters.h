@@ -42,6 +42,8 @@ protected:
 	UPROPERTY() UAudioComponent* BuzzAudio = nullptr;
 	float FlapTime = 0.f;
 	float BoostFov = 0.f;
+	float BuzzLevel = 0.f;     // wings audible only while accelerating / boosting
+	float PrevSpeed = 0.f;
 };
 
 /**

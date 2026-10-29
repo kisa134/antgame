@@ -14,6 +14,7 @@
 #include "AntArmy.h"
 #include "AntChain.h"
 #include "WarMode.h"
+#include "Critters.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "EngineUtils.h"
@@ -161,16 +162,17 @@ void AAntKitchenGameMode::SpawnGadgets()
 	Spawn(AKitchenWire::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, NoSetup);
 	Spawn(AKitchenTrap::StaticClass(), FVector(-3150.f, 3450.f, 140.f), FRotator(0.f, 90.f, 0.f), NoSetup);
 
-	// Secret routes (each end leads to the other).
-	Passage(EPassageLook::Vent, FVector(-3100.f, -4995.f, 0.f), 90.f, FVector(-4500.f, 4500.f, 4470.f), TEXT("вентиляция → на верхние шкафы"));
-	Passage(EPassageLook::Vent, FVector(-4500.f, 4995.f, 4400.f), -90.f, FVector(-3100.f, -4750.f, 60.f), TEXT("вентиляция → к кошачьим мискам"));
-	Passage(EPassageLook::Vent, FVector(6995.f, 400.f, 0.f), 180.f, FVector(3700.f, 4350.f, 3760.f), TEXT("вентиляция → на холодильник"));
-	Passage(EPassageLook::Vent, FVector(3700.f, 4995.f, 3700.f), -90.f, FVector(6750.f, 400.f, 60.f), TEXT("вентиляция → в мусорный угол"));
+	// Secret routes (each end leads to the other). The air ducts are real now: crawl in through the grilles (KitchenHouse.cpp).
 	Passage(EPassageLook::Drain, FVector(-3500.f, 4000.f, 1150.f), 0.f, FVector(-3500.f, 3600.f, 200.f), TEXT("слив раковины → под мойку"));
 	Passage(EPassageLook::Pipe, FVector(-3300.f, 4300.f, 140.f), 0.f, FVector(-3700.f, 3800.f, 1210.f), TEXT("труба → в раковину"));
-	// A crack under the window: the short way to the yard and back (or climb out over the sill).
-	Passage(EPassageLook::Hole, FVector(-4500.f, -4995.f, 0.f), 90.f, FVector(-4500.f, -5600.f, 60.f), TEXT("щель под окном → во двор"));
-	Passage(EPassageLook::Hole, FVector(-4500.f, -5205.f, 0.f), -90.f, FVector(-4500.f, -4700.f, 60.f), TEXT("щель под окном → на кухню"));
+	// The pets and the rest of the family (primitives for now).
+	Spawn(ACritter::StaticClass(), FVector(600.f, -600.f, 0.f), FRotator::ZeroRotator, [](AActor* A) { CastChecked<ACritter>(A)->Kind = 0; });
+	Spawn(ACritter::StaticClass(), FVector(13500.f, 400.f, 950.f), FRotator(0.f, -90.f, 0.f), [](AActor* A) { CastChecked<ACritter>(A)->Kind = 1; });
+	Spawn(AHouseholdNpc::StaticClass(), FVector(13500.f, 300.f, 950.f), FRotator::ZeroRotator, [](AActor* A) { CastChecked<AHouseholdNpc>(A)->Kind = 0; });
+	Spawn(AHouseholdNpc::StaticClass(), FVector(9250.f, -5800.f, 800.f), FRotator::ZeroRotator, [](AActor* A) { CastChecked<AHouseholdNpc>(A)->Kind = 1; });
+	// Grandma's ball of yarn on the floor with the thread running up to her lap: a climb.
+	// (geometry lives in KitchenBuilder so every client has it; the stash under the loose tile is loot.)
+	SpawnStash(FVector(5000.f, 2000.f, -350.f), 90, 16, 3);
 
 	// Fly food: dog poop on the lawn, the outdoor bin, the kitchen trash.
 	auto Feeder = [&Spawn](uint8 Kind, const FVector& Loc)

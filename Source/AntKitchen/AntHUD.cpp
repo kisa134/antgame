@@ -276,6 +276,12 @@ void AAntHUD::DrawAnt(AAntCharacter* Ant)
 	const float HFrac = Ant->Health / FMath::Max(1.f, Ant->MaxHealth);
 	Txt(FString::Printf(TEXT("ЗДОРОВЬЕ %d"), FMath::CeilToInt(Ant->Health)), X, Y - 28.f * S, White, Small, 1.2f * S);
 	Bar(X, Y, 340.f * S, 24.f * S, HFrac, FMath::Lerp(Red, Green, HFrac));
+	if (Ant->Creature != 2)
+	{
+		// Acid: what you have to spit with.
+		const float AFrac = Ant->Acid / AAntCharacter::MaxAcid;
+		Bar(X, Y + 26.f * S, 340.f * S, 7.f * S, AFrac, AFrac < 0.2f ? Red : FLinearColor(0.55f, 1.f, 0.3f));
+	}
 
 	const FAntClassDef& Cls = Ant->GetClassDef();
 	if (AKitchenLoot* C = Ant->Carrying)
@@ -659,7 +665,7 @@ void AAntHUD::DrawHelp(APawn* Me)
 	}
 	else
 	{
-		Help = TEXT("ЛКМ — плевок | ПКМ — укус | E — взять/отпустить | G — СЦЕПКА (мост, лестница, держать друга) | F/R — армия | Y — отозвать рой | T — тропа | P — сторона | J муха | K паук | H Человек | Tab счёт");
+		Help = TEXT("ЛКМ — плевок (кислота кончается — жди) | ПКМ — укус | Ctrl — РЫВОК | в спину — крит | E — взять/отпустить | G — сцепка | F/R — армия | Y — рой | T — тропа | P — сторона | J муха | K паук | H Человек | Tab счёт");
 	}
 	Txt(Help, Canvas->ClipX * 0.5f, Canvas->ClipY - 26.f * S, FLinearColor(1.f, 1.f, 1.f, 0.6f), GEngine->GetSmallFont(), 1.f * S, true);
 }

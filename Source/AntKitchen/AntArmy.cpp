@@ -277,7 +277,7 @@ void AAntArmy::Tick(float Dt)
 	}
 	if (March)
 	{
-		March->SetVolumeMultiplier(FMath::Clamp(0.25f + Count / 1500.f, 0.25f, 1.f) * (bMoving ? 1.f : 0.4f));
+		March->SetVolumeMultiplier(FMath::Clamp(0.08f + Count / 1500.f, 0.08f, 0.5f) * (bMoving ? 1.f : 0.3f));
 	}
 	PrepareLayout();
 	TArray<FTransform> Xf;

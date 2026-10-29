@@ -217,6 +217,20 @@ void AAntBotController::Think(AAntCharacter* Ant)
 		return;
 	}
 
+	// Hurt and under fire: fall back towards home, shooting over the shoulder; dash out of trouble.
+	if (Ant->Health < Ant->MaxHealth * 0.3f && ShootTarget.IsValid() && !Ant->Carrying)
+	{
+		const FVector Away = (Ant->GetActorLocation() - ShootTarget->GetActorLocation()).GetSafeNormal2D();
+		Goal = Ant->GetActorLocation() + Away * 900.f + (AKitchenBuilder::NestLocation(Ant->Team) - Ant->GetActorLocation()).GetSafeNormal2D() * 600.f;
+		bHasGoal = true;
+		if (FMath::FRand() < 0.3f) { Ant->Dash(); }
+		return;
+	}
+	if (ShootTarget.IsValid() && Cast<AAntCharacter>(ShootTarget.Get()) && FMath::FRand() < 0.08f)
+	{
+		Ant->Dash();   // sidestep now and then in a duel
+	}
+
 	AKitchenLoot* Carry = Ant->Carrying;
 	if (!Carry && LastCarried.IsValid())
 	{

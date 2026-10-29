@@ -110,7 +110,10 @@ namespace AntKit
 namespace AntSfx
 {
 	enum EId : uint8 { Spit, Splat, Hit, Crit, Kill, Grab, Drop, Deliver, Crunch, Stomp, Spray, Squish, Jump, Zap, Sizzle, Splash, Rage, Bite, Buzz, Web, Hiss, Step, Ambience,
-		Swat, HumanStep, Faucet, FridgeDoor, Toaster, ArmyMarch, ArmyCharge, PickupGear, Legendary, SpiderStep, HumanPanic, Count };
+		Swat, HumanStep, Faucet, FridgeDoor, Toaster, ArmyMarch, ArmyCharge, PickupGear, Legendary, SpiderStep, HumanPanic,
+		StepWood, StepMetal, StepFabric, StepSoil, StepGrass, Count };
+	/** Footstep id for the surface the foot is on (components tagged Surf_* by the kitchen builder; default: hard tile). */
+	ANTKITCHEN_API uint8 StepFor(const class UPrimitiveComponent* Surface);
 	ANTKITCHEN_API class USoundBase* Get(uint8 Id);
 	/** Shared distance falloff for looping world sounds. */
 	ANTKITCHEN_API class USoundAttenuation* Attenuation();

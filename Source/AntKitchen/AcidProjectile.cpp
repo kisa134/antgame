@@ -171,9 +171,24 @@ void AAcidProjectile::Explode(AActor* DirectHit)
 
 	auto Hurt = [this, InstController, PC, &Here](AActor* Victim, float Amount)
 	{
-		const bool bCrit = FMath::FRand() < 0.12f;
-		const float Final = bCrit ? Amount * 2.f : Amount;
+		bool bCrit = FMath::FRand() < 0.12f;
+		float Final = Amount;
+		AAntCharacter* V = Cast<AAntCharacter>(Victim);
+		if (V)
+		{
+			// Flanking pays: a hit in the back is a sure crit, and a crit staggers the target and knocks it about.
+			const FVector ToHit = (Here - V->GetActorLocation()).GetSafeNormal();
+			const bool bBehind = FVector::DotProduct(ToHit, V->GetActorForwardVector()) < -0.35f;
+			if (bBehind) { bCrit = true; }
+			if (bCrit && PC) { PC->ClientToast(bBehind ? TEXT("В СПИНУ!") : TEXT("КРИТ!")); }
+		}
+		Final = bCrit ? Amount * 2.f : Amount;
 		UGameplayStatics::ApplyDamage(Victim, Final, InstController, this, UDamageType::StaticClass());
+		if (V && !V->bDead && (bCrit || Final >= 25.f))
+		{
+			const FVector Knock = GetVelocity().GetSafeNormal() * (120.f + Final * 6.f) * AntKit::SpeedK + V->GetVisualUp() * 90.f * AntKit::SpeedK;
+			V->Stagger(bCrit ? 0.6f : 0.35f, Knock);
+		}
 		if (PC)
 		{
 			PC->ClientDamageNumber(Here, FMath::RoundToInt(Final), bCrit);

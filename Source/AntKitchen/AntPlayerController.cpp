@@ -18,8 +18,8 @@ void AAntPlayerController::BeginPlay()
 	Super::BeginPlay();
 	if (IsLocalController())
 	{
-		// Kitchen room tone: fridge hum and air, under everything.
-		if (USoundBase* Amb = AntSfx::Get(AntSfx::Ambience))
+		// Kitchen room tone: fridge hum and air. Off for now (too much noise under everything).
+		if (USoundBase* Amb = nullptr)
 		{
 			UGameplayStatics::SpawnSound2D(this, Amb, 0.35f, 1.f, 0.f, nullptr, true, false);
 		}
