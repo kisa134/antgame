@@ -19,3 +19,6 @@ vs_install.log
 Dist/
 *.log
 *.zip
+
+DistFx/
+DistArt/

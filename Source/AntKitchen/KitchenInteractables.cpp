@@ -1,4 +1,7 @@
 ﻿#include "KitchenInteractables.h"
+#include "AntFx.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 #include "AntCharacter.h"
 #include "AntKitchenGameMode.h"
 #include "KitchenBuilder.h"
@@ -432,6 +435,12 @@ void AKitchenFaucet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 void AKitchenFaucet::BeginPlay()
 {
 	Super::BeginPlay();
+	// Dev/test: -AntGadgetsOn starts with the hot tap running and the burner on (to look at the water and the steam).
+	if (HasAuthority() && FParse::Param(FCommandLine::Get(), TEXT("AntGadgetsOn")))
+	{
+		bOn = true;
+		bHot = true;
+	}
 	ShownLevel = WaterLevel;
 	if (GetNetMode() != NM_DedicatedServer)
 	{
@@ -497,6 +506,25 @@ void AKitchenFaucet::Tick(float DeltaSeconds)
 			const float Wobble = 1.f + 0.08f * FMath::Sin(Now() * 30.f);
 			StreamMesh->SetRelativeLocation(FVector(S.X, S.Y, Bottom + Len * 0.5f));
 			StreamMesh->SetRelativeScale3D(FVector(0.6f * Wobble, 0.6f * Wobble, Len / 100.f));
+
+			// Where the stream lands: droplets jump, rings spread over the water, hot water steams.
+			const FVector Land = GetActorTransform().TransformPosition(FVector(S.X, S.Y, Bottom + 2.f));
+			SplashAccum += DeltaSeconds;
+			RippleAccum += DeltaSeconds;
+			if (SplashAccum >= 0.06f)
+			{
+				SplashAccum = 0.f;
+				AntFx::Droplets(this, Land, 2, 14.f);
+				if (bHot && FMath::FRand() < 0.3f)
+				{
+					AntFx::Steam(this, Land + FVector(0.f, 0.f, 20.f), 140.f, 160.f);
+				}
+			}
+			if (RippleAccum >= 0.4f)
+			{
+				RippleAccum = 0.f;
+				AntFx::Ripple(this, Land, ShownLevel > BasinFloor + 4.f ? 420.f : 150.f);
+			}
 		}
 	}
 }

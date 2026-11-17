@@ -1,4 +1,5 @@
 ﻿#include "KitchenLoot.h"
+#include "AntFx.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/BoxComponent.h"
 #include "PhysicalMaterials/PhysicalMaterial.h"
@@ -430,6 +431,23 @@ void AKitchenLoot::Tick(float DeltaSeconds)
 	if (!bIsGear)
 	{
 		Mesh->SetRelativeLocation(ArtOffset);   // food is a physics body: it tumbles for real
+		// Too heavy to lift: it scrapes along the floor, leaving crumbs and a little dust behind.
+		const FVector Here = GetActorLocation();
+		if (IsCarried() && CarryRatio() < 1.f && !bHeld)
+		{
+			const float Rad = GetRadius();
+			DragFxDist += FMath::Min(60.f, (float)FVector::Dist(Here, DragFxLast));
+			if (DragFxDist > Rad * 0.7f + 5.f)
+			{
+				DragFxDist = 0.f;
+				AntFx::DragCrumbs(this, Here - FVector(0.f, 0.f, Rad * 0.8f), Color, Rad);
+			}
+		}
+		else
+		{
+			DragFxDist = 0.f;
+		}
+		DragFxLast = Here;
 		return;
 	}
 	Mesh->SetRelativeLocation(ArtOffset + FVector(0.f, 0.f, FMath::Sin(Phase * 2.5f) * 6.f));

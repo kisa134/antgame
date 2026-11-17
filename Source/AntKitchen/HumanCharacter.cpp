@@ -1,4 +1,5 @@
 ﻿#include "HumanCharacter.h"
+#include "AntFx.h"
 #include "KitchenLoot.h"
 #include "InputCoreTypes.h"
 #include "TimerManager.h"
@@ -222,15 +223,7 @@ void AHumanCharacter::BuildBody()
 		}
 	}
 
-	// Spray cloud puffs (only visible while spraying).
-	for (int32 i = 0; i < 16; ++i)
-	{
-		UStaticMeshComponent* Puff = AntKit::AddPart(this, R, EAntShape::Sphere, FVector::ZeroVector, FVector(0.5f), FLinearColor(0.55f, 0.9f, 0.35f));
-		Puff->SetCastShadow(false);
-		Puff->SetUsingAbsoluteLocation(true);
-		Puff->SetVisibility(false);
-		Puffs.Add(Puff);
-	}
+	// (The spray cloud is drawn by AntFx::SprayPuff in UpdateVisuals: translucent puffs that drift and linger.)
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -854,22 +847,17 @@ void AHumanCharacter::UpdateVisuals(float DeltaSeconds)
 
 	const FVector Origin = GetSprayOrigin();
 	const FVector Dir = GetSprayDirection();
-	const FVector Side = FVector::CrossProduct(Dir, FVector::UpVector).GetSafeNormal();
-	const FVector Up = FVector::CrossProduct(Side, Dir);
-	for (int32 i = 0; i < Puffs.Num(); ++i)
+
+	// The cloud: puffs shot down the cone (the same 20 degrees that hurt), slowing and hanging in the air for a moment.
+	if (bSpraying)
 	{
-		UStaticMeshComponent* Puff = Puffs[i];
-		if (!bSpraying)
+		SprayFxAccum += DeltaSeconds * 26.f;
+		int32 Burst = 0;
+		while (SprayFxAccum >= 1.f && Burst++ < 4)
 		{
-			Puff->SetVisibility(false);
-			continue;
+			SprayFxAccum -= 1.f;
+			AntFx::SprayPuff(this, Origin, Dir, GetSprayRange());
 		}
-		const float Frac = FMath::Fmod(Now * 1.6f + i / (float)Puffs.Num(), 1.f);
-		const float Ang = i * 2.399f;
-		const float Spread = Frac * GetSprayRange() * 0.33f;
-		const FVector Pos = Origin + Dir * Frac * GetSprayRange() + (Side * FMath::Cos(Ang) + Up * FMath::Sin(Ang)) * Spread * 0.6f;
-		Puff->SetVisibility(true);
-		Puff->SetWorldLocation(Pos);
-		Puff->SetWorldScale3D(FVector(0.4f + Frac * 4.f));
+		SprayFxAccum = FMath::Min(SprayFxAccum, 1.f);
 	}
 }

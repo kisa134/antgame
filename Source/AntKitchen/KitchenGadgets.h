@@ -38,6 +38,7 @@ private:
 	UPROPERTY() TArray<UStaticMeshComponent*> Bubbles;
 	UPROPERTY() UPointLightComponent* Glow = nullptr;
 	float Anim = 0.f;
+	float SteamAccum = 0.f;   // cosmetic
 };
 
 /** The pedal bin: step on the pedal and the lid swings up for a while; inside, the good stuff. */

@@ -3,6 +3,7 @@
 #include "KitchenLoot.h"
 #include "AntCharacter.h"
 #include "AntTypes.h"
+#include "AntFx.h"
 #include "Net/UnrealNetwork.h"
 #include "Engine/World.h"
 
@@ -47,6 +48,34 @@ void AAntGameState::MulticastSfx_Implementation(uint8 Id, FVector_NetQuantize Lo
 		return;
 	}
 	AntSfx::Play(this, Id, Location, Id == AntSfx::Stomp ? 1.6f : 1.f, Pitch);
+	// What you hear you also see (cosmetic, local): dust under the slipper, sparks, splashes, steam, the nest lighting up.
+	const FVector At = Location;
+	switch (Id)
+	{
+	case AntSfx::Stomp:
+		AntFx::StompDust(this, At);
+		break;
+	case AntSfx::Zap:
+		AntFx::Sparks(this, At + FVector(0.f, 0.f, 10.f), 16, 7.f);
+		break;
+	case AntSfx::Splash:
+		AntFx::Splash(this, At, 5.f);
+		break;
+	case AntSfx::Sizzle:
+		for (int32 i = 0; i < 5; ++i)
+		{
+			AntFx::Steam(this, At + FVector(0.f, 0.f, 4.f), 16.f, 45.f);
+		}
+		break;
+	case AntSfx::Deliver:
+	{
+		const bool bRival = FVector::DistSquared2D(At, AKitchenBuilder::NestLocation(1)) < FVector::DistSquared2D(At, AKitchenBuilder::NestLocation(0));
+		AntFx::DeliverPulse(this, At, bRival ? FLinearColor(1.f, 0.35f, 0.12f) : FLinearColor(1.f, 0.8f, 0.2f));
+		break;
+	}
+	default:
+		break;
+	}
 	// Big hits shake the local camera.
 	if (Id == AntSfx::Stomp || Id == AntSfx::Crunch || Id == AntSfx::Zap || Id == AntSfx::Swat)
 	{

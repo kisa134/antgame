@@ -132,6 +132,8 @@ private:
 	UPROPERTY() UMaterialInstanceDynamic* WaterMID = nullptr;
 	UPROPERTY() class UAudioComponent* FlowAudio = nullptr;
 	float ShownLevel = 1150.f;
+	float SplashAccum = 0.f;   // cosmetic: droplets, ripples and steam where the stream lands
+	float RippleAccum = 0.f;
 	mutable TMap<TWeakObjectPtr<AAntCharacter>, float> LastKnock;
 };
 

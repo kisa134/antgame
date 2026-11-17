@@ -143,4 +143,7 @@ private:
 	FVector ShatterAt = FVector::ZeroVector;
 	FVector ArtOffset = FVector::ZeroVector;
 	bool bHasArt = false;
+	/** Cosmetic: how far it has been dragged since the last crumbs. */
+	FVector DragFxLast = FVector::ZeroVector;
+	float DragFxDist = 0.f;
 };

@@ -19,6 +19,7 @@
 #include "AntMenu.h"
 #include "KitchenLoot.h"
 #include "Engine/PostProcessVolume.h"
+#include "AntFx.h"
 #include "EngineUtils.h"
 
 void AAntPlayerController::BeginPlay()
@@ -108,6 +109,24 @@ void AAntPlayerController::BeginPlay()
 		{
 			FTimerHandle H;
 			GetWorldTimerManager().SetTimer(H, FTimerDelegate::CreateWeakLambda(this, [this, TestAnts]() { ServerSwarmTest(TestAnts); }), 2.f, false);
+		}
+		// Dev/test: -AntFxTest plays every cosmetic effect in a row in front of where you stand, over and over.
+		if (FParse::Param(FCommandLine::Get(), TEXT("AntFxTest")))
+		{
+			FTimerHandle FH;
+			GetWorldTimerManager().SetTimer(FH, FTimerDelegate::CreateWeakLambda(this, [this]()
+			{
+				static FVector At = FVector::ZeroVector;
+				static FRotator Rot = FRotator::ZeroRotator;
+				static bool bPinned = false;
+				if (!bPinned && PlayerCameraManager)
+				{
+					bPinned = true;
+					At = PlayerCameraManager->GetCameraLocation();
+					Rot = PlayerCameraManager->GetCameraRotation();
+				}
+				AntFx::TestAll(this, At, Rot);
+			}), 0.25f, true, 6.f);
 		}
 		// Dev/test: -AntSmashAt=seconds smashes a handful of food, to see the fracture without climbing the fridge.
 		float SmashAt = 0.f;

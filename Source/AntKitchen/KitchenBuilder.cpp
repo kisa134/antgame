@@ -8,6 +8,11 @@
 #include "Components/SkyLightComponent.h"
 #include "Components/SkyAtmosphereComponent.h"
 #include "Components/ExponentialHeightFogComponent.h"
+#include "Components/SpotLightComponent.h"
+#include "Components/PostProcessComponent.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
+#include "AntFx.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/DamageType.h"
 #include "EngineUtils.h"
@@ -384,7 +389,7 @@ namespace
 	{
 		auto Is = [&C](const FLinearColor& K) { return C.Equals(K, 0.002f); };
 		FSurf S;
-		if (Is(TileA) || Is(TileB)) { S.Mode = 0; S.Tex = TEXT("T_Floor_Tile"); S.Size = 1400.f; S.Tint = Is(TileA) ? 1.f : 0.93f; S.Rough = 0.22f; }
+		if (Is(TileA) || Is(TileB)) { S.Mode = 0; S.Tex = TEXT("T_Floor_Tile"); S.Size = 1400.f; S.Tint = Is(TileA) ? 1.f : 0.93f; S.Rough = 0.3f; }   // satin, not a mirror: from an ant's eye every tile is seen at a grazing angle
 		else if (Is(WallC)) { S.Mode = 4; S.bUseColor = true; S.Rough = 0.9f; }
 		else if (Is(Ceiling)) { S.Mode = 0; S.Tex = TEXT("T_Ceiling"); S.Size = 900.f; S.Rough = 0.95f; }
 		else if (Is(Backsplash)) { S.Mode = 0; S.Tex = TEXT("T_Subway_Tile"); S.Size = 700.f; S.Rough = 0.12f; }
@@ -561,6 +566,7 @@ UPointLightComponent* AKitchenBuilder::Lamp(const FVector& Loc, float Intensity,
 	L->Intensity = Intensity;
 	L->AttenuationRadius = Radius;
 	L->CastShadows = bShadows;
+	L->VolumetricScatteringIntensity = 0.f;   // lamps must not light up the haze: only the sun draws shafts in it
 	L->SetLightColor(Color);
 	L->RegisterComponent();
 	AddInstanceComponent(L);
@@ -760,6 +766,45 @@ void AKitchenBuilder::Build()
 	WindowLight = Lamp(FVector(0.f, -4500.f, 3200.f), 3.f, FLinearColor(0.7f, 0.85f, 1.f), 6000.f, false);       // window daylight
 	Lamp(FVector(3900.f, 5300.f, 330.f), 2.5f, FLinearColor(1.f, 0.6f, 0.25f), 800.f, false);      // candle in the mouse room
 
+	// The lamp over the dinner table: a warm pool of light on the table, real shadows under it. Follows the switch.
+	{
+		const FVector P(500.f, -500.f, 3500.f);
+		Cyl(FVector(P.X, P.Y, P.Z + 280.f), 9.f, 5400.f - P.Z - 280.f, Black, false);                                             // cord
+		Part(EAntShape::Cone, FVector(P.X, P.Y, P.Z + 150.f), FVector(950.f, 950.f, 300.f), FRotator::ZeroRotator, Hex(200, 110, 55), false);   // shade
+		PendantBulb = AntFx::MakeGlow(Part(EAntShape::Sphere, FVector(P.X, P.Y, P.Z - 30.f), FVector(170.f, 170.f, 200.f), FRotator::ZeroRotator, White, false), FLinearColor(6.f, 4.4f, 2.2f));
+		Pendant = NewObject<USpotLightComponent>(this);
+		Pendant->SetMobility(EComponentMobility::Movable);
+		Pendant->SetupAttachment(Root);
+		Pendant->SetRelativeLocationAndRotation(FVector(P.X, P.Y, P.Z - 40.f), FRotator(-90.f, 0.f, 0.f));
+		Pendant->IntensityUnits = ELightUnits::Unitless;
+		Pendant->bUseInverseSquaredFalloff = false;
+		Pendant->LightFalloffExponent = 2.f;
+		Pendant->Intensity = 0.f;
+		Pendant->AttenuationRadius = 6500.f;
+		Pendant->InnerConeAngle = 22.f;   // a pool on the table and the floor around it, not a floodlight for the walls
+		Pendant->OuterConeAngle = 46.f;
+		Pendant->CastShadows = true;
+		Pendant->VolumetricScatteringIntensity = 0.5f;   // a soft cone in the haze at night
+		Pendant->SetLightColor(FLinearColor(1.f, 0.76f, 0.48f));
+		Pendant->RegisterComponent();
+		AddInstanceComponent(Pendant);
+	}
+	// The light under the range hood: always on, a small warm island over the stove.
+	{
+		const FVector P(-750.f, 4550.f, 3290.f);
+		HoodBulb = AntFx::MakeGlow(Box(FVector(P.X - 260.f, P.Y - 60.f, P.Z - 6.f), FVector(P.X + 260.f, P.Y + 60.f, P.Z + 10.f), White, false), FLinearColor(5.f, 4.2f, 2.8f));
+		HoodLight = Lamp(P - FVector(0.f, 150.f, 60.f), 0.f, FLinearColor(1.f, 0.84f, 0.62f), 2700.f, true);
+	}
+	// The light a real room bounces around, faked with weak shadowless fills (cheap, and identical on every machine):
+	// one from above the ceiling - the floor under furniture is dark but never black - and one from under the floor -
+	// the undersides of tables and the lower walls catch what the floor throws back. Outside the room on purpose:
+	// no bright blob on the ceiling or the floor next to them.
+	for (const FVector& C : { FVector(0.f, 0.f, 0.f), FVector(13700.f, -4000.f, 0.f) })
+	{
+		AmbFills.Add(Lamp(C + FVector(0.f, 0.f, 9500.f), 0.f, FLinearColor::White, 30000.f, false));
+		BounceFills.Add(Lamp(C - FVector(0.f, 0.f, 4500.f), 0.f, FLinearColor::White, 30000.f, false));
+	}
+
 	BuildSecrets();
 	BuildLivingRoom();
 
@@ -773,6 +818,7 @@ void AKitchenBuilder::Build()
 	Fill->SetLightColor(FLinearColor(1.f, 0.9f, 0.75f));
 	Fill->bAtmosphereSunLight = true;
 	Fill->VolumetricScatteringIntensity = 3.f;
+	Fill->LightSourceAngle = 1.2f;   // slightly soft shadow edges: cosier, and furniture shadows read as shade, not as holes
 	Fill->RegisterComponent();
 	AddInstanceComponent(Fill);
 
@@ -787,23 +833,46 @@ void AKitchenBuilder::Build()
 	SkyL->SetupAttachment(Root);
 	SkyL->bRealTimeCapture = true;
 	SkyL->Intensity = 1.2f;
+	SkyL->VolumetricScatteringIntensity = 0.25f;   // the sky barely lights the haze: the room stays clear, the beams stand out
 	SkyL->RegisterComponent();
 	AddInstanceComponent(SkyL);
+	SkyFill = SkyL;
 
-	// Dust in the air: visible sun beams.
+	// Dust in the air: visible sun beams. The haze itself is thin (the far wall must stay crisp); the beams come from
+	// the sun lighting it far more strongly than anything else does (FTimeOfDay::SunShafts), the lamps not at all.
 	UExponentialHeightFogComponent* Fog = NewObject<UExponentialHeightFogComponent>(this);
 	Fog->SetupAttachment(Root);
 	Fog->SetRelativeLocation(FVector(0.f, 0.f, 0.f));
-	Fog->FogDensity = 0.0025f;
+	Fog->FogDensity = 0.004f;
 	Fog->FogHeightFalloff = 0.02f;
+	Fog->FogMaxOpacity = 0.6f;
 	Fog->bEnableVolumetricFog = true;
-	Fog->VolumetricFogScatteringDistribution = 0.75f;
-	Fog->VolumetricFogExtinctionScale = 0.6f;
-	Fog->VolumetricFogDistance = 12000.f;
+	Fog->VolumetricFogScatteringDistribution = 0.45f;
+	Fog->VolumetricFogExtinctionScale = 1.f;
+	Fog->VolumetricFogDistance = 16000.f;
 	Fog->RegisterComponent();
 	AddInstanceComponent(Fog);
+	Haze = Fog;
 
-	SetMainLights(AKitchenSwitch::AreLightsOn(GetWorld()));
+	// Exposure and white balance follow the time of day (off with -AntNoPP, like the rest of the grade).
+	if (!FParse::Param(FCommandLine::Get(), TEXT("AntNoPP")) && GetNetMode() != NM_DedicatedServer)
+	{
+		TodGrade = NewObject<UPostProcessComponent>(this);
+		TodGrade->SetupAttachment(Root);
+		TodGrade->bUnbound = true;
+		TodGrade->Priority = 20.f;
+		TodGrade->RegisterComponent();
+		AddInstanceComponent(TodGrade);
+	}
+	// -AntTime=0|1|2 pins the time of day (morning / golden evening / night) whatever the shift is.
+	int32 Pinned = -1;
+	if (FParse::Value(FCommandLine::Get(), TEXT("AntTime="), Pinned))
+	{
+		ForcedTod = FMath::Clamp(Pinned, 0, 2);
+	}
+
+	bMainOn = AKitchenSwitch::AreLightsOn(GetWorld());
+	UpdateTimeOfDay(0.f);
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1216,19 +1285,235 @@ void AKitchenBuilder::EnvironmentFor(const AAntCharacter* Ant, FAntEnv& Env)
 
 void AKitchenBuilder::SetMainLights(bool bOn)
 {
-	for (UPointLightComponent* L : MainLamps)
+	bMainOn = bOn;
+	ApplyLights();
+}
+
+// ---------------------------------------------------------------------------------------------
+// Time of day. Every shift has its own light: 1 morning, 2 golden evening, 3 night with the lamps on, then round
+// again. All of it is local (this actor is built on every machine); the only input is the replicated shift number.
+// ---------------------------------------------------------------------------------------------
+
+AKitchenBuilder::FTimeOfDay AKitchenBuilder::TimeOfDay(int32 Index)
+{
+	FTimeOfDay T;
+	switch (Index)
 	{
-		if (L) { L->SetVisibility(bOn); }
+	default:   // morning: a clean sun from the south-east, a long strip of light across the west floor up to the counters
+		T.SunRot = FRotator(-26.f, 105.f, 0.f);
+		T.SunColor = FLinearColor(1.f, 0.93f, 0.80f);
+		T.SunLux = 9.f;
+		T.SunShafts = 26.f;
+		T.Sky = 1.25f;
+		T.Lamps = 0.22f;
+		T.Practicals = 0.35f;
+		T.Amb = 0.40f;
+		T.AmbColor = FLinearColor(1.f, 0.95f, 0.86f);
+		T.Bounce = 0.32f;
+		T.BounceColor = FLinearColor(1.f, 0.9f, 0.76f);
+		T.WindowColor = FLinearColor(0.78f, 0.88f, 1.f);
+		T.Window = 2.5f;
+		T.FogDensity = 0.004f;
+		T.ExposureBias = -0.35f;
+		T.WhiteTemp = 6800.f;
+		T.FxAmbient = 1.f;
+		T.FxTint = FLinearColor(1.f, 0.97f, 0.92f);
+		break;
+	case 1:    // golden evening: a low sun from the south-west, under the table and across the east floor to the fridge
+		T.SunRot = FRotator(-18.f, 50.f, 0.f);
+		T.SunColor = FLinearColor(1.f, 0.78f, 0.5f);
+		T.SunLux = 13.f;
+		T.SunShafts = 30.f;
+		T.Sky = 1.1f;
+		T.Lamps = 0.2f;
+		T.Practicals = 0.8f;
+		T.Amb = 0.34f;
+		T.AmbColor = FLinearColor(1.f, 0.7f, 0.42f);
+		T.Bounce = 0.38f;
+		T.BounceColor = FLinearColor(1.f, 0.62f, 0.35f);
+		T.WindowColor = FLinearColor(1.f, 0.66f, 0.38f);
+		T.Window = 3.2f;
+		T.FogDensity = 0.005f;
+		T.ExposureBias = -0.5f;
+		T.WhiteTemp = 7700.f;
+		T.FxAmbient = 0.85f;
+		T.FxTint = FLinearColor(1.f, 0.86f, 0.7f);
+		break;
+	case 2:    // night: moonlight through the window, the lamps carry the room
+		T.SunRot = FRotator(-38.f, 108.f, 0.f);
+		T.SunColor = FLinearColor(0.55f, 0.68f, 1.f);
+		T.SunLux = 0.7f;
+		T.SunShafts = 45.f;
+		T.Sky = 1.f;
+		T.Lamps = 0.12f;          // the ceiling lamps only glimmer: the pendant, the hood, the fridge and the TV carry the night
+		T.Practicals = 1.f;
+		T.Amb = 0.55f;
+		T.AmbColor = FLinearColor(0.42f, 0.55f, 1.f);
+		T.Bounce = 0.26f;
+		T.BounceColor = FLinearColor(0.62f, 0.7f, 1.f);
+		T.WindowColor = FLinearColor(0.4f, 0.52f, 1.f);
+		T.Window = 1.f;
+		T.FogDensity = 0.003f;
+		T.ExposureBias = -1.4f;
+		T.WhiteTemp = 6100.f;
+		T.FxAmbient = 0.35f;
+		T.FxTint = FLinearColor(0.8f, 0.88f, 1.f);
+		break;
+	}
+	return T;
+}
+
+AKitchenBuilder::FTimeOfDay AKitchenBuilder::Blend(const FTimeOfDay& A, const FTimeOfDay& B, float K)
+{
+	FTimeOfDay T;
+	T.SunRot = FMath::Lerp(A.SunRot, B.SunRot, K);
+	T.SunColor = FMath::Lerp(A.SunColor, B.SunColor, K);
+	T.SunLux = FMath::Lerp(A.SunLux, B.SunLux, K);
+	T.SunShafts = FMath::Lerp(A.SunShafts, B.SunShafts, K);
+	T.Sky = FMath::Lerp(A.Sky, B.Sky, K);
+	T.Lamps = FMath::Lerp(A.Lamps, B.Lamps, K);
+	T.Practicals = FMath::Lerp(A.Practicals, B.Practicals, K);
+	T.Amb = FMath::Lerp(A.Amb, B.Amb, K);
+	T.AmbColor = FMath::Lerp(A.AmbColor, B.AmbColor, K);
+	T.Bounce = FMath::Lerp(A.Bounce, B.Bounce, K);
+	T.BounceColor = FMath::Lerp(A.BounceColor, B.BounceColor, K);
+	T.WindowColor = FMath::Lerp(A.WindowColor, B.WindowColor, K);
+	T.Window = FMath::Lerp(A.Window, B.Window, K);
+	T.FogDensity = FMath::Lerp(A.FogDensity, B.FogDensity, K);
+	T.ExposureBias = FMath::Lerp(A.ExposureBias, B.ExposureBias, K);
+	T.WhiteTemp = FMath::Lerp(A.WhiteTemp, B.WhiteTemp, K);
+	T.FxAmbient = FMath::Lerp(A.FxAmbient, B.FxAmbient, K);
+	T.FxTint = FMath::Lerp(A.FxTint, B.FxTint, K);
+	return T;
+}
+
+void AKitchenBuilder::UpdateTimeOfDay(float Dt)
+{
+	int32 Want = 0;
+	if (ForcedTod >= 0)
+	{
+		Want = ForcedTod;
+	}
+	else if (const AAntGameState* GS = GetWorld()->GetGameState<AAntGameState>())
+	{
+		Want = GS->bHeistMode ? TimeOfDayFor(GS->Shift) : 0;
+	}
+	if (TodIndex < 0)
+	{
+		// First time: no fade.
+		TodIndex = Want;
+		Tod = TodFrom = TimeOfDay(Want);
+		TodBlend = 1.f;
+		ApplyLights();
+		return;
+	}
+	if (Want != TodIndex)
+	{
+		TodIndex = Want;
+		TodFrom = Tod;
+		TodBlend = 0.f;
+	}
+	if (TodBlend < 1.f)
+	{
+		TodBlend = FMath::Min(1.f, TodBlend + Dt / 6.f);
+		Tod = Blend(TodFrom, TimeOfDay(TodIndex), FMath::SmoothStep(0.f, 1.f, TodBlend));
+		ApplyLights();
+	}
+}
+
+void AKitchenBuilder::ApplyLights()
+{
+	if (MainLampBase.Num() != MainLamps.Num())
+	{
+		MainLampBase.Reset();
+		for (const UPointLightComponent* L : MainLamps)
+		{
+			MainLampBase.Add(L ? L->Intensity : 0.f);
+		}
+	}
+	const float Lamps = bMainOn ? Tod.Lamps : 0.f;
+	for (int32 i = 0; i < MainLamps.Num(); ++i)
+	{
+		if (UPointLightComponent* L = MainLamps[i])
+		{
+			L->SetVisibility(Lamps > 0.01f);
+			L->SetIntensity(MainLampBase[i] * Lamps);
+			L->SetLightColor(FLinearColor(1.f, 0.86f, 0.68f));   // warm bulbs
+		}
 	}
 	for (UStaticMeshComponent* S : LampShades)
 	{
 		if (UMaterialInstanceDynamic* M = S ? Cast<UMaterialInstanceDynamic>(S->GetMaterial(0)) : nullptr)
 		{
-			M->SetVectorParameterValue(TEXT("Color"), bOn ? FLinearColor(3.f, 2.8f, 2.4f) : FLinearColor(0.2f, 0.2f, 0.2f));
+			M->SetVectorParameterValue(TEXT("Color"), FMath::Lerp(FLinearColor(0.2f, 0.2f, 0.2f), FLinearColor(3.f, 2.8f, 2.4f), FMath::Clamp(Lamps * 1.4f, 0.f, 1.f)));
 		}
 	}
-	// The sun doesn't care about the light switch.
-	if (WindowLight) { WindowLight->SetIntensity(bOn ? 3.f : 1.2f); WindowLight->SetLightColor(bOn ? FLinearColor(0.7f, 0.85f, 1.f) : FLinearColor(0.35f, 0.45f, 0.9f)); }
+	// The pendant follows the switch; the hood light is its own little switch and stays on.
+	const float PendantK = bMainOn ? Tod.Practicals : 0.f;
+	if (Pendant)
+	{
+		Pendant->SetVisibility(PendantK > 0.01f);
+		Pendant->SetIntensity(18.f * PendantK);
+	}
+	if (PendantBulb)
+	{
+		PendantBulb->SetVectorParameterValue(TEXT("Color"), FLinearColor(6.f, 4.4f, 2.2f) * FMath::Max(0.03f, PendantK));
+	}
+	if (HoodLight)
+	{
+		HoodLight->SetIntensity(5.f * Tod.Practicals);
+	}
+	if (HoodBulb)
+	{
+		HoodBulb->SetVectorParameterValue(TEXT("Color"), FLinearColor(5.f, 4.2f, 2.8f) * Tod.Practicals);
+	}
+	const float RoomDim = bMainOn ? 1.f : 0.6f;   // lamps off: less light bouncing around
+	for (UPointLightComponent* L : AmbFills)
+	{
+		if (L)
+		{
+			L->SetLightColor(Tod.AmbColor);
+			L->SetIntensity(Tod.Amb * RoomDim);
+		}
+	}
+	for (UPointLightComponent* L : BounceFills)
+	{
+		if (L)
+		{
+			L->SetLightColor(Tod.BounceColor);
+			L->SetIntensity(Tod.Bounce * RoomDim);
+		}
+	}
+	if (Fill)
+	{
+		Fill->SetRelativeRotation(Tod.SunRot);
+		Fill->SetLightColor(Tod.SunColor);
+		Fill->SetIntensity(Tod.SunLux);
+		Fill->SetVolumetricScatteringIntensity(Tod.SunShafts);
+	}
+	if (SkyFill)
+	{
+		SkyFill->SetIntensity(Tod.Sky);
+	}
+	// The window glow is daylight (or moonlight): with the lamps off it is toned down so the room reads as dark.
+	if (WindowLight)
+	{
+		WindowLight->SetLightColor(Tod.WindowColor);
+		WindowLight->SetIntensity(Tod.Window * (bMainOn ? 1.f : 0.45f));
+	}
+	if (Haze)
+	{
+		Haze->SetFogDensity(Tod.FogDensity);
+	}
+	if (TodGrade)
+	{
+		FPostProcessSettings& G = TodGrade->Settings;
+		G.bOverride_AutoExposureBias = true;
+		G.AutoExposureBias = Tod.ExposureBias - (bMainOn ? 0.f : 0.7f);   // switch off: the room visibly drops, even by day
+		G.bOverride_WhiteTemp = true;
+		G.WhiteTemp = Tod.WhiteTemp;
+	}
+	AntFx::SetAmbient(this, Tod.FxAmbient * (bMainOn ? 1.f : 0.7f), Tod.FxTint);
 }
 
 void AKitchenBuilder::AddMound(int32 Team, UStaticMeshComponent* C)
@@ -1273,6 +1558,37 @@ void AKitchenBuilder::Tick(float DeltaSeconds)
 	if (GetNetMode() != NM_DedicatedServer)
 	{
 		UpdateMounds(DeltaSeconds);
+		UpdateTimeOfDay(DeltaSeconds);
+		// The fridge drips into the puddle behind it: a drop, then a little splash and rings.
+		const FVector DripAt(3700.f, 4300.f, 3.f);
+		DripTimer -= DeltaSeconds;
+		if (DripTimer <= 0.f)
+		{
+			DripTimer = FMath::FRandRange(1.6f, 3.2f);
+			DripRipple = 0.39f;
+			if (AAntFxManager* Fx = AAntFxManager::Get(this))
+			{
+				FAntFxBit D;
+				D.Pos = DripAt + FVector(0.f, 0.f, 112.f);
+				D.Gravity = 1500.f;
+				D.Scale0 = FVector(0.07f);
+				D.Scale1 = FVector(0.07f, 0.07f, 0.12f);
+				D.Color = FLinearColor(0.78f, 0.9f, 1.f, 0.75f);
+				D.Life = 0.39f;
+				D.FadeIn = 0.f;
+				D.FadePow = 0.1f;
+				D.FloorZ = DripAt.Z;
+				Fx->Emit(D);
+			}
+		}
+		if (DripRipple > 0.f)
+		{
+			DripRipple -= DeltaSeconds;
+			if (DripRipple <= 0.f)
+			{
+				AntFx::Splash(this, DripAt + FVector(0.f, 0.f, 1.f), 3.f);
+			}
+		}
 	}
 	// Drafts in the air ducts carry whoever crawls inside (movement is owner-authoritative: push locally).
 	for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)

@@ -29,6 +29,10 @@
 #include "AntChain.h"
 #include "Critters.h"
 #include "AntGibs.h"
+#include "AntFx.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
+#include "HAL/IConsoleManager.h"
 
 AAntCharacter::AAntCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<UAntMovementComponent>(ACharacter::CharacterMovementComponentName))
@@ -1502,8 +1506,27 @@ void AAntCharacter::ApplyCameraLook()
 	P.bOverride_BloomIntensity = true;         P.BloomIntensity = 1.1f;
 	P.bOverride_ColorSaturation = true;        P.ColorSaturation = FVector4(1.f, 1.f, 1.f, bBodycam ? 0.85f : 1.05f);
 	P.bOverride_ColorContrast = true;          P.ColorContrast = FVector4(1.f, 1.f, 1.f, bBodycam ? 1.15f : 1.05f);
-	P.bOverride_DepthOfFieldFocalDistance = true;  P.DepthOfFieldFocalDistance = bBodycam ? 60.f : 180.f;
-	P.bOverride_DepthOfFieldFstop = true;      P.DepthOfFieldFstop = bBodycam ? 2.8f : 4.f;
+	// Miniature feel: a macro lens. The focus follows what you aim at (UpdateVisuals), only what lies far BEHIND it
+	// goes soft, and the foreground blur is switched off - so the ant, its cargo and the aim point are never blurred.
+	// -AntNoDOF turns it off.
+	static const bool bNoDof = FParse::Param(FCommandLine::Get(), TEXT("AntNoDOF"));
+	bMiniDof = !bNoDof;
+	P.bOverride_DepthOfFieldFocalDistance = true;  P.DepthOfFieldFocalDistance = bMiniDof ? FocusDist : 0.f;
+	P.bOverride_DepthOfFieldFstop = true;          P.DepthOfFieldFstop = 1.2f;
+	P.bOverride_DepthOfFieldSensorWidth = true;    P.DepthOfFieldSensorWidth = 120.f;
+	P.bOverride_DepthOfFieldMinFstop = true;       P.DepthOfFieldMinFstop = 1.2f;
+	if (bMiniDof)
+	{
+		// Global and harmless for the other cameras (the Human, the fly, the spider have no focal distance = no DOF).
+		if (IConsoleVariable* Fg = IConsoleManager::Get().FindConsoleVariable(TEXT("r.DOF.Kernel.MaxForegroundRadius")))
+		{
+			Fg->Set(0.0005f, ECVF_SetByConsole);
+		}
+		if (IConsoleVariable* Bg = IConsoleManager::Get().FindConsoleVariable(TEXT("r.DOF.Kernel.MaxBackgroundRadius")))
+		{
+			Bg->Set(0.0035f, ECVF_SetByConsole);
+		}
+	}
 	Camera->PostProcessBlendWeight = 1.f;
 	Camera->SetFieldOfView(bBodycam ? 112.f : 95.f);
 	// Fisheye-ish lens for the bodycam.
@@ -1973,6 +1996,33 @@ void AAntCharacter::UpdateVisuals(float DeltaSeconds)
 		VisualRoot->SetWorldLocationAndRotation(GetActorLocation(), FRotationMatrix::MakeFromXZ(AttachedAlong, AttachedUp).ToQuat());
 	}
 
+	// A puff of dust when it lands from a jump or a fall; rings on the water while it wades.
+	{
+		const UCharacterMovementComponent* Move = GetCharacterMovement();
+		const bool bAir = Move && Move->IsFalling() && !IsAttached();
+		if (bAir)
+		{
+			AirTime += DeltaSeconds;
+		}
+		else
+		{
+			if (AirTime > 0.2f && bNear)
+			{
+				AntFx::LandDust(this, GetActorLocation() - VisNormal * GetSimpleCollisionHalfHeight() * 0.9f, VisNormal, 95.f * VisScale());
+			}
+			AirTime = 0.f;
+		}
+		if (bNear && !bAir && HasStatus(AntStatus::Wet) && Speed > 40.f)
+		{
+			WadeFx += DeltaSeconds;
+			if (WadeFx > 0.3f)
+			{
+				WadeFx = 0.f;
+				AntFx::Ripple(this, GetActorLocation() - VisNormal * GetSimpleCollisionHalfHeight() * 0.9f, 80.f * VisScale());
+			}
+		}
+	}
+
 	if (WebShell)
 	{
 		WebShell->SetVisibility(HasStatus(AntStatus::Webbed));
@@ -2005,6 +2055,27 @@ void AAntCharacter::UpdateVisuals(float DeltaSeconds)
 		SpringArm->TargetOffset = FMath::VInterpTo(SpringArm->TargetOffset, bBodycam ? Head * 0.8f : VisNormal * 30.f * AntShrink, DeltaSeconds, 8.f);
 		const float WantLen = bBodycam ? 0.f : (VisNormal.Z < 0.6f ? 175.f : 125.f) * AntShrink;
 		SpringArm->TargetArmLength = FMath::FInterpTo(SpringArm->TargetArmLength, WantLen, DeltaSeconds, bBodycam ? 12.f : 4.f);
+		// The lens: focused on whatever is under the crosshair, never nearer than MinFocus. Everything in front of the
+		// focal plane stays sharp (no foreground blur), so looking at something close just softens the far room.
+		if (bMiniDof && Controller)
+		{
+			FVector CamLoc;
+			FRotator CamRot;
+			Controller->GetPlayerViewPoint(CamLoc, CamRot);
+			FCollisionQueryParams FocusParams(SCENE_QUERY_STAT(AntFocus), false, this);
+			if (Carrying) { FocusParams.AddIgnoredActor(Carrying); }
+			const float MinFocus = 600.f, MaxFocus = 8000.f;
+			float Want = MaxFocus;
+			FHitResult FocusHit;
+			if (GetWorld()->LineTraceSingleByChannel(FocusHit, CamLoc, CamLoc + CamRot.Vector() * MaxFocus, ECC_Visibility, FocusParams))
+			{
+				Want = FocusHit.Distance;
+			}
+			Want = FMath::Clamp(Want, MinFocus, MaxFocus);
+			// Pull focus away fast (the new target must be sharp at once), let it come back gently.
+			FocusDist = FMath::FInterpTo(FocusDist, Want, DeltaSeconds, Want > FocusDist ? 14.f : 5.f);
+			Camera->PostProcessSettings.DepthOfFieldFocalDistance = FocusDist;
+		}
 		// Handheld feel: footsteps, breathing, and trauma from hits / stomps.
 		if (LastHealthSeen >= 0.f && Health < LastHealthSeen - 0.5f)
 		{

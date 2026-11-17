@@ -8,6 +8,11 @@
 class UStaticMeshComponent;
 class UPointLightComponent;
 class UDirectionalLightComponent;
+class USpotLightComponent;
+class USkyLightComponent;
+class UExponentialHeightFogComponent;
+class UPostProcessComponent;
+class UMaterialInstanceDynamic;
 class AAntCharacter;
 struct FAntEnv;
 
@@ -64,6 +69,9 @@ public:
 	/** Ceiling lamps on/off (light switch). */
 	void SetMainLights(bool bOn);
 
+	/** Time of day for a shift: 0 morning, 1 golden evening, 2 night with the lamps on. Cycles. */
+	static int32 TimeOfDayFor(int32 Shift) { return ((FMath::Max(1, Shift) - 1) % 3); }
+
 private:
 	void Build();
 	UStaticMeshComponent* Part(EAntShape Shape, const FVector& Center, const FVector& Size, const FRotator& Rot, const FLinearColor& Color, bool bCollide);
@@ -92,9 +100,55 @@ private:
 	USceneComponent* Root = nullptr;
 
 	UPROPERTY() TArray<UPointLightComponent*> MainLamps;
+	TArray<float> MainLampBase;                              // their full intensity (same order)
 	UPROPERTY() TArray<UStaticMeshComponent*> LampShades;
-	UPROPERTY() UDirectionalLightComponent* Fill = nullptr;
+	UPROPERTY() UDirectionalLightComponent* Fill = nullptr;   // the sun / the moon
 	UPROPERTY() UPointLightComponent* WindowLight = nullptr;
+	UPROPERTY() USpotLightComponent* Pendant = nullptr;       // the lamp over the dinner table
+	UPROPERTY() UMaterialInstanceDynamic* PendantBulb = nullptr;
+	UPROPERTY() UPointLightComponent* HoodLight = nullptr;
+	UPROPERTY() UMaterialInstanceDynamic* HoodBulb = nullptr;
+	/** Shadowless fills standing in for the light the room bounces around: from above the ceiling (floors under furniture never go black) and from under the floor (undersides of tables, lower walls). */
+	UPROPERTY() TArray<UPointLightComponent*> AmbFills;
+	UPROPERTY() TArray<UPointLightComponent*> BounceFills;
+	UPROPERTY() USkyLightComponent* SkyFill = nullptr;
+	UPROPERTY() UExponentialHeightFogComponent* Haze = nullptr;
+	UPROPERTY() UPostProcessComponent* TodGrade = nullptr;
+
+	/** Everything the time of day changes. Blended, so a new shift fades into its light. */
+	struct FTimeOfDay
+	{
+		FRotator SunRot = FRotator(-32.f, 82.f, 0.f);
+		FLinearColor SunColor = FLinearColor::White;
+		float SunLux = 8.f;
+		float SunShafts = 2.f;        // how strongly the sun lights the dust in the air
+		float Sky = 1.f;
+		float Lamps = 0.3f;           // ceiling lamps, 0..1 of their full intensity
+		float Practicals = 0.5f;      // the pendant over the table and the hood light
+		float Amb = 0.35f;            // fill from above
+		FLinearColor AmbColor = FLinearColor::White;
+		float Bounce = 0.25f;         // fill from below (what the floor throws back up)
+		FLinearColor BounceColor = FLinearColor::White;
+		FLinearColor WindowColor = FLinearColor::White;
+		float Window = 2.f;
+		float FogDensity = 0.004f;
+		float ExposureBias = 0.f;
+		float WhiteTemp = 6700.f;
+		float FxAmbient = 1.f;        // brightness of unlit dust / steam
+		FLinearColor FxTint = FLinearColor::White;
+	};
+	static FTimeOfDay TimeOfDay(int32 Index);
+	static FTimeOfDay Blend(const FTimeOfDay& A, const FTimeOfDay& B, float T);
+	void UpdateTimeOfDay(float Dt);
+	void ApplyLights();
+	FTimeOfDay Tod;
+	int32 TodIndex = -1;         // what Tod is heading for
+	int32 ForcedTod = -1;        // -AntTime=0|1|2
+	float TodBlend = 1.f;
+	FTimeOfDay TodFrom;
+	bool bMainOn = true;
+	float DripTimer = 1.f;       // cosmetic: the drip into the puddle behind the fridge
+	float DripRipple = -1.f;
 
 	float HazardTimer = 0.f;
 	/** Nest mounds grow as each colony fills its stores (index = team). */

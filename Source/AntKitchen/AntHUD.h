@@ -38,7 +38,37 @@ private:
 	void DrawTrophies(AAntGameState* GS, APawn* Me);
 	void DrawLinkState(AAntCharacter* Ant);
 
+	/** The shift ("heist run"): quota bar, larvae, what the Human is up to. */
+	void DrawShift(AAntGameState* GS);
+	/** A big line across the screen for a few seconds (stage change, quota met). */
+	void Announce(const FString& Title, const FString& Sub, const FLinearColor& Color);
+	void DrawAnnounce();
+	/** A soft coloured frame along the screen edges (damage, low health). */
+	void EdgeGlow(const FLinearColor& Color, float Strength, float Depth);
+
 	float S = 1.f;          // UI scale
 	float LastHealth = -1.f;
 	float HurtFlash = 0.f;
+	float HeartPhase = 0.f;
+
+	// What this machine has already seen of the shift, to notice changes (all local, nothing is sent anywhere).
+	int32 SeenShift = -1;
+	int32 SeenStage = -1;
+	bool bSeenQuota = false;
+	int32 SeenScore = -1;
+	int32 SeenLarvae = -1;
+	float ScorePulse = 0.f;     // 1 -> 0 after score was added
+	int32 ScoreGain = 0;
+	float GainFromFrac = 0.f;
+	float LarvaPop = 0.f;       // 1 -> 0 after a larva was spent
+	int32 LarvaPopCount = 0;
+	FString AnnTitle;
+	FString AnnSub;
+	FLinearColor AnnColor = FLinearColor::White;
+	float AnnTime = -100.f;
+
+	// -AntFpsLog: average frame rate to the log every few seconds.
+	double FpsTime = 0.0;
+	int32 FpsFrames = 0;
+	float FpsWorst = 0.f;
 };

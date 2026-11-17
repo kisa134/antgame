@@ -1,4 +1,7 @@
 ﻿#include "KitchenGadgets.h"
+#include "AntFx.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 #include "KitchenBuilder.h"
 #include "KitchenLoot.h"
 #include "AntCharacter.h"
@@ -67,6 +70,11 @@ bool AKitchenKnob::IsBurnerOn(UWorld* World)
 void AKitchenKnob::BeginPlay()
 {
 	Super::BeginPlay();
+	if (HasAuthority() && FParse::Param(FCommandLine::Get(), TEXT("AntGadgetsOn")))   // dev/test, see AKitchenFaucet::BeginPlay
+	{
+		bOn = true;
+		Boil = 1.f;
+	}
 	// The actor sits on the oven's control strip (the second knob from the left, in front of the hot burner).
 	// Everything else is placed in world space relative to it: the burner is at (-350, 3500, 1740).
 	Knob = Part(Root, EAntShape::Cylinder, FVector(0.f, -15.f, 0.f), FVector(70.f, 70.f, 30.f), Black, true, FRotator(90.f, 0.f, 0.f));
@@ -133,6 +141,18 @@ void AKitchenKnob::Tick(float Dt)
 	if (Glow)
 	{
 		Glow->SetIntensity(FMath::Clamp(Boil * 2.f, 0.f, 1.f) * 5.f);
+	}
+	// Steam: a wisp off the hot coil, a proper column off the soup as it comes to the boil.
+	if (Boil > 0.15f && GetNetMode() != NM_DedicatedServer)
+	{
+		SteamAccum += Dt * (1.5f + Boil * 7.f);
+		while (SteamAccum >= 1.f)
+		{
+			SteamAccum -= 1.f;
+			const float A = FMath::FRandRange(0.f, 2.f * PI);
+			const float R = FMath::FRandRange(0.f, 300.f);
+			AntFx::Steam(this, FVector(-350.f + FMath::Cos(A) * R, 3500.f + FMath::Sin(A) * R, 2300.f), 150.f + Boil * 130.f, 150.f + Boil * 170.f);
+		}
 	}
 	const bool bBoiling = Boil > 0.6f;
 	for (int32 i = 0; i < Bubbles.Num(); ++i)

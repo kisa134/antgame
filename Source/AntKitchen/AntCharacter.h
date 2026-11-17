@@ -184,6 +184,8 @@ public:
 	bool IsBurning() const { return HasStatus(AntStatus::Burning); }
 	float VisScale() const { return AntScale * GetClassDef().BodyScale * ExtraScale; }
 	bool bBodycam = false;
+	/** The macro-lens depth of field is on (off with -AntNoDOF). */
+	bool bMiniDof = false;
 	AKitchenLoot* FindNearestLoot(float Radius) const;
 	AKitchenInteractable* FindNearestInteractable(float* OutDistance = nullptr) const;
 	FVector GetMuzzleLocation() const;
@@ -344,6 +346,10 @@ protected:
 	FVector VisNormal = FVector::UpVector;
 	FVector VisHeading = FVector::ForwardVector;
 	float AnimTime = 0.f;
+	/** Cosmetic: time spent in the air (dust on landing), wading ripples, where the lens is focused. */
+	float AirTime = 0.f;
+	float WadeFx = 0.f;
+	float FocusDist = 600.f;
 
 	bool bWantsFire = false;
 	float NextFireTime = 0.f;

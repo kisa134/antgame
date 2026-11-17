@@ -18,6 +18,20 @@
 #include "Engine/Font.h"
 #include "Camera/PlayerCameraManager.h"
 #include "EngineUtils.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
+#include "Misc/App.h"
+#include "AntFx.h"
+
+namespace
+{
+	/** Dev: -AntHudTest plays the shift HUD with made-up numbers (drawn only; no game state is touched). */
+	bool HudTest()
+	{
+		static const bool b = FParse::Param(FCommandLine::Get(), TEXT("AntHudTest"));
+		return b;
+	}
+}
 
 namespace HudColors
 {
@@ -148,6 +162,24 @@ void AAntHUD::DrawHUD()
 	}
 	S = FMath::Max(0.7f, Canvas->ClipY / 1080.f);
 
+	// Dev: -AntFpsLog writes the frame rate to the log (to measure without a screenshot).
+	static const bool bFpsLog = FParse::Param(FCommandLine::Get(), TEXT("AntFpsLog"));
+	if (bFpsLog)
+	{
+		const float FrameDt = (float)FApp::GetDeltaTime();
+		FpsTime += FrameDt;
+		++FpsFrames;
+		FpsWorst = FMath::Max(FpsWorst, FrameDt);
+		if (FpsTime >= 5.0)
+		{
+			const AAntFxManager* Fx = AAntFxManager::Get(this);
+			UE_LOG(LogTemp, Display, TEXT("ANTFPS avg=%.1f worst_frame_ms=%.1f fx_bits=%d"), FpsFrames / FpsTime, FpsWorst * 1000.f, Fx ? Fx->NumLive() : 0);
+			FpsTime = 0.0;
+			FpsFrames = 0;
+			FpsWorst = 0.f;
+		}
+	}
+
 	AAntGameState* GS = GetWorld()->GetGameState<AAntGameState>();
 	AAntPlayerController* PC = Cast<AAntPlayerController>(PlayerOwner);
 	APawn* Me = PlayerOwner ? PlayerOwner->GetPawn() : nullptr;
@@ -168,6 +200,7 @@ void AAntHUD::DrawHUD()
 	}
 
 	DrawTop(GS);
+	DrawAnnounce();
 	DrawWar(GS, Me);
 	DrawTrophies(GS, Me);
 	DrawFeed(GS);
@@ -190,49 +223,297 @@ void AAntHUD::DrawTop(AAntGameState* GS)
 	UFont* Big = GEngine->GetLargeFont();
 
 	const FLinearColor Fire(1.f, 0.4f, 0.2f);
-	Txt(FString::Printf(TEXT("КОЛОНИЯ %d"), GS->TeamScore), W * 0.5f - 140.f * S, 12.f * S, Gold, Med, 1.3f * S, true);
-	Txt(FString::Printf(TEXT("ОГНЕННЫЕ %d"), GS->RivalScore), W * 0.5f + 140.f * S, 12.f * S, Fire, Med, 1.3f * S, true);
 	if (GS->bHeistMode)
 	{
-		static const TCHAR* StageName[] = { TEXT("Человек залип в телефон: лутай спокойно"), TEXT("Человек на кухне"), TEXT("УБОРКА: он зол и с дихлофосом"), TEXT("ВСЕ В ГНЕЗДО!") };
-		Txt(FString::Printf(TEXT("СМЕНА %d  ·  КВОТА %d / %d  ·  ЛИЧИНОК %d"), GS->Shift, GS->TeamScore, GS->TargetScore, GS->Larvae), W * 0.5f, 42.f * S, GS->bQuotaMet ? Gold : White, Med, 1.1f * S, true);
-		Txt(StageName[FMath::Min<int32>(GS->ShiftStage, 3)], W * 0.5f, 150.f * S, GS->ShiftStage >= 2 ? Red : Grey, GEngine->GetSmallFont(), 1.15f * S, true);
+		DrawShift(GS);
 	}
 	else
 	{
+		Txt(FString::Printf(TEXT("КОЛОНИЯ %d"), GS->TeamScore), W * 0.5f - 140.f * S, 12.f * S, Gold, Med, 1.3f * S, true);
+		Txt(FString::Printf(TEXT("ОГНЕННЫЕ %d"), GS->RivalScore), W * 0.5f + 140.f * S, 12.f * S, Fire, Med, 1.3f * S, true);
 		Txt(FString::Printf(TEXT("до %d"), GS->TargetScore), W * 0.5f, 16.f * S, Grey, GEngine->GetSmallFont(), 1.1f * S, true);
 		const float Tg = FMath::Max(1, GS->TargetScore);
 		Bar(W * 0.5f - 270.f * S, 48.f * S, 260.f * S, 16.f * S, GS->TeamScore / Tg, Gold);
 		Bar(W * 0.5f + 10.f * S, 48.f * S, 260.f * S, 16.f * S, GS->RivalScore / Tg, Fire);
+		if (GS->HumanRage > 0)
+		{
+			Txt(FString::Printf(TEXT("ЯРОСТЬ ЧЕЛОВЕКА: %d / 3"), GS->HumanRage), W * 0.5f, 128.f * S, Red, GEngine->GetSmallFont(), 1.15f * S, true);
+		}
+		const int32 T = FMath::Max(0, FMath::CeilToInt(GS->TimeRemaining));
+		Txt(FString::Printf(TEXT("%d:%02d"), T / 60, T % 60), W * 0.5f, 70.f * S, T < 60 ? Red : White, Med, 1.3f * S, true);
+		Txt(FString::Printf(TEXT("Раздавлено муравьёв: %d    Человек в панике: %d раз"), GS->AntsSquashed, GS->HumanKnockouts), W * 0.5f, 104.f * S, Grey, GEngine->GetSmallFont(), 1.1f * S, true);
 	}
-	if (GS->HumanRage > 0)
-	{
-		Txt(FString::Printf(TEXT("ЯРОСТЬ ЧЕЛОВЕКА: %d / 3"), GS->HumanRage), W * 0.5f, 128.f * S, Red, GEngine->GetSmallFont(), 1.15f * S, true);
-	}
-
-	const int32 T = FMath::Max(0, FMath::CeilToInt(GS->TimeRemaining));
-	Txt(FString::Printf(TEXT("%d:%02d"), T / 60, T % 60), W * 0.5f, 70.f * S, T < 60 ? Red : White, Med, 1.3f * S, true);
-	Txt(FString::Printf(TEXT("Раздавлено муравьёв: %d    Человек в панике: %d раз"), GS->AntsSquashed, GS->HumanKnockouts), W * 0.5f, 104.f * S, Grey, GEngine->GetSmallFont(), 1.1f * S, true);
 
 	if (GS->Phase != 0)
 	{
-		const FString Banner = GS->bHeistMode ? (GS->Phase == 1 ? TEXT("СМЕНА ОКОНЧЕНА: КОЛОНИЯ СЫТА") : GS->Phase == 3 ? TEXT("СМЕНА ОКОНЧЕНА: ОГНЕННЫЕ ОБОШЛИ") : TEXT("СМЕНА ОКОНЧЕНА: ЧЕЛОВЕК ОТСТОЯЛ КУХНЮ"))
-			: (GS->Phase == 1 ? TEXT("КОЛОНИЯ ПОБЕДИЛА!") : GS->Phase == 3 ? TEXT("ОГНЕННЫЕ МУРАВЬИ ПОБЕДИЛИ...") : TEXT("ЧЕЛОВЕК ПОБЕДИЛ!"));
-		DrawRect(Panel, 0.f, Canvas->ClipY * 0.3f, W, (GS->bHeistMode ? 200.f : 140.f) * S);
-		Txt(Banner, W * 0.5f, Canvas->ClipY * 0.3f + 20.f * S, Gold, Big, 2.5f * S, true);
+		// The shift: either the quota is in and everyone made it (Phase 1), or the colony starves and the run is over.
+		const bool bWon = GS->Phase == 1;
+		const FString Banner = GS->bHeistMode
+			? (bWon ? FString::Printf(TEXT("КВОТА ВЫПОЛНЕНА! СМЕНА %d ПРОЙДЕНА"), GS->Shift) : FString::Printf(TEXT("КОЛОНИЯ ГОЛОДАЕТ. ЗАБЕГ ОКОНЧЕН НА СМЕНЕ %d"), GS->Shift))
+			: FString(GS->Phase == 1 ? TEXT("КОЛОНИЯ ПОБЕДИЛА!") : GS->Phase == 3 ? TEXT("ОГНЕННЫЕ МУРАВЬИ ПОБЕДИЛИ...") : TEXT("ЧЕЛОВЕК ПОБЕДИЛ!"));
+		const float BY = Canvas->ClipY * 0.3f;
+		DrawRect(Panel, 0.f, BY, W, (GS->bHeistMode ? 200.f : 140.f) * S);
 		if (GS->bHeistMode)
 		{
-			Txt(FString::Printf(TEXT("Добыча %d  ·  трофеев целыми %d  ·  разбито %d  ·  раздавлено муравьёв %d"), GS->TeamScore, GS->TrophiesWhole, GS->TrophiesBroken, GS->AntsSquashed),
-				W * 0.5f, Canvas->ClipY * 0.3f + 100.f * S, White, Med, 1.1f * S, true);
-			Txt(TEXT("Новая смена через несколько секунд..."), W * 0.5f, Canvas->ClipY * 0.3f + 150.f * S, Grey, Med, 1.f * S, true);
+			const FLinearColor Accent = bWon ? Gold : Red;
+			DrawRect(Accent, 0.f, BY, W, 4.f * S);
+			DrawRect(Accent, 0.f, BY + 196.f * S, W, 4.f * S);
+			// Long line: shrink it to fit narrow windows.
+			float TW = 0.f, TH = 0.f;
+			GetTextSize(Banner, TW, TH, Big, 2.2f * S);
+			const float Fit = FMath::Min(1.f, W * 0.94f / FMath::Max(1.f, TW));
+			Txt(Banner, W * 0.5f, BY + 24.f * S, Accent, Big, 2.2f * S * Fit, true);
+			Txt(FString::Printf(TEXT("Добыча %d из %d  ·  трофеев целыми %d  ·  разбито %d  ·  раздавлено муравьёв %d"), GS->TeamScore, GS->TargetScore, GS->TrophiesWhole, GS->TrophiesBroken, GS->AntsSquashed),
+				W * 0.5f, BY + 104.f * S, White, Med, 1.1f * S, true);
+			Txt(bWon ? TEXT("Следующая смена через несколько секунд: квота вырастет") : TEXT("Новый забег со смены 1 через несколько секунд..."), W * 0.5f, BY + 150.f * S, Grey, Med, 1.f * S, true);
 		}
 		else
 		{
-			Txt(TEXT("Новый раунд через несколько секунд..."), W * 0.5f, Canvas->ClipY * 0.3f + 95.f * S, White, Med, 1.f * S, true);
+			Txt(Banner, W * 0.5f, BY + 20.f * S, Gold, Big, 2.5f * S, true);
+			Txt(TEXT("Новый раунд через несколько секунд..."), W * 0.5f, BY + 95.f * S, White, Med, 1.f * S, true);
 		}
 	}
 }
 
+// ---------------------------------------------------------------------------------------------
+// The shift: quota bar that jumps when food comes in, larvae as icons, big announcements
+// ---------------------------------------------------------------------------------------------
+
+void AAntHUD::DrawShift(AAntGameState* GS)
+{
+	const float W = Canvas->ClipX;
+	const float Now = GetWorld()->GetTimeSeconds();
+	const float Dt = GetWorld()->GetDeltaSeconds();
+	UFont* Small = GEngine->GetSmallFont();
+	UFont* Med = GEngine->GetMediumFont();
+	const FLinearColor Fire(1.f, 0.4f, 0.2f);
+
+	int32 Shift = GS->Shift, Score = GS->TeamScore, Target = FMath::Max(1, GS->TargetScore), Larvae = GS->Larvae;
+	int32 Stage = FMath::Min<int32>(GS->ShiftStage, 3);
+	bool bQuota = GS->bQuotaMet;
+	int32 TimeLeft = FMath::Max(0, FMath::CeilToInt(GS->TimeRemaining));
+	if (HudTest())
+	{
+		// Made-up numbers that walk through every state of this panel.
+		Shift = 2;
+		Target = 300;
+		Score = FMath::Min(360, FMath::FloorToInt(Now / 1.5f) * 30);
+		Larvae = 5 - (FMath::FloorToInt(Now / 4.f) % 6);
+		Stage = FMath::FloorToInt(Now / 3.8f) % 4;
+		bQuota = Score >= Target;
+		if (Stage == 0 && SeenStage == 3)
+		{
+			SeenShift = -1;   // the test loops: show the "new shift" line again
+		}
+	}
+
+	// --- What changed since the last frame ---
+	const bool bLive = GS->Phase == 0;
+	if (SeenShift != Shift)
+	{
+		SeenShift = Shift;
+		SeenStage = Stage;
+		bSeenQuota = bQuota;
+		SeenScore = Score;
+		SeenLarvae = Larvae;
+		if (bLive && Stage == 0)
+		{
+			Announce(FString::Printf(TEXT("СМЕНА %d"), Shift), FString::Printf(TEXT("Королеве нужно %d еды. Человек залип в телефон — лутай спокойно"), Target), Gold);
+		}
+	}
+	if (Stage != SeenStage)
+	{
+		SeenStage = Stage;
+		if (bLive)
+		{
+			if (Stage == 1) { Announce(TEXT("ЧЕЛОВЕК НА КУХНЕ"), TEXT("Теперь осторожно: он топчет всё, что шевелится"), FLinearColor(1.f, 0.55f, 0.25f)); }
+			else if (Stage == 2) { Announce(TEXT("УБОРКА!"), TEXT("Он зол и взялся за дихлофос. Осталось 2 минуты"), Red); }
+			else if (Stage == 3) { Announce(TEXT("ВСЕ В ГНЕЗДО!"), TEXT("Последние 30 секунд смены"), Gold); }
+		}
+	}
+	if (bQuota && !bSeenQuota && bLive)
+	{
+		Announce(TEXT("КВОТА ВЫПОЛНЕНА!"), TEXT("Все в гнездо — и смена ваша. Остаться за добавкой — риск"), Gold);
+	}
+	bSeenQuota = bQuota;
+	if (SeenScore >= 0 && Score > SeenScore)
+	{
+		ScoreGain = Score - SeenScore;
+		GainFromFrac = FMath::Clamp(SeenScore / (float)Target, 0.f, 1.f);
+		ScorePulse = 1.f;
+	}
+	SeenScore = Score;
+	if (SeenLarvae >= 0 && Larvae < SeenLarvae)
+	{
+		LarvaPop = 1.f;
+		LarvaPopCount = SeenLarvae - Larvae;
+	}
+	SeenLarvae = Larvae;
+	ScorePulse = FMath::Max(0.f, ScorePulse - Dt * 1.3f);
+	LarvaPop = FMath::Max(0.f, LarvaPop - Dt * 1.6f);
+
+	// --- Row 1: shift, clock, the rivals ---
+	const float CX = W * 0.5f;
+	const bool bLastCall = TimeLeft <= 30 && bLive;
+	const float ClockPulse = bLastCall ? 1.f + 0.12f * FMath::Abs(FMath::Sin(Now * 6.f)) : 1.f;
+	Txt(FString::Printf(TEXT("%d:%02d"), TimeLeft / 60, TimeLeft % 60), CX, 6.f * S, TimeLeft < 60 ? Red : White, Med, 1.45f * S * ClockPulse, true);
+	TxtRight(FString::Printf(TEXT("СМЕНА %d"), Shift), CX - 76.f * S, 13.f * S, Gold, Small, 1.25f * S);
+	Txt(FString::Printf(TEXT("ОГНЕННЫЕ %d"), GS->RivalScore), CX + 76.f * S, 13.f * S, Fire, Small, 1.15f * S);
+
+	// --- Row 2: the quota bar ---
+	const float Frac = FMath::Clamp(Score / (float)Target, 0.f, 1.f);
+	const float Kick = FMath::Square(ScorePulse);                 // sharp at first, then it settles
+	const float Grow = Kick * 5.f * S;
+	const float BW = 440.f * S + Grow * 2.f, BH = 22.f * S + Grow * 2.f;
+	const float BX = CX - BW * 0.5f, BY = 42.f * S - Grow;
+	const FLinearColor Done(0.5f, 1.f, 0.45f);
+	const FLinearColor Base = bQuota ? Done : Gold;
+	DrawRect(FLinearColor(0.f, 0.f, 0.f, 0.62f), BX - 2.f, BY - 2.f, BW + 4.f, BH + 4.f);
+	DrawRect(FMath::Lerp(Base, White, Kick * 0.6f), BX, BY, BW * Frac, BH);
+	if (ScorePulse > 0.f && Frac > GainFromFrac)
+	{
+		// The piece that just came in flashes white.
+		DrawRect(FLinearColor(1.f, 1.f, 1.f, ScorePulse), BX + BW * GainFromFrac, BY, BW * (Frac - GainFromFrac), BH);
+	}
+	for (float Mark : { 0.25f, 0.5f, 0.75f })
+	{
+		DrawRect(FLinearColor(0.f, 0.f, 0.f, 0.45f), BX + BW * Mark - 1.f, BY, 2.f, BH);   // the Human gets angrier at each of these
+	}
+	if (bQuota)
+	{
+		const float Glint = 0.5f + 0.5f * FMath::Sin(Now * 4.f);
+		DrawRect(FLinearColor(1.f, 1.f, 1.f, 0.10f + 0.12f * Glint), BX, BY, BW, BH);
+	}
+	{
+		const FString QuotaText = bQuota ? FString::Printf(TEXT("КВОТА ВЫПОЛНЕНА  %d / %d"), Score, Target) : FString::Printf(TEXT("КВОТА  %d / %d"), Score, Target);
+		if (Frac > 0.42f)
+		{
+			// The fill is bright under the text: dark letters, no shadow.
+			float QW = 0.f, QH = 0.f;
+			GetTextSize(QuotaText, QW, QH, Small, 1.15f * S);
+			DrawText(QuotaText, FLinearColor(0.05f, 0.04f, 0.02f), CX - QW * 0.5f, BY + BH * 0.5f - 10.f * S, Small, 1.15f * S);
+		}
+		else
+		{
+			Txt(QuotaText, CX, BY + BH * 0.5f - 10.f * S, White, Small, 1.15f * S, true);
+		}
+	}
+	if (ScorePulse > 0.f && ScoreGain > 0)
+	{
+		Txt(FString::Printf(TEXT("+%d"), ScoreGain), BX + BW + 14.f * S, BY - (1.f - ScorePulse) * 22.f * S, FLinearColor(1.f, 0.9f, 0.35f, FMath::Min(1.f, ScorePulse * 2.f)), Med, 1.25f * S);
+	}
+
+	// --- Row 3: larvae = respawns left, one icon each ---
+	const float LY = 84.f * S;
+	const int32 Shown = FMath::Clamp(Larvae, 0, 12);
+	const float Gap = 17.f * S;
+	auto Egg = [this](float X, float Y, float K, const FLinearColor& C)
+	{
+		DrawRect(C, X - 3.f * S * K, Y - 7.f * S * K, 6.f * S * K, 14.f * S * K);
+		DrawRect(C, X - 5.f * S * K, Y - 4.5f * S * K, 10.f * S * K, 9.f * S * K);
+	};
+	if (Larvae <= 0)
+	{
+		Txt(TEXT("ЛИЧИНОК НЕТ — возрождений больше не будет"), CX, LY - 9.f * S, Red, Small, 1.1f * S, true);
+	}
+	else
+	{
+		float LW = 0.f, LH = 0.f;
+		const FString Label = TEXT("ЛИЧИНКИ");
+		GetTextSize(Label, LW, LH, Small, 1.05f * S);
+		const float Total = LW + 10.f * S + Shown * Gap;
+		float X = CX - Total * 0.5f;
+		Txt(Label, X, LY - 9.f * S, Grey, Small, 1.05f * S);
+		X += LW + 10.f * S + Gap * 0.5f;
+		const FLinearColor Cream(1.f, 0.93f, 0.72f);
+		for (int32 i = 0; i < Shown; ++i)
+		{
+			Egg(X + i * Gap, LY, 1.f, Larvae == 1 ? Red : Cream);
+		}
+		if (Larvae > Shown)
+		{
+			Txt(FString::Printf(TEXT("+%d"), Larvae - Shown), X + Shown * Gap, LY - 9.f * S, Grey, Small, 1.05f * S);
+		}
+		// The ones just spent pop: they swell and fade where they were.
+		if (LarvaPop > 0.f)
+		{
+			for (int32 i = 0; i < FMath::Min(LarvaPopCount, 3) && Shown + i < 13; ++i)
+			{
+				Egg(X + (Shown + i) * Gap, LY - (1.f - LarvaPop) * 6.f * S, 1.f + (1.f - LarvaPop) * 1.6f, FLinearColor(1.f, 0.25f, 0.2f, LarvaPop));
+			}
+		}
+	}
+	if (Larvae <= 0 && LarvaPop > 0.f)
+	{
+		Egg(CX, LY + 16.f * S, 1.f + (1.f - LarvaPop) * 1.6f, FLinearColor(1.f, 0.25f, 0.2f, LarvaPop));
+	}
+
+	// --- Row 4: what the Human is doing (one quiet line; the stage change itself is announced big) ---
+	static const TCHAR* StageName[] = { TEXT("Человек залип в телефон: лутай спокойно"), TEXT("Человек на кухне"), TEXT("УБОРКА: он зол и с дихлофосом"), TEXT("ВСЕ В ГНЕЗДО!") };
+	FString Line = StageName[Stage];
+	if (GS->HumanRage > 0 && Stage < 2)
+	{
+		Line += FString::Printf(TEXT("  ·  ярость %d/3"), GS->HumanRage);
+	}
+	const FLinearColor StageColor = Stage == 3 ? Gold : Stage == 2 ? Red : Stage == 1 ? FLinearColor(1.f, 0.7f, 0.45f) : Grey;
+	Txt(Line, CX, 104.f * S, StageColor, Small, 1.15f * S, true);
+}
+
+void AAntHUD::Announce(const FString& Title, const FString& Sub, const FLinearColor& Color)
+{
+	AnnTitle = Title;
+	AnnSub = Sub;
+	AnnColor = Color;
+	AnnTime = GetWorld()->GetTimeSeconds();
+}
+
+void AAntHUD::DrawAnnounce()
+{
+	const float Hold = 3.4f;
+	const float Age = GetWorld()->GetTimeSeconds() - AnnTime;
+	if (Age < 0.f || Age > Hold || AnnTitle.IsEmpty())
+	{
+		return;
+	}
+	const float W = Canvas->ClipX, H = Canvas->ClipY;
+	const float In = FMath::Clamp(Age / 0.16f, 0.f, 1.f);
+	const float Out = FMath::Clamp((Hold - Age) / 0.6f, 0.f, 1.f);
+	const float A = In * Out;
+	const float Pop = 1.f + 0.4f * FMath::Square(1.f - In);   // slams in big, settles
+	const float Y = H * 0.185f;
+	const float BandH = 112.f * S;
+	DrawRect(FLinearColor(0.f, 0.f, 0.f, 0.5f * A), 0.f, Y, W, BandH);
+	FLinearColor C = AnnColor;
+	C.A = A;
+	const float LineW = W * (0.2f + 0.8f * In);
+	DrawRect(C, (W - LineW) * 0.5f, Y, LineW, 3.f * S);
+	DrawRect(C, (W - LineW) * 0.5f, Y + BandH - 3.f * S, LineW, 3.f * S);
+	UFont* Big = GEngine->GetLargeFont();
+	float TW = 0.f, TH = 0.f;
+	GetTextSize(AnnTitle, TW, TH, Big, 2.3f * S);
+	Txt(AnnTitle, W * 0.5f, Y + 12.f * S - TH * (Pop - 1.f) * 0.5f, C, Big, 2.3f * S * Pop, true);
+	Txt(AnnSub, W * 0.5f, Y + 74.f * S, FLinearColor(1.f, 1.f, 1.f, A), GEngine->GetMediumFont(), 1.05f * S, true);
+}
+
+void AAntHUD::EdgeGlow(const FLinearColor& Color, float Strength, float Depth)
+{
+	if (Strength <= 0.01f)
+	{
+		return;
+	}
+	const float W = Canvas->ClipX, H = Canvas->ClipY;
+	const int32 N = 28;   // thin strips: the falloff reads as a gradient, not as bands
+	const float Step = Depth / N;
+	for (int32 i = 0; i < N; ++i)
+	{
+		FLinearColor C = Color;
+		C.A = FMath::Clamp(Strength * FMath::Pow(1.f - i / (float)N, 2.4f), 0.f, 1.f);
+		DrawRect(C, 0.f, i * Step, W, Step);
+		DrawRect(C, 0.f, H - (i + 1) * Step, W, Step);
+		DrawRect(C, i * Step, 0.f, Step, H);
+		DrawRect(C, W - (i + 1) * Step, 0.f, Step, H);
+	}
+}
 void AAntHUD::DrawFeed(AAntGameState* GS)
 {
 	if (!GS)
@@ -275,10 +556,33 @@ void AAntHUD::DrawAnt(AAntCharacter* Ant)
 		HurtFlash = 1.f;
 	}
 	LastHealth = Ant->Health;
+	if (HudTest() && FMath::Fmod(GetWorld()->GetTimeSeconds(), 3.f) < Dt)
+	{
+		HurtFlash = 1.f;
+	}
 	if (HurtFlash > 0.f)
 	{
-		DrawRect(FLinearColor(0.8f, 0.f, 0.f, 0.25f * HurtFlash), 0.f, 0.f, W, H);
-		HurtFlash -= Dt * 2.5f;
+		// Hit: the edges of the screen flash red (the middle stays clear: you still have to see where to run).
+		EdgeGlow(FLinearColor(0.95f, 0.04f, 0.02f), 0.6f * HurtFlash, 170.f * S);
+		DrawRect(FLinearColor(0.8f, 0.f, 0.f, 0.06f * HurtFlash), 0.f, 0.f, W, H);
+		HurtFlash -= Dt * 2.2f;
+	}
+	// Nearly dead: the edges beat like a heart, faster the less health is left.
+	{
+		const float Frac01 = HudTest() ? 0.18f : Ant->Health / FMath::Max(1.f, Ant->MaxHealth);
+		if (!Ant->bDead && Frac01 < 0.35f)
+		{
+			const float Bad = 1.f - Frac01 / 0.35f;
+			HeartPhase += Dt * (1.15f + 0.9f * Bad);
+			const float Ph = FMath::Frac(HeartPhase);
+			const float Lub = FMath::Max(0.f, 1.f - Ph / 0.16f);
+			const float Dub = FMath::Max(0.f, 1.f - FMath::Abs(Ph - 0.30f) / 0.11f) * 0.6f;
+			EdgeGlow(FLinearColor(0.6f, 0.f, 0.f), (0.10f + 0.4f * FMath::Max(Lub, Dub)) * (0.45f + 0.55f * Bad), 190.f * S);
+		}
+		else
+		{
+			HeartPhase = 0.f;
+		}
 	}
 
 	if (Ant->bDead)

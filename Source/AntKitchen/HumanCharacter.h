@@ -112,7 +112,7 @@ private:
 
 	UPROPERTY() TArray<USceneComponent*> LegPivots;
 	UPROPERTY() TArray<USceneComponent*> ArmPivots;
-	UPROPERTY() TArray<UStaticMeshComponent*> Puffs;
+
 	// Generated art: the whole body is one static model (no skeleton yet), a giant slipper slams for stomps.
 	// Both are created in the constructor: the body is a moving surface ants ride on, and a base
 	// must have a stable network name so the ant's position can replicate relative to it.
@@ -136,6 +136,7 @@ private:
 	float KnockoutEnd = 0.f;
 	float LastHurtTime = -100.f;
 	float SprayAccum = 0.f;
+	float SprayFxAccum = 0.f;   // cosmetic: the spray cloud
 	float LocalStompStart = -100.f;
 	uint8 LocalStompLeg = 0;
 	float WalkPhase = 0.f;
