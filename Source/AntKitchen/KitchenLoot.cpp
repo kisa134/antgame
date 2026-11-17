@@ -14,6 +14,8 @@
 #include "AntGameState.h"
 #include "KitchenInteractables.h"
 #include "TimerManager.h"
+#include "KitchenShards.h"
+#include "ProceduralMeshComponent.h"
 
 AKitchenLoot::AKitchenLoot()
 {
@@ -80,6 +82,9 @@ void AKitchenLoot::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	DOREPLIFETIME(AKitchenLoot, bHeld);
 	DOREPLIFETIME(AKitchenLoot, bVault);
 	DOREPLIFETIME(AKitchenLoot, bTrophy);
+	DOREPLIFETIME(AKitchenLoot, ShardPath);
+	DOREPLIFETIME(AKitchenLoot, ShardSeed);
+	DOREPLIFETIME(AKitchenLoot, ShardScale);
 }
 
 float AKitchenLoot::GetRadius() const
@@ -152,7 +157,7 @@ void AKitchenLoot::OnBodyHit(UPrimitiveComponent* HitComp, AActor* Other, UPrimi
 	}
 }
 
-AKitchenLoot* AKitchenLoot::SpawnPiece(const FString& Name, int32 PieceValue, int32 PieceWeight, const FVector& Where, const FVector& Fling)
+AKitchenLoot* AKitchenLoot::SpawnPiece(const FString& Name, int32 PieceValue, int32 PieceWeight, const FVector& Where, const FVector& Fling, int32 ShardIndex, int32 ShardCount, int32 Seed)
 {
 	FAntFoodDef D;
 	D.Name = Name;
@@ -161,11 +166,22 @@ AKitchenLoot* AKitchenLoot::SpawnPiece(const FString& Name, int32 PieceValue, in
 	D.Color = Color;
 	D.Shape = (EAntShape)ShapeIndex;
 	D.Scale = VisualScale;
-	AKitchenLoot* L = GetWorld()->SpawnActorDeferred<AKitchenLoot>(AKitchenLoot::StaticClass(), FTransform(Where), nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+	// Chunks keep the orientation of the thing they broke off.
+	const FTransform SpawnAt(ShardCount > 0 ? GetActorQuat() : FQuat::Identity, Where);
+	AKitchenLoot* L = GetWorld()->SpawnActorDeferred<AKitchenLoot>(AKitchenLoot::StaticClass(), SpawnAt, nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 	if (L)
 	{
 		L->InitFood(D);
-		L->FinishSpawning(FTransform(Where));
+		if (ShardCount > 0 && ShardPath.Num() < 6)
+		{
+			// A chunk of a chunk continues the path; the first break picks the seed and remembers the model's size.
+			L->ShardPath = ShardPath;
+			L->ShardPath.Add((uint8)ShardIndex);
+			L->ShardPath.Add((uint8)ShardCount);
+			L->ShardSeed = ShardPath.Num() > 0 ? ShardSeed : Seed;
+			L->ShardScale = ShardPath.Num() > 0 ? ShardScale : Mesh->GetRelativeScale3D();
+		}
+		L->FinishSpawning(SpawnAt);
 		L->BreakableAfter = GetWorld()->GetTimeSeconds() + 1.5f;
 		L->Kick(Fling, L->GetActorLocation() + FMath::VRand() * 5.f);
 	}
@@ -198,11 +214,12 @@ void AKitchenLoot::Shatter(const FVector& At)
 	const FString Base = LootName.StartsWith(TEXT("Кусок")) ? LootName : FString::Printf(TEXT("Кусок: %s"), *LootName);
 	const FVector C = GetActorLocation() + FVector(0.f, 0.f, 15.f);
 	ReleaseAll();
+	const int32 CutSeed = FMath::RandRange(1, 1000000);
 	for (int32 i = 0; i < N; ++i)
 	{
 		const float A = (2.f * PI * i) / N + FMath::FRand();
 		const FVector Out(FMath::Cos(A), FMath::Sin(A), 0.f);
-		SpawnPiece(Base, PieceValue, PieceWeight, C + Out * GetRadius() * 0.5f, Out * FMath::FRandRange(250.f, 550.f) + FVector(0.f, 0.f, FMath::FRandRange(250.f, 500.f)));
+		SpawnPiece(Base, PieceValue, PieceWeight, C + Out * GetRadius() * 0.5f, Out * FMath::FRandRange(250.f, 550.f) + FVector(0.f, 0.f, FMath::FRandRange(250.f, 500.f)), i, N, CutSeed);
 	}
 	if (AAntGameState* GS = GetWorld()->GetGameState<AAntGameState>())
 	{
@@ -282,7 +299,11 @@ void AKitchenLoot::RefreshVisual()
 
 	const TCHAR* ArtName = bIsGear ? nullptr : AntArt::FoodArtName(LootName);
 	const AntArt::FPart* Art = ArtName ? &AntArt::Get(ArtName) : nullptr;
-	if (Art && Art->IsValid())
+	if (BuildShard(Art))
+	{
+		// A chunk cut out of the model: BuildShard set the mesh and the physics body.
+	}
+	else if (Art && Art->IsValid())
 	{
 		// Generated food model, a bit bigger than the old shape so it reads well.
 		bHasArt = true;
@@ -664,4 +685,85 @@ void AFoodCrumbs::Tick(float DeltaSeconds)
 			if (M) { M->SetWorldScale3D(FVector(BaseSize / 100.f * K)); }
 		}
 	}
+}
+
+bool AKitchenLoot::BuildShard(const AntArt::FPart* Art)
+{
+	const bool bArt = Art && Art->IsValid();
+	TSharedPtr<const AntShards::FChunk> Chunk;
+	if (!bIsGear && ShardPath.Num() >= 2)
+	{
+		Chunk = AntShards::Get(this, bArt ? Art->Mesh : nullptr, ShapeIndex, ShardSeed, ShardPath);
+	}
+	if (!Chunk.IsValid())
+	{
+		if (ShardPath.Num() >= 2 && !bIsGear) { UE_LOG(LogTemp, Warning, TEXT("Shard: no chunk for %s, plain model used"), *LootName); }
+		if (Shard) { Shard->SetVisibility(false); }
+		Mesh->SetVisibility(true);
+		return false;
+	}
+	if (!Shard)
+	{
+		Shard = NewObject<UProceduralMeshComponent>(this);
+		Shard->SetupAttachment(Body);
+		Shard->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		Shard->SetGenerateOverlapEvents(false);
+		Shard->SetCanEverAffectNavigation(false);
+		Shard->RegisterComponent();
+	}
+	if (ShardBuilt != Chunk)
+	{
+		ShardBuilt = Chunk;
+		UE_LOG(LogTemp, Display, TEXT("Shard: %s chunk %d/%d of level %d, %d sections"), *LootName, (int32)ShardPath[ShardPath.Num() - 2] + 1, (int32)ShardPath.Last(), ShardPath.Num() / 2, Chunk->Sections.Num());
+		Shard->ClearAllMeshSections();
+		for (int32 i = 0; i < Chunk->Sections.Num(); ++i)
+		{
+			Shard->SetProcMeshSection(i, Chunk->Sections[i]);
+		}
+	}
+	// Outside: the food's own look. Cut faces: plain, in the food's colour.
+	UMaterialInterface* Outside = nullptr;
+	if (bArt)
+	{
+		Outside = Art->Material;
+	}
+	else
+	{
+		Mesh->SetStaticMesh(AntKit::ShapeMesh((EAntShape)ShapeIndex));
+		if (!MeshMID) { MeshMID = AntKit::Paint(Mesh, Color); }
+		else { MeshMID->SetVectorParameterValue(TEXT("Color"), Color); }
+		Outside = MeshMID;
+	}
+	if (!CapMID)
+	{
+		if (!BeamMID)
+		{
+			Beam->SetStaticMesh(AntKit::ShapeMesh(EAntShape::Cylinder));
+			BeamMID = AntKit::Paint(Beam, Color);
+		}
+		if (BeamMID && BeamMID->Parent)
+		{
+			CapMID = UMaterialInstanceDynamic::Create(BeamMID->Parent, this);
+		}
+	}
+	if (CapMID)
+	{
+		CapMID->SetVectorParameterValue(TEXT("Color"), Color * 0.85f);
+	}
+	for (int32 i = 0; i < Chunk->Sections.Num(); ++i)
+	{
+		UMaterialInterface* M = Chunk->Cap[i] && CapMID ? (UMaterialInterface*)CapMID : Outside;
+		if (M)
+		{
+			Shard->SetMaterial(i, M);
+		}
+	}
+	Shard->SetRelativeScale3D(ShardScale);
+	Shard->SetRelativeLocation(-Chunk->Box.GetCenter() * ShardScale);
+	Shard->SetVisibility(true);
+	Mesh->SetVisibility(false);
+	bHasArt = false;
+	ArtOffset = FVector::ZeroVector;
+	SetupPhysics(Chunk->Box.GetExtent() * ShardScale);
+	return true;
 }

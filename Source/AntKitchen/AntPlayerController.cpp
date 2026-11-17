@@ -17,6 +17,8 @@
 #include "Engine/GameViewportClient.h"
 #include "AntSession.h"
 #include "AntMenu.h"
+#include "KitchenLoot.h"
+#include "EngineUtils.h"
 
 void AAntPlayerController::BeginPlay()
 {
@@ -82,6 +84,26 @@ void AAntPlayerController::BeginPlay()
 		{
 			FTimerHandle H;
 			GetWorldTimerManager().SetTimer(H, FTimerDelegate::CreateWeakLambda(this, [this, TestAnts]() { ServerSwarmTest(TestAnts); }), 2.f, false);
+		}
+		// Dev/test: -AntSmashAt=seconds smashes a handful of food, to see the fracture without climbing the fridge.
+		float SmashAt = 0.f;
+		if (FParse::Value(FCommandLine::Get(), TEXT("AntSmashAt="), SmashAt) && SmashAt > 0.f && HasAuthority())
+		{
+			FTimerHandle SH;
+			GetWorldTimerManager().SetTimer(SH, FTimerDelegate::CreateWeakLambda(this, [this]()
+			{
+				TArray<AKitchenLoot*> Food;
+				for (TActorIterator<AKitchenLoot> It(GetWorld()); It; ++It)
+				{
+					if (It->CanBreak()) { Food.Add(*It); }
+				}
+				int32 Smashed = 0;
+				for (AKitchenLoot* L : Food)
+				{
+					if (Smashed++ < 10) { L->Shatter(L->GetActorLocation()); }
+				}
+				UE_LOG(LogTemp, Display, TEXT("AntSmash: smashed %d of %d breakable food"), FMath::Min(Smashed, 10), Food.Num());
+			}), SmashAt, false);
 		}
 		float GrabAt = 0.f;
 		if (FParse::Value(FCommandLine::Get(), TEXT("AntGrabAt="), GrabAt) && GrabAt > 0.f)

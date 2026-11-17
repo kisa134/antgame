@@ -28,6 +28,7 @@
 #include "AntBotController.h"
 #include "AntChain.h"
 #include "Critters.h"
+#include "AntGibs.h"
 
 AAntCharacter::AAntCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<UAntMovementComponent>(ACharacter::CharacterMovementComponentName))
@@ -96,6 +97,10 @@ void AAntCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	DOREPLIFETIME(AAntCharacter, Chain);
 	DOREPLIFETIME(AAntCharacter, HeldBy);
 	DOREPLIFETIME(AAntCharacter, HoldingAnt);
+	DOREPLIFETIME(AAntCharacter, LostLegs);
+	DOREPLIFETIME(AAntCharacter, DeathKind);
+	DOREPLIFETIME(AAntCharacter, DeathDir);
+	DOREPLIFETIME(AAntCharacter, GrippedBy);
 }
 
 void AAntCharacter::BeginPlay()
@@ -465,8 +470,23 @@ void AAntCharacter::OnRep_Dead()
 	if (bDead)
 	{
 		bWantsFire = false;
-		VisualRoot->SetWorldLocationAndRotation(GetActorLocation() - VisNormal * 20.f, FRotationMatrix::MakeFromZX(VisNormal, VisHeading).ToQuat());
-		VisualRoot->SetRelativeScale3D(FVector(1.4f, 1.4f, 0.15f) * AntScale);   // squashed flat
+		// Legs, feelers and (when torn) the body halves fly off first: they are copied from the live pose.
+		SpawnDeathGibs();
+		if (DeathKind == 1)
+		{
+			VisualRoot->SetWorldLocationAndRotation(GetActorLocation() - VisNormal * 20.f, FRotationMatrix::MakeFromZX(VisNormal, VisHeading).ToQuat());
+			VisualRoot->SetRelativeScale3D(FVector(1.4f, 1.4f, 0.15f) * AntScale);   // squashed flat
+		}
+		else if (DeathKind == 2)
+		{
+			VisualRoot->SetVisibility(false, true);   // nothing left in one piece
+		}
+		else
+		{
+			// Falls on its back where it stood.
+			VisualRoot->SetWorldRotation(FRotationMatrix::MakeFromZX(-VisNormal, VisHeading).ToQuat());
+			VisualRoot->SetRelativeScale3D(FVector(VisScale()));
+		}
 		for (USceneComponent* P : AntennaPivots) { if (P) P->SetVisibility(false, true); }
 		for (UStaticMeshComponent* C : LegFemurs) { if (C) C->SetVisibility(false); }
 		for (UStaticMeshComponent* C : LegTibias) { if (C) C->SetVisibility(false); }
@@ -1035,8 +1055,35 @@ void AAntCharacter::Tick(float DeltaSeconds)
 			{
 				HoldingAnt = nullptr;
 			}
+			if (GrippedBy && (GetWorld()->GetTimeSeconds() > GripUntil || !IsValid(GrippedBy) || GrippedBy->bDead))
+			{
+				GrippedBy = nullptr;
+			}
+			if (LostLegs != 0 && IsInNest())
+			{
+				LostLegs = 0;   // legs grow back at home
+			}
 		}
 		ApplyAttachedPose();
+		if (GetNetMode() != NM_DedicatedServer)
+		{
+			// Mandibles locked on us: the body stretches like rubber (and tears if a second one pulls the other way).
+			if (GrippedBy && IsValid(GrippedBy) && !GrippedBy->bDead)
+			{
+				const float Wobble = 0.5f + 0.5f * FMath::Sin(GetWorld()->GetTimeSeconds() * 38.f);
+				VisualRoot->SetRelativeScale3D(FVector(1.3f + 0.3f * Wobble, 0.84f, 0.84f) * VisScale());
+				bStretched = true;
+			}
+			else if (bStretched)
+			{
+				VisualRoot->SetRelativeScale3D(FVector(VisScale()));
+				bStretched = false;
+			}
+			if (ShownLostLegs != LostLegs && LegFemurs.Num() > 0)
+			{
+				ShowLostLegs();
+			}
+		}
 	}
 	if (GetNetMode() != NM_DedicatedServer)
 	{
@@ -1354,6 +1401,20 @@ void AAntCharacter::ServerBite_Implementation()
 		const FVector To = O->GetActorLocation() - Me;
 		if (To.Size() < Reach && FVector::DotProduct(To.GetSafeNormal(), Fwd) > 0.2f)
 		{
+			// Two of us on one enemy, pulling from opposite sides: it comes apart.
+			AAntCharacter* Partner = O->GrippedBy;
+			const FVector Victim = O->GetActorLocation();
+			if (Partner && Partner != this && IsValid(Partner) && !Partner->bDead && Partner->IsEnemy(O) && Now < O->GripUntil
+				&& FVector::DotProduct((Me - Victim).GetSafeNormal(), (Partner->GetActorLocation() - Victim).GetSafeNormal()) < 0.25f)
+			{
+				if (PC) { PC->ClientDamageNumber(Victim, FMath::RoundToInt(O->Health), true); }
+				O->TearApart(this, Partner);
+				bHit = true;
+				continue;
+			}
+			O->GrippedBy = this;
+			O->GripUntil = Now + 1.8f;
+			O->TearLegOff(Me);
 			UGameplayStatics::ApplyDamage(O, Dmg, GetController(), this, UDamageType::StaticClass());
 			O->ApplyLaunch((To.GetSafeNormal() * 520.f + O->GetVisualUp() * 260.f) * SpeedK);
 			if (O->Carrying) { O->LetGo(); O->Toast(TEXT("Тебя укусили — груз выпал!")); }
@@ -1675,6 +1736,15 @@ void AAntCharacter::Die(AController* Killer, AActor* Causer)
 	{
 		CancelTrail(TEXT("Ты погиб — тропа оборвалась"));
 	}
+	if (DeathKind != 2)
+	{
+		const AHumanCharacter* Human = Cast<AHumanCharacter>(Causer);
+		const bool bCrushed = (Human && !Human->bSpraying) || Cast<ACritter>(Causer) != nullptr;
+		DeathKind = bCrushed ? 1 : 0;
+		const FVector Away = Causer ? GetActorLocation() - Causer->GetActorLocation() : FVector(VisNormal);
+		DeathDir = Away.GetSafeNormal(UE_SMALL_NUMBER, FVector(VisNormal));
+	}
+	GrippedBy = nullptr;
 	bDead = true;
 	BurnTime = 0.f;
 	AntSfx::Everyone(this, AntSfx::Squish, GetActorLocation(), FMath::FRandRange(0.85f, 1.15f));
@@ -1780,7 +1850,7 @@ void AAntCharacter::UpdateSpeed()
 	const float ClassSpeed = GetClassDef().Speed * SpeedScale;
 	M->MaxWalkSpeed = (bSprinting && !Carrying ? 760.f : 480.f) * SpeedK * Load * ClassSpeed;
 
-	float Mult = 1.f;
+	float Mult = 1.f - 0.1f * NumLostLegs();   // every torn-off leg costs speed
 	if (HasStatus(AntStatus::Sticky)) { Mult *= 0.35f; }
 	if (HasStatus(AntStatus::Wet)) { Mult *= 0.7f; }
 	if (Temperature < 8.f)
@@ -2459,4 +2529,203 @@ bool AAntCharacter::StartChainHere(const FVector& Aim)
 	}
 	Toast(TEXT("Цепочку начинают: с края (лестница вниз), с потолка, или прицелься в другой берег (мост)"));
 	return false;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Dismemberment
+// ---------------------------------------------------------------------------------------------
+
+void AAntCharacter::TearLegOff(const FVector& From)
+{
+	if (!HasAuthority() || bDead || NumLostLegs() >= 4)
+	{
+		return;
+	}
+	// Legs are stored front to back, left then right: odd index = the right side.
+	const FVector Right = FVector::CrossProduct(VisNormal, VisHeading);
+	const int32 Side = FVector::DotProduct(From - GetActorLocation(), Right) > 0.f ? 1 : 0;
+	TArray<int32> Near, Any;
+	for (int32 i = 0; i < 6; ++i)
+	{
+		if ((LostLegs & (1 << i)) == 0)
+		{
+			Any.Add(i);
+			if ((i & 1) == Side) { Near.Add(i); }
+		}
+	}
+	const TArray<int32>& Pick = Near.Num() > 0 ? Near : Any;
+	if (Pick.Num() == 0)
+	{
+		return;
+	}
+	LostLegs |= (uint8)(1 << Pick[FMath::RandRange(0, Pick.Num() - 1)]);
+	Toast(FString::Printf(TEXT("Тебе оторвали лапу! Осталось %d. В гнезде отрастут."), 6 - NumLostLegs()));
+}
+
+void AAntCharacter::TearApart(AAntCharacter* A, AAntCharacter* B)
+{
+	if (!HasAuthority() || bDead || !A || !B)
+	{
+		return;
+	}
+	DeathKind = 2;
+	DeathDir = (A->GetActorLocation() - B->GetActorLocation()).GetSafeNormal(UE_SMALL_NUMBER, FVector(VisNormal));
+	LastHazard = TEXT("разорван пополам");
+	LastHazardTime = GetWorld()->GetTimeSeconds();
+	A->Toast(TEXT("РАЗОРВАЛИ ПОПОЛАМ!"));
+	B->Toast(TEXT("РАЗОРВАЛИ ПОПОЛАМ!"));
+	if (AAntGameState* GS = GetWorld()->GetGameState<AAntGameState>())
+	{
+		GS->MulticastMessage(FString::Printf(TEXT("%s разорван пополам: тянули %s и %s"), *GetDisplayName(), *A->GetDisplayName(), *B->GetDisplayName()), FLinearColor(1.f, 0.4f, 0.25f));
+	}
+	Health = 0.f;
+	Die(A->GetController(), A);
+}
+
+void AAntCharacter::ShowLostLegs()
+{
+	// A newly missing leg flies off as a gib; a regrown one just comes back.
+	AAntGibs* Gibs = nullptr;
+	const FVector C = GetActorLocation();
+	for (int32 i = 0; i < 6; ++i)
+	{
+		const uint8 Bit = (uint8)(1 << i);
+		const bool bLost = (LostLegs & Bit) != 0;
+		UStaticMeshComponent* Parts[4] = {
+			LegFemurs.IsValidIndex(i) ? LegFemurs[i] : nullptr, LegTibias.IsValidIndex(i) ? LegTibias[i] : nullptr,
+			LegKnees.IsValidIndex(i) ? LegKnees[i] : nullptr, LegCoxas.IsValidIndex(i) ? LegCoxas[i] : nullptr };
+		if (bLost && (ShownLostLegs & Bit) == 0 && !bDead)
+		{
+			if (!Gibs)
+			{
+				Gibs = GetWorld()->SpawnActor<AAntGibs>(AAntGibs::StaticClass(), FTransform::Identity);
+			}
+			for (UStaticMeshComponent* P : Parts)
+			{
+				if (Gibs && P)
+				{
+					const FVector Out = FVector::VectorPlaneProject(P->GetComponentLocation() - C, VisNormal).GetSafeNormal(UE_SMALL_NUMBER, FMath::VRand());
+					Gibs->AddCopy(P, Out * FMath::FRandRange(140.f, 300.f) + VisNormal * FMath::FRandRange(160.f, 320.f), FMath::FRandRange(6.f, 18.f));
+				}
+			}
+			if (Gibs)
+			{
+				for (int32 g = 0; g < 3; ++g)
+				{
+					Gibs->AddGoo(C, (FMath::VRand() + VisNormal).GetSafeNormal() * FMath::FRandRange(90.f, 240.f), FMath::FRandRange(1.f, 2.2f) * AntShrink * 3.f, FLinearColor(0.62f, 0.75f, 0.12f));
+				}
+			}
+		}
+		for (UStaticMeshComponent* P : Parts)
+		{
+			if (P) { P->SetHiddenInGame(bLost); }
+		}
+	}
+	ShownLostLegs = LostLegs;
+}
+
+void AAntCharacter::SpawnDeathGibs()
+{
+	if (GetNetMode() == NM_DedicatedServer || !VisualRoot)
+	{
+		return;
+	}
+	AAntGibs* Gibs = GetWorld()->SpawnActor<AAntGibs>(AAntGibs::StaticClass(), FTransform::Identity);
+	if (!Gibs)
+	{
+		return;
+	}
+	UE_LOG(LogTemp, Display, TEXT("AntGibs: %s died, kind %d, legs lost %d"), *GetDisplayName(), (int32)DeathKind, NumLostLegs());
+	const FVector C = GetActorLocation();
+	const FVector N = VisNormal;
+	const FVector Dir = FVector(DeathDir);
+	const bool bFlat = DeathKind == 1;
+	TSet<const USceneComponent*> NotBody;
+	auto Fly = [&](UStaticMeshComponent* P, float Speed, float Up)
+	{
+		if (!P)
+		{
+			return;
+		}
+		NotBody.Add(P);
+		if (!P->IsVisible() || P->bHiddenInGame)
+		{
+			return;
+		}
+		const FVector Out = FVector::VectorPlaneProject(P->GetComponentLocation() - C, N).GetSafeNormal(UE_SMALL_NUMBER, FMath::VRand());
+		Gibs->AddCopy(P, Out * Speed * FMath::FRandRange(0.6f, 1.25f) + N * Up * FMath::FRandRange(0.5f, 1.3f) + Dir * Speed * 0.4f, FMath::FRandRange(5.f, 16.f));
+	};
+	// Legs: squashed = splayed around the pancake, otherwise they scatter.
+	for (int32 i = 0; i < 6; ++i)
+	{
+		const float Speed = bFlat ? 70.f : 250.f, Up = bFlat ? 25.f : 230.f;
+		if (LegFemurs.IsValidIndex(i)) { Fly(LegFemurs[i], Speed, Up); }
+		if (LegTibias.IsValidIndex(i)) { Fly(LegTibias[i], Speed, Up); }
+		if (LegKnees.IsValidIndex(i)) { Fly(LegKnees[i], Speed, Up); }
+		if (LegCoxas.IsValidIndex(i)) { Fly(LegCoxas[i], Speed, Up); }
+	}
+	for (USceneComponent* Pivot : AntennaPivots)
+	{
+		if (!Pivot)
+		{
+			continue;
+		}
+		TArray<USceneComponent*> Kids;
+		Pivot->GetChildrenComponents(true, Kids);
+		for (USceneComponent* K : Kids)
+		{
+			Fly(Cast<UStaticMeshComponent>(K), bFlat ? 60.f : 200.f, bFlat ? 20.f : 260.f);
+		}
+	}
+	// Hemolymph. Insects bleed yellow-green.
+	const int32 Drops = DeathKind == 2 ? 16 : bFlat ? 9 : 6;
+	for (int32 g = 0; g < Drops; ++g)
+	{
+		Gibs->AddGoo(C, (FMath::VRand() * 0.9f + N * 0.7f + Dir * 0.4f).GetSafeNormal() * FMath::FRandRange(110.f, bFlat ? 260.f : 420.f),
+			FMath::FRandRange(1.f, 2.6f) * AntShrink * 3.f, FLinearColor(0.62f, 0.75f, 0.12f));
+	}
+	if (DeathKind != 2)
+	{
+		return;
+	}
+	// Torn in two: every body part goes with one biter or the other; the big one is split down the middle.
+	for (UStaticMeshComponent* S : { CarryChunk, FrostShell, FlameShell, WebShell })
+	{
+		if (S) { NotBody.Add(S); }
+	}
+	for (UStaticMeshComponent* Dot : TrailDots)
+	{
+		if (Dot) { NotBody.Add(Dot); }
+	}
+	TArray<USceneComponent*> All;
+	VisualRoot->GetChildrenComponents(true, All);
+	TArray<UStaticMeshComponent*> Body;
+	float Biggest = 0.f;
+	for (USceneComponent* K : All)
+	{
+		UStaticMeshComponent* P = Cast<UStaticMeshComponent>(K);
+		if (P && !NotBody.Contains(P) && P->IsVisible() && !P->bHiddenInGame && P->GetStaticMesh())
+		{
+			Body.Add(P);
+			Biggest = FMath::Max(Biggest, (float)P->Bounds.SphereRadius);
+		}
+	}
+	const FVector Pull = Dir * 330.f;
+	for (UStaticMeshComponent* P : Body)
+	{
+		const float R = P->Bounds.SphereRadius;
+		if (R > Biggest * 0.6f)
+		{
+			// Two half-length copies, pushed apart along the part's own long axis.
+			const FVector Axis = P->GetComponentQuat().GetAxisX();
+			const float Sign = FVector::DotProduct(Axis, Dir) >= 0.f ? 1.f : -1.f;
+			Gibs->AddCopy(P, Pull * FMath::FRandRange(0.8f, 1.2f) + N * 240.f, FMath::FRandRange(6.f, 12.f), FVector(0.5f, 1.f, 1.f), Axis * Sign * R * 0.3f);
+			Gibs->AddCopy(P, -Pull * FMath::FRandRange(0.8f, 1.2f) + N * 240.f, FMath::FRandRange(6.f, 12.f), FVector(0.5f, 1.f, 1.f), -Axis * Sign * R * 0.3f);
+		}
+		else
+		{
+			const float Side = FVector::DotProduct(P->GetComponentLocation() - C, Dir) >= 0.f ? 1.f : -1.f;
+			Gibs->AddCopy(P, Pull * Side * FMath::FRandRange(0.7f, 1.2f) + N * FMath::FRandRange(160.f, 300.f), FMath::FRandRange(5.f, 14.f));
+		}
+	}
 }

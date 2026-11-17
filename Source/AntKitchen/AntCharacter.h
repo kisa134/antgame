@@ -225,6 +225,20 @@ public:
 	/** Server: switch colony (only in the nest or while dead). */
 	bool CanSwitchTeam() const;
 
+	// ---- Dismemberment ----
+	/** Legs torn off, a bit per leg (same order as Legs). Each one slows the ant; they grow back in the nest. */
+	UPROPERTY(Replicated) uint8 LostLegs = 0;
+	/** How it died: 0 fell apart, 1 squashed flat, 2 torn in two. */
+	UPROPERTY(Replicated) uint8 DeathKind = 0;
+	UPROPERTY(Replicated) FVector_NetQuantizeNormal DeathDir;
+	/** The enemy whose mandibles are locked on this ant. A second enemy biting from the other side tears it in two. */
+	UPROPERTY(Replicated) AAntCharacter* GrippedBy = nullptr;
+	int32 NumLostLegs() const { return FMath::CountBits((uint64)LostLegs); }
+	/** Server: a bite from this side rips a leg off (the last two always stay). */
+	void TearLegOff(const FVector& From);
+	/** Server: two enemies pulled it apart. */
+	void TearApart(AAntCharacter* A, AAntCharacter* B);
+
 	/** Last kitchen hazard that hurt us (server), for the kill feed. */
 	FString LastHazard;
 	float LastHazardTime = -100.f;
@@ -350,6 +364,11 @@ protected:
 	UPROPERTY() class UPointLightComponent* FlameLight = nullptr;
 	UPROPERTY() UStaticMeshComponent* WebShell = nullptr;
 	float WebTime = 0.f;            // server
+	float GripUntil = 0.f;        // server
+	uint8 ShownLostLegs = 0;      // which missing legs this machine has already shown flying off
+	bool bStretched = false;
+	void ShowLostLegs();
+	void SpawnDeathGibs();
 	FVector AttachedUp = FVector::UpVector;
 	FVector AttachedAlong = FVector::ForwardVector;
 	float AttachedSince = 0.f;

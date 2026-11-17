@@ -10,6 +10,9 @@ class UBoxComponent;
 class UPointLightComponent;
 class UMaterialInstanceDynamic;
 class AAntCharacter;
+class UProceduralMeshComponent;
+namespace AntArt { struct FPart; }
+namespace AntShards { struct FChunk; }
 
 /** Cosmetic only (spawned on clients): little crumbs fly out when food breaks or gets bitten. */
 UCLASS()
@@ -95,13 +98,27 @@ public:
 	UPROPERTY(ReplicatedUsing = OnRep_Visual) bool bIsGear = false;
 	UPROPERTY(ReplicatedUsing = OnRep_Visual) FAntWeapon Gear;
 
+	/**
+	 * Real fracture: this piece is a chunk cut out of the model. (index, count) pairs, see AntShards::Get.
+	 * Empty for whole food and for crumbs bitten off.
+	 */
+	UPROPERTY(ReplicatedUsing = OnRep_Visual) TArray<uint8> ShardPath;
+	UPROPERTY(ReplicatedUsing = OnRep_Visual) int32 ShardSeed = 0;
+	/** Scale of the whole model the chunk was cut from. */
+	UPROPERTY(ReplicatedUsing = OnRep_Visual) FVector ShardScale = FVector::OneVector;
+
 	UFUNCTION()
 	void OnRep_Visual();
 
 private:
 	void RefreshVisual();
 	UFUNCTION() void OnBodyHit(UPrimitiveComponent* HitComp, AActor* Other, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
-	AKitchenLoot* SpawnPiece(const FString& Name, int32 PieceValue, int32 PieceWeight, const FVector& Where, const FVector& Fling);
+	AKitchenLoot* SpawnPiece(const FString& Name, int32 PieceValue, int32 PieceWeight, const FVector& Where, const FVector& Fling, int32 ShardIndex = -1, int32 ShardCount = 0, int32 Seed = 0);
+	/** Shows this piece as its cut chunk. False = not a chunk (or the mesh can't be cut): the plain model is used. */
+	bool BuildShard(const AntArt::FPart* Art);
+	UPROPERTY() UProceduralMeshComponent* Shard = nullptr;
+	UPROPERTY() UMaterialInstanceDynamic* CapMID = nullptr;
+	TSharedPtr<const AntShards::FChunk> ShardBuilt;
 	void TickWater(float Dt);
 
 	UPROPERTY(VisibleAnywhere) UBoxComponent* Body;   // physics body for food
