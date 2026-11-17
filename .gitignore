@@ -15,3 +15,7 @@ Packaged/
 
 build.log
 vs_install.log
+
+Dist/
+*.log
+*.zip

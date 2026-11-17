@@ -27,6 +27,7 @@
 #include "AntArmy.h"
 #include "AntBotController.h"
 #include "AntChain.h"
+#include "Critters.h"
 
 AAntCharacter::AAntCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<UAntMovementComponent>(ACharacter::CharacterMovementComponentName))
@@ -1382,6 +1383,22 @@ void AAntCharacter::ServerBite_Implementation()
 			UGameplayStatics::ApplyDamage(H, Dmg * 0.8f, GetController(), this, UDamageType::StaticClass());
 			if (PC) { PC->ClientDamageNumber(Me + Fwd * 40.f * AntShrink, FMath::RoundToInt(Dmg * 0.8f), false); }
 			bHit = true;
+		}
+	}
+	// The pets: a bite on a paw (or on the back, while riding one).
+	{
+		const UAntMovementComponent* MM = GetAntMovement();
+		const UPrimitiveComponent* RiddenComp = MM ? MM->GetRiddenComponent() : nullptr;
+		for (TActorIterator<ACritter> It(GetWorld()); It; ++It)
+		{
+			ACritter* C = *It;
+			const bool bRiding = RiddenComp && RiddenComp->GetOwner() == C;
+			if (bRiding || FVector::Dist(C->GetActorLocation(), Me) < C->BodyLength() * 0.7f + Reach)
+			{
+				C->Bitten(this);
+				Toast(FString::Printf(TEXT("Укусил: %s"), *C->DisplayName()));
+				bHit = true;
+			}
 		}
 	}
 	// Big food: bite a piece off it that you can carry alone.

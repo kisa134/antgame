@@ -7,6 +7,8 @@
 #include "Components/StaticMeshComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/DamageType.h"
+#include "AntMovementComponent.h"
+#include "Components/PrimitiveComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "EngineUtils.h"
 #include "Engine/World.h"
@@ -109,7 +111,12 @@ void ACritter::BuildVisual()
 	Vis->RegisterComponent();
 	auto P = [this](EAntShape S, const FVector& L, const FVector& Size, const FLinearColor& C, const FRotator& R = FRotator::ZeroRotator, bool bCol = true)
 	{
-		return AntKit::AddPart(this, Vis, S, L, Size / 100.f, C, R, bCol, false);
+		UStaticMeshComponent* M = AntKit::AddPart(this, Vis, S, L, Size / 100.f, C, R, bCol, false);
+		if (bCol)
+		{
+			UAntMovementComponent::MakeClimbable(M);   // ants crawl up the legs and ride on the back
+		}
+		return M;
 	};
 	if (Kind == 0)
 	{
@@ -314,7 +321,8 @@ void ACritter::ServerMove(float Dt)
 	{
 		return;
 	}
-	const float Spd = Kind == 0 ? 650.f : 820.f;
+	const float Spd = (Kind == 0 ? 650.f : 820.f) * (Fleeing > 0.f ? 1.7f : 1.f);
+	Fleeing = FMath::Max(0.f, Fleeing - Dt);
 	const FVector Way = AKitchenBuilder::Route(Me, Goal);
 	FVector To = Way - Me;
 	To.Z = 0.f;
@@ -410,6 +418,76 @@ void ACritter::AnimateVisual(float Dt)
 	{
 		Head->SetRelativeRotation(FRotator(bSleep ? -25.f : (State == 2 ? -35.f : FMath::Sin(Anim * 1.3f) * 6.f), FMath::Sin(Anim * 0.7f) * 12.f, 0.f));
 	}
+}
+
+void ACritter::Bitten(AAntCharacter* By)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+	AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>();
+	const FVector Me = GetActorLocation();
+	if (Kind == 0)
+	{
+		// Yelp and shake: whoever rides him flies off.
+		for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
+		{
+			AAntCharacter* A = *It;
+			const UAntMovementComponent* M = A ? A->GetAntMovement() : nullptr;
+			const UPrimitiveComponent* B = M ? M->GetRiddenComponent() : nullptr;
+			if (A && !A->bDead && B && B->GetOwner() == this)
+			{
+				A->ApplyLaunch((A->GetActorLocation() - Me).GetSafeNormal2D() * 500.f * AntKit::SpeedK + FVector(0.f, 0.f, 420.f * AntKit::SpeedK));
+				A->Toast(TEXT("Бадрик отряхнулся — ты слетел!"));
+			}
+		}
+		if (--Patience > 0)
+		{
+			if (GM) { GM->Broadcast(TEXT("Бадрик взвизгнул!"), FLinearColor(0.9f, 0.8f, 0.5f)); }
+			if (State == 0) { State = 3; StateTimer = 3.f; }
+			return;
+		}
+		// Enough: runs off to the farthest sleeping spot and sulks there.
+		Patience = 3;
+		int32 Far = -1;
+		float BestD = -1.f;
+		for (int32 i = 0; i < Spots.Num(); ++i)
+		{
+			const float D = (float)FVector::Dist(Spots[i].P, Me);
+			if (Spots[i].Do == 0 && D > BestD) { BestD = D; Far = i; }
+		}
+		if (Far >= 0)
+		{
+			SpotIndex = Far;
+			Goal = Spots[Far].P;
+			State = 1;
+			Fleeing = 8.f;
+		}
+		if (GM) { GM->Broadcast(TEXT("Бадрик, скуля, удрал от муравьёв!"), FLinearColor(0.9f, 0.8f, 0.5f)); }
+		return;
+	}
+	// The cat: hisses, and either pounces straight back at the biter or leaps away.
+	Awake = 1.f;
+	if (State == 4)
+	{
+		return;
+	}
+	PounceFrom = Me;
+	if (By && FMath::FRand() < 0.6f)
+	{
+		PounceTo = By->GetActorLocation();
+		PounceTo.Z = Me.Z;
+		if (GM) { GM->Broadcast(TEXT("Кошка зашипела и бросилась на обидчика!"), FLinearColor(1.f, 0.6f, 0.3f)); }
+	}
+	else
+	{
+		const FVector Away = By ? (Me - By->GetActorLocation()).GetSafeNormal2D() : FVector::ForwardVector;
+		PounceTo = Me + Away * 900.f;
+		if (GM) { GM->Broadcast(TEXT("Кошка зашипела и отскочила!"), FLinearColor(1.f, 0.6f, 0.3f)); }
+	}
+	PounceT = 0.f;
+	State = 4;
 }
 
 // =============================================================================================

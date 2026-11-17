@@ -40,6 +40,9 @@ public:
 	/** [P] play for the other colony (in your nest or while dead). */
 	UFUNCTION(Server, Reliable) void ServerSwitchTeam();
 	void SwitchTeam() { ServerSwitchTeam(); }
+	/** F9 / F10: one more ally / enemy bot (console: AddBot <team> <n>). */
+	void AddAllyBot() { ServerAddBot(0, 1); }
+	void AddEnemyBot() { ServerAddBot(1, 1); }
 
 	/** Console: HostGame  -> reopens the current map as a listen server. */
 	UFUNCTION(Exec) void HostGame();

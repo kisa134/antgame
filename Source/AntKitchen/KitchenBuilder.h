@@ -82,6 +82,7 @@ private:
 	void BuildDucts();
 	void BuildWestStreet();
 	void BuildClutter();
+	void BuildAppliances();
 
 	/** Air moving through a duct: ants inside are carried along. */
 	struct FDuctWind { FBox Box; FVector Dir; };

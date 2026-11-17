@@ -267,6 +267,10 @@ void AKitchenBuilder::LootSpots(TArray<FVector>& L, TArray<int32>& T)
 	Add(600.f, 3300.f, 1710.f, 1);
 	Add(1800.f, 3400.f, 1710.f, 1);
 	Add(1850.f, 4450.f, 2350.f, 2);    // microwave top
+	Add(1760.f, 4430.f, 1770.f, 3);    // inside the microwave: the plate of leftovers
+	Add(300.f, 3600.f, 420.f, 1);  Add(900.f, 4200.f, 420.f, 2);  Add(650.f, 3900.f, 1070.f, 2);   // dishwasher racks
+	Add(-2150.f, 4880.f, 1920.f, 1); Add(-2050.f, 4880.f, 2520.f, 2);                               // spice rack shelves
+	Add(-750.f, 4880.f, 2770.f, 2);                                                                   // on the utensil rail
 	Add(800.f, 4600.f, 2210.f, 2);     // sugar jar lid
 	Add(-750.f, 4000.f, 1740.f, 2);    // stove, between the burners
 	Add(-3500.f, 3900.f, 1150.f, 2);   // sink bottom
@@ -292,11 +296,12 @@ void AKitchenBuilder::LootSpots(TArray<FVector>& L, TArray<int32>& T)
 	Add(1200.f, 1650.f, 880.f, 1);
 
 	// Trash corner
-	Add(5750.f, -1250.f, 1540.f, 3);
-	Add(6250.f, -1250.f, 1540.f, 2);
+	Add(5900.f, -1400.f, 900.f, 3);    // inside the pedal bin, on the bag
+	Add(6200.f, -1650.f, 900.f, 2);
+	Add(5800.f, -1700.f, 60.f, 2);     // on the bin floor, next to the bag
 	Add(5200.f, -300.f, 0.f, 1);
 	Add(5000.f, -900.f, 0.f, 1);
-	Add(6000.f, -2700.f, 50.f, 1);     // on the fallen lid
+	Add(6000.f, -2700.f, 0.f, 1);
 	Add(6600.f, -500.f, 0.f, 1);
 	Add(4800.f, -1800.f, 0.f, 1);
 
@@ -586,6 +591,7 @@ void AKitchenBuilder::Build()
 	BuildYard();
 	BuildWestStreet();
 	BuildClutter();
+	BuildAppliances();
 
 	// Backsplash
 	Box(FVector(-7000.f, 4970.f, 1710.f), FVector(2500.f, 5000.f, 2900.f), Backsplash, false);
@@ -609,20 +615,12 @@ void AKitchenBuilder::Build()
 	Box(FVector(-5600.f, 3250.f, 1710.f), FVector(-4500.f, 3950.f, 1760.f), Wood);               // cutting board
 	Box(FVector(-5400.f, 3450.f, 1760.f), FVector(-4800.f, 3510.f, 1772.f), Steel, false);       // knife
 	Box(FVector(-4800.f, 3440.f, 1760.f), FVector(-4550.f, 3520.f, 1790.f), Black, false);
-	Box(FVector(1300.f, 4000.f, 1710.f), FVector(2400.f, 4900.f, 2350.f), DarkSteel);            // microwave
-	Box(FVector(1400.f, 3988.f, 1800.f), FVector(2050.f, 4000.f, 2250.f), Black, false);
 	Cyl(FVector(800.f, 4600.f, 1710.f), 250.f, 500.f, Hex(230, 235, 240));                         // sugar jar
 	Cyl(FVector(-2200.f, 4200.f, 1710.f), 180.f, 300.f, Hex(230, 120, 40));                        // mug
 
 	BuildFridge();
 
-	// ---- Trash corner (east) ----
-	Cyl(FVector(6000.f, -1500.f, 0.f), 650.f, 1500.f, Steel);
-	Cyl(FVector(6000.f, -1500.f, 1500.f), 670.f, 40.f, DarkSteel);
-	Ball(FVector(6000.f, -1500.f, 1560.f), FVector(480.f, 480.f, 120.f), Hex(30, 70, 40));            // bag sticking out
-	Box(FVector(5700.f, -1850.f, 1600.f), FVector(6100.f, -1700.f, 1640.f), Hex(240, 210, 60), false); // banana peel
-	Ball(FVector(6300.f, -1750.f, 1650.f), FVector(70.f, 70.f, 110.f), Hex(170, 120, 60));            // apple core
-	Cyl(FVector(6000.f, -2700.f, 0.f), 680.f, 50.f, Steel);                                            // fallen lid
+	// ---- Trash corner (east): the pedal bin itself is in BuildAppliances (hollow), the lid is a gadget ----
 	Ball(FVector(5200.f, -400.f, 250.f), FVector(500.f, 400.f, 300.f), Black);                        // tipped bag
 	Box(FVector(4900.f, -700.f, 0.f), FVector(5300.f, -500.f, 30.f), Hex(230, 170, 90), false);       // pizza crust
 
@@ -756,7 +754,6 @@ void AKitchenBuilder::Build()
 		LampShades.Add(Cyl(FVector(S.X, S.Y, 5150.f), 350.f, 250.f, White, false));
 		MainLamps.Add(Lamp(FVector(S.X, S.Y, 4950.f), 8.f, FLinearColor(1.f, 0.93f, 0.8f), 16000.f, true));
 	}
-	Lamp(FVector(-350.f, 3500.f, 1950.f), 4.f, FLinearColor(1.f, 0.25f, 0.05f), 1100.f, false);   // hot burner glow
 	Lamp(FVector(-6800.f, Nest.Y, 300.f), 2.f, FLinearColor(1.f, 0.7f, 0.4f), 1400.f, false);      // daylight through the crack
 	WindowLight = Lamp(FVector(0.f, -4500.f, 3200.f), 3.f, FLinearColor(0.7f, 0.85f, 1.f), 6000.f, false);       // window daylight
 	Lamp(FVector(3900.f, 5300.f, 330.f), 2.5f, FLinearColor(1.f, 0.6f, 0.25f), 800.f, false);      // candle in the mouse room
@@ -870,12 +867,14 @@ void AKitchenBuilder::BuildNorthRun()
 	Box(FVector(-1500.f, 3000.f, 1500.f), FVector(0.f, Back, 1650.f), DarkSteel);
 	Box(FVector(-1500.f, 3000.f, 300.f), FVector(-1450.f, Back, 1500.f), DarkSteel);
 	Box(FVector(-50.f, 3000.f, 300.f), FVector(0.f, Back, 1500.f), DarkSteel);
-	Box(FVector(-1450.f, 4700.f, 300.f), FVector(-50.f, Back, 1500.f), Hex(30, 25, 25));
+	Box(FVector(-1450.f, 4700.f, 300.f), FVector(-800.f, Back, 1500.f), Hex(30, 25, 25));     // oven back wall, with a hole gnawed through into the corridor
+	Box(FVector(-600.f, 4700.f, 300.f), FVector(-50.f, Back, 1500.f), Hex(30, 25, 25));
+	Box(FVector(-800.f, 4700.f, 430.f), FVector(-600.f, Back, 1500.f), Hex(30, 25, 25));
 	Box(FVector(-1450.f, 3100.f, 880.f), FVector(-50.f, 4650.f, 900.f), Steel);                      // rack
 	Box(FVector(-1100.f, 3500.f, 900.f), FVector(-400.f, 4300.f, 915.f), Hex(60, 60, 64));          // baking tray
 	Box(FVector(-1400.f, 3200.f, 1478.f), FVector(-100.f, 4600.f, 1490.f), Hex(255, 90, 30), false); // glowing element
 	Box(FVector(-1400.f, 3200.f, 302.f), FVector(-100.f, 4600.f, 312.f), Hex(255, 90, 30), false);
-	Box(FVector(0.f, 3000.f, 120.f), FVector(2500.f, Back, 1650.f), Cabinet);
+	Box(FVector(1300.f, 3000.f, 120.f), FVector(2500.f, Back, 1650.f), Cabinet);   // the dishwasher is x 0..1300 (BuildAppliances)
 
 	// Countertop with a hole for the sink basin (covers the secret corridor too).
 	Box(FVector(-7000.f, 2950.f, 1650.f), FVector(-4200.f, 5000.f, 1710.f), CounterTop);
@@ -903,20 +902,21 @@ void AKitchenBuilder::BuildNorthRun()
 	const FVector Burners[4] = { FVector(-1150.f, 3500.f, 0.f), FVector(-350.f, 3500.f, 0.f), FVector(-1150.f, 4400.f, 0.f), FVector(-350.f, 4400.f, 0.f) };
 	for (int32 i = 0; i < 4; ++i)
 	{
-		const bool bHot = (i == 1);
-		Cyl(FVector(Burners[i].X, Burners[i].Y, 1740.f), 260.f, 25.f, bHot ? Hex(255, 60, 20) : DarkSteel);
-		Cyl(FVector(Burners[i].X, Burners[i].Y, 1765.f), 120.f, 6.f, bHot ? Hex(255, 160, 40) : Black, false);
+		if (i == 1) { continue; }   // the front-right burner belongs to the stove knob gadget (coil, pot of soup, glow)
+		Cyl(FVector(Burners[i].X, Burners[i].Y, 1740.f), 260.f, 25.f, DarkSteel);
+		Cyl(FVector(Burners[i].X, Burners[i].Y, 1765.f), 120.f, 6.f, Black, false);
 	}
 	Box(FVector(-1450.f, 2950.f, 1560.f), FVector(-50.f, 2990.f, 1640.f), Steel, false);   // oven control strip
 	// Generated oven shell around the hollow oven (the inside stays our box so ants can crawl in).
 	AntArt::DressAuto(this, Root, TEXT("SM_Oven_Body"), FVector(-1500.f, 2990.f, 120.f), FVector(0.f, 4750.f, 1740.f), 0.f, 6.f, false);   // shell only: the oven stays hollow inside
 	for (int32 i = 0; i < 4; ++i)
 	{
+		if (i == 1) { continue; }   // the gadget's knob
 		Part(EAntShape::Cylinder, FVector(-1250.f + i * 330.f, 2945.f, 1600.f), FVector(70.f, 70.f, 30.f), FRotator(90.f, 0.f, 0.f), Black, false);
 	}
 
 	Doors(-2800.f, -1500.f, 2, CabinetDoor, Steel);
-	Doors(0.f, 2500.f, 3, CabinetDoor, Steel);
+	Doors(1300.f, 2500.f, 2, CabinetDoor, Steel);
 
 	// The corridor behind the cabinets: dark, dusty, forgotten.
 	for (int32 i = 0; i < 9; ++i)
@@ -1179,14 +1179,7 @@ void AKitchenBuilder::EnvironmentFor(const AAntCharacter* Ant, FAntEnv& Env)
 		Env.Temp(70.f, 12.f);   // the radiator
 	}
 
-	if (HotBurner().IsInside(P))
-	{
-		Env.Temp(150.f, 70.f);
-	}
-	else if (FBox(FVector(-650.f, 3200.f, 1740.f), FVector(-50.f, 3800.f, 2400.f)).IsInside(P))
-	{
-		Env.Temp(48.f, 8.f);   // hot air above the burner
-	}
+	// (the front burner's heat comes from the stove knob gadget: only when it is switched on)
 
 	static const FBox Sticky[] =
 	{

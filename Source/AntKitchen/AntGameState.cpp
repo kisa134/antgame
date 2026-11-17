@@ -29,6 +29,9 @@ void AAntGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	DOREPLIFETIME(AAntGameState, AntsSquashed);
 	DOREPLIFETIME(AAntGameState, HumanKnockouts);
 	DOREPLIFETIME(AAntGameState, bWarMode);
+	DOREPLIFETIME(AAntGameState, bHeistMode);
+	DOREPLIFETIME(AAntGameState, TrophiesWhole);
+	DOREPLIFETIME(AAntGameState, TrophiesBroken);
 	DOREPLIFETIME(AAntGameState, WarPool0);
 	DOREPLIFETIME(AAntGameState, WarPool1);
 }

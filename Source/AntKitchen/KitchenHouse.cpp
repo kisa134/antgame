@@ -80,6 +80,7 @@ void AKitchenBuilder::BuildShell()
 	// Air duct 1: floor grille on the south wall -> up inside the wall -> across the ceiling -> down the north wall -> grille above the upper cabinets.
 	const FBox S1(FVector(-3300.f, -5180.f, 80.f), FVector(-2900.f, -5020.f, 5580.f));
 	const FBox G1(FVector(-3300.f, -5020.f, 80.f), FVector(-2900.f, -4990.f, 380.f));
+	const FBox Socket(FVector(-3200.f, -5020.f, 560.f), FVector(-3000.f, -4990.f, 660.f));   // a cracked wall socket: the back way into the same shaft
 	const FBox D1(FVector(-3300.f, -5180.f, 5420.f), FVector(-2900.f, 5180.f, 5580.f));
 	const FBox N1(FVector(-3300.f, 5020.f, 4480.f), FVector(-2900.f, 5180.f, 5580.f));
 	const FBox R1(FVector(-4700.f, 5020.f, 4480.f), FVector(-2900.f, 5180.f, 4640.f));
@@ -129,7 +130,7 @@ void AKitchenBuilder::BuildShell()
 	Box(FVector(3800.f, 5000.f, 140.f), FVector(3960.f, 5050.f, 450.f), WallC);
 	Box(FVector(3500.f, 5000.f, -100.f), FVector(4300.f, 5600.f, 0.f), Hex(120, 95, 70));   // mouse room floor
 	// South wall with the window opening; the vent shaft and the crack under the window are carved out.
-	Solid(FBox(FVector(-7200.f, -5200.f, 0.f), FVector(-1500.f, -5000.f, 5400.f)), { S1, G1, WindowCrack }, WallC);
+	Solid(FBox(FVector(-7200.f, -5200.f, 0.f), FVector(-1500.f, -5000.f, 5400.f)), { S1, G1, Socket, WindowCrack }, WallC);
 	Box(FVector(1500.f, -5200.f, 0.f), FVector(7200.f, -5000.f, 5400.f), WallC);
 	Box(FVector(-1500.f, -5200.f, 0.f), FVector(1500.f, -5000.f, 2200.f), WallC);
 	Box(FVector(-1500.f, -5200.f, 4200.f), FVector(1500.f, -5000.f, 5400.f), WallC);
@@ -206,6 +207,14 @@ void AKitchenBuilder::BuildDucts()
 	Grille(FVector(-4700.f, 4990.f, 4480.f), FVector(-4300.f, 5020.f, 4640.f), true);    // above the upper cabinets
 	Grille(FVector(6990.f, 200.f, 80.f), FVector(7020.f, 600.f, 380.f), false);          // east floor
 	Grille(FVector(3500.f, 4990.f, 3700.f), FVector(3900.f, 5020.f, 3860.f), true);      // above the fridge
+
+	// The wall socket: a cracked plate, the gap at the bottom leads into the shaft behind it.
+	Box(FVector(-3250.f, -5000.f, 660.f), FVector(-2950.f, -4984.f, 720.f), White);
+	Box(FVector(-3250.f, -5000.f, 480.f), FVector(-3200.f, -4984.f, 660.f), White);
+	Box(FVector(-3000.f, -5000.f, 480.f), FVector(-2950.f, -4984.f, 660.f), White);
+	Box(FVector(-3250.f, -5000.f, 480.f), FVector(-2950.f, -4984.f, 560.f), White);
+	Box(FVector(-3140.f, -4986.f, 600.f), FVector(-3120.f, -4983.f, 640.f), Black, false);   // the two holes
+	Box(FVector(-3080.f, -4986.f, 600.f), FVector(-3060.f, -4983.f, 640.f), Black, false);
 
 	// Dust and a dead fly inside the ducts, dim light leaking in from the grilles, the fan.
 	Ball(FVector(-3100.f, -5100.f, 110.f), FVector(60.f, 50.f, 25.f), Hex(150, 145, 140));
@@ -408,4 +417,106 @@ void AKitchenBuilder::BuildClutter()
 	Cyl(FVector(9250.f, -4800.f, 1220.f), 110.f, 25.f, Hex(190, 130, 70));
 	// Behind the TV: a hole gnawed into the hollow TV stand's back (another way in).
 	Box(FVector(13780.f, -7720.f, 80.f), FVector(13860.f, -7700.f, 260.f), Black, false);
+}
+
+// ---------------------------------------------------------------------------------------------
+// Appliances with an inside: the dishwasher, the microwave, the pedal bin (their doors/lid are gadgets).
+// Plus the ways up that de_rats taught us: a utensil rail, a spice rack of little shelves.
+// ---------------------------------------------------------------------------------------------
+
+void AKitchenBuilder::BuildAppliances()
+{
+	auto Solid = [this](const FBox& B, std::initializer_list<FBox> Cavities, const FLinearColor& C)
+	{
+		TArray<FBox> P;
+		P.Add(B);
+		for (const FBox& Cav : Cavities)
+		{
+			Carve(P, Cav);
+		}
+		for (const FBox& Q : P)
+		{
+			Box(Q.Min, Q.Max, C);
+		}
+	};
+
+	// Dishwasher: a hollow box under the counter right of the stove; the door (gadget) drops into a ramp.
+	Solid(FBox(FVector(0.f, 3000.f, 120.f), FVector(1300.f, 4750.f, 1650.f)), { FBox(FVector(60.f, 2990.f, 160.f), FVector(1240.f, 4700.f, 1600.f)) }, Hex(200, 205, 210));
+	Box(FVector(60.f, 3040.f, 160.f), FVector(1240.f, 4700.f, 190.f), Hex(120, 170, 220), false);        // rinse water on the floor
+	for (float Z : { 400.f, 1050.f })                                                                       // two wire racks
+	{
+		for (float X = 120.f; X <= 1180.f; X += 212.f)
+		{
+			Box(FVector(X - 7.f, 3080.f, Z), FVector(X + 7.f, 4660.f, Z + 14.f), Steel);
+		}
+		for (float Y = 3100.f; Y <= 4660.f; Y += 390.f)
+		{
+			Box(FVector(80.f, Y - 7.f, Z), FVector(1220.f, Y + 7.f, Z + 14.f), Steel);
+		}
+		for (float X = 100.f; X <= 1200.f; X += 550.f)                                                      // rack posts
+		{
+			Box(FVector(X - 10.f, 3080.f, 160.f), FVector(X + 10.f, 3100.f, Z + 14.f), Steel);
+			Box(FVector(X - 10.f, 4640.f, 160.f), FVector(X + 10.f, 4660.f, Z + 14.f), Steel);
+		}
+	}
+	for (int32 i = 0; i < 4; ++i)   // dirty plates standing on edge in the lower rack
+	{
+		const float Y = 3350.f + i * 330.f;
+		Part(EAntShape::Cylinder, FVector(650.f, Y, 414.f + 300.f), FVector(600.f, 600.f, 24.f), FRotator(0.f, 0.f, 90.f), Hex(240, 240, 235), true);
+		Ball(FVector(650.f, Y - 14.f, 650.f), FVector(120.f, 6.f, 90.f), Hex(200, 120, 60));              // sauce smear
+	}
+	Part(EAntShape::Cylinder, FVector(300.f, 4300.f, 1064.f + 150.f), FVector(240.f, 240.f, 300.f), FRotator(0.f, 0.f, 180.f), Hex(230, 120, 40), true);   // a mug upside down (upper rack)
+	Cyl(FVector(900.f, 4100.f, 1064.f), 260.f, 120.f, White);                                             // a bowl
+	Part(EAntShape::Cube, FVector(1000.f, 3500.f, 1064.f + 60.f), FVector(220.f, 30.f, 120.f), FRotator(0.f, 20.f, 0.f), Steel, true);   // a knife standing in the cutlery basket
+
+	// Microwave: hollow, door on the left front edge (gadget), control panel on the right.
+	Solid(FBox(FVector(1300.f, 4000.f, 1710.f), FVector(2400.f, 4900.f, 2350.f)), { FBox(FVector(1360.f, 3990.f, 1750.f), FVector(2160.f, 4860.f, 2310.f)) }, DarkSteel);
+	Cyl(FVector(1760.f, 4425.f, 1750.f), 370.f, 16.f, Hex(200, 220, 230));                                // the glass plate
+	Cyl(FVector(1760.f, 4425.f, 1766.f), 230.f, 90.f, White);                                             // a bowl of leftovers
+	Ball(FVector(1760.f, 4425.f, 1870.f), FVector(190.f, 190.f, 40.f), Hex(200, 120, 50));
+	Box(FVector(2190.f, 3999.f, 1800.f), FVector(2370.f, 4001.f, 2300.f), Hex(30, 30, 35), false);        // panel
+	for (int32 i = 0; i < 4; ++i)
+	{
+		Box(FVector(2210.f, 3996.f, 1860.f + i * 100.f), FVector(2350.f, 4000.f, 1900.f + i * 100.f), Hex(90, 90, 95), false);
+	}
+
+	// The pedal bin: a hollow steel cylinder (12 wall panels), the bag and the junk inside, the lid is a gadget.
+	const FVector Bin(6000.f, -1500.f, 0.f);
+	Cyl(Bin, 650.f, 30.f, DarkSteel);
+	for (int32 i = 0; i < 12; ++i)
+	{
+		const float A = i * 30.f;
+		const float R = FMath::DegreesToRadians(A);
+		Part(EAntShape::Cube, Bin + FVector(FMath::Cos(R) * 630.f, FMath::Sin(R) * 630.f, 770.f), FVector(40.f, 350.f, 1540.f), FRotator(0.f, A, 0.f), Steel, true);
+	}
+	Ball(Bin + FVector(0.f, 0.f, 460.f), FVector(440.f, 430.f, 430.f), Hex(30, 70, 40));                   // the bag
+	Box(Bin + FVector(-250.f, -200.f, 860.f), Bin + FVector(150.f, -50.f, 900.f), Hex(240, 210, 60), false);   // banana peel on the bag
+	Ball(Bin + FVector(200.f, 150.f, 940.f), FVector(70.f, 70.f, 110.f), Hex(170, 120, 60));              // apple core
+	Box(Bin + FVector(-500.f, 150.f, 30.f), Bin + FVector(-150.f, 350.f, 60.f), Hex(230, 170, 90), false); // pizza crust on the floor
+	for (int32 i = 0; i < 5; ++i)                                                                           // fish bones
+	{
+		Box(Bin + FVector(100.f + i * 60.f, 350.f, 30.f), Bin + FVector(110.f + i * 60.f, 520.f, 36.f), White, false);
+	}
+	Box(Bin + FVector(80.f, 340.f, 30.f), Bin + FVector(420.f, 352.f, 36.f), White, false);
+	Ball(Bin + FVector(-100.f, 300.f, 930.f), FVector(160.f, 110.f, 60.f), Hex(230, 200, 150));           // half a sandwich (the prize)
+
+	// Utensil rail above the stove: ladle and spatula hang down to the stove top; climb them up to the rail and the hood.
+	Part(EAntShape::Cylinder, FVector(-750.f, 4900.f, 2760.f), FVector(30.f, 30.f, 1500.f), FRotator(0.f, 0.f, 90.f), Steel, true);
+	Box(FVector(-1510.f, 4900.f, 2700.f), FVector(-1490.f, 5000.f, 2800.f), Steel);                      // rail brackets
+	Box(FVector(-10.f, 4900.f, 2700.f), FVector(10.f, 5000.f, 2800.f), Steel);
+	Part(EAntShape::Cylinder, FVector(-1150.f, 4900.f, 2400.f), FVector(24.f, 24.f, 700.f), FRotator::ZeroRotator, Steel, true);          // ladle handle
+	Ball(FVector(-1150.f, 4860.f, 2040.f), FVector(110.f, 110.f, 70.f), Steel);                           // ladle bowl (touches the stove top at 1740? no: hangs; the spatula does)
+	Part(EAntShape::Cube, FVector(-500.f, 4900.f, 2250.f), FVector(26.f, 26.f, 1000.f), FRotator::ZeroRotator, Hex(60, 45, 35), true);    // spatula handle, down to 1750
+	Box(FVector(-600.f, 4890.f, 1750.f), FVector(-400.f, 4910.f, 1900.f), DarkSteel);                     // spatula blade on the stove top
+	Part(EAntShape::Cylinder, FVector(-900.f, 4900.f, 2560.f), FVector(14.f, 14.f, 380.f), FRotator::ZeroRotator, Steel, true);           // a hanging whisk
+	Ball(FVector(-900.f, 4900.f, 2320.f), FVector(70.f, 70.f, 110.f), Steel);
+
+	// Spice rack: four little shelves up the backsplash left of the stove, jars on them (steps to the upper cabinets).
+	for (int32 i = 0; i < 4; ++i)
+	{
+		const float Z = 1900.f + i * 300.f;
+		Box(FVector(-2400.f, 4840.f, Z), FVector(-1800.f, 4970.f, Z + 20.f), Wood);
+		Cyl(FVector(-2300.f + (i % 2) * 150.f, 4905.f, Z + 20.f), 45.f, 150.f, i % 3 == 0 ? Hex(200, 60, 40) : (i % 3 == 1 ? Hex(220, 170, 50) : Hex(90, 140, 60)));
+		Cyl(FVector(-1950.f - (i % 2) * 100.f, 4905.f, Z + 20.f), 40.f, 130.f, Hex(230, 230, 220));
+	}
 }

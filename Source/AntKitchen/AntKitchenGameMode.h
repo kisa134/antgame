@@ -72,8 +72,14 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Match") float RespawnDelay = 5.f;
 	UPROPERTY(EditDefaultsOnly, Category = "Match") int32 AllyBots = 7;    // + you = 8 per colony
 	UPROPERTY(EditDefaultsOnly, Category = "Match") int32 RivalBots = 8;
-	/** "Муравьиная война" (territories + cashouts). -AntClassic on the command line turns it off. */
-	UPROPERTY(EditDefaultsOnly, Category = "Match") bool bWar = true;
+	/** Modes: «Хайст» (default: co-op heist, trophies up high), «Война» (-AntWar: territories + cashouts), «Набег» (-AntClassic). */
+	UPROPERTY(EditDefaultsOnly, Category = "Match") bool bWar = false;
+	UPROPERTY(EditDefaultsOnly, Category = "Match") bool bHeist = true;
+	/** Heist: keeps 3 trophies in the kitchen. */
+	void HeistTick();
+	void SpawnTrophy(int32 Slot);
+	FTimerHandle HeistTimer;
+	float TrophyLostAt = -100.f;
 
 private:
 	void SpawnHuman();

@@ -27,6 +27,19 @@ void AAntPlayerController::BeginPlay()
 		SetInputMode(Mode);
 		bShowMouseCursor = false;
 
+		// Co-op without the console: -AntHost makes this machine the listen server, -AntJoin=ip connects to a friend.
+		FString JoinArg;
+		if (FParse::Param(FCommandLine::Get(), TEXT("AntHost")) && GetWorld()->GetNetMode() == NM_Standalone)
+		{
+			FTimerHandle HH;
+			GetWorldTimerManager().SetTimer(HH, FTimerDelegate::CreateWeakLambda(this, [this]() { HostGame(); }), 1.f, false);
+		}
+		else if (FParse::Value(FCommandLine::Get(), TEXT("AntJoin="), JoinArg, false) && GetWorld()->GetNetMode() == NM_Standalone)
+		{
+			FTimerHandle JH;
+			GetWorldTimerManager().SetTimer(JH, FTimerDelegate::CreateWeakLambda(this, [this, JoinArg]() { JoinGame(JoinArg); }), 1.f, false);
+		}
+
 		// Dev/test switches.
 		FString TpArg;
 		if (FParse::Value(FCommandLine::Get(), TEXT("AntTp="), TpArg, false))
@@ -95,6 +108,7 @@ void AAntPlayerController::ServerAddBot_Implementation(int32 Team, int32 Count)
 	if (AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
 	{
 		GM->AddBots((uint8)FMath::Clamp(Team, 0, 1), FMath::Clamp(Count, 1, 8));
+		ClientToast(FString::Printf(TEXT("Бот добавлен: %s (F9 — свой, F10 — враг)"), Team == 0 ? TEXT("союзник") : TEXT("огненный")));
 	}
 }
 
@@ -154,6 +168,8 @@ void AAntPlayerController::SetupInputComponent()
 	InputComponent->BindKey(EKeys::J, IE_Pressed, this, &AAntPlayerController::BecomeFly);
 	InputComponent->BindKey(EKeys::K, IE_Pressed, this, &AAntPlayerController::BecomeSpider);
 	InputComponent->BindKey(EKeys::P, IE_Pressed, this, &AAntPlayerController::SwitchTeam);
+	InputComponent->BindKey(EKeys::F9, IE_Pressed, this, &AAntPlayerController::AddAllyBot);
+	InputComponent->BindKey(EKeys::F10, IE_Pressed, this, &AAntPlayerController::AddEnemyBot);
 	InputComponent->BindAction("ToggleHuman", IE_Pressed, this, &AAntPlayerController::RequestToggleHuman);
 	InputComponent->BindAction("Scoreboard", IE_Pressed, this, &AAntPlayerController::ShowScores);
 	InputComponent->BindAction("Scoreboard", IE_Released, this, &AAntPlayerController::HideScores);

@@ -212,6 +212,31 @@ void AKitchenDoor::Build()
 		UsePointsLocal = { FVector(0.f, -30.f, 120.f), FVector(0.f, -30.f, -60.f) };
 		break;
 	}
+	case EKitchenDoorKind::Dishwasher:
+	{
+		// Hinge = bottom-front edge of the dishwasher opening; the door drops into a ramp (grooved inside: easy to climb).
+		BoxPart(Hinge, FVector(-640.f, -16.f, 0.f), FVector(640.f, 0.f, 1480.f), Hex(200, 205, 210), true);
+		BoxPart(Hinge, FVector(-620.f, -60.f, 1380.f), FVector(620.f, -16.f, 1440.f), Steel, true);            // handle
+		BoxPart(Hinge, FVector(-400.f, -19.f, 1300.f), FVector(-200.f, -16.f, 1340.f), Hex(60, 200, 90), false); // ready light
+		for (int32 i = 0; i < 6; ++i)                                                                          // grooves on the inside face
+		{
+			BoxPart(Hinge, FVector(-600.f, 0.f, 150.f + i * 220.f), FVector(600.f, 12.f, 170.f + i * 220.f), Hex(170, 175, 180), true);
+		}
+		UsePointsLocal = { FVector(0.f, -150.f, -100.f), FVector(0.f, 600.f, 40.f), FVector(0.f, -900.f, 20.f) };
+		InnerLight = MakeLight(this, Root, FVector(0.f, 900.f, 1100.f), 2.5f, FLinearColor(0.8f, 0.95f, 1.f), 1700.f);
+		break;
+	}
+	case EKitchenDoorKind::Microwave:
+	{
+		// Hinge = the left (west) front edge; the door swings out towards -Y.
+		UStaticMeshComponent* Slab = BoxPart(Hinge, FVector(0.f, -30.f, 0.f), FVector(850.f, 0.f, 560.f), Hex(60, 60, 64), true);
+		BoxPart(Hinge, FVector(80.f, -33.f, 80.f), FVector(680.f, -30.f, 480.f), Hex(30, 25, 25), false);          // the dark window
+		BoxPart(Hinge, FVector(760.f, -70.f, 120.f), FVector(800.f, -30.f, 440.f), Steel, true);                   // handle
+		(void)Slab;
+		UsePointsLocal = { FVector(760.f, -120.f, -40.f), FVector(400.f, 300.f, 40.f) };
+		InnerLight = MakeLight(this, Root, FVector(450.f, 450.f, 450.f), 2.f, FLinearColor(1.f, 0.9f, 0.6f), 1200.f);
+		break;
+	}
 	}
 }
 
@@ -232,8 +257,14 @@ void AKitchenDoor::ApplyAlpha()
 	case EKitchenDoorKind::Drawer:
 		Hinge->SetRelativeLocation(FVector(0.f, -1100.f * Alpha, 0.f));
 		break;
+	case EKitchenDoorKind::Dishwasher:
+		Hinge->SetRelativeRotation(FQuat(FVector::ForwardVector, FMath::DegreesToRadians(85.f * Alpha)));
+		break;
+	case EKitchenDoorKind::Microwave:
+		Hinge->SetRelativeRotation(FQuat(FVector::UpVector, FMath::DegreesToRadians(-115.f * Alpha)));
+		break;
 	}
-	if (InnerLight && Kind == EKitchenDoorKind::Fridge)
+	if (InnerLight && (Kind == EKitchenDoorKind::Fridge || Kind == EKitchenDoorKind::Dishwasher || Kind == EKitchenDoorKind::Microwave))
 	{
 		InnerLight->SetVisibility(Alpha > 0.05f);
 	}
@@ -297,6 +328,8 @@ FString AKitchenDoor::GetPrompt(const AAntCharacter* Ant) const
 	case EKitchenDoorKind::Fridge: return bOpen ? TEXT("Захлопнуть холодильник") : TEXT("Подцепить дверь холодильника");
 	case EKitchenDoorKind::Oven: return bOpen ? TEXT("Закрыть духовку") : TEXT("Открыть духовку (там печенье... и жар)");
 	case EKitchenDoorKind::Drawer: return bOpen ? TEXT("Задвинуть ящик") : TEXT("Выдвинуть ящик");
+	case EKitchenDoorKind::Dishwasher: return bOpen ? TEXT("Закрыть посудомойку") : TEXT("Открыть посудомойку (грязные тарелки!)");
+	case EKitchenDoorKind::Microwave: return bOpen ? TEXT("Закрыть микроволновку") : TEXT("Открыть микроволновку");
 	}
 	return FString();
 }
@@ -329,6 +362,14 @@ void AKitchenDoor::Interact(AAntCharacter* Ant)
 		}
 		break;
 	}
+	case EKitchenDoorKind::Dishwasher:
+		SetOpen(!bOpen, 25.f);
+		if (bOpen && Ant) { Ant->Toast(TEXT("Посудомойка открыта на 25 с: внутри мокро, но тарелки грязные — объедение")); }
+		break;
+	case EKitchenDoorKind::Microwave:
+		SetOpen(!bOpen, 20.f);
+		if (bOpen && Ant) { Ant->Toast(TEXT("Микроволновка открыта на 20 с")); }
+		break;
 	}
 }
 
@@ -351,6 +392,20 @@ void AKitchenDoor::AffectAnt(AAntCharacter* Ant, FAntEnv& Env) const
 		if (FBox(FVector(-1450.f, 3000.f, 300.f), FVector(-50.f, 4700.f, 1500.f)).IsInside(P))
 		{
 			Env.Temp(bOpen ? 90.f : 170.f, bOpen ? 9.f : 35.f);
+		}
+	}
+	else if (Kind == EKitchenDoorKind::Dishwasher)
+	{
+		// Rinse water on the floor of the machine, warm and humid inside when shut.
+		if (FBox(FVector(60.f, 3040.f, 160.f), FVector(1240.f, 4700.f, 230.f)).IsInside(P))
+		{
+			Env.Flags |= AntStatus::Wet;
+			Env.Temp(34.f, 6.f);
+		}
+		else if (!bOpen && FBox(FVector(60.f, 3040.f, 230.f), FVector(1240.f, 4700.f, 1600.f)).IsInside(P))
+		{
+			Env.Flags |= AntStatus::Wet;
+			Env.Temp(44.f, 5.f);
 		}
 	}
 }

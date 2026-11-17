@@ -35,6 +35,7 @@ private:
 	void DrawScoreboard(AAntGameState* GS);
 	void DrawHelp(APawn* Me);
 	void DrawWar(AAntGameState* GS, APawn* Me);
+	void DrawTrophies(AAntGameState* GS, APawn* Me);
 	void DrawLinkState(AAntCharacter* Ant);
 
 	float S = 1.f;          // UI scale

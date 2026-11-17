@@ -1,4 +1,6 @@
 ﻿#include "AntMovementComponent.h"
+#include "KitchenLoot.h"
+#include "KitchenInteractables.h"
 #include "GameFramework/Character.h"
 #include "AntTypes.h"
 #include "Components/CapsuleComponent.h"
@@ -50,6 +52,7 @@ FCollisionObjectQueryParams UAntMovementComponent::SurfaceObjects()
 {
 	FCollisionObjectQueryParams P(ECC_WorldStatic);
 	P.AddObjectTypesToQuery(ECC_AntClimbable);
+	P.AddObjectTypesToQuery(ECC_PhysicsBody);   // food and props lying around: climb the cake
 	return P;
 }
 
@@ -102,6 +105,13 @@ bool UAntMovementComponent::IsStickable(const FHitResult& Hit) const
 		return false;
 	}
 	const ECollisionChannel T = C->GetCollisionObjectType();
+	if (T == ECC_PhysicsBody)
+	{
+		// Food lying around is a surface; what you (or anyone) carry is not.
+		const AKitchenLoot* L = Cast<AKitchenLoot>(C->GetOwner());
+		if (L) { return !L->IsCarried() && !L->bHeld; }
+		return C->GetOwner() && C->GetOwner()->IsA<AKitchenProp>();
+	}
 	return T == ECC_WorldStatic || T == ECC_AntClimbable;
 }
 

@@ -169,6 +169,7 @@ void AAntHUD::DrawHUD()
 
 	DrawTop(GS);
 	DrawWar(GS, Me);
+	DrawTrophies(GS, Me);
 	DrawFeed(GS);
 	DrawToastsAndNumbers(PC);
 	DrawHelp(Me);
@@ -191,10 +192,17 @@ void AAntHUD::DrawTop(AAntGameState* GS)
 	const FLinearColor Fire(1.f, 0.4f, 0.2f);
 	Txt(FString::Printf(TEXT("КОЛОНИЯ %d"), GS->TeamScore), W * 0.5f - 140.f * S, 12.f * S, Gold, Med, 1.3f * S, true);
 	Txt(FString::Printf(TEXT("ОГНЕННЫЕ %d"), GS->RivalScore), W * 0.5f + 140.f * S, 12.f * S, Fire, Med, 1.3f * S, true);
-	Txt(FString::Printf(TEXT("до %d"), GS->TargetScore), W * 0.5f, 16.f * S, Grey, GEngine->GetSmallFont(), 1.1f * S, true);
-	const float Tg = FMath::Max(1, GS->TargetScore);
-	Bar(W * 0.5f - 270.f * S, 48.f * S, 260.f * S, 16.f * S, GS->TeamScore / Tg, Gold);
-	Bar(W * 0.5f + 10.f * S, 48.f * S, 260.f * S, 16.f * S, GS->RivalScore / Tg, Fire);
+	if (GS->bHeistMode)
+	{
+		Txt(FString::Printf(TEXT("СМЕНА  ·  трофеев целыми %d, разбито %d"), GS->TrophiesWhole, GS->TrophiesBroken), W * 0.5f, 48.f * S, Grey, GEngine->GetSmallFont(), 1.1f * S, true);
+	}
+	else
+	{
+		Txt(FString::Printf(TEXT("до %d"), GS->TargetScore), W * 0.5f, 16.f * S, Grey, GEngine->GetSmallFont(), 1.1f * S, true);
+		const float Tg = FMath::Max(1, GS->TargetScore);
+		Bar(W * 0.5f - 270.f * S, 48.f * S, 260.f * S, 16.f * S, GS->TeamScore / Tg, Gold);
+		Bar(W * 0.5f + 10.f * S, 48.f * S, 260.f * S, 16.f * S, GS->RivalScore / Tg, Fire);
+	}
 	if (GS->HumanRage > 0)
 	{
 		Txt(FString::Printf(TEXT("ЯРОСТЬ ЧЕЛОВЕКА: %d / 3"), GS->HumanRage), W * 0.5f, 128.f * S, Red, GEngine->GetSmallFont(), 1.15f * S, true);
@@ -206,10 +214,20 @@ void AAntHUD::DrawTop(AAntGameState* GS)
 
 	if (GS->Phase != 0)
 	{
-		const FString Banner = GS->Phase == 1 ? TEXT("КОЛОНИЯ ПОБЕДИЛА!") : GS->Phase == 3 ? TEXT("ОГНЕННЫЕ МУРАВЬИ ПОБЕДИЛИ...") : TEXT("ЧЕЛОВЕК ПОБЕДИЛ!");
-		DrawRect(Panel, 0.f, Canvas->ClipY * 0.3f, W, 140.f * S);
+		const FString Banner = GS->bHeistMode ? (GS->Phase == 1 ? TEXT("СМЕНА ОКОНЧЕНА: КОЛОНИЯ СЫТА") : GS->Phase == 3 ? TEXT("СМЕНА ОКОНЧЕНА: ОГНЕННЫЕ ОБОШЛИ") : TEXT("СМЕНА ОКОНЧЕНА: ЧЕЛОВЕК ОТСТОЯЛ КУХНЮ"))
+			: (GS->Phase == 1 ? TEXT("КОЛОНИЯ ПОБЕДИЛА!") : GS->Phase == 3 ? TEXT("ОГНЕННЫЕ МУРАВЬИ ПОБЕДИЛИ...") : TEXT("ЧЕЛОВЕК ПОБЕДИЛ!"));
+		DrawRect(Panel, 0.f, Canvas->ClipY * 0.3f, W, (GS->bHeistMode ? 200.f : 140.f) * S);
 		Txt(Banner, W * 0.5f, Canvas->ClipY * 0.3f + 20.f * S, Gold, Big, 2.5f * S, true);
-		Txt(TEXT("Новый раунд через несколько секунд..."), W * 0.5f, Canvas->ClipY * 0.3f + 95.f * S, White, Med, 1.f * S, true);
+		if (GS->bHeistMode)
+		{
+			Txt(FString::Printf(TEXT("Добыча %d  ·  трофеев целыми %d  ·  разбито %d  ·  раздавлено муравьёв %d"), GS->TeamScore, GS->TrophiesWhole, GS->TrophiesBroken, GS->AntsSquashed),
+				W * 0.5f, Canvas->ClipY * 0.3f + 100.f * S, White, Med, 1.1f * S, true);
+			Txt(TEXT("Новая смена через несколько секунд..."), W * 0.5f, Canvas->ClipY * 0.3f + 150.f * S, Grey, Med, 1.f * S, true);
+		}
+		else
+		{
+			Txt(TEXT("Новый раунд через несколько секунд..."), W * 0.5f, Canvas->ClipY * 0.3f + 95.f * S, White, Med, 1.f * S, true);
+		}
 	}
 }
 
@@ -807,5 +825,32 @@ void AAntHUD::DrawWar(AAntGameState* GS, APawn* Me)
 		{
 			Marker(It->GetActorLocation() + FVector(0.f, 0.f, 250.f), It->ZoneName, Gold, true);
 		}
+	}
+}
+
+void AAntHUD::DrawTrophies(AAntGameState* GS, APawn* Me)
+{
+	const AAntCharacter* Ant = Cast<AAntCharacter>(Me);
+	if (!GS || !GS->bHeistMode || !Ant || Ant->bDead)
+	{
+		return;
+	}
+	for (TActorIterator<AKitchenLoot> It(GetWorld()); It; ++It)
+	{
+		AKitchenLoot* L = *It;
+		if (!L->bTrophy || L->bHeld)
+		{
+			continue;
+		}
+		FString Label;
+		if (L->IsCarried())
+		{
+			Label = L->CarryTeam() == Ant->Team ? FString::Printf(TEXT("%s — несём (%d)"), *L->LootName, L->NumCarriers()) : FString::Printf(TEXT("%s — ТАЩАТ ВРАГИ!"), *L->LootName);
+		}
+		else
+		{
+			Label = FString::Printf(TEXT("ТРОФЕЙ: %s  +%d ×2  нужно %d"), *L->LootName, L->Value, L->AntsNeeded(Ant->GetStrength()));
+		}
+		Marker(L->GetActorLocation() + FVector(0.f, 0.f, 120.f), Label, L->IsCarried() && L->CarryTeam() != Ant->Team ? FLinearColor(1.f, 0.4f, 0.2f) : Gold, true);
 	}
 }

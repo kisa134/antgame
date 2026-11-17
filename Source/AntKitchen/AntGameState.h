@@ -32,6 +32,10 @@ public:
 	UPROPERTY(Replicated) int32 HumanKnockouts = 0;
 	/** "Муравьиная война": territories + cashouts, 128 army ants per side in a reserve pool. */
 	UPROPERTY(Replicated) bool bWarMode = false;
+	/** «Хайст»: the shift (default mode). Trophies delivered whole / smashed this shift. */
+	UPROPERTY(Replicated) bool bHeistMode = true;
+	UPROPERTY(Replicated) int32 TrophiesWhole = 0;
+	UPROPERTY(Replicated) int32 TrophiesBroken = 0;
 	UPROPERTY(Replicated) int32 WarPool0 = 128;
 	UPROPERTY(Replicated) int32 WarPool1 = 128;
 	int32 WarPool(uint8 Team) const { return Team == 0 ? WarPool0 : WarPool1; }

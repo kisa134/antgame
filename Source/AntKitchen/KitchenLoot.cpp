@@ -79,6 +79,7 @@ void AKitchenLoot::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	DOREPLIFETIME(AKitchenLoot, CarrierTeam);
 	DOREPLIFETIME(AKitchenLoot, bHeld);
 	DOREPLIFETIME(AKitchenLoot, bVault);
+	DOREPLIFETIME(AKitchenLoot, bTrophy);
 }
 
 float AKitchenLoot::GetRadius() const
@@ -178,8 +179,21 @@ void AKitchenLoot::Shatter(const FVector& At)
 		return;
 	}
 	const int32 N = FMath::Clamp(Weight / 5, 2, 6);
-	// Pieces are worth a bit more in total: smashing heavy food is a strategy, not a loss.
-	const int32 PieceValue = FMath::CeilToInt(Value * 1.1f / N);
+	// Ordinary food: pieces are worth a bit more in total (smashing is a strategy). A trophy: the whole-delivery
+	// bonus is gone, the pieces add up to the plain value.
+	const int32 PieceValue = FMath::CeilToInt(Value * (bTrophy ? 1.f : 1.1f) / N);
+	if (bTrophy)
+	{
+		if (AAntKitchenGameMode* TGM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
+		{
+			TGM->TrophyLostAt = GetWorld()->GetTimeSeconds();
+		}
+		if (AAntGameState* TGS = GetWorld()->GetGameState<AAntGameState>())
+		{
+			TGS->TrophiesBroken++;
+			TGS->MulticastMessage(FString::Printf(TEXT("ТРОФЕЙ РАЗБИТ: «%s» — куски стоят вдвое меньше целого"), *LootName), FLinearColor(1.f, 0.5f, 0.3f));
+		}
+	}
 	const int32 PieceWeight = FMath::Max(2, FMath::RoundToInt((float)Weight / N));
 	const FString Base = LootName.StartsWith(TEXT("Кусок")) ? LootName : FString::Printf(TEXT("Кусок: %s"), *LootName);
 	const FVector C = GetActorLocation() + FVector(0.f, 0.f, 15.f);
@@ -293,14 +307,15 @@ void AKitchenLoot::RefreshVisual()
 		SetupPhysics(Mesh->GetRelativeScale3D() * 50.f);
 	}
 
-	const bool bShowBeam = bIsGear && Gear.Rarity >= 1;
+	const bool bShowBeam = (bIsGear && Gear.Rarity >= 1) || bTrophy;
+	const FLinearColor BeamCol = bTrophy ? FLinearColor(1.f, 0.8f, 0.2f) : Col;
 	Beam->SetStaticMesh(AntKit::ShapeMesh(EAntShape::Cylinder));
 	Beam->SetVisibility(bShowBeam);
-	if (!BeamMID) { BeamMID = AntKit::Paint(Beam, Col); }
-	else { BeamMID->SetVectorParameterValue(TEXT("Color"), Col); }
+	if (!BeamMID) { BeamMID = AntKit::Paint(Beam, BeamCol); }
+	else { BeamMID->SetVectorParameterValue(TEXT("Color"), BeamCol); }
 
-	const bool bGlow = bIsGear || Value >= 100;
-	Glow->SetLightColor(Col);
+	const bool bGlow = bIsGear || Value >= 100 || bTrophy;
+	Glow->SetLightColor(bTrophy ? FLinearColor(1.f, 0.8f, 0.2f) : Col);
 	Glow->SetIntensity(bIsGear ? 2.f + Gear.Rarity * 1.5f : 2.5f);
 	Glow->SetVisibility(bGlow);
 }

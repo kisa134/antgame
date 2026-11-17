@@ -73,6 +73,8 @@ public:
 	bool CanBreak() const { return !bIsGear && !bVault && Weight >= 6; }
 	/** War mode: the sugar-bowl safe. Not food: it goes to a cashout, never into a nest. */
 	UPROPERTY(Replicated) bool bVault = false;
+	/** Heist: a big prize placed up high. Delivered whole it is worth double; its pieces are worth the plain value. */
+	UPROPERTY(ReplicatedUsing = OnRep_Visual) bool bTrophy = false;
 
 	/** Server: the Human picks it up (attached to his hand) / throws it. */
 	void PickUpBy(USceneComponent* Hand, const FVector& RelativeLocation);

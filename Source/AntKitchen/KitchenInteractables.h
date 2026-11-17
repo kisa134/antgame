@@ -54,6 +54,8 @@ enum class EKitchenDoorKind : uint8
 	Fridge,
 	Oven,
 	Drawer,
+	Dishwasher,   // folds down into a ramp like the oven; wet racks of dirty plates inside
+	Microwave,    // swings sideways on the left edge; a plate of leftovers inside
 };
 
 /** Fridge door (swings), oven door (folds down into a ramp), drawer (slides out). */
