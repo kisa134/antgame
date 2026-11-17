@@ -444,6 +444,7 @@ namespace
 			}
 		}
 		static UMaterialInterface* Base = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Textures/M_Surface.M_Surface"));
+		if (Base && !Base->IsRooted()) { Base->AddToRoot(); }   // static: must survive map travel
 		if (!Base || !C)
 		{
 			return;
@@ -466,6 +467,7 @@ namespace
 			if (!T)
 			{
 				T = LoadObject<UTexture>(nullptr, *FString::Printf(TEXT("/Game/Textures/%s.%s"), S.Tex, S.Tex));
+				if (T) { T->AddToRoot(); }   // cached across map travel
 			}
 			if (T)
 			{

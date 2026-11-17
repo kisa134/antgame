@@ -310,6 +310,10 @@ const FPart& Get(const TCHAR* Name)
 		P.Bounds = P.Mesh->GetBoundingBox();
 		const FVector E = P.Bounds.GetSize();
 		P.LongAxis = (E.X >= E.Y && E.X >= E.Z) ? 0 : ((E.Y >= E.Z) ? 1 : 2);
+		// This cache outlives the map: nothing else holds the assets between two loads, so without the root
+		// the garbage collector frees them on travel and the next kitchen gets dangling pointers.
+		P.Mesh->AddToRoot();
+		if (P.Material) { P.Material->AddToRoot(); }
 	}
 	return Cache.Add(N, P);
 }
@@ -524,7 +528,9 @@ USoundBase* Get(uint8 Id)
 		auto Load = [Id](const FString& N)
 		{
 			const FString Path = FString::Printf(TEXT("/Game/SoundsReal/%s.%s"), *N, *N);
-			if (USoundBase* S = LoadObject<USoundBase>(nullptr, *Path, nullptr, LOAD_NoWarn | LOAD_Quiet))
+			USoundBase* S = LoadObject<USoundBase>(nullptr, *Path, nullptr, LOAD_NoWarn | LOAD_Quiet);
+			if (S && !S->IsRooted()) { S->AddToRoot(); }   // the cache below survives map travel, the sound must too
+			if (S)
 			{
 				S->AddToRoot();
 				Cache[Id].Add(S);
