@@ -12,6 +12,11 @@
 #include "Sound/SoundBase.h"
 #include "AntTypes.h"
 #include "Engine/World.h"
+#include "Engine/Engine.h"
+#include "Engine/GameInstance.h"
+#include "Engine/GameViewportClient.h"
+#include "AntSession.h"
+#include "AntMenu.h"
 
 void AAntPlayerController::BeginPlay()
 {
@@ -26,6 +31,18 @@ void AAntPlayerController::BeginPlay()
 		FInputModeGameOnly Mode;
 		SetInputMode(Mode);
 		bShowMouseCursor = false;
+
+		// Main menu on a fresh start. Launch flags and the map reload after a menu choice skip it.
+		{
+			const FString Cmd = FCommandLine::Get();
+			UAntSession* Sess = GetGameInstance() ? GetGameInstance()->GetSubsystem<UAntSession>() : nullptr;
+			const bool bFlags = Cmd.Contains(TEXT("-AntHost")) || Cmd.Contains(TEXT("-AntJoin=")) || Cmd.Contains(TEXT("-AntNoMenu"))
+				|| Cmd.Contains(TEXT("-AntTp=")) || Cmd.Contains(TEXT("-AntSwarmTest=")) || Cmd.Contains(TEXT("-AntGrabAt="));
+			if (Sess && !Sess->bMenuDone && !bFlags && GetWorld()->GetNetMode() == NM_Standalone)
+			{
+				OpenMenu(false);
+			}
+		}
 
 		// Co-op without the console: -AntHost makes this machine the listen server, -AntJoin=ip connects to a friend.
 		FString JoinArg;
@@ -165,6 +182,7 @@ void AAntPlayerController::ServerSwitchTeam_Implementation()
 void AAntPlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
+	InputComponent->BindKey(EKeys::Escape, IE_Pressed, this, &AAntPlayerController::ToggleMenu);
 	InputComponent->BindKey(EKeys::J, IE_Pressed, this, &AAntPlayerController::BecomeFly);
 	InputComponent->BindKey(EKeys::K, IE_Pressed, this, &AAntPlayerController::BecomeSpider);
 	InputComponent->BindKey(EKeys::P, IE_Pressed, this, &AAntPlayerController::SwitchTeam);
@@ -247,11 +265,69 @@ void AAntPlayerController::ClientDamageNumber_Implementation(FVector_NetQuantize
 
 void AAntPlayerController::HostGame()
 {
-	const FString Map = UWorld::RemovePIEPrefix(GetWorld()->GetPackage()->GetName());
-	UGameplayStatics::OpenLevel(this, FName(*Map), true, TEXT("listen"));
+	// Hosting goes through Steam: a lobby friends can find and join without IPs or port forwarding.
+	if (UAntSession* Sess = GetGameInstance() ? GetGameInstance()->GetSubsystem<UAntSession>() : nullptr)
+	{
+		Sess->Host();
+	}
 }
 
 void AAntPlayerController::JoinGame(const FString& Address)
 {
 	ClientTravel(Address, TRAVEL_Absolute);
+}
+
+void AAntPlayerController::OpenMenu(bool bPause)
+{
+	if (MenuWidget.IsValid() || !IsLocalController() || !GEngine || !GEngine->GameViewport)
+	{
+		return;
+	}
+	TSharedRef<SAntMenu> Menu = SNew(SAntMenu).PC(this).bPause(bPause);
+	MenuWidget = Menu;
+	GEngine->GameViewport->AddViewportWidgetContent(Menu, 100);
+	FInputModeUIOnly Mode;
+	Mode.SetWidgetToFocus(Menu);
+	Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	SetInputMode(Mode);
+	bShowMouseCursor = true;
+}
+
+void AAntPlayerController::CloseMenu()
+{
+	if (!MenuWidget.IsValid())
+	{
+		return;
+	}
+	if (GEngine && GEngine->GameViewport)
+	{
+		GEngine->GameViewport->RemoveViewportWidgetContent(MenuWidget.ToSharedRef());
+	}
+	MenuWidget.Reset();
+	FInputModeGameOnly Mode;
+	SetInputMode(Mode);
+	bShowMouseCursor = false;
+}
+
+void AAntPlayerController::ToggleMenu()
+{
+	if (MenuWidget.IsValid())
+	{
+		CloseMenu();
+	}
+	else
+	{
+		OpenMenu(true);
+	}
+}
+
+void AAntPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	// Viewport widgets outlive the map, so the menu has to be taken down with its controller.
+	if (MenuWidget.IsValid() && GEngine && GEngine->GameViewport)
+	{
+		GEngine->GameViewport->RemoveViewportWidgetContent(MenuWidget.ToSharedRef());
+	}
+	MenuWidget.Reset();
+	Super::EndPlay(EndPlayReason);
 }

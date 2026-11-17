@@ -28,6 +28,12 @@ public:
 	virtual void BeginPlay() override;
 	virtual void SetupInputComponent() override;
 	virtual void PawnLeavingGame() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+	/** Main menu (solo / host / find) on a fresh start, or the pause menu on Esc. */
+	void OpenMenu(bool bPause);
+	void CloseMenu();
+	void ToggleMenu();
 
 	UFUNCTION(Client, Reliable) void ClientToast(const FString& Text);
 	UFUNCTION(Client, Unreliable) void ClientDamageNumber(FVector_NetQuantize Location, int32 Amount, bool bCrit);
@@ -64,6 +70,7 @@ public:
 	UFUNCTION(Server, Reliable) void ServerGrab();
 	UFUNCTION(Server, Reliable) void ServerAddBot(int32 Team, int32 Count);
 
+	TSharedPtr<class SWidget> MenuWidget;
 	bool bShowScores = false;
 	float HitMarkerTime = -100.f;
 	bool bHitCrit = false;
