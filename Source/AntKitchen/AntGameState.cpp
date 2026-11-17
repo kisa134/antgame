@@ -32,6 +32,10 @@ void AAntGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	DOREPLIFETIME(AAntGameState, bHeistMode);
 	DOREPLIFETIME(AAntGameState, TrophiesWhole);
 	DOREPLIFETIME(AAntGameState, TrophiesBroken);
+	DOREPLIFETIME(AAntGameState, Shift);
+	DOREPLIFETIME(AAntGameState, Larvae);
+	DOREPLIFETIME(AAntGameState, ShiftStage);
+	DOREPLIFETIME(AAntGameState, bQuotaMet);
 	DOREPLIFETIME(AAntGameState, WarPool0);
 	DOREPLIFETIME(AAntGameState, WarPool1);
 }

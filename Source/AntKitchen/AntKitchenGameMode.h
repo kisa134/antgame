@@ -77,6 +77,13 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Match") bool bHeist = true;
 	/** Heist: keeps 3 trophies in the kitchen. */
 	void HeistTick();
+	/** The run: a quota per shift that grows, a shared pool of respawns, the Human escalating over the shift. */
+	void StartShift();
+	void ShiftTick();
+	void SetHumanAwake(bool bAwake);
+	bool AnyAllyPlayerAlive(bool bMustBeOutside) const;
+	int32 ShiftNumber = 1;
+	int32 BestShift = 0;
 	void SpawnTrophy(int32 Slot);
 	FTimerHandle HeistTimer;
 	float TrophyLostAt = -100.f;

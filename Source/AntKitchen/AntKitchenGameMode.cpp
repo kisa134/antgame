@@ -70,8 +70,8 @@ void AAntKitchenGameMode::BeginPlay()
 	else if (bHeist)
 	{
 		// The shift: 10 minutes, no score target; friends + a couple of bots, add more with F9/F10.
-		TargetScore = 100000;
-		MatchLength = 600.f;
+		TargetScore = 300;      // the quota; StartShift sets the real one
+		MatchLength = 480.f;
 		AllyBots = 1;
 		RivalBots = 2;
 	}
@@ -126,6 +126,7 @@ void AAntKitchenGameMode::BeginPlay()
 	{
 		for (int32 i = 0; i < 3; ++i) { SpawnTrophy(i); }
 		GetWorldTimerManager().SetTimer(HeistTimer, this, &AAntKitchenGameMode::HeistTick, 5.f, true, 10.f);
+		StartShift();
 		Broadcast(TEXT("ХАЙСТ: трофеи лежат высоко — снимите и дотащите домой ЦЕЛЫМИ (×2). Разбитый — куски за обычную цену"), Gold);
 	}
 	GetWorldTimerManager().SetTimer(MatchTimer, this, &AAntKitchenGameMode::MatchTick, 1.f, true);
@@ -261,6 +262,16 @@ void AAntKitchenGameMode::AddScore(uint8 Team, int32 Value)
 	}
 	(Team == 0 ? GS->TeamScore : GS->RivalScore) += Value;
 	UpdateRage();
+	if (bHeist)
+	{
+		// The shift: hitting the quota does not end it. Everyone still has to make it home (ShiftTick), or stay for more.
+		if (!GS->bQuotaMet && GS->TeamScore >= GS->TargetScore)
+		{
+			GS->bQuotaMet = true;
+			Broadcast(TEXT("КВОТА ЕСТЬ! Все в гнездо — и смена ваша."), Gold);
+		}
+		return;
+	}
 	if (GS->TeamScore >= GS->TargetScore)
 	{
 		EndMatch(1);
@@ -994,6 +1005,24 @@ void AAntKitchenGameMode::OnAntKilled(AAntCharacter* Ant, AController* Killer, A
 		}
 	}
 
+	// The shift: every death of a player's ant costs the colony a larva. None left = nobody hatches.
+	if (bHeist && GS && Ant->Team == 0 && Ant->Creature == 0 && Cast<APlayerController>(Ant->GetController()))
+	{
+		if (GS->Larvae <= 0)
+		{
+			Ant->Toast(TEXT("Личинок не осталось: ты выбыл до конца смены"));
+			if (!AnyAllyPlayerAlive(false))
+			{
+				EndMatch(2);
+			}
+			return;
+		}
+		GS->Larvae--;
+		if (GS->Larvae == 0)
+		{
+			Broadcast(TEXT("ПОСЛЕДНЯЯ ЛИЧИНКА ВЫЛУПИЛАСЬ. Больше возрождений нет!"), Bad);
+		}
+	}
 	TWeakObjectPtr<AController> WeakC = Ant->GetController();
 	FTimerHandle Handle;
 	GetWorldTimerManager().SetTimer(Handle, FTimerDelegate::CreateWeakLambda(this, [this, WeakC]()
@@ -1037,6 +1066,11 @@ void AAntKitchenGameMode::MatchTick()
 	}
 	GS->TimeRemaining = FMath::Max(0.f, GS->TimeRemaining - 1.f);
 	GS->RivalWorkers += 4;   // their queen keeps laying eggs
+	if (bHeist)
+	{
+		ShiftTick();
+		return;
+	}
 	if (GS->TimeRemaining <= 0.f)
 	{
 		// Time's up: the richer colony wins; nobody ahead - the Human defended his kitchen.
@@ -1049,6 +1083,23 @@ void AAntKitchenGameMode::EndMatch(uint8 Winner)
 	AAntGameState* GS = GetGameState<AAntGameState>();
 	if (!GS || GS->Phase != 0)
 	{
+		return;
+	}
+	if (bHeist)
+	{
+		GS->Phase = Winner;
+		if (Winner == 1)
+		{
+			BestShift = FMath::Max(BestShift, ShiftNumber);
+			Broadcast(FString::Printf(TEXT("СМЕНА %d ПРОЙДЕНА! Королева довольна. Дальше квота больше."), ShiftNumber), Gold);
+			++ShiftNumber;
+		}
+		else
+		{
+			Broadcast(FString::Printf(TEXT("КОЛОНИЯ ГОЛОДАЕТ. Забег окончен на смене %d (рекорд: %d пройдено)."), ShiftNumber, BestShift), Bad);
+			ShiftNumber = 1;
+		}
+		GetWorldTimerManager().SetTimer(ResetTimer, this, &AAntKitchenGameMode::ResetMatch, 12.f, false);
 		return;
 	}
 	GS->Phase = Winner;
@@ -1093,6 +1144,10 @@ void AAntKitchenGameMode::ResetMatch()
 	{
 		Human->ResetHuman(AKitchenBuilder::HumanSpawn());
 		Human->SetRage(0);
+	}
+	if (bHeist)
+	{
+		StartShift();
 	}
 	for (TActorIterator<AAntBotController> It(GetWorld()); It; ++It)
 	{
@@ -1490,5 +1545,112 @@ void AAntKitchenGameMode::HeistTick()
 		SpawnTrophy(Count);
 		TrophyLostAt = GetWorld()->GetTimeSeconds();
 		Broadcast(TEXT("Новый трофей появился на кухне"), Info);
+	}
+}
+
+// ---------------------------------------------------------------------------------------------
+// The run (heist): quota, shared lives, the Human escalating
+// ---------------------------------------------------------------------------------------------
+
+void AAntKitchenGameMode::SetHumanAwake(bool bAwake)
+{
+	if (!Human)
+	{
+		return;
+	}
+	AController* C = Human->GetController();
+	if (C && C != HumanPlayer)
+	{
+		C->SetActorTickEnabled(bAwake);
+		if (!bAwake)
+		{
+			C->StopMovement();
+			Human->SetSpraying(false);
+		}
+	}
+}
+
+bool AAntKitchenGameMode::AnyAllyPlayerAlive(bool bMustBeOutside) const
+{
+	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	{
+		const AAntCharacter* A = It->IsValid() ? Cast<AAntCharacter>((*It)->GetPawn()) : nullptr;
+		if (A && !A->bDead && A->Team == 0 && (!bMustBeOutside || !A->IsInNest()))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+void AAntKitchenGameMode::StartShift()
+{
+	AAntGameState* GS = GetGameState<AAntGameState>();
+	if (!GS)
+	{
+		return;
+	}
+	const int32 Players = FMath::Max(1, GetNumPlayers());
+	// More players: more mouths. Every shift survived: the queen wants 30% more. -AntQuota=N overrides for tuning.
+	int32 Quota = FMath::RoundToInt((300.f + 120.f * (Players - 1)) * FMath::Pow(1.3f, (float)(ShiftNumber - 1)) / 10.f) * 10;
+	int32 Forced = 0;
+	if (FParse::Value(FCommandLine::Get(), TEXT("AntQuota="), Forced) && Forced > 0)
+	{
+		Quota = Forced;
+	}
+	GS->TargetScore = Quota;
+	GS->Shift = ShiftNumber;
+	GS->Larvae = 3 + 2 * Players;
+	GS->ShiftStage = 0;
+	GS->bQuotaMet = false;
+	SetHumanAwake(false);
+	Broadcast(FString::Printf(TEXT("СМЕНА %d. Королеве нужно %d еды. Личинок в запасе: %d. Человек пока залип в телефон."), ShiftNumber, Quota, GS->Larvae), Gold);
+}
+
+void AAntKitchenGameMode::ShiftTick()
+{
+	AAntGameState* GS = GetGameState<AAntGameState>();
+	if (!GS || GS->Phase != 0)
+	{
+		return;
+	}
+	const float Left = GS->TimeRemaining;
+	const float Gone = MatchLength - Left;
+	// Quiet start to learn the room, then the Human walks in, then he cleans up in earnest, then the last call.
+	const uint8 Stage = Left <= 30.f ? 3 : Left <= 120.f ? 2 : Gone >= 75.f ? 1 : 0;
+	if (Stage != GS->ShiftStage)
+	{
+		GS->ShiftStage = Stage;
+		if (Stage >= 1)
+		{
+			SetHumanAwake(true);
+		}
+		if (Stage == 1)
+		{
+			Broadcast(TEXT("ЧЕЛОВЕК ЗАШЁЛ НА КУХНЮ. Теперь осторожно."), Bad);
+		}
+		else if (Stage == 2)
+		{
+			if (Human)
+			{
+				Human->SetRage(3);
+				GS->HumanRage = 3;
+			}
+			Broadcast(TEXT("УБОРКА! Человек взялся за дихлофос всерьёз. Осталось 2 минуты."), Bad);
+		}
+		else if (Stage == 3)
+		{
+			Broadcast(TEXT("ПОСЛЕДНИЕ 30 СЕКУНД: все в гнездо!"), Gold);
+		}
+	}
+	// Quota in the bank and nobody left outside: the shift is won. (Staying out for more is the gamble.)
+	if (GS->bQuotaMet && !AnyAllyPlayerAlive(true))
+	{
+		EndMatch(1);
+		return;
+	}
+	if (Left <= 0.f)
+	{
+		EndMatch(GS->bQuotaMet ? 1 : 2);
 	}
 }

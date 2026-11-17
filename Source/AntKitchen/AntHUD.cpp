@@ -194,7 +194,9 @@ void AAntHUD::DrawTop(AAntGameState* GS)
 	Txt(FString::Printf(TEXT("ОГНЕННЫЕ %d"), GS->RivalScore), W * 0.5f + 140.f * S, 12.f * S, Fire, Med, 1.3f * S, true);
 	if (GS->bHeistMode)
 	{
-		Txt(FString::Printf(TEXT("СМЕНА  ·  трофеев целыми %d, разбито %d"), GS->TrophiesWhole, GS->TrophiesBroken), W * 0.5f, 48.f * S, Grey, GEngine->GetSmallFont(), 1.1f * S, true);
+		static const TCHAR* StageName[] = { TEXT("Человек залип в телефон: лутай спокойно"), TEXT("Человек на кухне"), TEXT("УБОРКА: он зол и с дихлофосом"), TEXT("ВСЕ В ГНЕЗДО!") };
+		Txt(FString::Printf(TEXT("СМЕНА %d  ·  КВОТА %d / %d  ·  ЛИЧИНОК %d"), GS->Shift, GS->TeamScore, GS->TargetScore, GS->Larvae), W * 0.5f, 42.f * S, GS->bQuotaMet ? Gold : White, Med, 1.1f * S, true);
+		Txt(StageName[FMath::Min<int32>(GS->ShiftStage, 3)], W * 0.5f, 150.f * S, GS->ShiftStage >= 2 ? Red : Grey, GEngine->GetSmallFont(), 1.15f * S, true);
 	}
 	else
 	{

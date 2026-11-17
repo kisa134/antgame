@@ -36,6 +36,11 @@ public:
 	UPROPERTY(Replicated) bool bHeistMode = true;
 	UPROPERTY(Replicated) int32 TrophiesWhole = 0;
 	UPROPERTY(Replicated) int32 TrophiesBroken = 0;
+	/** The run: shift number, respawns left for the whole colony, the quota (TargetScore) reached, and what the Human is up to (0 away, 1 hunting, 2 clean-up, 3 last call). */
+	UPROPERTY(Replicated) int32 Shift = 1;
+	UPROPERTY(Replicated) int32 Larvae = 0;
+	UPROPERTY(Replicated) uint8 ShiftStage = 0;
+	UPROPERTY(Replicated) bool bQuotaMet = false;
 	UPROPERTY(Replicated) int32 WarPool0 = 128;
 	UPROPERTY(Replicated) int32 WarPool1 = 128;
 	int32 WarPool(uint8 Team) const { return Team == 0 ? WarPool0 : WarPool1; }

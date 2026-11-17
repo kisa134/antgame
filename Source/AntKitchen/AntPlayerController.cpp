@@ -18,6 +18,7 @@
 #include "AntSession.h"
 #include "AntMenu.h"
 #include "KitchenLoot.h"
+#include "Engine/PostProcessVolume.h"
 #include "EngineUtils.h"
 
 void AAntPlayerController::BeginPlay()
@@ -33,6 +34,29 @@ void AAntPlayerController::BeginPlay()
 		FInputModeGameOnly Mode;
 		SetInputMode(Mode);
 		bShowMouseCursor = false;
+
+		// A touch of grade over the whole kitchen: warmer, punchier, a soft vignette. -AntNoPP switches it off to compare.
+		if (!FParse::Param(FCommandLine::Get(), TEXT("AntNoPP")))
+		{
+			if (APostProcessVolume* Grade = GetWorld()->SpawnActor<APostProcessVolume>())
+			{
+				Grade->bUnbound = true;
+				Grade->Priority = 10.f;
+				FPostProcessSettings& G = Grade->Settings;
+				G.bOverride_ColorSaturation = true;
+				G.ColorSaturation = FVector4(1.16f, 1.16f, 1.16f, 1.f);
+				G.bOverride_ColorContrast = true;
+				G.ColorContrast = FVector4(1.06f, 1.06f, 1.06f, 1.f);
+				G.bOverride_WhiteTemp = true;
+				G.WhiteTemp = 6900.f;
+				G.bOverride_BloomIntensity = true;
+				G.BloomIntensity = 0.9f;
+				G.bOverride_VignetteIntensity = true;
+				G.VignetteIntensity = 0.45f;
+				G.bOverride_Sharpen = true;
+				G.Sharpen = 0.5f;
+			}
+		}
 
 		// Main menu on a fresh start. Launch flags and the map reload after a menu choice skip it.
 		{
