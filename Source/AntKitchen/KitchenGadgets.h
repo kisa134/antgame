@@ -6,6 +6,7 @@
 
 class UStaticMeshComponent;
 class UPointLightComponent;
+class UMaterialInstanceDynamic;
 
 /**
  * The stove knob: turns the front burner on and off. On, the burner glows and the pot of soup on it
@@ -39,6 +40,11 @@ private:
 	UPROPERTY() UPointLightComponent* Glow = nullptr;
 	float Anim = 0.f;
 	float SteamAccum = 0.f;   // cosmetic
+	/** Modelled kitchen: the knob turns about its own axis, the burner ring has its own material that reddens. */
+	UPROPERTY() UMaterialInstanceDynamic* CoilMID = nullptr;
+	FQuat KnobBase = FQuat::Identity;
+	bool bKnobArt = false;
+	int32 KnobShown = -1;
 };
 
 /** The pedal bin: step on the pedal and the lid swings up for a while; inside, the good stuff. */
@@ -62,6 +68,8 @@ private:
 	UPROPERTY() UStaticMeshComponent* Pedal = nullptr;
 	float Alpha = 0.f;
 	float CloseAt = -1.f;
+	FQuat PedalBase = FQuat::Identity;
+	bool bPedalArt = false;   // the modelled pedal: hinged at its back edge
 };
 
 /**

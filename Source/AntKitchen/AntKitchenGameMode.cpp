@@ -16,6 +16,8 @@
 #include "WarMode.h"
 #include "Critters.h"
 #include "KitchenGadgets.h"
+#include "KitchenArt.h"
+#include "KitchenMover.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "EngineUtils.h"
@@ -57,6 +59,96 @@ void AAntKitchenGameMode::BeginPlay()
 	Super::BeginPlay();
 	Rng.GenerateNewSeed();
 	AKitchenBuilder::LootSpots(SpotLocations, SpotTiers);
+	if (FParse::Param(FCommandLine::Get(), TEXT("AntArtProbe")))   // dev: log what lies under every loot spot (see KitchenArt::ProbeSpots)
+	{
+		FTimerHandle PH;
+		GetWorldTimerManager().SetTimer(PH, FTimerDelegate::CreateWeakLambda(this, [this]() { KitchenArt::ProbeSpots(GetWorld(), SpotLocations); }), 5.f, false);
+	}
+	if (FParse::Param(FCommandLine::Get(), TEXT("AntArtTour")))
+	{
+		// Dev: puts the player's ant on every kind of surface of the modelled kitchen in turn and logs where it ended up
+		// (ARTPOS lines): does it stand on the worktop, inside the fridge, in the drawer... or fall through?
+		// (kept clear of the loot spots: an ant put inside a piece of food is pushed out of it, sometimes through a wall)
+		static const FVector Tour[] =
+		{
+			FVector(-6300.f, 3300.f, 1740.f),   // 0 worktop A
+			FVector(1500.f, 3300.f, 1740.f),    // 1 worktop B
+			FVector(3400.f, 4350.f, 960.f),     // 2 fridge, shelf 1
+			FVector(3800.f, 4000.f, 265.f),     // 3 fridge, in the crisper (pulled out 700 with -AntArtOpen: still over the tray)
+			FVector(4300.f, 3900.f, 2590.f),    // 4 freezer
+			FVector(3900.f, 3900.f, 30.f),      // 5 under the fridge
+			FVector(-3700.f, 4000.f, 170.f),    // 6 under the sink
+			FVector(-900.f, 3600.f, 330.f),     // 7 oven floor
+			FVector(600.f, 3900.f, 190.f),      // 8 dishwasher floor
+			FVector(1500.f, 4400.f, 1790.f),    // 9 microwave plate
+			FVector(-4900.f, 3400.f, 1380.f),   // 10 top drawer (shut: inside the unit; open: 1100 further south)
+			FVector(-4900.f, 2300.f, 1380.f),   // 11 top drawer pulled out (only with -AntArtOpen)
+			FVector(-4900.f, 2300.f, 850.f),    // 12 second drawer pulled out (only with -AntArtOpen)
+			FVector(-2150.f, 3900.f, 200.f),    // 13 inside the base cabinet left of the oven
+			FVector(-5125.f, 4640.f, 3050.f),   // 14 inside a wall cabinet
+			FVector(4200.f, 4300.f, 3730.f),    // 15 fridge top
+			FVector(5700.f, -1300.f, 60.f),     // 16 pedal bin floor
+			FVector(-3800.f, 3700.f, 1180.f),   // 17 sink bottom
+			FVector(-6000.f, 4870.f, 30.f),     // 18 corridor behind the cabinets
+			FVector(-700.f, 4870.f, 30.f),      // 19 corridor behind the oven
+			FVector(-750.f, 3700.f, 1770.f),    // 20 stove top
+			FVector(-200.f, 200.f, 1430.f),     // 21 table
+			FVector(2000.f, 300.f, 45.f),       // 22 rug under the table
+			FVector(200.f, -2600.f, 910.f),     // 23 chair seat
+			FVector(-6780.f, -400.f, 2710.f),   // 24 wall shelf
+			FVector(-5800.f, 4650.f, 4430.f),   // 25 top of the wall cabinets
+			FVector(-5300.f, 800.f, 50.f),      // 26 inside the cereal box
+			FVector(-300.f, -4910.f, 2230.f),   // 27 window sill
+			FVector(-600.f, 4100.f, 945.f),     // 28 oven tray
+			FVector(-750.f, 2500.f, 345.f),     // 29 open oven door (only with -AntArtOpen)
+			FVector(650.f, 2300.f, 160.f),      // 30 open dishwasher door (only with -AntArtOpen)
+			FVector(-6400.f, 4200.f, 2180.f),   // 31 toaster top, between the slots
+			FVector(6550.f, -4250.f, 230.f),    // 32 inside the shoe
+			FVector(-6300.f, 2600.f, 900.f),    // 33 on an open base cabinet door (only with -AntArtOpen): falls to the floor when shut
+			FVector(3700.f, 3000.f, 1000.f),    // 34 by the fridge door (open: a door bin; shut: the floor in front)
+			FVector(650.f, 2500.f, 470.f),      // 35 dishwasher lower rack rolled out (only with -AntArtOpen)
+			FVector(6000.f, -1500.f, 1600.f),   // 36 on the bin lid (shut) / on the bag (open)
+			FVector(-2800.f, -3850.f, 60.f),    // 37 pet mat
+			FVector(6200.f, 3700.f, 680.f),     // 38 water in the mop bucket
+			// ---- living room, yard, street
+			FVector(13500.f, 300.f, 990.f),     // 39 sofa seat cushion
+			FVector(13000.f, 700.f, 30.f),      // 40 under the sofa
+			FVector(13750.f, -3000.f, 1010.f),  // 41 coffee table
+			FVector(14000.f, -5500.f, 40.f),    // 42 carpet
+			FVector(12500.f, -8300.f, 1130.f),  // 43 TV stand top
+			FVector(15000.f, -8350.f, 130.f),   // 44 inside the TV stand (open bay)
+			FVector(9250.f, -5500.f, 830.f),    // 45 armchair seat
+			FVector(19650.f, -3000.f, 4690.f),  // 46 top of the bookshelf
+			FVector(7100.f, -4000.f, 30.f),     // 47 the doorway
+			FVector(-7350.f, 1000.f, 9000.f),   // 48 in the roof gutter
+			FVector(-13550.f, 1000.f, -200.f),  // 49 under the car
+			FVector(-10200.f, 200.f, 30.f),     // 50 pavement
+			FVector(-13000.f, -2000.f, -200.f), // 51 road
+			FVector(600.f, -6400.f, 50.f),      // 52 stepping stone in the yard
+			FVector(4200.f, -13000.f, 2900.f),  // 53 on the bags in the yard bin
+			FVector(-6600.f, -12500.f, 5300.f), // 54 the tree's branch
+		};
+		TSharedRef<int32> Step = MakeShared<int32>(-1);
+		FTimerHandle TH;
+		GetWorldTimerManager().SetTimer(TH, FTimerDelegate::CreateWeakLambda(this, [this, Step]()
+		{
+			APlayerController* PC = GetWorld()->GetFirstPlayerController();
+			AAntCharacter* Ant = PC ? Cast<AAntCharacter>(PC->GetPawn()) : nullptr;
+			if (!Ant)
+			{
+				return;
+			}
+			const int32 N = UE_ARRAY_COUNT(Tour);
+			if (*Step >= 0 && *Step < N)
+			{
+				KitchenArt::ProbeAnt(Ant, *Step, Tour[*Step]);
+			}
+			if (++*Step < N)
+			{
+				Ant->ApplyTeleport(Tour[*Step]);
+			}
+		}), 2.f, true, 6.f);
+	}
 	// Mode: heist by default; -AntWar, -AntClassic switch.
 	bWar = FParse::Param(FCommandLine::Get(), TEXT("AntWar"));
 	bHeist = !bWar && !FParse::Param(FCommandLine::Get(), TEXT("AntClassic"));
@@ -170,10 +262,11 @@ void AAntKitchenGameMode::SpawnGadgets()
 
 	FridgeDoor = Door(EKitchenDoorKind::Fridge, FVector(4700.f, 3100.f, 120.f));
 	Door(EKitchenDoorKind::Oven, FVector(-750.f, 3000.f, 300.f));
-	Door(EKitchenDoorKind::Drawer, FVector(-4950.f, 3000.f, 1330.f));
+	const bool bArt = KitchenArt::Enabled();   // the modelled kitchen: a few gadgets stand where its pieces are
+	Door(EKitchenDoorKind::Drawer, FVector(bArt ? -4900.f : -4950.f, 3000.f, 1330.f));   // the modelled drawer unit is centred 50 further east
 	Door(EKitchenDoorKind::Dishwasher, FVector(650.f, 3000.f, 120.f));
 	Door(EKitchenDoorKind::Microwave, FVector(1300.f, 4000.f, 1740.f));
-	Spawn(AKitchenKnob::StaticClass(), FVector(-920.f, 2945.f, 1600.f), FRotator::ZeroRotator, NoSetup);        // stove knob + the pot of soup
+	Spawn(AKitchenKnob::StaticClass(), bArt ? FVector(-920.f, 2962.f, 1612.f) : FVector(-920.f, 2945.f, 1600.f), FRotator::ZeroRotator, NoSetup);        // stove knob + the pot of soup
 	Spawn(AKitchenPedalBin::StaticClass(), FVector(6000.f, -1500.f, 0.f), FRotator::ZeroRotator, NoSetup);     // the bin's lid and pedal
 	Spawn(AKitchenFan::StaticClass(), FVector(500.f, 3400.f, 1710.f), FRotator::ZeroRotator, NoSetup);         // desk fan on the counter
 
@@ -182,6 +275,22 @@ void AAntKitchenGameMode::SpawnGadgets()
 	Spawn(AKitchenToaster::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, NoSetup);
 	Spawn(AKitchenWire::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, NoSetup);
 	Spawn(AKitchenTrap::StaticClass(), FVector(-3150.f, 3450.f, 140.f), FRotator(0.f, 90.f, 0.f), NoSetup);
+	if (bArt)
+	{
+		// Every other moving part of the modelled kitchen: cabinet doors, drawers, the freezer door, the crisper,
+		// the dishwasher racks, the matchbox tray. One generic actor each, standing at the part's own origin.
+		const TConstArrayView<FKitchenArtMover> Movers = KitchenArt::Movers();
+		for (int32 i = 0; i < Movers.Num(); ++i)
+		{
+			const FKitchenArtMover& M = Movers[i];
+			Spawn(AKitchenMover::StaticClass(), FVector(KitchenArt::Instances()[M.Inst].Loc), FRotator::ZeroRotator, [i, &M](AActor* A)
+			{
+				AKitchenMover* Mv = CastChecked<AKitchenMover>(A);
+				Mv->PartIndex = i;
+				Mv->bOpen = (M.Flags & KitchenArt::StartsOpen) != 0;
+			});
+		}
+	}
 
 	// Secret routes (each end leads to the other). The air ducts are real now: crawl in through the grilles (KitchenHouse.cpp).
 	Passage(EPassageLook::Drain, FVector(-3500.f, 4000.f, 1150.f), 0.f, FVector(-3500.f, 3600.f, 200.f), TEXT("слив раковины → под мойку"));
@@ -516,7 +625,12 @@ void AAntKitchenGameMode::KitchenLifeEvent()
 	{
 		return;
 	}
-	const int32 Roll = Rng.RandRange(0, 3);
+	const int32 Roll = Rng.RandRange(0, 4);
+	if (Roll == 2 && AKitchenMover::HumanOpensOne(GetWorld(), Rng, 20.f))
+	{
+		Broadcast(TEXT("Человек полез в шкаф и не закрыл дверцу — внутри открыто!"), Info);
+		return;
+	}
 	if (Roll == 0 && FridgeDoor && !FridgeDoor->IsOpen())
 	{
 		FridgeDoor->SetOpen(true, 9.f);

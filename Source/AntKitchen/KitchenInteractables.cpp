@@ -5,6 +5,7 @@
 #include "AntCharacter.h"
 #include "AntKitchenGameMode.h"
 #include "KitchenBuilder.h"
+#include "KitchenArt.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/PointLightComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
@@ -133,6 +134,10 @@ void AKitchenDoor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 void AKitchenDoor::BeginPlay()
 {
 	Super::BeginPlay();
+	if (HasAuthority() && FParse::Param(FCommandLine::Get(), TEXT("AntArtOpen")))   // dev: every door starts open and stays open (to look inside)
+	{
+		bOpen = true;
+	}
 	Build();
 	Alpha = bOpen ? 1.f : 0.f;
 	ApplyAlpha();
@@ -141,29 +146,35 @@ void AKitchenDoor::BeginPlay()
 void AKitchenDoor::Build()
 {
 	Hinge = AntKit::AddPivot(this, Root, FVector::ZeroVector);
+	// The modelled kitchen has a real door for every kind (hinge and motion as below); the boxes are the old kitchen.
+	const bool bArt = KitchenArt::Enabled();
+	auto ArtDoor = [this, bArt](const TCHAR* Name) { return bArt && KitchenArt::AddAt(this, Hinge, Name, 0, KitchenArt::ESolid::Moving, false, TEXT("ArtDoor")) != nullptr; };
 
 	switch (Kind)
 	{
 	case EKitchenDoorKind::Fridge:
 	{
 		// Hinge = east-front-bottom corner of the fridge; the door extends west (-X), outside is -Y.
-		UStaticMeshComponent* Slab = BoxPart(Hinge, FVector(-2000.f, -100.f, 0.f), FVector(0.f, 0.f, 2380.f), White, true);
-		UStaticMeshComponent* Handle = BoxPart(Hinge, FVector(-1910.f, -150.f, 1300.f), FVector(-1850.f, -100.f, 2200.f), Steel, true);   // handle
-		UStaticMeshComponent* M1 = BoxPart(Hinge, FVector(-1200.f, -104.f, 1880.f), FVector(-1050.f, -100.f, 2030.f), Hex(240, 60, 60), false);  // magnets
-		UStaticMeshComponent* M2 = BoxPart(Hinge, FVector(-800.f, -104.f, 1680.f), FVector(-700.f, -100.f, 1780.f), Hex(60, 160, 240), false);
-		UStaticMeshComponent* Note = BoxPart(Hinge, FVector(-1400.f, -103.f, 1530.f), FVector(-1000.f, -100.f, 1830.f), White * 0.9f, false);       // a note
-		if (AntArt::DressAuto(this, Hinge, TEXT("SM_Fridge_Door"), FVector(-2000.f, -160.f, 0.f), FVector(0.f, -2.f, 2380.f), 0.f, 4.f))
+		if (!ArtDoor(TEXT("SM_K_Fridge_DoorMain")))   // the model has the handle, the magnets, the bins and the bottles
 		{
-			AntArt::HideAll({ Slab, Handle, M1, M2, Note });
+			UStaticMeshComponent* Slab = BoxPart(Hinge, FVector(-2000.f, -100.f, 0.f), FVector(0.f, 0.f, 2380.f), White, true);
+			UStaticMeshComponent* Handle = BoxPart(Hinge, FVector(-1910.f, -150.f, 1300.f), FVector(-1850.f, -100.f, 2200.f), Steel, true);   // handle
+			UStaticMeshComponent* M1 = BoxPart(Hinge, FVector(-1200.f, -104.f, 1880.f), FVector(-1050.f, -100.f, 2030.f), Hex(240, 60, 60), false);  // magnets
+			UStaticMeshComponent* M2 = BoxPart(Hinge, FVector(-800.f, -104.f, 1680.f), FVector(-700.f, -100.f, 1780.f), Hex(60, 160, 240), false);
+			UStaticMeshComponent* Note = BoxPart(Hinge, FVector(-1400.f, -103.f, 1530.f), FVector(-1000.f, -100.f, 1830.f), White * 0.9f, false);       // a note
+			if (AntArt::DressAuto(this, Hinge, TEXT("SM_Fridge_Door"), FVector(-2000.f, -160.f, 0.f), FVector(0.f, -2.f, 2380.f), 0.f, 4.f))
+			{
+				AntArt::HideAll({ Slab, Handle, M1, M2, Note });
+			}
+			// Door bins on the inside
+			for (float Z : { 500.f, 1300.f })
+			{
+				BoxPart(Hinge, FVector(-1850.f, 0.f, Z), FVector(-150.f, 150.f, Z + 30.f), Hex(225, 230, 235), true);
+				BoxPart(Hinge, FVector(-1850.f, 130.f, Z + 30.f), FVector(-150.f, 150.f, Z + 140.f), Hex(200, 225, 235), true);
+			}
+			Part(Hinge, EAntShape::Cylinder, FVector(-600.f, 75.f, 735.f), FVector(110.f, 110.f, 410.f), Hex(60, 140, 70), true);   // bottle
+			Part(Hinge, EAntShape::Cylinder, FVector(-1300.f, 75.f, 1450.f), FVector(90.f, 90.f, 260.f), Hex(200, 60, 40), true);   // ketchup
 		}
-		// Door bins on the inside
-		for (float Z : { 500.f, 1300.f })
-		{
-			BoxPart(Hinge, FVector(-1850.f, 0.f, Z), FVector(-150.f, 150.f, Z + 30.f), Hex(225, 230, 235), true);
-			BoxPart(Hinge, FVector(-1850.f, 130.f, Z + 30.f), FVector(-150.f, 150.f, Z + 140.f), Hex(200, 225, 235), true);
-		}
-		Part(Hinge, EAntShape::Cylinder, FVector(-600.f, 75.f, 735.f), FVector(110.f, 110.f, 410.f), Hex(60, 140, 70), true);   // bottle
-		Part(Hinge, EAntShape::Cylinder, FVector(-1300.f, 75.f, 1450.f), FVector(90.f, 90.f, 260.f), Hex(200, 60, 40), true);   // ketchup
 		UsePointsLocal = { FVector(-1850.f, -150.f, -90.f), FVector(-1500.f, 300.f, 110.f), FVector(-1000.f, 300.f, 110.f) };
 		InnerLight = MakeLight(this, Root, FVector(-1000.f, 800.f, 2000.f), 6.f, FLinearColor(0.85f, 0.95f, 1.f), 2600.f);
 		break;
@@ -171,14 +182,17 @@ void AKitchenDoor::Build()
 	case EKitchenDoorKind::Oven:
 	{
 		// Hinge = bottom-front edge; the door folds down into a ramp.
-		UStaticMeshComponent* Slab = BoxPart(Hinge, FVector(-700.f, -14.f, 0.f), FVector(700.f, 0.f, 1200.f), Hex(35, 35, 38), true);
-		UStaticMeshComponent* Win = BoxPart(Hinge, FVector(-450.f, -17.f, 420.f), FVector(450.f, -14.f, 980.f), Hex(45, 30, 20), false);    // window
-		UStaticMeshComponent* Handle = BoxPart(Hinge, FVector(-550.f, -70.f, 1080.f), FVector(550.f, -40.f, 1130.f), Steel, true);           // handle
-		UStaticMeshComponent* H1 = BoxPart(Hinge, FVector(-540.f, -40.f, 1090.f), FVector(-500.f, -14.f, 1120.f), Steel, false);
-		UStaticMeshComponent* H2 = BoxPart(Hinge, FVector(500.f, -40.f, 1090.f), FVector(540.f, -14.f, 1120.f), Steel, false);
-		if (AntArt::DressAuto(this, Hinge, TEXT("SM_Oven_Door"), FVector(-700.f, -75.f, 0.f), FVector(700.f, 0.f, 1200.f), 0.f, 3.f))
+		if (!ArtDoor(TEXT("SM_K_Range_OvenDoor")))
 		{
-			AntArt::HideAll({ Slab, Win, Handle, H1, H2 });
+			UStaticMeshComponent* Slab = BoxPart(Hinge, FVector(-700.f, -14.f, 0.f), FVector(700.f, 0.f, 1200.f), Hex(35, 35, 38), true);
+			UStaticMeshComponent* Win = BoxPart(Hinge, FVector(-450.f, -17.f, 420.f), FVector(450.f, -14.f, 980.f), Hex(45, 30, 20), false);    // window
+			UStaticMeshComponent* Handle = BoxPart(Hinge, FVector(-550.f, -70.f, 1080.f), FVector(550.f, -40.f, 1130.f), Steel, true);           // handle
+			UStaticMeshComponent* H1 = BoxPart(Hinge, FVector(-540.f, -40.f, 1090.f), FVector(-500.f, -14.f, 1120.f), Steel, false);
+			UStaticMeshComponent* H2 = BoxPart(Hinge, FVector(500.f, -40.f, 1090.f), FVector(540.f, -14.f, 1120.f), Steel, false);
+			if (AntArt::DressAuto(this, Hinge, TEXT("SM_Oven_Door"), FVector(-700.f, -75.f, 0.f), FVector(700.f, 0.f, 1200.f), 0.f, 3.f))
+			{
+				AntArt::HideAll({ Slab, Win, Handle, H1, H2 });
+			}
 		}
 		UsePointsLocal = { FVector(0.f, -150.f, -274.f), FVector(0.f, 500.f, 26.f), FVector(0.f, -700.f, 26.f) };
 		InnerLight = MakeLight(this, Root, FVector(0.f, 900.f, 1000.f), 3.f, FLinearColor(1.f, 0.45f, 0.1f), 1500.f);
@@ -186,31 +200,34 @@ void AKitchenDoor::Build()
 	}
 	case EKitchenDoorKind::Drawer:
 	{
-		UStaticMeshComponent* Front = BoxPart(Hinge, FVector(-650.f, -20.f, 0.f), FVector(650.f, 0.f, 270.f), Cabinet, true);      // front
-		UStaticMeshComponent* Handle = BoxPart(Hinge, FVector(-120.f, -50.f, 150.f), FVector(120.f, -20.f, 185.f), Steel, true);    // handle
+		if (!ArtDoor(TEXT("SM_K_BaseDrawers_Drawer1")))   // the model is the whole drawer: front, handle, tray
 		{
-			// The generated drawer: a flat front panel, or a whole box (then it covers the tray too).
-			const AntArt::FPart& DA = AntArt::Get(TEXT("SM_Drawer"));
-			if (DA.IsValid())
+			UStaticMeshComponent* Front = BoxPart(Hinge, FVector(-650.f, -20.f, 0.f), FVector(650.f, 0.f, 270.f), Cabinet, true);      // front
+			UStaticMeshComponent* Handle = BoxPart(Hinge, FVector(-120.f, -50.f, 150.f), FVector(120.f, -20.f, 185.f), Steel, true);    // handle
 			{
-				const FVector E = DA.Bounds.GetSize();
-				const bool bFlat = FMath::Min(E.X, E.Y) < 0.3f * FMath::Max(E.X, E.Y);
-				const FVector Max = bFlat ? FVector(650.f, 0.f, 270.f) : FVector(650.f, 1600.f, 270.f);
-				if (AntArt::DressAuto(this, Hinge, TEXT("SM_Drawer"), FVector(-650.f, -55.f, 0.f), Max, 0.f, 3.f))
+				// The generated drawer: a flat front panel, or a whole box (then it covers the tray too).
+				const AntArt::FPart& DA = AntArt::Get(TEXT("SM_Drawer"));
+				if (DA.IsValid())
 				{
-					AntArt::HideAll({ Front, Handle });
+					const FVector E = DA.Bounds.GetSize();
+					const bool bFlat = FMath::Min(E.X, E.Y) < 0.3f * FMath::Max(E.X, E.Y);
+					const FVector Max = bFlat ? FVector(650.f, 0.f, 270.f) : FVector(650.f, 1600.f, 270.f);
+					if (AntArt::DressAuto(this, Hinge, TEXT("SM_Drawer"), FVector(-650.f, -55.f, 0.f), Max, 0.f, 3.f))
+					{
+						AntArt::HideAll({ Front, Handle });
+					}
 				}
 			}
-		}
-		BoxPart(Hinge, FVector(-630.f, 0.f, 0.f), FVector(630.f, 1600.f, 20.f), LightWood, true);    // bottom
-		BoxPart(Hinge, FVector(-650.f, 0.f, 0.f), FVector(-630.f, 1600.f, 240.f), LightWood, true);
-		BoxPart(Hinge, FVector(630.f, 0.f, 0.f), FVector(650.f, 1600.f, 240.f), LightWood, true);
-		BoxPart(Hinge, FVector(-630.f, 1580.f, 0.f), FVector(630.f, 1600.f, 240.f), LightWood, true);
-		for (int32 i = 0; i < 3; ++i)   // cutlery
-		{
-			const float X = -480.f + i * 70.f;
-			BoxPart(Hinge, FVector(X, 200.f, 20.f), FVector(X + 30.f, 1000.f, 32.f), Steel, true);
-			Part(Hinge, EAntShape::Sphere, FVector(X + 15.f, 1080.f, 30.f), FVector(70.f, 110.f, 20.f), Steel, false);
+			BoxPart(Hinge, FVector(-630.f, 0.f, 0.f), FVector(630.f, 1600.f, 20.f), LightWood, true);    // bottom
+			BoxPart(Hinge, FVector(-650.f, 0.f, 0.f), FVector(-630.f, 1600.f, 240.f), LightWood, true);
+			BoxPart(Hinge, FVector(630.f, 0.f, 0.f), FVector(650.f, 1600.f, 240.f), LightWood, true);
+			BoxPart(Hinge, FVector(-630.f, 1580.f, 0.f), FVector(630.f, 1600.f, 240.f), LightWood, true);
+			for (int32 i = 0; i < 3; ++i)   // cutlery
+			{
+				const float X = -480.f + i * 70.f;
+				BoxPart(Hinge, FVector(X, 200.f, 20.f), FVector(X + 30.f, 1000.f, 32.f), Steel, true);
+				Part(Hinge, EAntShape::Sphere, FVector(X + 15.f, 1080.f, 30.f), FVector(70.f, 110.f, 20.f), Steel, false);
+			}
 		}
 		UsePointsLocal = { FVector(0.f, -30.f, 120.f), FVector(0.f, -30.f, -60.f) };
 		break;
@@ -218,12 +235,15 @@ void AKitchenDoor::Build()
 	case EKitchenDoorKind::Dishwasher:
 	{
 		// Hinge = bottom-front edge of the dishwasher opening; the door drops into a ramp (grooved inside: easy to climb).
-		BoxPart(Hinge, FVector(-640.f, -16.f, 0.f), FVector(640.f, 0.f, 1480.f), Hex(200, 205, 210), true);
-		BoxPart(Hinge, FVector(-620.f, -60.f, 1380.f), FVector(620.f, -16.f, 1440.f), Steel, true);            // handle
-		BoxPart(Hinge, FVector(-400.f, -19.f, 1300.f), FVector(-200.f, -16.f, 1340.f), Hex(60, 200, 90), false); // ready light
-		for (int32 i = 0; i < 6; ++i)                                                                          // grooves on the inside face
+		if (!ArtDoor(TEXT("SM_K_Dishwasher_Door")))   // ribbed on the inside like the old one: an easy ramp
 		{
-			BoxPart(Hinge, FVector(-600.f, 0.f, 150.f + i * 220.f), FVector(600.f, 12.f, 170.f + i * 220.f), Hex(170, 175, 180), true);
+			BoxPart(Hinge, FVector(-640.f, -16.f, 0.f), FVector(640.f, 0.f, 1480.f), Hex(200, 205, 210), true);
+			BoxPart(Hinge, FVector(-620.f, -60.f, 1380.f), FVector(620.f, -16.f, 1440.f), Steel, true);            // handle
+			BoxPart(Hinge, FVector(-400.f, -19.f, 1300.f), FVector(-200.f, -16.f, 1340.f), Hex(60, 200, 90), false); // ready light
+			for (int32 i = 0; i < 6; ++i)                                                                          // grooves on the inside face
+			{
+				BoxPart(Hinge, FVector(-600.f, 0.f, 150.f + i * 220.f), FVector(600.f, 12.f, 170.f + i * 220.f), Hex(170, 175, 180), true);
+			}
 		}
 		UsePointsLocal = { FVector(0.f, -150.f, -100.f), FVector(0.f, 600.f, 40.f), FVector(0.f, -900.f, 20.f) };
 		InnerLight = MakeLight(this, Root, FVector(0.f, 900.f, 1100.f), 2.5f, FLinearColor(0.8f, 0.95f, 1.f), 1700.f);
@@ -232,10 +252,13 @@ void AKitchenDoor::Build()
 	case EKitchenDoorKind::Microwave:
 	{
 		// Hinge = the left (west) front edge; the door swings out towards -Y.
-		UStaticMeshComponent* Slab = BoxPart(Hinge, FVector(0.f, -30.f, 0.f), FVector(850.f, 0.f, 560.f), Hex(60, 60, 64), true);
-		BoxPart(Hinge, FVector(80.f, -33.f, 80.f), FVector(680.f, -30.f, 480.f), Hex(30, 25, 25), false);          // the dark window
-		BoxPart(Hinge, FVector(760.f, -70.f, 120.f), FVector(800.f, -30.f, 440.f), Steel, true);                   // handle
-		(void)Slab;
+		if (!ArtDoor(TEXT("SM_K_Microwave_Door")))
+		{
+			UStaticMeshComponent* Slab = BoxPart(Hinge, FVector(0.f, -30.f, 0.f), FVector(850.f, 0.f, 560.f), Hex(60, 60, 64), true);
+			BoxPart(Hinge, FVector(80.f, -33.f, 80.f), FVector(680.f, -30.f, 480.f), Hex(30, 25, 25), false);          // the dark window
+			BoxPart(Hinge, FVector(760.f, -70.f, 120.f), FVector(800.f, -30.f, 440.f), Steel, true);                   // handle
+			(void)Slab;
+		}
 		UsePointsLocal = { FVector(760.f, -120.f, -40.f), FVector(400.f, 300.f, 40.f) };
 		InnerLight = MakeLight(this, Root, FVector(450.f, 450.f, 450.f), 2.f, FLinearColor(1.f, 0.9f, 0.6f), 1200.f);
 		break;
@@ -442,6 +465,16 @@ void AKitchenFaucet::BeginPlay()
 		bHot = true;
 	}
 	ShownLevel = WaterLevel;
+	if (KitchenArt::Enabled())
+	{
+		// The modelled taps (hot, cold): each turns a quarter while its water runs. Ants stand on them to use them.
+		for (const TCHAR* Name : { TEXT("SM_K_Faucet_TapHot"), TEXT("SM_K_Faucet_TapCold") })
+		{
+			UStaticMeshComponent* T = KitchenArt::AddAt(this, Root, Name, 0, KitchenArt::ESolid::Moving);
+			Taps.Add(T);
+			TapBase.Add(T ? T->GetRelativeRotation().Quaternion() : FQuat::Identity);
+		}
+	}
 	if (GetNetMode() != NM_DedicatedServer)
 	{
 		Water = Part(Root, EAntShape::Cube, FVector::ZeroVector, FVector(100.f), FLinearColor(0.3f, 0.55f, 0.95f), false);
@@ -461,6 +494,15 @@ void AKitchenFaucet::Tick(float DeltaSeconds)
 		WaterLevel = FMath::Clamp(WaterLevel + (bOn ? 32.f : -14.f) * DeltaSeconds, BasinFloor, BasinTop);
 	}
 	ShownLevel = FMath::FInterpTo(ShownLevel, WaterLevel, DeltaSeconds, 4.f);
+	for (int32 i = 0; i < Taps.Num() && i < 2; ++i)
+	{
+		const float Want = (bOn && bHot == (i == 0)) ? 1.f : 0.f;
+		if (Taps[i] && !FMath::IsNearlyEqual(TapTurn[i], Want))
+		{
+			TapTurn[i] = FMath::FInterpConstantTo(TapTurn[i], Want, DeltaSeconds, 3.f);
+			Taps[i]->SetRelativeRotation(TapBase[i] * FQuat(FVector::UpVector, FMath::DegreesToRadians(-90.f * TapTurn[i])));
+		}
+	}
 
 	if (GetNetMode() != NM_DedicatedServer)
 	{
@@ -615,14 +657,21 @@ void AKitchenSwitch::BeginPlay()
 {
 	Super::BeginPlay();
 	// Local +X points out of the wall.
-	UStaticMeshComponent* Plate = BoxPart(Root, FVector(0.f, -70.f, -100.f), FVector(10.f, 70.f, 100.f), Hex(235, 230, 215), true);
-	UStaticMeshComponent* Frame = BoxPart(Root, FVector(8.f, -25.f, -45.f), FVector(14.f, 25.f, 45.f), Hex(190, 185, 170), false);
-	if (AntArt::Dress(this, Root, TEXT("SM_LightSwitch"), FVector(0.f, -80.f, -110.f), FVector(18.f, 80.f, 110.f), -90.f))
+	const bool bArt = KitchenArt::Enabled();   // the plate is part of the modelled kitchen (SM_K_Switch): only the rocker is ours
+	if (!bArt)
 	{
-		AntArt::HideAll({ Plate, Frame });
+		UStaticMeshComponent* Plate = BoxPart(Root, FVector(0.f, -70.f, -100.f), FVector(10.f, 70.f, 100.f), Hex(235, 230, 215), true);
+		UStaticMeshComponent* Frame = BoxPart(Root, FVector(8.f, -25.f, -45.f), FVector(14.f, 25.f, 45.f), Hex(190, 185, 170), false);
+		if (AntArt::Dress(this, Root, TEXT("SM_LightSwitch"), FVector(0.f, -80.f, -110.f), FVector(18.f, 80.f, 110.f), -90.f))
+		{
+			AntArt::HideAll({ Plate, Frame });
+		}
 	}
 	Toggle = AntKit::AddPivot(this, Root, FVector(12.f, 0.f, 0.f));
-	BoxPart(Toggle, FVector(0.f, -18.f, -12.f), FVector(34.f, 18.f, 12.f), Hex(250, 248, 240), true);
+	if (!(bArt && KitchenArt::AddAt(this, Toggle, TEXT("SM_K_Switch_Toggle"), 0, KitchenArt::ESolid::Moving)))
+	{
+		BoxPart(Toggle, FVector(0.f, -18.f, -12.f), FVector(34.f, 18.f, 12.f), Hex(250, 248, 240), true);
+	}
 	OnRep_Lights();
 }
 
@@ -765,17 +814,35 @@ void AKitchenToaster::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 void AKitchenToaster::BeginPlay()
 {
 	Super::BeginPlay();
-	BoxPart(Root, FVector(-5902.f, 4185.f, 1780.f), FVector(-5898.f, 4215.f, 2090.f), Black, false);   // lever slot
-	Lever = AntKit::AddPivot(this, Root, FVector(-5900.f, 4200.f, 2060.f));
-	UStaticMeshComponent* Knob = BoxPart(Lever, FVector(0.f, -45.f, -22.f), FVector(55.f, 45.f, 22.f), Black, true);
-	if (AntArt::DressAuto(this, Lever, TEXT("SM_Toaster_Lever"), FVector(0.f, -55.f, -30.f), FVector(80.f, 55.f, 30.f)))
+	const bool bArt = KitchenArt::Enabled();   // the toaster itself (real slots, lever slot) is part of the modelled kitchen
+	if (!bArt)
 	{
-		AntArt::HideAll({ Knob });
+		BoxPart(Root, FVector(-5902.f, 4185.f, 1780.f), FVector(-5898.f, 4215.f, 2090.f), Black, false);   // lever slot
 	}
+	Lever = AntKit::AddPivot(this, Root, FVector(-5900.f, 4200.f, 2060.f));
+	if (!(bArt && KitchenArt::AddAt(this, Lever, TEXT("SM_K_Toaster_Lever"), 0, KitchenArt::ESolid::Moving)))
+	{
+		UStaticMeshComponent* Knob = BoxPart(Lever, FVector(0.f, -45.f, -22.f), FVector(55.f, 45.f, 22.f), Black, true);
+		if (AntArt::DressAuto(this, Lever, TEXT("SM_Toaster_Lever"), FVector(0.f, -55.f, -30.f), FVector(80.f, 55.f, 30.f)))
+		{
+			AntArt::HideAll({ Knob });
+		}
+	}
+	int32 Slice = 0;
 	for (float Y : { 4085.f, 4315.f })
 	{
-		Toasts.Add(BoxPart(Root, FVector(-6420.f, Y - 25.f, 1950.f), FVector(-6080.f, Y + 25.f, 2140.f), Hex(215, 150, 70), false));
+		// Modelled slices stand in the real slots (origin at their bottom, z 1950); ants ride them when they pop.
+		UStaticMeshComponent* T = bArt ? KitchenArt::AddAt(this, Root, TEXT("SM_K_Toast"), Slice, KitchenArt::ESolid::Moving) : nullptr;
+		bToastArt = bToastArt || T != nullptr;
+		Toasts.Add(T ? T : BoxPart(Root, FVector(-6420.f, Y - 25.f, 1950.f), FVector(-6080.f, Y + 25.f, 2140.f), Hex(215, 150, 70), false));
+		++Slice;
 	}
+}
+
+FBox AKitchenToaster::Slots()
+{
+	// The modelled toaster has real slots 350 deep: whoever sits down in one is launched too.
+	return FBox(FVector(-6500.f, 4000.f, KitchenArt::Enabled() ? 1780.f : 2100.f), FVector(-6000.f, 4400.f, 2400.f));
 }
 
 bool AKitchenToaster::CanInteract(const AAntCharacter* Ant) const
@@ -812,7 +879,11 @@ void AKitchenToaster::Tick(float DeltaSeconds)
 	for (int32 i = 0; i < Toasts.Num(); ++i)
 	{
 		const float Up = FMath::Sin(FMath::Clamp(ToastAnim, 0.f, 1.f) * PI) * 320.f;
-		Toasts[i]->SetRelativeLocation(FVector(-6250.f, i == 0 ? 4085.f : 4315.f, 2045.f + Up));
+		const FVector Want(-6250.f, i == 0 ? 4085.f : 4315.f, (bToastArt ? 1950.f : 2045.f) + Up);
+		if (!Toasts[i]->GetRelativeLocation().Equals(Want, 0.05f))
+		{
+			Toasts[i]->SetRelativeLocation(Want);
+		}
 	}
 
 	if (HasAuthority() && bArmed && Now() >= PopAt)
@@ -1035,17 +1106,24 @@ void AKitchenTrap::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 void AKitchenTrap::BeginPlay()
 {
 	Super::BeginPlay();
-	UStaticMeshComponent* Base = BoxPart(Root, FVector(-190.f, -90.f, 0.f), FVector(190.f, 90.f, 16.f), LightWood, true);             // base
-	UStaticMeshComponent* Bait = BoxPart(Root, FVector(40.f, -35.f, 16.f), FVector(110.f, 35.f, 22.f), Hex(200, 190, 60), false);      // bait plate
-	if (AntArt::Dress(this, Root, TEXT("SM_MouseTrap"), FVector(-195.f, -95.f, 0.f), FVector(195.f, 95.f, 75.f), 0.f))
+	const bool bArt = KitchenArt::Enabled();   // the base with the bait and the spring is part of the modelled kitchen (SM_K_MouseTrap)
+	if (!bArt)
 	{
-		AntArt::HideAll({ Base, Bait });
+		UStaticMeshComponent* Base = BoxPart(Root, FVector(-190.f, -90.f, 0.f), FVector(190.f, 90.f, 16.f), LightWood, true);             // base
+		UStaticMeshComponent* Bait = BoxPart(Root, FVector(40.f, -35.f, 16.f), FVector(110.f, 35.f, 22.f), Hex(200, 190, 60), false);      // bait plate
+		if (AntArt::Dress(this, Root, TEXT("SM_MouseTrap"), FVector(-195.f, -95.f, 0.f), FVector(195.f, 95.f, 75.f), 0.f))
+		{
+			AntArt::HideAll({ Base, Bait });
+		}
+		Part(Root, EAntShape::Cylinder, FVector(0.f, 0.f, 22.f), FVector(16.f, 150.f, 16.f), Steel, false, FRotator(0.f, 0.f, 90.f));   // spring axis
 	}
-	Part(Root, EAntShape::Cylinder, FVector(0.f, 0.f, 22.f), FVector(16.f, 150.f, 16.f), Steel, false, FRotator(0.f, 0.f, 90.f));   // spring axis
 	Bar = AntKit::AddPivot(this, Root, FVector(0.f, 0.f, 22.f));
-	BoxPart(Bar, FVector(-175.f, -88.f, 0.f), FVector(0.f, -78.f, 8.f), Steel, false);
-	BoxPart(Bar, FVector(-175.f, 78.f, 0.f), FVector(0.f, 88.f, 8.f), Steel, false);
-	BoxPart(Bar, FVector(-175.f, -88.f, 0.f), FVector(-165.f, 88.f, 8.f), Steel, false);
+	if (!(bArt && KitchenArt::AddAt(this, Bar, TEXT("SM_K_MouseTrap_Bar"), 0, KitchenArt::ESolid::None)))
+	{
+		BoxPart(Bar, FVector(-175.f, -88.f, 0.f), FVector(0.f, -78.f, 8.f), Steel, false);
+		BoxPart(Bar, FVector(-175.f, 78.f, 0.f), FVector(0.f, 88.f, 8.f), Steel, false);
+		BoxPart(Bar, FVector(-175.f, -88.f, 0.f), FVector(-165.f, 88.f, 8.f), Steel, false);
+	}
 	BarAlpha = bArmed ? 0.f : 1.f;
 }
 

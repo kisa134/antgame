@@ -134,6 +134,10 @@ private:
 	float ShownLevel = 1150.f;
 	float SplashAccum = 0.f;   // cosmetic: droplets, ripples and steam where the stream lands
 	float RippleAccum = 0.f;
+	/** Modelled kitchen: the hot and the cold tap, turned while their water runs. */
+	UPROPERTY() TArray<UStaticMeshComponent*> Taps;
+	TArray<FQuat> TapBase;
+	float TapTurn[2] = { 0.f, 0.f };
 	mutable TMap<TWeakObjectPtr<AAntCharacter>, float> LastKnock;
 };
 
@@ -211,7 +215,7 @@ public:
 
 	UPROPERTY(Replicated) bool bArmed = false;
 
-	static FBox Slots() { return FBox(FVector(-6500.f, 4000.f, 2100.f), FVector(-6000.f, 4400.f, 2400.f)); }
+	static FBox Slots();
 
 private:
 	void Pop();
@@ -222,6 +226,7 @@ private:
 	float PopAt = 0.f;
 	float ReadyAt = 0.f;
 	float ToastAnim = 0.f;
+	bool bToastArt = false;   // the slices are the modelled ones (origin at the bottom)
 };
 
 // ---------------------------------------------------------------------------------------------

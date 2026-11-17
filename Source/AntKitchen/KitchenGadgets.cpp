@@ -3,6 +3,8 @@
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "KitchenBuilder.h"
+#include "KitchenArt.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "KitchenLoot.h"
 #include "AntCharacter.h"
 #include "AntTypes.h"
@@ -77,17 +79,45 @@ void AKitchenKnob::BeginPlay()
 	}
 	// The actor sits on the oven's control strip (the second knob from the left, in front of the hot burner).
 	// Everything else is placed in world space relative to it: the burner is at (-350, 3500, 1740).
-	Knob = Part(Root, EAntShape::Cylinder, FVector(0.f, -15.f, 0.f), FVector(70.f, 70.f, 30.f), Black, true, FRotator(90.f, 0.f, 0.f));
-	Part(Knob, EAntShape::Cube, FVector(0.f, 0.f, 0.f), FVector(10.f, 60.f, 34.f), Hex(230, 230, 230), false);   // the pointer line
 	const FVector B = FVector(-350.f, 3500.f, 1740.f) - GetActorLocation();   // burner, local
-	Coil = Part(Root, EAntShape::Cylinder, B + FVector(0.f, 0.f, 12.f), FVector(520.f, 520.f, 25.f), DarkSteel, true);
-	Part(Root, EAntShape::Cylinder, B + FVector(0.f, 0.f, 28.f), FVector(240.f, 240.f, 6.f), Black, false);
-	// The pot: a steel cylinder with a rolled rim; the soup fills it almost to the top.
-	Part(Root, EAntShape::Cylinder, B + FVector(0.f, 0.f, 285.f), FVector(840.f, 840.f, 520.f), Steel, true);
-	Part(Root, EAntShape::Cylinder, B + FVector(0.f, 0.f, 548.f), FVector(880.f, 880.f, 26.f), Steel, true);                       // rim
-	for (float s : { -1.f, 1.f })
+	const bool bArt = KitchenArt::Enabled();
+	if (bArt)
 	{
-		Part(Root, EAntShape::Cube, B + FVector(470.f * s, 0.f, 420.f), FVector(120.f, 260.f, 50.f), DarkSteel, true);          // handles
+		// The modelled kitchen: our knob is the middle one of five, our coil the front-right burner; the pot itself is
+		// part of the kitchen (SM_K_Pot, without its lid). The soup, the bubbles and the glow below are still ours.
+		Knob = KitchenArt::AddAt(this, Root, TEXT("SM_K_Range_Knob"), 2, KitchenArt::ESolid::Moving);
+		Coil = KitchenArt::AddAt(this, Root, TEXT("SM_K_Range_Burner"), 1, KitchenArt::ESolid::Moving);
+		bKnobArt = Knob != nullptr;
+		if (Knob)
+		{
+			KnobBase = Knob->GetRelativeRotation().Quaternion();
+		}
+		const int32 Ring = Coil ? Coil->GetMaterialIndex(TEXT("BurnerRing")) : INDEX_NONE;
+		if (UMaterialInterface* Base = Ring != INDEX_NONE ? LoadObject<UMaterialInterface>(nullptr, TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial")) : nullptr)
+		{
+			CoilMID = UMaterialInstanceDynamic::Create(Base, Coil);   // the ring reddens as it heats up
+			Coil->SetMaterial(Ring, CoilMID);
+		}
+	}
+	if (!Knob)
+	{
+		Knob = Part(Root, EAntShape::Cylinder, FVector(0.f, -15.f, 0.f), FVector(70.f, 70.f, 30.f), Black, true, FRotator(90.f, 0.f, 0.f));
+		Part(Knob, EAntShape::Cube, FVector(0.f, 0.f, 0.f), FVector(10.f, 60.f, 34.f), Hex(230, 230, 230), false);   // the pointer line
+	}
+	if (!Coil)
+	{
+		Coil = Part(Root, EAntShape::Cylinder, B + FVector(0.f, 0.f, 12.f), FVector(520.f, 520.f, 25.f), DarkSteel, true);
+		Part(Root, EAntShape::Cylinder, B + FVector(0.f, 0.f, 28.f), FVector(240.f, 240.f, 6.f), Black, false);
+	}
+	if (!bArt)
+	{
+		// The pot: a steel cylinder with a rolled rim; the soup fills it almost to the top.
+		Part(Root, EAntShape::Cylinder, B + FVector(0.f, 0.f, 285.f), FVector(840.f, 840.f, 520.f), Steel, true);
+		Part(Root, EAntShape::Cylinder, B + FVector(0.f, 0.f, 548.f), FVector(880.f, 880.f, 26.f), Steel, true);                       // rim
+		for (float s : { -1.f, 1.f })
+		{
+			Part(Root, EAntShape::Cube, B + FVector(470.f * s, 0.f, 420.f), FVector(120.f, 260.f, 50.f), DarkSteel, true);          // handles
+		}
 	}
 	Soup = Part(Root, EAntShape::Cylinder, B + FVector(0.f, 0.f, 540.f), FVector(760.f, 760.f, 10.f), Hex(230, 150, 60), true);  // soup surface (walkable... and scalding)
 	Part(Root, EAntShape::Cylinder, B + FVector(180.f, -120.f, 545.f), FVector(160.f, 160.f, 8.f), Hex(240, 200, 90), false);    // a floating carrot
@@ -130,11 +160,23 @@ void AKitchenKnob::Tick(float Dt)
 	{
 		Boil = FMath::Clamp(Boil + (bOn ? Dt / 25.f : -Dt / 12.f), 0.f, 1.f);
 	}
-	if (Knob)
+	if (Knob && bKnobArt)
+	{
+		if (KnobShown != (bOn ? 1 : 0))
+		{
+			KnobShown = bOn ? 1 : 0;
+			Knob->SetRelativeRotation(KnobBase * FQuat(FVector::RightVector, FMath::DegreesToRadians(bOn ? 120.f : 0.f)));   // about its own axis
+		}
+	}
+	else if (Knob)
 	{
 		Knob->SetRelativeRotation(FRotator(90.f, 0.f, bOn ? 120.f : 0.f));
 	}
-	if (Coil)
+	if (CoilMID)
+	{
+		CoilMID->SetVectorParameterValue(TEXT("Color"), FMath::Lerp(FLinearColor(0.65f, 0.12f, 0.05f), FLinearColor(3.f, 0.35f, 0.08f), FMath::Clamp(Boil * 2.f, 0.f, 1.f)));
+	}
+	else if (Coil && !bKnobArt)
 	{
 		AntKit::Paint(Coil, FMath::Lerp(DarkSteel, Hex(255, 60, 20), FMath::Clamp(Boil * 2.f, 0.f, 1.f)));
 	}
@@ -216,11 +258,24 @@ void AKitchenPedalBin::BeginPlay()
 	Super::BeginPlay();
 	// Actor at the bin's base centre. The lid hinges at the back (+Y) rim, the pedal sticks out at the front (-Y).
 	Hinge = AntKit::AddPivot(this, Root, FVector(0.f, 660.f, 1540.f));
-	Part(Hinge, EAntShape::Cylinder, FVector(0.f, -660.f, 0.f), FVector(1380.f, 1380.f, 40.f), Steel, true);        // the lid
-	Part(Hinge, EAntShape::Cylinder, FVector(0.f, -660.f, 40.f), FVector(400.f, 400.f, 30.f), DarkSteel, true);      // the knob on top
-	Part(Hinge, EAntShape::Cube, FVector(0.f, -40.f, -10.f), FVector(300.f, 80.f, 60.f), DarkSteel, false);         // hinge barrel
-	Pedal = Part(Root, EAntShape::Cube, FVector(0.f, -760.f, 35.f), FVector(320.f, 240.f, 50.f), DarkSteel, true);
-	Part(Root, EAntShape::Cube, FVector(0.f, -640.f, 20.f), FVector(60.f, 100.f, 40.f), Black, true);                // the lever
+	const bool bArt = KitchenArt::Enabled();   // the modelled lid and pedal have the same pivots
+	if (!(bArt && KitchenArt::AddAt(this, Hinge, TEXT("SM_K_Bin_Lid"), 0, KitchenArt::ESolid::Moving, false, TEXT("ArtLid"))))
+	{
+		Part(Hinge, EAntShape::Cylinder, FVector(0.f, -660.f, 0.f), FVector(1380.f, 1380.f, 40.f), Steel, true);        // the lid
+		Part(Hinge, EAntShape::Cylinder, FVector(0.f, -660.f, 40.f), FVector(400.f, 400.f, 30.f), DarkSteel, true);      // the knob on top
+		Part(Hinge, EAntShape::Cube, FVector(0.f, -40.f, -10.f), FVector(300.f, 80.f, 60.f), DarkSteel, false);         // hinge barrel
+	}
+	Pedal = bArt ? KitchenArt::AddAt(this, Root, TEXT("SM_K_Bin_Pedal"), 0, KitchenArt::ESolid::Moving) : nullptr;
+	bPedalArt = Pedal != nullptr;
+	if (Pedal)
+	{
+		PedalBase = Pedal->GetRelativeRotation().Quaternion();
+	}
+	else
+	{
+		Pedal = Part(Root, EAntShape::Cube, FVector(0.f, -760.f, 35.f), FVector(320.f, 240.f, 50.f), DarkSteel, true);
+		Part(Root, EAntShape::Cube, FVector(0.f, -640.f, 20.f), FVector(60.f, 100.f, 40.f), Black, true);                // the lever
+	}
 	UsePointsLocal = { FVector(0.f, -900.f, 0.f), FVector(-200.f, -800.f, 0.f), FVector(200.f, -800.f, 0.f) };
 }
 
@@ -260,7 +315,14 @@ void AKitchenPedalBin::Tick(float Dt)
 		}
 		if (Pedal)
 		{
-			Pedal->SetRelativeRotation(FRotator(-12.f * Alpha, 0.f, 0.f));
+			if (bPedalArt)
+			{
+				Pedal->SetRelativeRotation(FQuat(FVector(-1.f, 0.f, 0.f), FMath::DegreesToRadians(-12.f * Alpha)) * PedalBase);   // the front edge goes down
+			}
+			else
+			{
+				Pedal->SetRelativeRotation(FRotator(-12.f * Alpha, 0.f, 0.f));
+			}
 		}
 	}
 }

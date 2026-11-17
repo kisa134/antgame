@@ -1,0 +1,271 @@
+﻿#include "KitchenMover.h"
+#include "KitchenArt.h"
+#include "AntCharacter.h"
+#include "HumanCharacter.h"
+#include "Critters.h"
+#include "AntTypes.h"
+#include "Components/StaticMeshComponent.h"
+#include "Components/CapsuleComponent.h"
+#include "Engine/StaticMesh.h"
+#include "Net/UnrealNetwork.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
+#include "EngineUtils.h"
+#include "Engine/World.h"
+
+AKitchenMover::AKitchenMover()
+{
+	PrimaryActorTick.bCanEverTick = true;
+	InteractRadius = 300.f;
+}
+
+void AKitchenMover::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(AKitchenMover, PartIndex);
+	DOREPLIFETIME(AKitchenMover, bOpen);
+}
+
+void AKitchenMover::BeginPlay()
+{
+	Super::BeginPlay();
+	if (HasAuthority() && FParse::Param(FCommandLine::Get(), TEXT("AntArtOpen")))   // dev: everything starts open (to look inside)
+	{
+		bOpen = true;
+	}
+	Build();
+	Alpha = bOpen ? 1.f : 0.f;
+	ApplyAlpha();
+}
+
+void AKitchenMover::Build()
+{
+	const TConstArrayView<FKitchenArtMover> All = KitchenArt::Movers();
+	if (!All.IsValidIndex(PartIndex))
+	{
+		return;
+	}
+	const FKitchenArtMover& M = All[PartIndex];
+	const FKitchenArtInst& I = KitchenArt::Instances()[M.Inst];
+
+	// The actor stands at the part's origin (hinge line / back of the drawer), unrotated: the motion is in game space.
+	Hinge = AntKit::AddPivot(this, Root, FVector::ZeroVector);
+	Body = KitchenArt::AddAt(this, Hinge, I.Name, I.Index, KitchenArt::ESolid::Moving, false, TEXT("ArtBody"));
+	// Whatever stands on this part travels with it (plates in the dishwasher rack...).
+	int32 N = 0;
+	for (const FKitchenArtInst& R : KitchenArt::Instances())
+	{
+		if (R.Role == KitchenArt::Rider && R.Parent == PartIndex)
+		{
+			KitchenArt::AddAt(this, Hinge, R.Name, R.Index, KitchenArt::ESolid::Moving, false, FName(*FString::Printf(TEXT("ArtRider%d"), N++)));
+		}
+	}
+
+	// Where it can be used from: around the part, shut and open (also from behind it: an ant shut inside gets out).
+	UsePointsLocal.Reset();
+	if (Body && Body->GetStaticMesh())
+	{
+		const FBox B = Body->GetStaticMesh()->GetBoundingBox().TransformBy(Body->GetRelativeTransform());
+		const FVector C = B.GetCenter(), E = B.GetExtent();
+		TArray<FVector> Pts;
+		for (int32 sx = -1; sx <= 1; ++sx)
+		{
+			for (int32 sy = -1; sy <= 1; ++sy)
+			{
+				Pts.Add(C + FVector(sx * E.X, sy * E.Y, -E.Z));
+			}
+		}
+		Pts.Add(C);
+		Pts.Add(C + FVector(0.f, 0.f, E.Z));
+		const FTransform Open = M.Type == 0
+			? FTransform(FQuat(FVector(M.Axis).GetSafeNormal(), FMath::DegreesToRadians(M.Angle)))
+			: FTransform(FVector(M.Slide));
+		for (const FVector& P : Pts)
+		{
+			UsePointsLocal.Add(P);
+			UsePointsLocal.Add(Open.TransformPosition(P));
+		}
+	}
+}
+
+void AKitchenMover::ApplyAlpha()
+{
+	const TConstArrayView<FKitchenArtMover> All = KitchenArt::Movers();
+	if (!Hinge || !All.IsValidIndex(PartIndex))
+	{
+		return;
+	}
+	const FKitchenArtMover& M = All[PartIndex];
+	const float K = FMath::InterpEaseInOut(0.f, 1.f, Alpha, 2.f);
+	if (M.Type == 0)
+	{
+		Hinge->SetRelativeRotation(FQuat(FVector(M.Axis).GetSafeNormal(), FMath::DegreesToRadians(M.Angle * K)));
+	}
+	else
+	{
+		Hinge->SetRelativeLocation(FVector(M.Slide) * K);
+	}
+}
+
+bool AKitchenMover::IsBlocked() const
+{
+	const TConstArrayView<FKitchenArtMover> All = KitchenArt::Movers();
+	if (!All.IsValidIndex(PartIndex))
+	{
+		return false;
+	}
+	const int32 Flags = All[PartIndex].Flags;
+	if (!(Flags & (KitchenArt::NeedsFridge | KitchenArt::NeedsDishwasher)))
+	{
+		return false;
+	}
+	const EKitchenDoorKind Need = (Flags & KitchenArt::NeedsFridge) ? EKitchenDoorKind::Fridge : EKitchenDoorKind::Dishwasher;
+	for (TActorIterator<AKitchenDoor> It(GetWorld()); It; ++It)
+	{
+		if (It->Kind == Need)
+		{
+			return !It->IsOpen();
+		}
+	}
+	return false;
+}
+
+void AKitchenMover::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	const float Target = bOpen ? 1.f : 0.f;
+	if (!FMath::IsNearlyEqual(Alpha, Target))
+	{
+		Alpha = FMath::FInterpConstantTo(Alpha, Target, DeltaSeconds, 1.5f);
+		ApplyAlpha();
+	}
+
+	if (!HasAuthority())
+	{
+		return;
+	}
+	if (!bOpen)
+	{
+		// The door between the rooms: the Human and the pets never find it shut in their way, they push it open.
+		const TConstArrayView<FKitchenArtMover> Parts = KitchenArt::Movers();
+		ServerCheck -= DeltaSeconds;
+		if (ServerCheck <= 0.f && Parts.IsValidIndex(PartIndex) && (Parts[PartIndex].Flags & KitchenArt::BigOpens))
+		{
+			ServerCheck = 0.25f;
+			bool bNear = false;
+			for (TActorIterator<AHumanCharacter> It(GetWorld()); It && !bNear; ++It)
+			{
+				bNear = FVector::Dist2D(It->GetActorLocation(), GetActorLocation()) < 1900.f;
+			}
+			for (TActorIterator<ACritter> It(GetWorld()); It && !bNear; ++It)
+			{
+				bNear = FVector::Dist2D(It->GetActorLocation(), GetActorLocation()) < 1900.f;
+			}
+			if (bNear)
+			{
+				SetOpen(true);
+				AntSfx::Everyone(this, AntSfx::FridgeDoor, GetActorLocation(), 0.9f);
+			}
+		}
+		return;
+	}
+	if (AutoCloseAt > 0.f && Now() >= AutoCloseAt)
+	{
+		SetOpen(false);
+		return;
+	}
+	ServerCheck -= DeltaSeconds;
+	if (ServerCheck > 0.f)
+	{
+		return;
+	}
+	ServerCheck = 0.25f;
+	const TConstArrayView<FKitchenArtMover> All = KitchenArt::Movers();
+	if (!All.IsValidIndex(PartIndex))
+	{
+		return;
+	}
+	// The fridge door swings shut on the crisper, the dishwasher door lifts the racks back in.
+	if (IsBlocked())
+	{
+		SetOpen(false);
+		return;
+	}
+	// The Human walks into an open cabinet door or drawer: he bumps it shut and walks on (it never traps him).
+	if ((All[PartIndex].Flags & KitchenArt::HumanShuts) && Body && Alpha > 0.9f)
+	{
+		const FBox B = Body->Bounds.GetBox();
+		for (TActorIterator<AHumanCharacter> It(GetWorld()); It; ++It)
+		{
+			const UCapsuleComponent* Cap = It->GetCapsuleComponent();
+			const float R = Cap ? Cap->GetScaledCapsuleRadius() + 60.f : 400.f;
+			const float Feet = It->GetActorLocation().Z - (Cap ? Cap->GetScaledCapsuleHalfHeight() : 1700.f);
+			const FVector P = It->GetActorLocation();
+			if (P.X > B.Min.X - R && P.X < B.Max.X + R && P.Y > B.Min.Y - R && P.Y < B.Max.Y + R && B.Max.Z > Feet + 250.f)
+			{
+				SetOpen(false);
+				AntSfx::Everyone(this, AntSfx::FridgeDoor, GetActorLocation(), 1.5f);
+				break;
+			}
+		}
+	}
+}
+
+void AKitchenMover::SetOpen(bool bInOpen, float AutoClose)
+{
+	bOpen = bInOpen;
+	AutoCloseAt = (bInOpen && AutoClose > 0.f) ? Now() + AutoClose : -1.f;
+	ServerCheck = 0.6f;
+}
+
+FString AKitchenMover::GetPrompt(const AAntCharacter* Ant) const
+{
+	const TConstArrayView<FKitchenArtMover> All = KitchenArt::Movers();
+	if (!All.IsValidIndex(PartIndex))
+	{
+		return FString();
+	}
+	return bOpen ? All[PartIndex].CloseText : All[PartIndex].OpenText;
+}
+
+void AKitchenMover::Interact(AAntCharacter* Ant)
+{
+	const TConstArrayView<FKitchenArtMover> All = KitchenArt::Movers();
+	if (!All.IsValidIndex(PartIndex))
+	{
+		return;
+	}
+	const FKitchenArtMover& M = All[PartIndex];
+	if (!bOpen && IsBlocked())
+	{
+		if (Ant)
+		{
+			Ant->Toast((M.Flags & KitchenArt::NeedsFridge) ? TEXT("Сначала открой дверь холодильника") : TEXT("Сначала открой посудомойку"));
+		}
+		return;
+	}
+	SetOpen(!bOpen, M.AutoClose);
+	AntSfx::Everyone(this, AntSfx::FridgeDoor, GetActorLocation(), bOpen ? 1.35f : 1.6f);
+}
+
+bool AKitchenMover::HumanOpensOne(UWorld* World, FRandomStream& Rng, float Seconds)
+{
+	TArray<AKitchenMover*> Free;
+	const TConstArrayView<FKitchenArtMover> All = KitchenArt::Movers();
+	for (TActorIterator<AKitchenMover> It(World); It; ++It)
+	{
+		if (!It->bOpen && All.IsValidIndex(It->PartIndex) && (All[It->PartIndex].Flags & KitchenArt::HumanOpens))
+		{
+			Free.Add(*It);
+		}
+	}
+	if (Free.Num() == 0)
+	{
+		return false;
+	}
+	AKitchenMover* M = Free[Rng.RandRange(0, Free.Num() - 1)];
+	M->SetOpen(true, Seconds);
+	AntSfx::Everyone(M, AntSfx::FridgeDoor, M->GetActorLocation(), 1.35f);
+	return true;
+}

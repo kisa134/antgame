@@ -1,4 +1,5 @@
 ﻿#include "WarMode.h"
+#include "KitchenArt.h"
 #include "AntCharacter.h"
 #include "CreatureCharacters.h"
 #include "AntArmy.h"
@@ -573,6 +574,10 @@ void AFlyFeeder::BeginPlay()
 	if (GetNetMode() == NM_DedicatedServer || Kind != 0)
 	{
 		return;
+	}
+	if (KitchenArt::Enabled() && KitchenArt::Find(TEXT("SM_Y_DogPoop")))
+	{
+		return;   // the modelled pile stands there (placed with the rest of the yard by AKitchenBuilder::BuildArt)
 	}
 	// A proper dog pile on the lawn (with a few circling specks).
 	const FLinearColor Poo(0.36f, 0.22f, 0.1f), PooDark(0.25f, 0.15f, 0.07f);

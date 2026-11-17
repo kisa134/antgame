@@ -91,6 +91,12 @@ private:
 	void BuildWestStreet();
 	void BuildClutter();
 	void BuildAppliances();
+	/** The modelled kitchen (KitchenArt): every fixed piece at its manifest placement. The box-built versions of the same
+	 *  things are skipped (bArt); -AntOldKitchen keeps them instead. */
+	void BuildArt();
+	/** Modelled grass: tufts instead of the given single blades (every third one). False if the models are missing. */
+	bool ScatterTufts(const TArray<FTransform>& Blades, int32 Seed);
+	bool bArt = false;
 
 	/** Air moving through a duct: ants inside are carried along. */
 	struct FDuctWind { FBox Box; FVector Dir; };
