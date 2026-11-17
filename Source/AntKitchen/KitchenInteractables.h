@@ -341,6 +341,8 @@ public:
 	UPROPERTY(Replicated) FString PropName;
 	/** Server (dev tests): counts as pushed over by an ant even though nobody touched it. */
 	bool bDevPushed = false;
+	/** Server: an ant dashes into it. True if it was in reach and got shoved along Dir (harder the stronger the ant). */
+	bool TryShove(AAntCharacter* By, const FVector& From, const FVector& Dir, float Reach);
 
 	virtual void Tick(float DeltaSeconds) override;
 

@@ -128,10 +128,10 @@ namespace
 		{ TEXT("Bone"),         Flat, nullptr, 0.f, 0.94f, 0.9f, 0.78f,    0.6f,  0.f, nullptr },
 		// Stone outside: the granite texture, tinted, at a tile size that reads as fine grain from an ant's height.
 		// (The material's "speckle" mode draws 3-7 unit square cells: at ant scale that was coarse square noise.)
-		{ TEXT("Stone"),        Textured, TEXT("T_Granite"), 520.f, 1.05f, 1.02f, 0.95f, 0.85f, 0.f, nullptr },
-		{ TEXT("Concrete"),     Textured, TEXT("T_Granite"), 640.f, 1.2f, 1.18f, 1.12f, 0.9f, 0.f, nullptr },
-		{ TEXT("Kerb"),         Textured, TEXT("T_Granite"), 560.f, 0.92f, 0.9f, 0.86f, 0.9f,  0.f, nullptr },
-		{ TEXT("Asphalt"),      Textured, TEXT("T_Granite"), 420.f, 0.2f, 0.2f, 0.22f, 0.9f,  0.f, nullptr },
+		{ TEXT("Stone"),        Textured, TEXT("T_Granite"), 260.f, 1.05f, 1.02f, 0.95f, 0.85f, 0.f, nullptr },
+		{ TEXT("Concrete"),     Textured, TEXT("T_Granite"), 300.f, 1.2f, 1.18f, 1.12f, 0.9f, 0.f, nullptr },
+		{ TEXT("Kerb"),         Textured, TEXT("T_Granite"), 280.f, 0.92f, 0.9f, 0.86f, 0.9f,  0.f, nullptr },
+		{ TEXT("Asphalt"),      Textured, TEXT("T_Granite"), 200.f, 0.2f, 0.2f, 0.22f, 0.9f,  0.f, nullptr },
 		{ TEXT("RoadPaint"),    Flat, nullptr, 0.f, 0.93f, 0.91f, 0.82f,   0.7f,  0.f, nullptr },
 		{ TEXT("GrassDark"),    Flat, nullptr, 0.f, 0.15f, 0.38f, 0.1f,    0.9f,  0.f, TEXT("Surf_Grass") },
 		{ TEXT("Grass"),        Flat, nullptr, 0.f, 0.3f, 0.56f, 0.16f,    0.9f,  0.f, TEXT("Surf_Grass") },

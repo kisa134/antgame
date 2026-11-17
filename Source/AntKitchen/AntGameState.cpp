@@ -5,7 +5,8 @@
 #include "AntTypes.h"
 #include "AntFx.h"
 #include "Net/UnrealNetwork.h"
-#include "Misc/ConfigCacheIni.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
 #include "Engine/World.h"
 
 void AAntGameState::BeginPlay()
@@ -82,14 +83,29 @@ void AAntGameState::MulticastPing_Implementation(FVector_NetQuantize Loc, uint8 
 	AntSfx::Play2D(this, AntSfx::PickupGear, 0.5f, 1.6f);
 }
 
+namespace
+{
+	/** The best run of this machine: a two-number text file in the game's Saved folder ("shifts haul"). */
+	FString BestRunPath()
+	{
+		return FPaths::ProjectSavedDir() / TEXT("BestRun.txt");
+	}
+}
+
 void AAntGameState::LoadBestRun(int32& OutShifts, int32& OutHaul)
 {
 	OutShifts = 0;
 	OutHaul = 0;
-	if (GConfig)
+	FString Text;
+	if (FFileHelper::LoadFileToString(Text, *BestRunPath()))
 	{
-		GConfig->GetInt(TEXT("AntKitchen.Run"), TEXT("BestShifts"), OutShifts, GGameUserSettingsIni);
-		GConfig->GetInt(TEXT("AntKitchen.Run"), TEXT("BestHaul"), OutHaul, GGameUserSettingsIni);
+		TArray<FString> Parts;
+		Text.ParseIntoArrayWS(Parts);
+		if (Parts.Num() >= 2)
+		{
+			OutShifts = FMath::Max(0, FCString::Atoi(*Parts[0]));
+			OutHaul = FMath::Max(0, FCString::Atoi(*Parts[1]));
+		}
 	}
 }
 
@@ -97,14 +113,12 @@ void AAntGameState::SaveBestRun(int32 Shifts, int32 Haul)
 {
 	int32 BestShifts = 0, BestHaul = 0;
 	LoadBestRun(BestShifts, BestHaul);
-	if (!GConfig || (Shifts < BestShifts) || (Shifts == BestShifts && Haul <= BestHaul))
+	if ((Shifts < BestShifts) || (Shifts == BestShifts && Haul <= BestHaul))
 	{
 		return;
 	}
-	GConfig->SetInt(TEXT("AntKitchen.Run"), TEXT("BestShifts"), Shifts, GGameUserSettingsIni);
-	GConfig->SetInt(TEXT("AntKitchen.Run"), TEXT("BestHaul"), Haul, GGameUserSettingsIni);
-	GConfig->Flush(false, GGameUserSettingsIni);
-	UE_LOG(LogTemp, Display, TEXT("ANTRUN best run saved: shifts=%d haul=%d"), Shifts, Haul);
+	const bool bOk = FFileHelper::SaveStringToFile(FString::Printf(TEXT("%d %d\n"), Shifts, Haul), *BestRunPath());
+	UE_LOG(LogTemp, Display, TEXT("ANTRUN best run %s: shifts=%d haul=%d -> %s"), bOk ? TEXT("saved") : TEXT("NOT saved"), Shifts, Haul, *BestRunPath());
 }
 
 void AAntGameState::MulticastRunOver_Implementation(int32 Shifts, int32 Haul)

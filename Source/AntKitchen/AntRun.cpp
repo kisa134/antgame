@@ -658,7 +658,7 @@ void AAntKitchenGameMode::SpawnHighProps()
 		{ TEXT("Крышка от кастрюли"), EAntShape::Cylinder, FVector(300.f, 3170.f, 1760.f),    FVector(230.f, 230.f, 26.f),  FLinearColor(0.72f, 0.74f, 0.78f), 4.f },
 		{ TEXT("Кружка"),             EAntShape::Cylinder, FVector(-5600.f, 3170.f, 1820.f),  FVector(150.f, 150.f, 170.f), FLinearColor(0.2f, 0.45f, 0.8f),   5.f },
 		{ TEXT("Банка специй"),       EAntShape::Cylinder, FVector(2250.f, 3160.f, 1800.f),   FVector(110.f, 110.f, 180.f), FLinearColor(0.75f, 0.3f, 0.15f),  4.f },
-		{ TEXT("Банка огурцов"),      EAntShape::Cylinder, FVector(3700.f, 3300.f, 3880.f),   FVector(190.f, 190.f, 270.f), FLinearColor(0.35f, 0.6f, 0.25f),  7.f },
+		{ TEXT("Банка огурцов"),      EAntShape::Cylinder, FVector(3700.f, 3230.f, 3880.f),   FVector(190.f, 190.f, 270.f), FLinearColor(0.35f, 0.6f, 0.25f),  7.f },
 		{ TEXT("Банка варенья"),      EAntShape::Cylinder, FVector(-6700.f, 300.f, 2780.f),   FVector(160.f, 160.f, 220.f), FLinearColor(0.6f, 0.1f, 0.2f),    6.f },
 		{ TEXT("Тарелка"),            EAntShape::Cylinder, FVector(-1250.f, -1700.f, 1440.f), FVector(320.f, 320.f, 22.f),  FLinearColor(0.95f, 0.95f, 0.92f), 5.f },
 		{ TEXT("Кружка"),             EAntShape::Cylinder, FVector(14450.f, -3150.f, 1090.f), FVector(150.f, 150.f, 170.f), FLinearColor(0.85f, 0.3f, 0.25f),  5.f },
@@ -1301,6 +1301,7 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 	else if (Op == TEXT("interact") && Me) { Me->DevInteract(); }
 	else if (Op == TEXT("look") && PC) { PC->SetControlRotation(FRotator(Num(2), Num(1), 0.f)); }   // look yaw pitch
 	else if (Op == TEXT("trophies")) { for (int32 i = 0; i < 16; ++i) { SpawnTrophy(i); } }      // one on every trophy spot
+	else if (Op == TEXT("shot") && PC) { PC->ConsoleCommand(TEXT("Shot showui"), false); }        // a screenshot at an exact moment (Saved/Screenshots)
 	else if (Op == TEXT("probe"))
 	{
 		for (TActorIterator<AKitchenLoot> It(W); It; ++It)
@@ -1349,6 +1350,13 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 		}
 	}
 	else if (Op == TEXT("dash") && Me) { Me->Dash(); }
+	else if ((Op == TEXT("botto") || Op == TEXT("botgo")) && Bots(0).Num() > 0)
+	{
+		// The first ally bot: put it somewhere / tell it to walk to a point (it shoves whatever stands in its way).
+		AAntCharacter* B = Bots(0)[0];
+		if (Op == TEXT("botto")) { B->LetGo(); B->ApplyTeleport(Vec(1)); }
+		else if (AAntBotController* BC = Cast<AAntBotController>(B->GetController())) { BC->SetOrder(2, Me, Vec(1)); }
+	}
 	else if (Op == TEXT("army") && Me) { Me->DevCommand(0, Me->GetActorLocation()); }
 	else if (Op == TEXT("event")) { StartEvent((uint8)Num(1, 1.f)); }
 	else if (Op == TEXT("win") && GS && GS->Phase == 0)

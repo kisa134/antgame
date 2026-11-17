@@ -105,7 +105,7 @@ void AAntHUD::DrawRun(AAntGameState* GS, APawn* Me)
 		RowY += 24.f * S;
 		if (GS->EventId == AntEvent::Pizza || GS->EventId == AntEvent::Flood)
 		{
-			Marker(FVector(GS->EventLoc) + FVector(0.f, 0.f, 260.f), GS->EventId == AntEvent::Pizza ? TEXT("Пицца") : TEXT("Лужа"), FLinearColor(0.55f, 0.85f, 1.f), true);
+			Marker(FVector(GS->EventLoc) + FVector(0.f, 0.f, 120.f), GS->EventId == AntEvent::Pizza ? TEXT("Пицца") : TEXT("Лужа"), FLinearColor(0.55f, 0.85f, 1.f), false);
 		}
 	}
 	// Where the Human is heading (a noise, a door): a small mark there.

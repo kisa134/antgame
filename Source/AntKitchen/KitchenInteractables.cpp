@@ -1463,6 +1463,32 @@ void AKitchenProp::Tick(float DeltaSeconds)
 	}
 }
 
+bool AKitchenProp::TryShove(AAntCharacter* By, const FVector& From, const FVector& Dir, float Reach)
+{
+	if (!HasAuthority() || !By || !Mesh->IsSimulatingPhysics())
+	{
+		return false;
+	}
+	FVector Closest;
+	if (Mesh->GetClosestPointOnCollision(From, Closest) < 0.f)
+	{
+		Closest = Mesh->Bounds.Origin;
+	}
+	const FVector ToCentre = (Mesh->Bounds.Origin - From).GetSafeNormal2D();
+	if (FVector::Dist(Closest, From) > Reach || FVector::DotProduct(ToCentre, Dir.GetSafeNormal2D()) < 0.3f)
+	{
+		return false;
+	}
+	// A shove, not a launch: a worker slides a mug a couple of body lengths, a soldier further; heavier things go less far.
+	const float Speed = By->GetStrength() * 38.f * FMath::Clamp(5.f / FMath::Max(1.f, Mass), 0.5f, 2.f);
+	Mesh->WakeAllRigidBodies();
+	Mesh->AddImpulse(Dir.GetSafeNormal2D() * Speed + FVector(0.f, 0.f, 30.f), NAME_None, true);
+	LastPusher = By;
+	AntSfx::Everyone(this, AntSfx::Hit, Closest, 0.7f);
+	UE_LOG(LogTemp, Display, TEXT("ANTRAM %s shoved %s (%.0f uu/s)"), *By->GetDisplayName(), PropName.IsEmpty() ? TEXT("a prop") : *PropName, Speed);
+	return true;
+}
+
 void AKitchenProp::OnPropHit(UPrimitiveComponent* HitComp, AActor* Other, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
 	if (!HasAuthority() || Mass < 3.f)

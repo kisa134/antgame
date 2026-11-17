@@ -697,6 +697,19 @@ void AAntCharacter::RamCheck()
 		UE_LOG(LogTemp, Display, TEXT("ANTRAM %s rammed %s (dropped load: %d)"), *GetDisplayName(), *O->GetDisplayName(), bHadLoad ? 1 : 0);
 		return;
 	}
+	// A dash into a mug, a jar, a pot lid shoves it: that is how things go over the edge (walking into one just climbs it).
+	for (TActorIterator<AKitchenProp> It(GetWorld()); It; ++It)
+	{
+		if (It->TryShove(this, Me, Dir, Reach))
+		{
+			RamUntil = 0.f;
+			if (!It->PropName.IsEmpty())
+			{
+				Toast(FString::Printf(TEXT("Толкнул: %s"), *It->PropName));
+			}
+			return;
+		}
+	}
 }
 
 void AAntCharacter::StartSprint()
