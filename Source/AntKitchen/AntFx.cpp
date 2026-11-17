@@ -273,14 +273,14 @@ void StompDust(const UObject* Ctx, const FVector& At)
 	Ring.Shape = EAntShape::Cylinder;
 	Ring.Pos = Floor;
 	Ring.Scale0 = FVector(7.f, 7.f, 0.03f);
-	Ring.Scale1 = FVector(30.f, 30.f, 0.03f);
-	Ring.Color = FLinearColor(DustColor.R, DustColor.G, DustColor.B, 0.20f);
+	Ring.Scale1 = FVector(22.f, 22.f, 0.03f);
+	Ring.Color = FLinearColor(DustColor.R, DustColor.G, DustColor.B, 0.10f);
 	Ring.Life = 0.75f;
 	Ring.FadeIn = 0.05f;
 	Ring.FadePow = 1.4f;
 	M->Emit(Ring);
-	// Dust rolling away from the slipper.
-	const int32 N = 18;
+	// Dust rolling away from the slipper: small low puffs that never hide what is going on (an ant's camera sits right in them).
+	const int32 N = 10;
 	for (int32 i = 0; i < N; ++i)
 	{
 		const float Ang = (i + Rnd(-0.3f, 0.3f)) * 2.f * PI / N;
@@ -289,12 +289,12 @@ void StompDust(const UObject* Ctx, const FVector& At)
 		P.Pos = Floor + Dir * Rnd(300.f, 430.f) + FVector(0.f, 0.f, Rnd(20.f, 80.f));
 		P.Vel = Dir * Rnd(1300.f, 2100.f) + FVector(0.f, 0.f, Rnd(120.f, 420.f));
 		P.Drag = 3.4f;
-		const float S1 = Rnd(4.f, 6.5f);
-		P.Scale0 = FVector(Rnd(1.2f, 2.f));
-		P.Scale1 = FVector(S1, S1, S1 * 0.7f);
+		const float S1 = Rnd(1.3f, 2.2f);
+		P.Scale0 = FVector(Rnd(0.5f, 0.8f));
+		P.Scale1 = FVector(S1, S1, S1 * 0.55f);
 		const float Shade = Rnd(0.85f, 1.05f);
-		P.Color = FLinearColor(DustColor.R * Shade, DustColor.G * Shade, DustColor.B * Shade, Rnd(0.28f, 0.4f));
-		P.Life = Rnd(0.9f, 1.6f);
+		P.Color = FLinearColor(DustColor.R * Shade, DustColor.G * Shade, DustColor.B * Shade, Rnd(0.09f, 0.15f));
+		P.Life = Rnd(0.7f, 1.2f);
 		P.FadeIn = 0.1f;
 		P.FadePow = 1.3f;
 		M->Emit(P);
@@ -427,9 +427,9 @@ void Steam(const UObject* Ctx, const FVector& At, float Size, float Rise)
 	P.Pos = At + FVector(Rnd(-0.3f, 0.3f) * Size, Rnd(-0.3f, 0.3f) * Size, 0.f);
 	P.Vel = FVector(Rnd(-0.15f, 0.15f) * Rise, Rnd(-0.15f, 0.15f) * Rise, Rise * Rnd(0.7f, 1.2f));
 	P.Drag = 0.45f;
-	P.Scale0 = FVector(Size * Rnd(0.4f, 0.6f) / 100.f);
-	P.Scale1 = FVector(Size * Rnd(1.8f, 2.6f) / 100.f);
-	P.Color = FLinearColor(0.95f, 0.96f, 0.98f, Rnd(0.10f, 0.17f));
+	P.Scale0 = FVector(Size * Rnd(0.3f, 0.45f) / 100.f);
+	P.Scale1 = FVector(Size * Rnd(0.9f, 1.4f) / 100.f);
+	P.Color = FLinearColor(0.95f, 0.96f, 0.98f, Rnd(0.06f, 0.11f));
 	P.MinAmbient = 0.5f;
 	P.Life = Rnd(2.f, 3.2f);
 	P.FadeIn = 0.2f;
@@ -450,10 +450,10 @@ void SprayPuff(const UObject* Ctx, const FVector& From, const FVector& Dir, floa
 	P.Drag = 2.2f;
 	P.Vel = D * Range * P.Drag * Rnd(0.55f, 1.f);   // travels Range * 0.55..1 before it hangs
 	P.Gravity = 60.f;
-	P.Scale0 = FVector(Rnd(0.5f, 0.9f));
-	P.Scale1 = FVector(Range * Rnd(0.14f, 0.26f) / 100.f);
-	// A hazard first, a pretty cloud second: clearly green and dense enough to read at a glance, day or night.
-	P.Color = FLinearColor(0.42f, 0.95f, 0.28f, Rnd(0.16f, 0.24f));
+	P.Scale0 = FVector(Rnd(0.4f, 0.7f));
+	P.Scale1 = FVector(Range * Rnd(0.08f, 0.14f) / 100.f);
+	// A hazard first, a pretty cloud second: clearly green, readable day or night, but thin enough to see through.
+	P.Color = FLinearColor(0.42f, 0.95f, 0.28f, Rnd(0.11f, 0.17f));
 	P.MinAmbient = 0.75f;
 	P.Life = Rnd(1.7f, 2.6f);
 	P.FadeIn = 0.08f;
@@ -520,18 +520,18 @@ void LandDust(const UObject* Ctx, const FVector& At, const FVector& Normal, floa
 	const FVector Up = Normal.GetSafeNormal(UE_SMALL_NUMBER, FVector::UpVector);
 	FVector T1, T2;
 	Up.FindBestAxisVectors(T1, T2);
-	const int32 N = 7;
+	const int32 N = 4;   // a few small puffs at the feet: the camera is a body length behind, big ones would fill the screen
 	for (int32 i = 0; i < N; ++i)
 	{
 		const float Ang = (i + Rnd(-0.3f, 0.3f)) * 2.f * PI / N;
 		const FVector Dir = T1 * FMath::Cos(Ang) + T2 * FMath::Sin(Ang);
 		FAntFxBit P;
-		P.Pos = At + Dir * Size * 0.35f + Up * Size * 0.1f;
-		P.Vel = Dir * Size * Rnd(4.5f, 8.f) + Up * Size * Rnd(0.6f, 1.6f);
+		P.Pos = At + Dir * Size * 0.35f + Up * Size * 0.05f;
+		P.Vel = Dir * Size * Rnd(4.5f, 8.f) + Up * Size * Rnd(0.3f, 0.8f);
 		P.Drag = 4.5f;
-		P.Scale0 = FVector(Size * Rnd(0.2f, 0.3f) / 100.f);
-		P.Scale1 = FVector(Size * Rnd(0.8f, 1.3f) / 100.f);
-		P.Color = FLinearColor(FineDust.R, FineDust.G, FineDust.B, Rnd(0.34f, 0.5f));
+		P.Scale0 = FVector(Size * Rnd(0.12f, 0.2f) / 100.f);
+		P.Scale1 = FVector(Size * Rnd(0.35f, 0.6f) / 100.f);
+		P.Color = FLinearColor(FineDust.R, FineDust.G, FineDust.B, Rnd(0.12f, 0.2f));
 		P.Life = Rnd(0.45f, 0.75f);
 		P.FadeIn = 0.1f;
 		P.FadePow = 1.2f;
@@ -567,9 +567,9 @@ void DragCrumbs(const UObject* Ctx, const FVector& At, const FLinearColor& FoodC
 	P.Pos = At;
 	P.Vel = FVector(Rnd(-0.6f, 0.6f) * Size, Rnd(-0.6f, 0.6f) * Size, Size * 0.8f);
 	P.Drag = 3.f;
-	P.Scale0 = FVector(Size * 0.3f / 100.f);
-	P.Scale1 = FVector(Size * 1.f / 100.f);
-	P.Color = FLinearColor(FineDust.R, FineDust.G, FineDust.B, 0.3f);
+	P.Scale0 = FVector(Size * 0.2f / 100.f);
+	P.Scale1 = FVector(Size * 0.5f / 100.f);
+	P.Color = FLinearColor(FineDust.R, FineDust.G, FineDust.B, 0.13f);
 	P.Life = 0.6f;
 	M->Emit(P);
 }

@@ -5,6 +5,7 @@
 #include "AntTypes.h"
 #include "AntFx.h"
 #include "Net/UnrealNetwork.h"
+#include "Misc/ConfigCacheIni.h"
 #include "Engine/World.h"
 
 void AAntGameState::BeginPlay()
@@ -39,6 +40,80 @@ void AAntGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	DOREPLIFETIME(AAntGameState, bQuotaMet);
 	DOREPLIFETIME(AAntGameState, WarPool0);
 	DOREPLIFETIME(AAntGameState, WarPool1);
+	DOREPLIFETIME(AAntGameState, Cards);
+	DOREPLIFETIME(AAntGameState, Interlude);
+	DOREPLIFETIME(AAntGameState, InterludeEnds);
+	DOREPLIFETIME(AAntGameState, CardOffer);
+	DOREPLIFETIME(AAntGameState, CardVotes);
+	DOREPLIFETIME(AAntGameState, CardPicked);
+	DOREPLIFETIME(AAntGameState, Orders);
+	DOREPLIFETIME(AAntGameState, OrdersDone);
+	DOREPLIFETIME(AAntGameState, OrdersFailed);
+	DOREPLIFETIME(AAntGameState, Greed);
+	DOREPLIFETIME(AAntGameState, Awards);
+	DOREPLIFETIME(AAntGameState, RunShifts);
+	DOREPLIFETIME(AAntGameState, RunHaul);
+	DOREPLIFETIME(AAntGameState, LarvaeStart);
+	DOREPLIFETIME(AAntGameState, EventId);
+	DOREPLIFETIME(AAntGameState, EventEnds);
+	DOREPLIFETIME(AAntGameState, EventLoc);
+	DOREPLIFETIME(AAntGameState, HumanGoal);
+	DOREPLIFETIME(AAntGameState, HumanGoalText);
+	DOREPLIFETIME(AAntGameState, HumanGoalLoc);
+}
+
+void AAntGameState::MulticastPing_Implementation(FVector_NetQuantize Loc, uint8 Kind, uint8 Team, const FString& Who)
+{
+	if (GetNetMode() == NM_DedicatedServer)
+	{
+		return;
+	}
+	FAntPingMark P;
+	P.Loc = Loc;
+	P.Kind = Kind;
+	P.Team = Team;
+	P.Who = Who;
+	P.Time = GetWorld()->GetTimeSeconds();
+	Pings.Add(P);
+	if (Pings.Num() > 8)
+	{
+		Pings.RemoveAt(0);
+	}
+	AntSfx::Play2D(this, AntSfx::PickupGear, 0.5f, 1.6f);
+}
+
+void AAntGameState::LoadBestRun(int32& OutShifts, int32& OutHaul)
+{
+	OutShifts = 0;
+	OutHaul = 0;
+	if (GConfig)
+	{
+		GConfig->GetInt(TEXT("AntKitchen.Run"), TEXT("BestShifts"), OutShifts, GGameUserSettingsIni);
+		GConfig->GetInt(TEXT("AntKitchen.Run"), TEXT("BestHaul"), OutHaul, GGameUserSettingsIni);
+	}
+}
+
+void AAntGameState::SaveBestRun(int32 Shifts, int32 Haul)
+{
+	int32 BestShifts = 0, BestHaul = 0;
+	LoadBestRun(BestShifts, BestHaul);
+	if (!GConfig || (Shifts < BestShifts) || (Shifts == BestShifts && Haul <= BestHaul))
+	{
+		return;
+	}
+	GConfig->SetInt(TEXT("AntKitchen.Run"), TEXT("BestShifts"), Shifts, GGameUserSettingsIni);
+	GConfig->SetInt(TEXT("AntKitchen.Run"), TEXT("BestHaul"), Haul, GGameUserSettingsIni);
+	GConfig->Flush(false, GGameUserSettingsIni);
+	UE_LOG(LogTemp, Display, TEXT("ANTRUN best run saved: shifts=%d haul=%d"), Shifts, Haul);
+}
+
+void AAntGameState::MulticastRunOver_Implementation(int32 Shifts, int32 Haul)
+{
+	UE_LOG(LogTemp, Display, TEXT("ANTRUN run over: shifts=%d haul=%d"), Shifts, Haul);
+	if (GetNetMode() != NM_DedicatedServer)
+	{
+		SaveBestRun(Shifts, Haul);
+	}
 }
 
 void AAntGameState::MulticastSfx_Implementation(uint8 Id, FVector_NetQuantize Location, float Pitch)

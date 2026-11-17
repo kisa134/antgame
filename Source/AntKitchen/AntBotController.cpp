@@ -8,6 +8,8 @@
 #include "AntArmy.h"
 #include "AntChain.h"
 #include "WarMode.h"
+#include "AntRun.h"
+#include "KitchenInteractables.h"
 #include "EngineUtils.h"
 #include "Engine/World.h"
 
@@ -128,6 +130,10 @@ AKitchenLoot* AAntBotController::PickFood(AAntCharacter* Ant) const
 		{
 			continue;   // secret corridor (bots don't know it) / already home
 		}
+		if ((L->bBody && Ant->Team != 0) || KitchenContainers::SealedAt(GetWorld(), P) >= 0)
+		{
+			continue;   // not their dead; behind a shut door (bots never open doors, they take what is reachable)
+		}
 		float Score = (float)FVector::Dist2D(P, Me) + FMath::Abs((float)(P.Z - Me.Z)) * 1.3f;
 		// Distance home matters too: the prize has to be dragged back.
 		Score += 0.35f * (float)FVector::Dist2D(P, AKitchenBuilder::NestLocation(Ant->Team));
@@ -229,6 +235,24 @@ void AAntBotController::Think(AAntCharacter* Ant)
 	if (ShootTarget.IsValid() && Cast<AAntCharacter>(ShootTarget.Get()) && FMath::FRand() < 0.08f)
 	{
 		Ant->Dash();   // sidestep now and then in a duel
+	}
+
+	// A teammate strains at a heavy door nearby: come and lean on it (an idle bot at the door adds its strength).
+	if (!Ant->Carrying && Ant->Creature == 0 && !Ant->IsMonster())
+	{
+		for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
+		{
+			const AAntCharacter* Mate = *It;
+			if (Mate && Mate != Ant && !Mate->bDead && Mate->Team == Ant->Team && Mate->Pulling && Mate->Pulling->PullMissing > 0
+				&& FVector::Dist(Mate->GetActorLocation(), Ant->GetActorLocation()) < 7000.f)
+			{
+				const float Ang = (GetUniqueID() % 8) * 0.785f;
+				Goal = Mate->GetActorLocation() + FVector(FMath::Cos(Ang), FMath::Sin(Ang), 0.f) * 30.f * AAntCharacter::AntShrink;
+				bHasGoal = true;
+				FoodTarget = nullptr;
+				return;
+			}
+		}
 	}
 
 	AKitchenLoot* Carry = Ant->Carrying;

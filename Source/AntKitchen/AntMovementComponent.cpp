@@ -67,7 +67,10 @@ void UAntMovementComponent::MakeClimbable(UPrimitiveComponent* C)
 	{
 		if (UStaticMesh* Mesh = SM->GetStaticMesh())
 		{
-			if (UBodySetup* BS = Mesh->GetBodySetup(); BS && BS->CollisionTraceFlag != CTF_UseComplexAsSimple)
+			// Not for the engine's basic shapes: their body setup is shared by everything built from cubes, spheres and
+			// cylinders, and a complex-as-simple body cannot simulate physics (it froze every physics prop and food crumb
+			// in the air). Their simple collision is exact anyway.
+			if (UBodySetup* BS = Mesh->GetBodySetup(); BS && BS->CollisionTraceFlag != CTF_UseComplexAsSimple && !Mesh->GetPathName().StartsWith(TEXT("/Engine/")))
 			{
 				BS->CollisionTraceFlag = CTF_UseComplexAsSimple;
 				SM->RecreatePhysicsState();

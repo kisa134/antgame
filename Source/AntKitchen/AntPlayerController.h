@@ -47,6 +47,20 @@ public:
 	UFUNCTION(Server, Reliable) void ServerSwitchTeam();
 	void SwitchTeam() { ServerSwitchTeam(); }
 	/** F9 / F10: one more ally / enemy bot (console: AddBot <team> <n>). */
+	/** Middle mouse button: a marker in the world the whole team sees for a few seconds ("Трофей", "Человек!", "Сюда", "Дверь"). */
+	void PingPressed();
+	UFUNCTION(Server, Reliable) void ServerPing(FVector_NetQuantize Location);
+	/** The card vote between shifts (keys 1, 2, 3). True if a vote is on and the key was used for it. */
+	bool TryVote(int32 Option);
+	UFUNCTION(Server, Reliable) void ServerVoteCard(uint8 Option);
+	void Vote1() { TryVote(0); }
+	void Vote2() { TryVote(1); }
+	void Vote3() { TryVote(2); }
+	/** F1: show the controls line again for a while (it fades after the first minute). */
+	void ShowHelp();
+	float HelpAskedAt = -100.f;
+	float NextPingTime = 0.f;
+	int32 MyVote = -1;
 	void AddAllyBot() { ServerAddBot(0, 1); }
 	void AddEnemyBot() { ServerAddBot(1, 1); }
 

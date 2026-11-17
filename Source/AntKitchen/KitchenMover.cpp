@@ -4,6 +4,7 @@
 #include "HumanCharacter.h"
 #include "Critters.h"
 #include "AntTypes.h"
+#include "AntRun.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Engine/StaticMesh.h"
@@ -134,8 +135,16 @@ void AKitchenMover::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
+	PullTick(DeltaSeconds);
+	const float Strain = StrainNow(DeltaSeconds);
 	const float Target = bOpen ? 1.f : 0.f;
-	if (!FMath::IsNearlyEqual(Alpha, Target))
+	if (!bOpen && Strain > 0.f)
+	{
+		// Not enough ants on it: it gives a crack and falls back (the travel is eased, so undo the ease).
+		Alpha = FMath::Sqrt(Strain * 0.5f);
+		ApplyAlpha();
+	}
+	else if (!FMath::IsNearlyEqual(Alpha, Target))
 	{
 		Alpha = FMath::FInterpConstantTo(Alpha, Target, DeltaSeconds, 1.5f);
 		ApplyAlpha();
@@ -212,8 +221,62 @@ void AKitchenMover::Tick(float DeltaSeconds)
 	}
 }
 
+int32 AKitchenMover::DoorClass() const
+{
+	const TConstArrayView<FKitchenArtMover> All = KitchenArt::Movers();
+	if (!All.IsValidIndex(PartIndex))
+	{
+		return 0;
+	}
+	const FKitchenArtMover& M = All[PartIndex];
+	if ((M.Flags & (KitchenArt::NeedsFridge | KitchenArt::NeedsDishwasher)) && IsBlocked())
+	{
+		return 0;   // behind another door: a plain [E] says which one to open first
+	}
+	const FString Name = KitchenArt::Instances()[M.Inst].Name;
+	if (Name.Contains(TEXT("DoorFreezer")))
+	{
+		return AntDoor::Heavy;
+	}
+	if (M.Type == 1 || Name.Contains(TEXT("Lid")) || Name.Contains(TEXT("Gate")) || Name.Contains(TEXT("Door_Leaf")))
+	{
+		return AntDoor::Light;   // drawers, racks, the crisper, sliding doors, lids, the gate, the door between the rooms
+	}
+	return AntDoor::Medium;      // cabinet doors
+}
+
+FString AKitchenMover::DoorNoun() const
+{
+	// "Открыть дверцу шкафа" -> "дверцу шкафа"; "Выдвинуть ящик" -> "ящик".
+	const TConstArrayView<FKitchenArtMover> All = KitchenArt::Movers();
+	FString Verb, Noun;
+	if (All.IsValidIndex(PartIndex) && FString(All[PartIndex].OpenText).Split(TEXT(" "), &Verb, &Noun))
+	{
+		int32 Paren = INDEX_NONE;
+		if (Noun.FindChar(TEXT('('), Paren)) { Noun = Noun.Left(Paren).TrimEnd(); }
+		return Noun;
+	}
+	return TEXT("дверцу");
+}
+
+bool AKitchenMover::HumanShuts() const
+{
+	const TConstArrayView<FKitchenArtMover> All = KitchenArt::Movers();
+	if (!All.IsValidIndex(PartIndex))
+	{
+		return false;
+	}
+	const FKitchenArtMover& M = All[PartIndex];
+	// Not what stands open by design (the sink door, the gate, the yard bin), not the door between the rooms.
+	return !(M.Flags & (KitchenArt::StartsOpen | KitchenArt::BigOpens)) && !FString(KitchenArt::Instances()[M.Inst].Name).StartsWith(TEXT("SM_Y_"));
+}
+
 void AKitchenMover::SetOpen(bool bInOpen, float AutoClose)
 {
+	if (bInOpen && !bOpen)
+	{
+		OpenedAt = Now();
+	}
 	bOpen = bInOpen;
 	AutoCloseAt = (bInOpen && AutoClose > 0.f) ? Now() + AutoClose : -1.f;
 	ServerCheck = 0.6f;

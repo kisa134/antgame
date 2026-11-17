@@ -33,6 +33,7 @@
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "HAL/IConsoleManager.h"
+#include "AntRun.h"
 
 AAntCharacter::AAntCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<UAntMovementComponent>(ACharacter::CharacterMovementComponentName))
@@ -105,6 +106,35 @@ void AAntCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	DOREPLIFETIME(AAntCharacter, DeathKind);
 	DOREPLIFETIME(AAntCharacter, DeathDir);
 	DOREPLIFETIME(AAntCharacter, GrippedBy);
+	DOREPLIFETIME(AAntCharacter, Pulling);
+	DOREPLIFETIME(AAntCharacter, StuckTo);
+	DOREPLIFETIME(AAntCharacter, StuckLeg);
+	DOREPLIFETIME(AAntCharacter, bCorpseGone);
+}
+
+float AAntCharacter::GetStrength() const
+{
+	const float S = StrengthOverride >= 0.f ? StrengthOverride : GetClassDef().Strength;
+	return (Team == 0 && Creature == 0 && AntCard::Has(this, AntCard::Jaws)) ? S * 1.25f : S;
+}
+
+float AAntCharacter::AcidCost() const
+{
+	const float Cost = Weapon.bWeb ? 18.f : 7.f + Weapon.Damage * 0.25f;
+	return (Team == 0 && AntCard::Has(this, AntCard::Acid)) ? Cost * 0.65f : Cost;
+}
+
+float AAntCharacter::DashCooldown() const
+{
+	return (Team == 0 && AntCard::Has(this, AntCard::Spring)) ? 1.f : 1.6f;
+}
+
+void AAntCharacter::OnRep_Corpse()
+{
+	if (bCorpseGone && bDead && VisualRoot)
+	{
+		VisualRoot->SetVisibility(false, true);
+	}
 }
 
 void AAntCharacter::BeginPlay()
@@ -197,9 +227,10 @@ void AAntCharacter::SetClass(EAntClass NewClass, bool bForce)
 	}
 }
 
-void AAntCharacter::PickClass1() { ServerSetClass(0); }
-void AAntCharacter::PickClass2() { ServerSetClass(1); }
-void AAntCharacter::PickClass3() { ServerSetClass(2); }
+// Keys 1-3 vote for a card while the vote between shifts is on; otherwise they pick the caste.
+void AAntCharacter::PickClass1() { AAntPlayerController* PC = Cast<AAntPlayerController>(GetController()); if (!PC || !PC->TryVote(0)) { ServerSetClass(0); } }
+void AAntCharacter::PickClass2() { AAntPlayerController* PC = Cast<AAntPlayerController>(GetController()); if (!PC || !PC->TryVote(1)) { ServerSetClass(1); } }
+void AAntCharacter::PickClass3() { AAntPlayerController* PC = Cast<AAntPlayerController>(GetController()); if (!PC || !PC->TryVote(2)) { ServerSetClass(2); } }
 void AAntCharacter::PickClass4() { ServerSetClass(3); }
 
 void AAntCharacter::ServerSetClass_Implementation(uint8 NewClass)
@@ -224,13 +255,14 @@ void AAntCharacter::TickNurse(float Dt)
 	}
 	const float Step = NurseTimer;
 	NurseTimer = 0.f;
+	const float Boost = (Team == 0 && AntCard::Has(this, AntCard::Nurse)) ? 1.6f : 1.f;
 	for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
 	{
 		AAntCharacter* A = *It;
 		if (A && !A->bDead && A->Team == Team && A->Health < A->MaxHealth
-			&& FVector::Dist(A->GetActorLocation(), GetActorLocation()) < D.HealRadius)
+			&& FVector::Dist(A->GetActorLocation(), GetActorLocation()) < D.HealRadius * Boost)
 		{
-			A->Health = FMath::Min(A->MaxHealth, A->Health + D.HealPerSec * Step * (A == this ? 0.5f : 1.f));
+			A->Health = FMath::Min(A->MaxHealth, A->Health + D.HealPerSec * Boost * Step * (A == this ? 0.5f : 1.f));
 		}
 	}
 }
@@ -523,6 +555,7 @@ void AAntCharacter::SetupPlayerInputComponent(UInputComponent* Input)
 	Input->BindAction("Fire", IE_Pressed, this, &AAntCharacter::StartFire);
 	Input->BindAction("Fire", IE_Released, this, &AAntCharacter::StopFire);
 	Input->BindAction("Interact", IE_Pressed, this, &AAntCharacter::Interact);
+	Input->BindAction("Interact", IE_Released, this, &AAntCharacter::StopInteract);
 	Input->BindAction("Sprint", IE_Pressed, this, &AAntCharacter::StartSprint);
 	Input->BindKey(EKeys::LeftControl, IE_Pressed, this, &AAntCharacter::Dash);
 	Input->BindAction("Sprint", IE_Released, this, &AAntCharacter::StopSprint);
@@ -615,6 +648,54 @@ void AAntCharacter::Interact()
 	if (!bDead)
 	{
 		ServerInteract();
+	}
+}
+
+void AAntCharacter::StopInteract()
+{
+	// Letting go of [E] lets go of the door (heavy doors only open while enough ants hold on).
+	ServerStopPull();
+}
+
+void AAntCharacter::ServerStopPull_Implementation()
+{
+	Pulling = nullptr;
+}
+
+void AAntCharacter::RamCheck()
+{
+	const FVector Me = GetActorLocation();
+	const FVector Dir = GetVelocity().GetSafeNormal(UE_SMALL_NUMBER, GetActorForwardVector());
+	const float Reach = BodyRadius * 2.f + 60.f * AntShrink;
+	for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
+	{
+		AAntCharacter* O = *It;
+		if (!O || O == this || O->bDead || !IsEnemy(O) || O->IsInNest() || O->IsAttached())
+		{
+			continue;
+		}
+		const FVector To = O->GetActorLocation() - Me;
+		if (To.Size() > Reach || FVector::DotProduct(To.GetSafeNormal(), Dir) < 0.f)
+		{
+			continue;
+		}
+		RamUntil = 0.f;
+		const bool bHadLoad = O->Carrying != nullptr;
+		if (bHadLoad)
+		{
+			O->LetGo();
+			O->Toast(TEXT("Тебя протаранили — груз выпал!"));
+		}
+		O->Stagger(0.6f, (Dir * 700.f + O->GetVisualUp() * 320.f) * SpeedK);
+		UGameplayStatics::ApplyDamage(O, 8.f * DamageMult(), GetController(), this, UDamageType::StaticClass());
+		AntSfx::Everyone(this, AntSfx::Hit, O->GetActorLocation(), 0.8f);
+		Toast(bHadLoad ? TEXT("Таран! Враг выронил груз") : TEXT("Таран!"));
+		if (AAntPlayerState* RamPS = GetPlayerState<AAntPlayerState>())
+		{
+			RamPS->Rams++;
+		}
+		UE_LOG(LogTemp, Display, TEXT("ANTRAM %s rammed %s (dropped load: %d)"), *GetDisplayName(), *O->GetDisplayName(), bHadLoad ? 1 : 0);
+		return;
 	}
 }
 
@@ -860,7 +941,11 @@ void AAntCharacter::Dash()
 	{
 		return;
 	}
-	NextDash = Now + 1.6f;
+	NextDash = Now + DashCooldown();
+	if (HasAuthority())
+	{
+		RamUntil = Now + 0.45f;
+	}
 	// Along the movement input (or forward), in the plane of the surface you stand on.
 	FVector Dir = GetLastMovementInputVector();
 	if (Dir.IsNearlyZero())
@@ -881,7 +966,8 @@ void AAntCharacter::Dash()
 void AAntCharacter::ServerDash_Implementation()
 {
 	// The client already moved itself (owner-authoritative); the server just marks the cooldown for bots' sake.
-	NextDash = GetWorld()->GetTimeSeconds() + 1.6f;
+	NextDash = GetWorld()->GetTimeSeconds() + DashCooldown();
+	RamUntil = GetWorld()->GetTimeSeconds() + 0.5f;
 }
 
 void AAntCharacter::ClientLaunch_Implementation(FVector_NetQuantize10 V)
@@ -1067,6 +1153,21 @@ void AAntCharacter::Tick(float DeltaSeconds)
 			{
 				LostLegs = 0;   // legs grow back at home
 			}
+			if (Pulling && (!IsValid(Pulling) || Pulling->IsDoorOpen() || Pulling->DistanceTo(GetActorLocation()) > Pulling->InteractRadius * 2.f))
+			{
+				Pulling = nullptr;   // walked off, or the door is open
+			}
+			if (RamUntil > GetWorld()->GetTimeSeconds())
+			{
+				RamCheck();
+			}
+			if (Team == 0 && GetRiddenHuman())
+			{
+				if (AAntPlayerState* RidePS = GetPlayerState<AAntPlayerState>())
+				{
+					RidePS->RideTime += DeltaSeconds;
+				}
+			}
 		}
 		ApplyAttachedPose();
 		if (GetNetMode() != NM_DedicatedServer)
@@ -1087,6 +1188,18 @@ void AAntCharacter::Tick(float DeltaSeconds)
 			{
 				ShowLostLegs();
 			}
+		}
+	}
+	if (bDead && StuckTo)
+	{
+		// Flattened under the slipper: the pancake is stuck to the sole and goes where the Human goes.
+		if (HasAuthority() && (GetWorld()->GetTimeSeconds() > StuckUntil || !IsValid(StuckTo)))
+		{
+			StuckTo = nullptr;
+		}
+		else if (IsValid(StuckTo))
+		{
+			SetActorLocation(StuckTo->GetSoleLocation(StuckLeg) + FVector(0.f, 0.f, BodyRadius), false, nullptr, ETeleportType::TeleportPhysics);
 		}
 	}
 	if (GetNetMode() != NM_DedicatedServer)
@@ -1279,6 +1392,27 @@ void AAntCharacter::ServerInteract_Implementation()
 
 	if (Gadget && (!Loot || GadgetDist < LootDist))
 	{
+		if (Gadget->DoorClass() > 0)
+		{
+			if (!Gadget->IsDoorOpen())
+			{
+				// A shut door: pull. Heavy ones only give when enough ants hold [E] together.
+				Gadget->Pull(this);
+			}
+			else
+			{
+				const int32 Class = Gadget->DoorClass();
+				Gadget->Interact(this);   // shutting is always easy
+				if (Class >= AntDoor::Heavy && !Gadget->IsDoorOpen())
+				{
+					if (AAntKitchenGameMode* NoiseGM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
+					{
+						NoiseGM->MakeNoise(Gadget->GetActorLocation(), 0.6f, AntNoise::Door, nullptr, this);   // a heavy door slams
+					}
+				}
+			}
+			return;
+		}
 		Gadget->Interact(this);
 		return;
 	}
@@ -1500,7 +1634,8 @@ void AAntCharacter::ApplyCameraLook()
 	// A cheap action-camera look: lens fringe, grain, vignette, motion blur, punchy contrast.
 	FPostProcessSettings& P = Camera->PostProcessSettings;
 	P.bOverride_VignetteIntensity = true;      P.VignetteIntensity = bBodycam ? 0.95f : 0.5f;
-	P.bOverride_SceneFringeIntensity = true;   P.SceneFringeIntensity = bBodycam ? 3.5f : 1.2f;
+	// The lens fringe (red/cyan edges) belongs to the bodycam only: in the normal view it read as a rendering defect.
+	P.bOverride_SceneFringeIntensity = true;   P.SceneFringeIntensity = bBodycam ? 3.5f : 0.f;
 	P.bOverride_FilmGrainIntensity = true;     P.FilmGrainIntensity = bBodycam ? 0.45f : 0.12f;
 	P.bOverride_MotionBlurAmount = true;       P.MotionBlurAmount = bBodycam ? 0.9f : 0.45f;
 	P.bOverride_BloomIntensity = true;         P.BloomIntensity = 1.1f;
@@ -1651,6 +1786,11 @@ void AAntCharacter::DevInteract()
 	ServerInteract_Implementation();
 }
 
+void AAntCharacter::DevCommand(uint8 Cmd, const FVector& Point)
+{
+	ServerCommand_Implementation(Cmd, Point);
+}
+
 bool AAntCharacter::GrabLoot(AKitchenLoot* Loot)
 {
 	if (!HasAuthority() || !Loot || bDead || Loot->bIsGear || GetStrength() <= 0.f)
@@ -1752,6 +1892,7 @@ void AAntCharacter::Die(AController* Killer, AActor* Causer)
 		return;
 	}
 	DropEverything();
+	Pulling = nullptr;
 	if (HoldingAnt) { ReleaseAnt(false); }
 	if (HeldBy && IsValid(HeldBy)) { HeldBy->ReleaseAnt(false); }
 	if (Chain) { Chain->Leave(this); }
@@ -1764,6 +1905,21 @@ void AAntCharacter::Die(AController* Killer, AActor* Causer)
 		const AHumanCharacter* Human = Cast<AHumanCharacter>(Causer);
 		const bool bCrushed = (Human && !Human->bSpraying) || Cast<ACritter>(Causer) != nullptr;
 		DeathKind = bCrushed ? 1 : 0;
+		if (bCrushed)
+		{
+			if (AAntPlayerState* SquashPS = GetPlayerState<AAntPlayerState>())
+			{
+				SquashPS->Squashed++;
+			}
+			if (Human && Creature == 0)
+			{
+				// The pancake sticks to the slipper that made it.
+				StuckTo = const_cast<AHumanCharacter*>(Human);
+				StuckLeg = Human->GetLastStompLeg();
+				StuckUntil = GetWorld()->GetTimeSeconds() + 7.f;
+				UE_LOG(LogTemp, Display, TEXT("ANTPANCAKE %s is stuck to the slipper (leg %d)"), *GetDisplayName(), (int32)StuckLeg);
+			}
+		}
 		const FVector Away = Causer ? GetActorLocation() - Causer->GetActorLocation() : FVector(VisNormal);
 		DeathDir = Away.GetSafeNormal(UE_SMALL_NUMBER, FVector(VisNormal));
 	}
@@ -1874,6 +2030,7 @@ void AAntCharacter::UpdateSpeed()
 	M->MaxWalkSpeed = (bSprinting && !Carrying ? 760.f : 480.f) * SpeedK * Load * ClassSpeed;
 
 	float Mult = 1.f - 0.1f * NumLostLegs();   // every torn-off leg costs speed
+	if (!Carrying && Team == 0 && Creature == 0 && AntCard::Has(this, AntCard::Legs)) { Mult *= 1.15f; }
 	if (HasStatus(AntStatus::Sticky)) { Mult *= 0.35f; }
 	if (HasStatus(AntStatus::Wet)) { Mult *= 0.7f; }
 	if (Temperature < 8.f)
@@ -2612,6 +2769,16 @@ void AAntCharacter::TearLegOff(const FVector& From)
 	{
 		return;
 	}
+	if (Team == 0 && !bChitinUsed && AntCard::Has(this, AntCard::Chitin))
+	{
+		bChitinUsed = true;
+		Toast(TEXT("Хитин выдержал: лапа на месте"));
+		return;
+	}
+	if (AAntPlayerState* LegPS = GetPlayerState<AAntPlayerState>())
+	{
+		LegPS->LegsLost++;
+	}
 	// Legs are stored front to back, left then right: odd index = the right side.
 	const FVector Right = FVector::CrossProduct(VisNormal, VisHeading);
 	const int32 Side = FVector::DotProduct(From - GetActorLocation(), Right) > 0.f ? 1 : 0;
@@ -2645,6 +2812,10 @@ void AAntCharacter::TearApart(AAntCharacter* A, AAntCharacter* B)
 	LastHazardTime = GetWorld()->GetTimeSeconds();
 	A->Toast(TEXT("РАЗОРВАЛИ ПОПОЛАМ!"));
 	B->Toast(TEXT("РАЗОРВАЛИ ПОПОЛАМ!"));
+	if (AAntKitchenGameMode* TearGM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
+	{
+		TearGM->OnEnemyTorn(this, A, B);
+	}
 	if (AAntGameState* GS = GetWorld()->GetGameState<AAntGameState>())
 	{
 		GS->MulticastMessage(FString::Printf(TEXT("%s разорван пополам: тянули %s и %s"), *GetDisplayName(), *A->GetDisplayName(), *B->GetDisplayName()), FLinearColor(1.f, 0.4f, 0.25f));

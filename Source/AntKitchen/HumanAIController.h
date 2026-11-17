@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "AIController.h"
+#include "AntRun.h"
 #include "HumanAIController.generated.h"
 
 class AAntCharacter;
@@ -38,4 +39,14 @@ private:
 	float StuckTimer = 0.f;
 	float UnstickTimer = 0.f;
 	bool bMovedThisTick = false;
+
+	// Noise: he walks to the loudest recent one, looks around for a few seconds, switches the thing off.
+	FAntNoise Noise;
+	bool bInvestigating = false;
+	float LookUntil = 0.f;
+	float NoiseGiveUp = 0.f;
+	// Doors and drawers left open: he goes and shuts them.
+	TWeakObjectPtr<class AKitchenInteractable> DoorTarget;
+	float NextDoorScan = 0.f;
+	float DoorGiveUp = 0.f;
 };

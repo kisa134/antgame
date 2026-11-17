@@ -73,7 +73,19 @@ public:
 	void Shatter(const FVector& At);
 	/** Server: an ant bites a crumb off this. Returns the crumb (or null if too small). */
 	AKitchenLoot* BiteOff(AAntCharacter* By);
-	bool CanBreak() const { return !bIsGear && !bVault && Weight >= 6; }
+	bool CanBreak() const { return !bIsGear && !bVault && !bBody && Weight >= 6; }
+	/** A dead teammate's body: hauled home like food, it gives the colony a larva back. Gone after about a minute. */
+	UPROPERTY(Replicated) bool bBody = false;
+	/** Server. The player (or bot) the body belonged to. */
+	TWeakObjectPtr<AController> BodyOf;
+	/** Server. World time this piece disappears (bodies, the pizza slices); < 0 = never. */
+	float ExpireAt = -1.f;
+	/** Server. Where it was lying when it appeared: KitchenContainers index + 1 (0 = in the open), and was it in the living room. */
+	uint8 Origin = 0;
+	bool bFromLiving = false;
+	bool bOriginSet = false;
+	/** Server. The last ant that held it (who dropped the trophy, who dropped this on the Human). */
+	TWeakObjectPtr<AAntCharacter> LastCarrier;
 	/** War mode: the sugar-bowl safe. Not food: it goes to a cashout, never into a nest. */
 	UPROPERTY(Replicated) bool bVault = false;
 	/** Heist: a big prize placed up high. Delivered whole it is worth double; its pieces are worth the plain value. */
@@ -139,6 +151,8 @@ private:
 	FVector LastVelocity = FVector::ZeroVector;
 	float BreakableAfter = 0.f;
 	float NextThud = 0.f;
+	float NextCrash = 0.f;
+	float LastKickTime = -100.f;   // kicked by a stomp / thrown by the Human: what comes down then is his own doing
 	bool bShatterPending = false;
 	FVector ShatterAt = FVector::ZeroVector;
 	FVector ArtOffset = FVector::ZeroVector;

@@ -41,7 +41,15 @@ public:
 
 	void SetRage(uint8 NewRage);
 	float GetSprayRange() const { return SprayRange * (1.f + 0.25f * Rage); }
-	float GetWalkSpeed() const { return bKnockedOut ? 260.f : 720.f * (1.f + 0.12f * Rage); }
+	float GetWalkSpeed() const { return bStunned ? 1.f : bKnockedOut ? 260.f : 720.f * (1.f + 0.12f * Rage); }
+
+	/** Server: something heavy landed on him. He reels for a moment (there is a cooldown) and gets angrier. False = no effect. */
+	bool Stun(float Seconds, class AAntCharacter* By, const FString& What);
+	bool IsStunned() const { return bStunned; }
+	UPROPERTY(ReplicatedUsing = OnRep_KnockedOut) bool bStunned = false;
+	/** Where the sole of that foot is right now: a squashed ant rides on it. */
+	FVector GetSoleLocation(int32 Leg) const;
+	uint8 GetLastStompLeg() const { return PendingLeg; }
 
 	/** Server: start a stomp with leg 0 (left) / 1 (right), -1 = alternate. */
 	void TryStomp(int32 Leg = -1);
@@ -134,6 +142,8 @@ private:
 	uint8 PendingLeg = 0;
 	uint8 NextLeg = 0;
 	float KnockoutEnd = 0.f;
+	float StunEnd = 0.f;
+	float NextStunTime = 0.f;
 	float LastHurtTime = -100.f;
 	float SprayAccum = 0.f;
 	float SprayFxAccum = 0.f;   // cosmetic: the spray cloud

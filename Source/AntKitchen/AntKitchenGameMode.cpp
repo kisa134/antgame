@@ -181,6 +181,7 @@ void AAntKitchenGameMode::BeginPlay()
 
 	SpawnHuman();
 	SpawnGadgets();
+	RunBeginPlay();
 	SpawnSwarm();
 	SpawnInitialLoot();
 
@@ -359,6 +360,11 @@ void AAntKitchenGameMode::OnSwarmIncome(int32 Value)
 	{
 		Swarm->AddPopulation(Value * 2);
 	}
+	if (bHeist)
+	{
+		// «Натоптанная тропа»: the trail workers bring half as much again. Greed counts for them too.
+		Value = GreedValue(HasCard(AntCard::Trail) ? FMath::RoundToInt(Value * 1.5f) : Value);
+	}
 	AddScore(0, Value);
 }
 
@@ -377,7 +383,7 @@ void AAntKitchenGameMode::AddScore(uint8 Team, int32 Value)
 		if (!GS->bQuotaMet && GS->TeamScore >= GS->TargetScore)
 		{
 			GS->bQuotaMet = true;
-			Broadcast(TEXT("КВОТА ЕСТЬ! Все в гнездо — и смена ваша."), Gold);
+			Broadcast(TEXT("КВОТА ЕСТЬ! Все в гнездо — и смена ваша. Кто остаётся снаружи, тому всё дороже: жадность растёт."), Gold);
 		}
 		return;
 	}
@@ -898,6 +904,7 @@ void AAntKitchenGameMode::SpawnInitialLoot()
 		const FVector Loc = SpotLocations[i] + FVector(Rng.FRandRange(-70.f, 70.f), Rng.FRandRange(-70.f, 70.f), 0.f);
 		SpawnGear(Loc, AntKit::RollWeapon(RollRarity(SpotTiers[i]), Rng));
 	}
+	SpawnContainerLoot();
 }
 
 void AAntKitchenGameMode::RefillLoot()
@@ -973,7 +980,47 @@ void AAntKitchenGameMode::OnFoodDelivered(uint8 Team, AKitchenLoot* Food, const 
 	{
 		return;
 	}
+	if (Food->bBody)
+	{
+		// A dead teammate brought home: the colony gets a larva back (or the player himself, if he was out for good).
+		if (Team != 0 || !bHeist)
+		{
+			return;
+		}
+		AController* BodyOwner = Food->BodyOf.Get();
+		const FString Name = Food->LootName.Replace(TEXT("Тело: "), TEXT(""));
+		for (AAntCharacter* A : Carriers)
+		{
+			if (AAntPlayerState* PS = A ? A->GetPlayerState<AAntPlayerState>() : nullptr) { PS->BodiesHome++; }
+		}
+		if (BodyOwner && Run.OutPlayers.Contains(BodyOwner))
+		{
+			Run.OutPlayers.Remove(BodyOwner);
+			Broadcast(FString::Printf(TEXT("Тело дома: %s снова в строю!"), *Name), Good);
+			RespawnAnt(BodyOwner);
+		}
+		else if (GS->Larvae < GS->LarvaeStart)
+		{
+			GS->Larvae++;
+			Broadcast(FString::Printf(TEXT("Тело дома (%s): колония вернула личинку. Теперь их %d"), *Name, GS->Larvae), Good);
+		}
+		else
+		{
+			Broadcast(FString::Printf(TEXT("Тело дома (%s). Личинок и так полный запас"), *Name), Info);
+		}
+		UE_LOG(LogTemp, Display, TEXT("ANTBODY delivered: %s, larvae now %d of %d"), *Name, GS->Larvae, GS->LarvaeStart);
+		CompleteOrder(AntOrder::Body);
+		return;
+	}
 	int32 Value = Food->Value;
+	if (Team == 0 && bHeist)
+	{
+		// The Queen's orders that are about what was brought and from where.
+		if (Food->bTrophy) { CompleteOrder(AntOrder::TrophyWhole); }
+		if (Food->Origin == KitchenContainers::Freezer + 1) { CompleteOrder(AntOrder::Freezer); }
+		if (Food->Origin == KitchenContainers::Fridge + 1) { CompleteOrder(AntOrder::Fridge); }
+		if (Food->bFromLiving && ++Run.LivingDelivered >= 3) { CompleteOrder(AntOrder::Living3); }
+	}
 	if (Food->bTrophy)
 	{
 		Value *= 2;
@@ -981,6 +1028,10 @@ void AAntKitchenGameMode::OnFoodDelivered(uint8 Team, AKitchenLoot* Food, const 
 		TrophyLostAt = GetWorld()->GetTimeSeconds();
 		AntSfx::Everyone(this, AntSfx::Legendary, Food->GetActorLocation(), 1.f);
 		Broadcast(FString::Printf(TEXT("ЦЕЛЫЙ ТРОФЕЙ! «%s» доставлен без единой трещины: ×2 = %d"), *Food->LootName, Value), Gold);
+	}
+	if (Team == 0)
+	{
+		Value = GreedValue(Value);   // after the quota: the longer somebody stays out, the more everything is worth
 	}
 	FString Names;
 	const int32 Share = FMath::Max(1, Value / FMath::Max(1, Carriers.Num()));
@@ -1122,9 +1173,21 @@ void AAntKitchenGameMode::OnAntKilled(AAntCharacter* Ant, AController* Killer, A
 	// The shift: every death of a player's ant costs the colony a larva. None left = nobody hatches.
 	if (bHeist && GS && Ant->Team == 0 && Ant->Creature == 0 && Cast<APlayerController>(Ant->GetController()))
 	{
+		++Run.DeathsThisShift;
+		FailOrder(AntOrder::NoDeaths);
+		// The body stays behind for a minute (after the pancake has had its ride on the slipper): bring it home for a larva.
+		{
+			TWeakObjectPtr<AAntCharacter> WeakBody = Ant;
+			FTimerHandle BodyHandle;
+			GetWorldTimerManager().SetTimer(BodyHandle, FTimerDelegate::CreateWeakLambda(this, [this, WeakBody]()
+			{
+				SpawnBody(WeakBody.Get());
+			}), FMath::Max(0.5f, RespawnDelay - 0.3f), false);
+		}
 		if (GS->Larvae <= 0)
 		{
-			Ant->Toast(TEXT("Личинок не осталось: ты выбыл до конца смены"));
+			Run.OutPlayers.Add(Ant->GetController());
+			Ant->Toast(TEXT("Личинок не осталось: ты выбыл до конца смены. Вернуть тебя могут, если принесут тело домой"));
 			if (!AnyAllyPlayerAlive(false))
 			{
 				EndMatch(2);
@@ -1165,6 +1228,10 @@ void AAntKitchenGameMode::OnHumanKnockedOut(AController* By)
 	}
 	Broadcast(FString::Printf(TEXT("ЧЕЛОВЕК В ПАНИКЕ УБЕГАЕТ! %s +100.%s"), Team == 0 ? TEXT("Колония") : TEXT("Огненные"), *Who), Gold);
 	AddScore(Team, 100);
+	if (Team == 0)
+	{
+		CompleteOrder(AntOrder::KnockOut);
+	}
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1201,19 +1268,24 @@ void AAntKitchenGameMode::EndMatch(uint8 Winner)
 	}
 	if (bHeist)
 	{
+		// Orders decided at the end, the awards, the run totals (while the score still counts).
+		RunEndShift(Winner == 1);
 		GS->Phase = Winner;
 		if (Winner == 1)
 		{
 			BestShift = FMath::Max(BestShift, ShiftNumber);
 			Broadcast(FString::Printf(TEXT("СМЕНА %d ПРОЙДЕНА! Королева довольна. Дальше квота больше."), ShiftNumber), Gold);
 			++ShiftNumber;
+			// The interlude: the results and the awards, then the colony votes for a card, then the next shift.
+			const float T = FParse::Param(FCommandLine::Get(), TEXT("AntFastVote")) ? 4.f : 10.f;
+			GS->Interlude = 1;
+			GS->InterludeEnds = GS->GetServerWorldTimeSeconds() + T;
+			GetWorldTimerManager().SetTimer(RunTimer, this, &AAntKitchenGameMode::InterludeTick, T, false);
+			return;
 		}
-		else
-		{
-			Broadcast(FString::Printf(TEXT("КОЛОНИЯ ГОЛОДАЕТ. Забег окончен на смене %d (рекорд: %d пройдено)."), ShiftNumber, BestShift), Bad);
-			ShiftNumber = 1;
-		}
-		GetWorldTimerManager().SetTimer(ResetTimer, this, &AAntKitchenGameMode::ResetMatch, 12.f, false);
+		Broadcast(FString::Printf(TEXT("КОЛОНИЯ ГОЛОДАЕТ. Забег окончен: пройдено смен %d, добыча за забег %d."), GS->RunShifts, GS->RunHaul), Bad);
+		ShiftNumber = 1;
+		GetWorldTimerManager().SetTimer(ResetTimer, this, &AAntKitchenGameMode::ResetMatch, 14.f, false);
 		return;
 	}
 	GS->Phase = Winner;
@@ -1261,6 +1333,12 @@ void AAntKitchenGameMode::ResetMatch()
 	}
 	if (bHeist)
 	{
+		// The jars and mugs that were pushed off their edges go back up.
+		for (TActorIterator<AKitchenProp> It(GetWorld()); It; ++It)
+		{
+			if (!It->PropName.IsEmpty()) { It->Destroy(); }
+		}
+		SpawnHighProps();
 		StartShift();
 	}
 	for (TActorIterator<AAntBotController> It(GetWorld()); It; ++It)
@@ -1607,18 +1685,43 @@ void AAntKitchenGameMode::SpawnTrophy(int32 Slot)
 		{ TEXT("Полбутерброда"), 240, 52, FLinearColor(0.92f, 0.78f, 0.55f), EAntShape::Cube, FVector(0.7f, 0.5f, 0.3f), FVector(5900.f, -1500.f, 1060.f) },   // in the pedal bin
 		{ TEXT("Печенье с противня"), 150, 30, FLinearColor(0.75f, 0.5f, 0.25f), EAntShape::Cylinder, FVector(0.6f, 0.6f, 0.15f), FVector(-750.f, 3900.f, 980.f) },   // on the oven tray
 		{ TEXT("Кубик сахара с чаем"), 120, 26, FLinearColor(1.f, 1.f, 1.f), EAntShape::Cube, FVector(0.4f), FVector(-6780.f, -650.f, 2760.f) },   // the wall shelf
+		// Behind doors (the modelled kitchen): somebody has to get the door open first.
+		{ TEXT("Кусок сыра с полки"), 230, 40, FLinearColor(1.f, 0.82f, 0.25f), EAntShape::Cube, FVector(0.6f, 0.45f, 0.35f), FVector(3400.f, 4300.f, 1010.f) },      // fridge shelf
+		{ TEXT("Брикет пломбира"), 280, 46, FLinearColor(0.97f, 0.95f, 0.88f), EAntShape::Cube, FVector(0.7f, 0.45f, 0.3f), FVector(3900.f, 3800.f, 2640.f) },          // freezer
+		{ TEXT("Банка сгущёнки"), 240, 42, FLinearColor(0.3f, 0.5f, 0.85f), EAntShape::Cylinder, FVector(0.45f, 0.45f, 0.5f), FVector(-5125.f, 4640.f, 3100.f) },       // wall cabinet
+		{ TEXT("Пачка печенья"), 190, 34, FLinearColor(0.8f, 0.55f, 0.25f), EAntShape::Cube, FVector(0.7f, 0.4f, 0.3f), FVector(-2150.f, 4000.f, 250.f) },              // base cabinet left of the oven
+		{ TEXT("Забытая шоколадка"), 210, 36, FLinearColor(0.3f, 0.15f, 0.07f), EAntShape::Cube, FVector(0.8f, 0.4f, 0.15f), FVector(13800.f, -8400.f, 180.f) },        // TV stand, behind its door
+		{ TEXT("Плитка шоколада из шкафа"), 200, 36, FLinearColor(0.28f, 0.14f, 0.06f), EAntShape::Cube, FVector(0.8f, 0.4f, 0.15f), FVector(1900.f, 4000.f, 250.f) }, // base cabinet under the microwave
 	};
 	constexpr int32 NumDefs = UE_ARRAY_COUNT(Defs);
-	// Pick a free spot (no trophy within 400 of it), preferring the slot's own column of the table.
-	TArray<int32> Free;
-	for (int32 i = 0; i < NumDefs; ++i)
+	constexpr int32 FirstBehindDoors = 7;
+	const bool bArt = KitchenArt::Enabled();
+	// Pick a free spot (no trophy within 400 of it). Two of the three trophies lie inside something that has to be opened.
+	int32 Inside = 0;
+	for (TActorIterator<AKitchenLoot> It(GetWorld()); It; ++It)
+	{
+		if (It->bTrophy && KitchenContainers::At(It->GetActorLocation()) >= 0) { ++Inside; }
+	}
+	TArray<int32> Free, FreeInside;
+	for (int32 i = 0; i < (bArt ? NumDefs : FirstBehindDoors); ++i)
 	{
 		bool bTaken = false;
 		for (TActorIterator<AKitchenLoot> It(GetWorld()); It; ++It)
 		{
 			if (It->bTrophy && FVector::Dist(It->GetActorLocation(), Defs[i].Where) < 400.f) { bTaken = true; break; }
 		}
-		if (!bTaken) { Free.Add(i); }
+		if (!bTaken)
+		{
+			(KitchenContainers::At(Defs[i].Where) >= 0 ? FreeInside : Free).Add(i);
+		}
+	}
+	if (bArt && Inside < 2 && FreeInside.Num() > 0)
+	{
+		Free = FreeInside;
+	}
+	else if (Free.Num() == 0)
+	{
+		Free = FreeInside;
 	}
 	if (Free.Num() == 0)
 	{
@@ -1638,6 +1741,8 @@ void AAntKitchenGameMode::SpawnTrophy(int32 Slot)
 		L->InitFood(D);
 		L->bTrophy = true;
 		L->FinishSpawning(FTransform(T.Where));
+		const int32 In = KitchenContainers::At(T.Where);
+		UE_LOG(LogTemp, Display, TEXT("ANTLOOT trophy «%s» %s"), T.Name, In >= 0 ? KitchenContainers::Get(In).Where : TEXT("на виду"));
 	}
 }
 
@@ -1717,6 +1822,7 @@ void AAntKitchenGameMode::StartShift()
 	GS->Larvae = 3 + 2 * Players;
 	GS->ShiftStage = 0;
 	GS->bQuotaMet = false;
+	RunStartShift();   // cards, the Queen's orders, the event, the clock
 	SetHumanAwake(false);
 	Broadcast(FString::Printf(TEXT("СМЕНА %d. Королеве нужно %d еды. Личинок в запасе: %d. Человек пока залип в телефон."), ShiftNumber, Quota, GS->Larvae), Gold);
 }
@@ -1729,9 +1835,16 @@ void AAntKitchenGameMode::ShiftTick()
 		return;
 	}
 	const float Left = GS->TimeRemaining;
-	const float Gone = MatchLength - Left;
+	const float Gone = MatchLength + (HasCard(AntCard::Overtime) ? 45.f : 0.f) - Left;
 	// Quiet start to learn the room, then the Human walks in, then he cleans up in earnest, then the last call.
-	const uint8 Stage = Left <= 30.f ? 3 : Left <= 120.f ? 2 : Gone >= 75.f ? 1 : 0;
+	float Quiet = 75.f + (HasCard(AntCard::Phone) ? 30.f : 0.f);
+	FParse::Value(FCommandLine::Get(), TEXT("AntQuiet="), Quiet);   // dev: -AntQuiet=5 wakes the Human almost at once
+	const uint8 Stage = Left <= 30.f ? 3 : Left <= 120.f ? 2 : Gone >= Quiet ? 1 : 0;
+	RunTick();
+	if (GS->Phase != 0)
+	{
+		return;
+	}
 	if (Stage != GS->ShiftStage)
 	{
 		GS->ShiftStage = Stage;

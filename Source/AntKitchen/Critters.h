@@ -37,6 +37,8 @@ public:
 	/** Server: an ant bit it. The dog yelps, shakes the riders off and after a few bites runs away to sulk;
 	 *  the cat hisses and pounces straight back (or leaps away). */
 	void Bitten(AAntCharacter* By);
+	/** Server (the shift's event): the cat wakes up and stalks ants on the floor for that long. */
+	void Hunt(float Seconds);
 
 private:
 	struct FSpot { FVector P; uint8 Do; float Time; };   // Do: 0 sleep, 1 sniff/eat, 2 sit
@@ -69,6 +71,8 @@ private:
 	float PounceT = 0.f;
 	float EatTimer = 0.f;
 	int32 Patience = 3;
+	float HuntUntil = 0.f;
+	float NextHuntPounce = 0.f;
 	float Fleeing = 0.f;
 };
 

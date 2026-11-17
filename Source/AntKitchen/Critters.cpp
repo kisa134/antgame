@@ -178,6 +178,16 @@ FVector ACritter::PawWorld(int32 i) const
 	return GetActorTransform().TransformPosition(FVector(X, Y, 0.f));
 }
 
+void ACritter::Hunt(float Seconds)
+{
+	if (HasAuthority() && Kind == 1)
+	{
+		HuntUntil = GetWorld()->GetTimeSeconds() + Seconds;
+		NextHuntPounce = 0.f;
+		UE_LOG(LogTemp, Display, TEXT("ANTCAT the cat hunts for %.0f s"), Seconds);
+	}
+}
+
 void ACritter::PickSpot()
 {
 	if (Spots.Num() < 2)
@@ -212,6 +222,63 @@ void ACritter::ServerThink(float Dt)
 	if (State == 4)
 	{
 		return;   // mid-air
+	}
+	if (Kind == 1 && HuntUntil > 0.f)
+	{
+		const float Now = GetWorld()->GetTimeSeconds();
+		if (Now >= HuntUntil)
+		{
+			HuntUntil = 0.f;
+			PickSpot();
+			return;
+		}
+		// The hunt: down to the floor, after the nearest ant, a pounce whenever one is in reach.
+		Awake += Dt;
+		if (Me.Z > 150.f)
+		{
+			const FVector Centre = Me.X > 7100.f ? FVector(13500.f, -4500.f, 0.f) : FVector(0.f, -1000.f, 0.f);
+			PounceFrom = Me;
+			PounceTo = Me + (Centre - Me).GetSafeNormal2D() * 1100.f;
+			PounceTo.Z = 0.f;
+			PounceT = 0.f;
+			State = 4;
+			return;
+		}
+		AAntCharacter* Prey = nullptr;
+		float Best = 14000.f;
+		for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
+		{
+			AAntCharacter* A = *It;
+			if (!A || A->bDead || A->IsInNest() || A->Creature != 0 || A->GetActorLocation().Z > 350.f || A->GetActorLocation().Y > 3000.f)
+			{
+				continue;
+			}
+			const float D = (float)FVector::Dist2D(A->GetActorLocation(), Me);
+			if (D < Best) { Best = D; Prey = A; }
+		}
+		if (Prey)
+		{
+			Goal = Prey->GetActorLocation();
+			Goal.Z = 0.f;
+			State = 1;
+			if (Best < 800.f && Now >= NextHuntPounce)
+			{
+				NextHuntPounce = Now + 2.2f;
+				PounceFrom = Me;
+				PounceTo = Prey->GetActorLocation() + Prey->GetVelocity() * 0.4f;
+				PounceTo.Z = Me.Z;
+				PounceT = 0.f;
+				State = 4;
+				if (GM) { GM->Broadcast(TEXT("КОШКА ПРЫГНУЛА!"), FLinearColor(1.f, 0.6f, 0.3f)); }
+			}
+		}
+		else if (State != 1 || FVector::Dist2D(Me, Goal) < 200.f)
+		{
+			Goal = AKitchenBuilder::RandomFloorPoint();
+			Goal.Z = 0.f;
+			State = 1;
+		}
+		return;
 	}
 	// The cat hunts: an ant (not a nestmate at home) close by while it's awake -> pounce. A fly -> swat.
 	if (Kind == 1 && State != 0)

@@ -29,6 +29,11 @@ public:
 	/** Server: open/close; AutoClose > 0 shuts it again after that many seconds. */
 	void SetOpen(bool bInOpen, float AutoClose = -1.f);
 	bool IsOpen() const { return bOpen; }
+	virtual int32 DoorClass() const override;
+	virtual bool IsDoorOpen() const override { return bOpen; }
+	virtual void SetDoorOpen(bool bInOpen) override { SetOpen(bInOpen); }
+	virtual bool HumanShuts() const override;
+	virtual FString DoorNoun() const override;
 
 	/** Server, the Human's "kitchen life": he opens one cabinet door or drawer for a while. False if none was free. */
 	static bool HumanOpensOne(UWorld* World, FRandomStream& Rng, float Seconds);

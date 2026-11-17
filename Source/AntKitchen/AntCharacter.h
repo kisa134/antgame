@@ -108,7 +108,7 @@ public:
 	/** Server: a hard hit (from behind, a crit) knocks the ant about and staggers it for a moment. */
 	void Stagger(float Seconds, const FVector& Knock);
 	/** Server: what this spit would cost. */
-	float AcidCost() const { return Weapon.bWeb ? 18.f : 7.f + Weapon.Damage * 0.25f; }
+	float AcidCost() const;
 	/** [Ctrl] a short dash in the direction you move: dodge the spit, close the gap (bots use it too). */
 	void Dash();
 	UPROPERTY(BlueprintReadOnly) float MaxHealth = 100.f;
@@ -145,7 +145,19 @@ public:
 	int32 CarriedWeight() const;
 	bool IsEnemy(const AAntCharacter* Other) const { return Other && Other->Team != Team; }
 	const FAntClassDef& GetClassDef() const { return AntKit::ClassDef(AntClass); }
-	float GetStrength() const { return StrengthOverride >= 0.f ? StrengthOverride : GetClassDef().Strength; }
+	/** Carrying / pulling strength (the «Крепкие жвала» card makes the colony's ants stronger). */
+	float GetStrength() const;
+
+	// ---- Doors, ramming, the pancake on the slipper, the body left behind ----
+	/** The door this ant is pulling at: [E] is held. */
+	UPROPERTY(Replicated) AKitchenInteractable* Pulling = nullptr;
+	/** Squashed by the slipper: the pancake rides on the Human's sole for a while, and the dead player's camera with it. */
+	UPROPERTY(Replicated) class AHumanCharacter* StuckTo = nullptr;
+	UPROPERTY(Replicated) uint8 StuckLeg = 0;
+	/** The body was carried off as loot ("bring the body home"): this corpse is no longer drawn. */
+	UPROPERTY(ReplicatedUsing = OnRep_Corpse) bool bCorpseGone = false;
+	UFUNCTION() void OnRep_Corpse();
+	float DashCooldown() const;
 
 	// ---- Creatures (fly, spider) reuse the ant: same health, teams, legs, crawling, AI ----
 	/** 0 ant, 1 fly, 2 spider. Set by the subclass. */
@@ -177,6 +189,8 @@ public:
 	bool GrabLoot(AKitchenLoot* Loot);
 	void LetGo();
 	void DevInteract();
+	/** Dev (scripted test runs): a commander order without the keyboard. */
+	void DevCommand(uint8 Cmd, const FVector& Point);
 	/** Local camera shake (0..1, adds up, decays). */
 	void AddTrauma(float Amount) { Trauma = FMath::Min(1.f, Trauma + Amount); }
 	/** Server: set on fire for a few seconds (spreads to ants nearby, water puts it out). */
@@ -253,6 +267,13 @@ protected:
 	void StartFire();
 	void StopFire();
 	void Interact();
+	void StopInteract();
+	UFUNCTION(Server, Reliable) void ServerStopPull();
+	/** Server: a dash that runs into an enemy ant knocks it back and makes it drop its load. */
+	void RamCheck();
+	float RamUntil = 0.f;      // server
+	float StuckUntil = 0.f;    // server
+	bool bChitinUsed = false;  // server: the «Хитин» card already saved a leg this life
 	void StartSprint();
 	UFUNCTION(Server, Unreliable) void ServerDash();
 	float NextDash = -100.f;

@@ -1,6 +1,7 @@
 ﻿#include "AntMenu.h"
 #include "AntSession.h"
 #include "AntPlayerController.h"
+#include "AntGameState.h"
 #include "Engine/GameInstance.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Styling/CoreStyle.h"
@@ -91,6 +92,19 @@ void SAntMenu::Rebuild()
 
 	AddLabel(TEXT("ANT KITCHEN"), 46, Gold, 2.f);
 	AddLabel(bPause ? TEXT("Пауза") : TEXT("Тащи еду. Не попадись под тапок."), 16, Grey, 2.f);
+	{
+		// The best run of this machine (saved when a run ends).
+		int32 BestShifts = 0, BestHaul = 0;
+		AAntGameState::LoadBestRun(BestShifts, BestHaul);
+		if (BestShifts > 0 || BestHaul > 0)
+		{
+			AddLabel(FString::Printf(TEXT("Лучший забег: смен пройдено %d, добыча %d"), BestShifts, BestHaul), 15, Gold, 4.f);
+		}
+		else if (!bPause)
+		{
+			AddLabel(TEXT("Лучший забег: пока нет. Пройди первую смену"), 13, Dim, 4.f);
+		}
+	}
 
 	if (S && !S->Status.IsEmpty())
 	{

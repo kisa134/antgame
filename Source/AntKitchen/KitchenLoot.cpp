@@ -16,6 +16,8 @@
 #include "KitchenInteractables.h"
 #include "TimerManager.h"
 #include "KitchenShards.h"
+#include "AntRun.h"
+#include "HumanCharacter.h"
 #include "ProceduralMeshComponent.h"
 
 AKitchenLoot::AKitchenLoot()
@@ -83,6 +85,7 @@ void AKitchenLoot::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	DOREPLIFETIME(AKitchenLoot, bHeld);
 	DOREPLIFETIME(AKitchenLoot, bVault);
 	DOREPLIFETIME(AKitchenLoot, bTrophy);
+	DOREPLIFETIME(AKitchenLoot, bBody);
 	DOREPLIFETIME(AKitchenLoot, ShardPath);
 	DOREPLIFETIME(AKitchenLoot, ShardSeed);
 	DOREPLIFETIME(AKitchenLoot, ShardScale);
@@ -128,6 +131,13 @@ void AKitchenLoot::BeginPlay()
 	if (HasAuthority() && !bIsGear)
 	{
 		BreakableAfter = GetWorld()->GetTimeSeconds() + 2.f;
+		if (!bOriginSet)
+		{
+			// Remember where it lay: in which container (for the Queen's orders) and in which room.
+			bOriginSet = true;
+			Origin = (uint8)(KitchenContainers::At(GetActorLocation()) + 1);
+			bFromLiving = GetActorLocation().X > 7100.f;
+		}
 		Body->SetNotifyRigidBodyCollision(true);
 		Body->OnComponentHit.AddDynamic(this, &AKitchenLoot::OnBodyHit);
 	}
@@ -150,8 +160,43 @@ void AKitchenLoot::OnBodyHit(UPrimitiveComponent* HitComp, AActor* Other, UPrimi
 		NextThud = Now + 0.3f;
 		AntSfx::Everyone(this, AntSfx::Drop, Hit.ImpactPoint, FMath::Clamp(1.6f - Weight * 0.02f, 0.6f, 1.6f));
 	}
-	// Dropped from a counter / the table / the fridge: it smashes.
-	if (CanBreak() && !IsCarried() && Now > BreakableAfter && ImpactSpeed > 1250.f)
+	// Something heavy coming down: a crash the Human hears, a blow if it lands on him, the end of an enemy ant under it.
+	if (Weight >= 8 && !IsCarried() && !bHeld && Now > BreakableAfter)
+	{
+		AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>();
+		AAntCharacter* By = LastCarrier.Get();
+		const float Speed = (float)LastVelocity.Size();
+		if (AHumanCharacter* H = Cast<AHumanCharacter>(Other))
+		{
+			// Only what ants let fall on him from above counts: not food his own stomp kicked up, not what he threw.
+			if (By && Now - LastKickTime > 4.f && Speed > 600.f && LastVelocity.Z < -400.f)
+			{
+				H->Stun(2.5f, By, LootName);
+			}
+		}
+		else if (ImpactSpeed > 600.f)
+		{
+			const uint8 Friends = By ? By->Team : 0;
+			for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
+			{
+				AAntCharacter* A = *It;
+				if (A && !A->bDead && A->Creature == 0 && A->Team != Friends && !A->IsInNest()
+					&& FVector::Dist(A->GetActorLocation(), Hit.ImpactPoint) < GetRadius() + 14.f)
+				{
+					UE_LOG(LogTemp, Display, TEXT("ANTCRUSH %s crushed by falling %s"), *A->GetDisplayName(), *LootName);
+					A->HurtBy(300.f, FString::Printf(TEXT("раздавлен: упал «%s»"), *LootName));
+				}
+			}
+			if (GM && By && ImpactSpeed > 800.f && Now > NextCrash)   // somebody dropped it (food settling on its own is no event)
+			{
+				NextCrash = Now + 1.5f;
+				GM->MakeNoise(Hit.ImpactPoint, FMath::Clamp(0.35f + Weight * 0.012f, 0.4f, 0.9f), AntNoise::Crash, nullptr, By);
+			}
+		}
+	}
+	// Dropped from a counter / the table / the fridge: it smashes. («Мягкая упаковка»: trophies take a harder fall.)
+	const float BreakSpeed = (bTrophy && AntCard::Has(this, AntCard::Padding)) ? 1900.f : 1250.f;
+	if (CanBreak() && !IsCarried() && Now > BreakableAfter && ImpactSpeed > BreakSpeed)
 	{
 		bShatterPending = true;
 		ShatterAt = Hit.ImpactPoint;
@@ -173,6 +218,11 @@ AKitchenLoot* AKitchenLoot::SpawnPiece(const FString& Name, int32 PieceValue, in
 	if (L)
 	{
 		L->InitFood(D);
+		L->Origin = Origin;
+		L->bFromLiving = bFromLiving;
+		L->bOriginSet = true;
+		L->LastCarrier = LastCarrier;
+		L->ExpireAt = ExpireAt;
 		if (ShardCount > 0 && ShardPath.Num() < 6)
 		{
 			// A chunk of a chunk continues the path; the first break picks the seed and remembers the model's size.
@@ -204,6 +254,7 @@ void AKitchenLoot::Shatter(const FVector& At)
 		if (AAntKitchenGameMode* TGM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
 		{
 			TGM->TrophyLostAt = GetWorld()->GetTimeSeconds();
+			TGM->OnTrophyBroken(this);
 		}
 		if (AAntGameState* TGS = GetWorld()->GetGameState<AAntGameState>())
 		{
@@ -387,6 +438,10 @@ void AKitchenLoot::Kick(const FVector& Impulse, const FVector& At)
 	if (Body && Body->IsSimulatingPhysics())
 	{
 		Body->AddImpulseAtLocation(Impulse * Body->GetMass(), At);
+		if (Impulse.SizeSquared() > 200.f * 200.f)
+		{
+			LastKickTime = GetWorld()->GetTimeSeconds();
+		}
 	}
 }
 
@@ -406,7 +461,17 @@ void AKitchenLoot::Tick(float DeltaSeconds)
 			Shatter(ShatterAt);
 			return;
 		}
+		if (ExpireAt > 0.f && GetWorld()->GetTimeSeconds() > ExpireAt)
+		{
+			ReleaseAll();
+			Destroy();
+			return;
+		}
 		ServerCarryTick(DeltaSeconds);
+		if (IsPendingKillPending())
+		{
+			return;   // delivered
+		}
 		if (!bIsGear && Body->IsSimulatingPhysics())
 		{
 			LastVelocity = Body->GetPhysicsLinearVelocity();
@@ -483,6 +548,7 @@ void AKitchenLoot::Throw(const FVector& Velocity)
 	Body->SetPhysicsLinearVelocity(Velocity);
 	Body->SetPhysicsAngularVelocityInDegrees(FMath::VRand() * 360.f);
 	BreakableAfter = GetWorld()->GetTimeSeconds() + 0.1f;
+	LastKickTime = GetWorld()->GetTimeSeconds();
 }
 
 void AKitchenLoot::OnRep_Held()
@@ -535,6 +601,7 @@ void AKitchenLoot::Release(AAntCharacter* Ant)
 	const int32 Idx = Carriers.Find(Ant);
 	if (Idx != INDEX_NONE)
 	{
+		LastCarrier = Ant;
 		Carriers.RemoveAt(Idx);
 		GrabLocal.RemoveAt(Idx);
 		if (Ant && Ant->Carrying == this)
@@ -551,6 +618,10 @@ void AKitchenLoot::Release(AAntCharacter* Ant)
 void AKitchenLoot::ReleaseAll()
 {
 	TArray<AAntCharacter*> Old = Carriers;
+	if (Old.Num() > 0 && IsValid(Old[0]))
+	{
+		LastCarrier = Old[0];
+	}
 	Carriers.Reset();
 	GrabLocal.Reset();
 	for (AAntCharacter* A : Old)

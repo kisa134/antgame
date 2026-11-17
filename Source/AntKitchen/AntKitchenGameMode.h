@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
 #include "AntTypes.h"
+#include "AntRun.h"
 #include "AntKitchenGameMode.generated.h"
 
 class AAntCharacter;
@@ -87,6 +88,53 @@ public:
 	void SpawnTrophy(int32 Slot);
 	FTimerHandle HeistTimer;
 	float TrophyLostAt = -100.f;
+
+	// ---- The run on top of the shift (AntRun.cpp): noise, doors, cards, orders, greed, awards, events ----
+	/** Something made a noise. The AI Human goes to check the loudest recent one. By: the ant that caused it, if any. */
+	void MakeNoise(const FVector& Loc, float Loud, uint8 Kind, AActor* Source = nullptr, AAntCharacter* By = nullptr);
+	/** For the Human AI: the noise worth checking right now, if any (not one he has just checked). */
+	bool BestNoise(const FVector& From, FAntNoise& Out) const;
+	/** He has looked: that source / kind does not fool him again for a while. */
+	void NoiseChecked(const FAntNoise& N, bool bDistracted);
+	/** What the Human is up to, for everyone's HUD. */
+	void SetHumanGoal(uint8 Kind, const FString& Text, const FVector& Loc);
+	void OnDoorOpened(AKitchenInteractable* Door, AAntCharacter* By, int32 Class);
+	void OnTrophyBroken(AKitchenLoot* Trophy);
+	void OnEnemyTorn(AAntCharacter* Victim, AAntCharacter* A, AAntCharacter* B);
+	void OnHumanStunned(AAntCharacter* By, const FString& What);
+	/** A dead ant leaves a body that can be hauled home for a larva. */
+	void SpawnBody(AAntCharacter* Ant);
+	void CompleteOrder(uint8 OrderId);
+	void FailOrder(uint8 OrderId);
+	bool HasCard(uint8 Id) const;
+	void VoteCard(AController* By, int32 Option);
+	void Ping(class AAntPlayerController* By, const FVector& Loc);
+	/** Dev: start the shift's event now (AntEvent::EId). */
+	void StartEvent(uint8 Id);
+	void EndEvent();
+	FAntRunState Run;
+	FTimerHandle RunTimer;
+	FTimerHandle EventTimer;
+	FTimerHandle DevTimer;
+
+private:
+	void RunBeginPlay();
+	void RunStartShift();
+	/** Once a second while the shift runs. */
+	void RunTick();
+	void RunEndShift(bool bWon);
+	void InterludeTick();
+	void ResolveCards();
+	void BuildAwards();
+	void SpawnContainerLoot();
+	void SpawnHighProps();
+	void CheckTrapped();
+	int32 GreedValue(int32 Value) const;
+	void DevScriptTick();
+	void DevCommand(const FString& Cmd);
+	TArray<TPair<float, FString>> DevScript;
+
+public:
 
 private:
 	void SpawnHuman();

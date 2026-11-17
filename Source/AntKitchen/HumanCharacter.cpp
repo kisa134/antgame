@@ -96,6 +96,34 @@ void AHumanCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME(AHumanCharacter, Held);
 	DOREPLIFETIME(AHumanCharacter, SwatReadyTime);
 	DOREPLIFETIME(AHumanCharacter, StompReadyTime);
+	DOREPLIFETIME(AHumanCharacter, bStunned);
+}
+
+FVector AHumanCharacter::GetSoleLocation(int32 Leg) const
+{
+	return GetActorLocation() + GetActorForwardVector() * 90.f + GetActorRightVector() * (Leg == 0 ? -180.f : 180.f) - FVector(0.f, 0.f, HalfHeight - 4.f);
+}
+
+bool AHumanCharacter::Stun(float Seconds, AAntCharacter* By, const FString& What)
+{
+	const float Now = GetWorld()->GetTimeSeconds();
+	if (!HasAuthority() || bKnockedOut || bStunned || Now < NextStunTime)
+	{
+		return false;
+	}
+	bStunned = true;
+	StunEnd = Now + Seconds;
+	NextStunTime = StunEnd + 10.f;
+	bSpraying = false;
+	bStompPending = false;
+	OnRep_KnockedOut();
+	AntSfx::Everyone(this, AntSfx::HumanPanic, GetActorLocation() + FVector(0.f, 0.f, 600.f), 1.3f);
+	UE_LOG(LogTemp, Display, TEXT("ANTSTUN the Human is stunned for %.1f s by %s"), Seconds, *What);
+	if (AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
+	{
+		GM->OnHumanStunned(By, What);
+	}
+	return true;
 }
 
 void AHumanCharacter::BeginPlay()
@@ -342,7 +370,7 @@ void AHumanCharacter::AnimateBody(float DeltaSeconds)
 	WalkPhase += DeltaSeconds * Speed / 140.f;
 
 	// Knockout sway + a violent shudder when shaking ants off.
-	float Roll = bKnockedOut ? FMath::Sin(Now * 2.5f) * 10.f : 0.f;
+	float Roll = bKnockedOut ? FMath::Sin(Now * 2.5f) * 10.f : bStunned ? FMath::Sin(Now * 7.f) * 6.f : 0.f;   // stunned: he reels
 	const float ST = Now - ShakeLocalStart;
 	if (ST >= 0.f && ST < 0.7f)
 	{
@@ -488,7 +516,7 @@ void AHumanCharacter::ServerSetSpray_Implementation(bool bOn) { SetSpraying(bOn)
 
 void AHumanCharacter::TryStomp(int32 Leg)
 {
-	if (!HasAuthority() || bKnockedOut || bStompPending)
+	if (!HasAuthority() || bKnockedOut || bStompPending || bStunned)
 	{
 		return;
 	}
@@ -527,10 +555,10 @@ void AHumanCharacter::DoStompImpact()
 	for (TActorIterator<AKitchenLoot> It(GetWorld()); It; ++It)
 	{
 		const FVector To = It->GetActorLocation() - P;
-		if (To.Size2D() < StompRadius * 2.f && FMath::Abs(To.Z) < 300.f)
+		if (To.Size2D() < StompRadius * 2.6f && FMath::Abs(To.Z) < 300.f)
 		{
-			const float K = 1.f - (float)To.Size2D() / (StompRadius * 2.f);
-			It->Kick(To.GetSafeNormal2D() * 350.f * K + FVector(0.f, 0.f, 650.f * K), It->GetActorLocation() + FMath::VRand() * 10.f);
+			const float K = 1.f - (float)To.Size2D() / (StompRadius * 2.6f);
+			It->Kick(To.GetSafeNormal2D() * 650.f * K + FVector(0.f, 0.f, 800.f * K), It->GetActorLocation() + FMath::VRand() * 10.f);
 		}
 	}
 	for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
@@ -545,9 +573,23 @@ void AHumanCharacter::DoStompImpact()
 		{
 			continue;   // can't stomp what's crawling up your own leg
 		}
-		if (FVector::Dist2D(A, P) < StompRadius && A.Z - P.Z < 220.f)
+		const float D2 = (float)FVector::Dist2D(A, P);
+		if (D2 < StompRadius && A.Z - P.Z < 220.f)
 		{
 			UGameplayStatics::ApplyDamage(Ant, 200.f, GetController(), this, UDamageType::StaticClass());
+		}
+		else if (D2 < StompRadius * 2.6f && FMath::Abs(A.Z - P.Z) < 260.f && !Ant->IsAttached())
+		{
+			// A near miss: only what is right under the slipper dies, the shockwave throws the rest across the floor.
+			const float K = 1.f - (D2 - StompRadius) / (StompRadius * 1.6f);
+			const FVector Out = (A - P).GetSafeNormal2D();
+			Ant->ApplyLaunch((Out * (450.f + 950.f * K) + FVector(0.f, 0.f, 380.f + 440.f * K)) * AntKit::SpeedK);
+			if (Ant->Carrying && K > 0.45f)
+			{
+				Ant->LetGo();
+				Ant->Toast(TEXT("Ударная волна выбила груз!"));
+			}
+			UE_LOG(LogTemp, Display, TEXT("ANTSHOCK %s thrown by the stomp shockwave (%.0f from the slipper)"), *Ant->GetDisplayName(), D2);
 		}
 	}
 }
@@ -664,6 +706,8 @@ void AHumanCharacter::ResetHuman(const FVector& Location)
 	bSpraying = false;
 	bStompPending = false;
 	bKnockedOut = false;
+	bStunned = false;
+	NextStunTime = 0.f;
 	OnRep_KnockedOut();
 	SetActorLocation(Location, false, nullptr, ETeleportType::TeleportPhysics);
 }
@@ -714,6 +758,11 @@ void AHumanCharacter::Tick(float DeltaSeconds)
 			SprayFuel = FMath::Min(100.f, SprayFuel + 9.f * DeltaSeconds);
 		}
 
+		if (bStunned && Now >= StunEnd)
+		{
+			bStunned = false;
+			OnRep_KnockedOut();
+		}
 		if (bKnockedOut && Now >= KnockoutEnd)
 		{
 			bKnockedOut = false;

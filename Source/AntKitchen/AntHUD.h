@@ -38,6 +38,22 @@ private:
 	void DrawTrophies(AAntGameState* GS, APawn* Me);
 	void DrawLinkState(AAntCharacter* Ant);
 
+	// ---- The run (AntHUDRun.cpp): orders, cards, greed, the event, pings, first-shift hints, the interlude ----
+	void DrawRun(AAntGameState* GS, APawn* Me);
+	void DrawInterlude(AAntGameState* GS);
+	/** Is this point near the crosshair (within Degrees of the view direction)? */
+	bool Aimed(const FVector& World, float Degrees) const;
+	/** 0..1: how visible the long controls lines are (they fade after the first minute; F1 brings them back). */
+	float HelpAlpha() const;
+	int32 SeenEvent = 0;
+	float FirstDrawTime = -1.f;
+	// First shift: three steps for a new player, ticked off as they happen (local).
+	bool bHintOut = false;
+	bool bHintGrab = false;
+	bool bHintHome = false;
+	float HintsDoneAt = -1.f;
+	int32 HintShift = -1;
+
 	/** The shift ("heist run"): quota bar, larvae, what the Human is up to. */
 	void DrawShift(AAntGameState* GS);
 	/** A big line across the screen for a few seconds (stage change, quota met). */

@@ -22,6 +22,7 @@
 #include "Misc/Parse.h"
 #include "Misc/App.h"
 #include "AntFx.h"
+#include "AntRun.h"
 
 namespace
 {
@@ -102,6 +103,13 @@ void AAntHUD::Marker(const FVector& World, const FString& Label, const FLinearCo
 	}
 	P.X = FMath::Clamp(P.X, 60.f * S, W - 60.f * S);
 	P.Y = FMath::Clamp(P.Y, 60.f * S, H - 60.f * S);
+	if (Label.IsEmpty())
+	{
+		// No words: just a small quiet mark where the thing is.
+		DrawRect(FLinearColor(0.f, 0.f, 0.f, 0.5f), P.X - 4.f * S, P.Y - 4.f * S, 8.f * S, 8.f * S);
+		DrawRect(FLinearColor(C.R, C.G, C.B, 0.8f), P.X - 3.f * S, P.Y - 3.f * S, 6.f * S, 6.f * S);
+		return;
+	}
 	DrawRect(C, P.X - 5.f * S, P.Y - 5.f * S, 10.f * S, 10.f * S);
 	Txt(Full, P.X, P.Y + 8.f * S, C, GEngine->GetSmallFont(), 1.1f * S, true);
 }
@@ -184,7 +192,11 @@ void AAntHUD::DrawHUD()
 	AAntPlayerController* PC = Cast<AAntPlayerController>(PlayerOwner);
 	APawn* Me = PlayerOwner ? PlayerOwner->GetPawn() : nullptr;
 
-	DrawWorldTags(Me);
+	const bool bVoteScreen = GS && GS->bHeistMode && GS->Interlude >= 2;
+	if (!bVoteScreen)
+	{
+		DrawWorldTags(Me);   // names and health bars would sit on top of the cards
+	}
 
 	if (AAntCharacter* Ant = Cast<AAntCharacter>(Me))
 	{
@@ -203,6 +215,7 @@ void AAntHUD::DrawHUD()
 	DrawAnnounce();
 	DrawWar(GS, Me);
 	DrawTrophies(GS, Me);
+	DrawRun(GS, Me);
 	DrawFeed(GS);
 	DrawToastsAndNumbers(PC);
 	DrawHelp(Me);
@@ -244,7 +257,7 @@ void AAntHUD::DrawTop(AAntGameState* GS)
 		Txt(FString::Printf(TEXT("Раздавлено муравьёв: %d    Человек в панике: %d раз"), GS->AntsSquashed, GS->HumanKnockouts), W * 0.5f, 104.f * S, Grey, GEngine->GetSmallFont(), 1.1f * S, true);
 	}
 
-	if (GS->Phase != 0)
+	if (GS->Phase != 0 && !(GS->bHeistMode && GS->Interlude >= 2))
 	{
 		// The shift: either the quota is in and everyone made it (Phase 1), or the colony starves and the run is over.
 		const bool bWon = GS->Phase == 1;
@@ -265,7 +278,8 @@ void AAntHUD::DrawTop(AAntGameState* GS)
 			Txt(Banner, W * 0.5f, BY + 24.f * S, Accent, Big, 2.2f * S * Fit, true);
 			Txt(FString::Printf(TEXT("Добыча %d из %d  ·  трофеев целыми %d  ·  разбито %d  ·  раздавлено муравьёв %d"), GS->TeamScore, GS->TargetScore, GS->TrophiesWhole, GS->TrophiesBroken, GS->AntsSquashed),
 				W * 0.5f, BY + 104.f * S, White, Med, 1.1f * S, true);
-			Txt(bWon ? TEXT("Следующая смена через несколько секунд: квота вырастет") : TEXT("Новый забег со смены 1 через несколько секунд..."), W * 0.5f, BY + 150.f * S, Grey, Med, 1.f * S, true);
+			Txt(bWon ? TEXT("Дальше: выбор карты для колонии, потом новая смена") : FString::Printf(TEXT("Забег: пройдено смен %d, добыча %d. Новый забег через несколько секунд..."), GS->RunShifts, GS->RunHaul),
+				W * 0.5f, BY + 150.f * S, Grey, Med, 1.f * S, true);
 		}
 		else
 		{
@@ -451,6 +465,11 @@ void AAntHUD::DrawShift(AAntGameState* GS)
 	// --- Row 4: what the Human is doing (one quiet line; the stage change itself is announced big) ---
 	static const TCHAR* StageName[] = { TEXT("Человек залип в телефон: лутай спокойно"), TEXT("Человек на кухне"), TEXT("УБОРКА: он зол и с дихлофосом"), TEXT("ВСЕ В ГНЕЗДО!") };
 	FString Line = StageName[Stage];
+	if (Stage >= 1 && Stage < 3 && GS->HumanGoal != AntHumanGoal::Idle && !GS->HumanGoalText.IsEmpty())
+	{
+		// What he is heading for right now: a noise, a door left open, somebody he saw.
+		Line = FString::Printf(TEXT("%s: %s"), Stage == 2 ? TEXT("УБОРКА. Человек") : TEXT("Человек"), *GS->HumanGoalText);
+	}
 	if (GS->HumanRage > 0 && Stage < 2)
 	{
 		Line += FString::Printf(TEXT("  ·  ярость %d/3"), GS->HumanRage);
@@ -523,16 +542,17 @@ void AAntHUD::DrawFeed(AAntGameState* GS)
 	const float Now = GetWorld()->GetTimeSeconds();
 	float Y = 14.f * S;
 	int32 Shown = 0;
-	for (int32 i = GS->Feed.Num() - 1; i >= 0 && Shown < 7; --i)
+	// Short and quick to fade: the newest four lines, six seconds each.
+	for (int32 i = GS->Feed.Num() - 1; i >= 0 && Shown < 4; --i)
 	{
 		const FAntFeedLine& L = GS->Feed[i];
 		const float Age = Now - L.Time;
-		if (Age > 9.f)
+		if (Age > 6.f)
 		{
 			continue;
 		}
 		FLinearColor C = L.Color;
-		C.A = FMath::Clamp(9.f - Age, 0.f, 1.f);
+		C.A = FMath::Clamp((6.f - Age) / 1.5f, 0.f, 1.f) * (Shown == 0 ? 1.f : 0.8f);
 		TxtRight(L.Text, Canvas->ClipX - 20.f * S, Y, C, GEngine->GetSmallFont(), 1.15f * S);
 		Y += 24.f * S;
 		++Shown;
@@ -587,8 +607,13 @@ void AAntHUD::DrawAnt(AAntCharacter* Ant)
 
 	if (Ant->bDead)
 	{
-		Txt(TEXT("ТЕБЯ РАЗДАВИЛИ"), W * 0.5f, H * 0.36f, Red, Big, 2.2f * S, true);
-		Txt(TEXT("Возрождение в муравейнике через пару секунд..."), W * 0.5f, H * 0.36f + 80.f * S, White, Med, 1.1f * S, true);
+		const bool bStuck = Ant->StuckTo != nullptr;
+		Txt(bStuck ? TEXT("ТЫ ПРИЛИП К ТАПКУ") : TEXT("ТЕБЯ РАЗДАВИЛИ"), W * 0.5f, H * 0.36f, Red, Big, 2.2f * S, true);
+		const AAntGameState* DeadGS = GetWorld()->GetGameState<AAntGameState>();
+		const bool bOut = DeadGS && DeadGS->bHeistMode && DeadGS->Larvae <= 0 && DeadGS->Phase == 0;
+		Txt(bOut ? TEXT("Личинок нет. Вернуть тебя могут, если свои принесут твоё тело в гнездо")
+			: bStuck ? TEXT("Катаешься лепёшкой на подошве. Возрождение через пару секунд...") : TEXT("Возрождение в муравейнике через пару секунд..."),
+			W * 0.5f, H * 0.36f + 80.f * S, White, Med, 1.1f * S, true);
 		return;
 	}
 
@@ -637,7 +662,14 @@ void AAntHUD::DrawAnt(AAntCharacter* Ant)
 			? FString::Printf(TEXT("АРМИЯ: %d — %s   |  R — в атаку на прицел / ко мне   F — распустить"), Army->Count,
 				Army->Mode == EArmyMode::Follow ? TEXT("за тобой") : Army->Mode == EArmyMode::Attack ? TEXT("АТАКУЕТ") : TEXT("домой"))
 			: TEXT("F — вывести армию рабочих из муравейника   |   Z — отряд за мной   X — отряд в атаку на прицел   C — отряд свободен");
-		Txt(ArmyLine, X, Y - 112.f * S, Army ? FLinearColor(1.f, 0.8f, 0.3f) : Grey, Small, 1.1f * S);
+		// The hint about F / Z / X / C fades with the rest of the controls; a live army always shows.
+		const float ArmyA = Army ? 1.f : HelpAlpha();
+		if (ArmyA > 0.01f)
+		{
+			FLinearColor AC = Army ? FLinearColor(1.f, 0.8f, 0.3f) : Grey;
+			AC.A = ArmyA;
+			Txt(ArmyLine, X, Y - 112.f * S, AC, Small, 1.1f * S);
+		}
 		if (Army && Army->Mode == EArmyMode::Attack)
 		{
 			Marker(FVector(Army->Target) + FVector(0.f, 0.f, 80.f), TEXT("цель армии"), FLinearColor(1.f, 0.8f, 0.3f), true);
@@ -684,6 +716,8 @@ void AAntHUD::DrawAnt(AAntCharacter* Ant)
 		}
 		FString St = FString::Printf(TEXT("%.0f°C"), T);
 		FLinearColor SC = White;
+		const bool bPlain = T >= 12.f && T <= 36.f && !(Ant->StatusFlags & (AntStatus::Sticky | AntStatus::Wet | AntStatus::Drowning)) && !Ant->IsBurning();
+		if (bPlain) { St = FString(); }   // room temperature and nothing on you: nothing to say
 		if (Ant->IsFrozen()) { St += TEXT("  ЗАМЁРЗ! медленно, не прыгнуть, не залезть на стену"); SC = FLinearColor(0.6f, 0.85f, 1.f); }
 		else if (T < 8.f) { St += TEXT("  холодно: медленнее бегаешь и стреляешь"); SC = FLinearColor(0.6f, 0.85f, 1.f); }
 		else if (T > 55.f) { St += TEXT("  ГОРИШЬ!"); SC = Red; }
@@ -695,8 +729,8 @@ void AAntHUD::DrawAnt(AAntCharacter* Ant)
 		Txt(St, X, Y - 56.f * S, SC, Small, 1.15f * S);
 	}
 
-	// Colony swarm
-	if (const AAntSwarm* Swarm = AAntSwarm::Get(GetWorld()))
+	// Colony swarm: only while it works for you (a trail is laid)
+	if (const AAntSwarm* Swarm = AAntSwarm::Get(GetWorld()); Swarm && Swarm->Streams.Num() > 0)
 	{
 		Txt(FString::Printf(TEXT("КОЛОНИЯ: %d рабочих  |  в гнезде %d  |  на тропах %d  (%d троп)"),
 			Swarm->Population, Swarm->Idle, Swarm->AntsOnTrails(), Swarm->Streams.Num()),
@@ -713,9 +747,27 @@ void AAntHUD::DrawAnt(AAntCharacter* Ant)
 	float GadgetDist = 0.f;
 	AKitchenInteractable* Gadget = Ant->FindNearestInteractable(&GadgetDist);
 	AKitchenLoot* NearLoot = Ant->FindNearestLoot(AAntCharacter::InteractRadius);
-	if (Gadget && (!NearLoot || GadgetDist < FVector::Dist(NearLoot->GetActorLocation(), Ant->GetActorLocation())))
+	if (Ant->Pulling && Ant->Pulling->PullMissing > 0)
 	{
-		Txt(FString::Printf(TEXT("[E] %s"), *Gadget->GetPrompt(Ant)), W * 0.5f, H * 0.5f + 70.f * S, FLinearColor(0.6f, 1.f, 0.9f), Med, 1.05f * S, true);
+		// Straining at a door that will not give: say how many more it takes.
+		const float Beat = 0.75f + 0.25f * FMath::Abs(FMath::Sin(GetWorld()->GetTimeSeconds() * 6.f));
+		Txt(FString::Printf(TEXT("ДВЕРЬ НЕ ПОДДАЁТСЯ  ·  Нужно ещё %d"), (int32)Ant->Pulling->PullMissing), W * 0.5f, H * 0.5f + 70.f * S, FLinearColor(1.f, 0.55f, 0.2f, Beat), Med, 1.2f * S, true);
+		Txt(TEXT("Держи [E]. Зови своих, выведи армию (F) или переоденься в Солдата"), W * 0.5f, H * 0.5f + 106.f * S, Grey, Small, 1.1f * S, true);
+	}
+	else if (Gadget && (!NearLoot || GadgetDist < FVector::Dist(NearLoot->GetActorLocation(), Ant->GetActorLocation())))
+	{
+		const int32 DoorClass = Gadget->DoorClass();
+		const int32 Missing = (DoorClass > 0 && !Gadget->IsDoorOpen()) ? AntDoor::Missing(Gadget->PullNeed(), Ant->GetStrength()) : 0;
+		if (Missing > 0)
+		{
+			Txt(FString::Printf(TEXT("[E] держать — %s"), *Gadget->GetPrompt(Ant)), W * 0.5f, H * 0.5f + 70.f * S, Gold, Med, 1.05f * S, true);
+			Txt(FString::Printf(TEXT("%s: одному не открыть, нужно ещё %d"), DoorClass >= AntDoor::Heavy ? TEXT("Тяжёлая дверь") : TEXT("Тугая дверца"), Missing),
+				W * 0.5f, H * 0.5f + 104.f * S, Gold, Small, 1.1f * S, true);
+		}
+		else
+		{
+			Txt(FString::Printf(TEXT("[E] %s"), *Gadget->GetPrompt(Ant)), W * 0.5f, H * 0.5f + 70.f * S, FLinearColor(0.6f, 1.f, 0.9f), Med, 1.05f * S, true);
+		}
 	}
 	else if (AKitchenLoot* L = NearLoot)
 	{
@@ -763,20 +815,32 @@ void AAntHUD::DrawAnt(AAntCharacter* Ant)
 	{
 		AKitchenLoot* L = *It;
 		const float D = FVector::Dist(L->GetActorLocation(), Me);
-		if (D > 3000.f || D < AAntCharacter::InteractRadius)
+		if (D > 5000.f || D < AAntCharacter::InteractRadius || L->bTrophy)
+		{
+			continue;
+		}
+		// Labels only for what is close or what you look at: the screen stays clean.
+		const FVector LabelAt = L->GetActorLocation() + FVector(0.f, 0.f, 40.f + (L->bIsGear ? 0.f : L->GetRadius()));
+		if (D > 650.f && !Aimed(LabelAt, 3.5f))
 		{
 			continue;
 		}
 		if (L->bIsGear)
 		{
-			Marker(L->GetActorLocation() + FVector(0.f, 0.f, 40.f), AntKit::RarityName(L->Gear.Rarity), AntKit::RarityColor(L->Gear.Rarity), false);
+			Marker(LabelAt, AntKit::RarityName(L->Gear.Rarity), AntKit::RarityColor(L->Gear.Rarity), false);
 			++Count;
 		}
-		else if (L->Value >= 60)
+		else if (L->bBody)
 		{
-			Marker(L->GetActorLocation() + FVector(0.f, 0.f, 40.f + L->GetRadius()),
-				L->IsCarried() ? FString::Printf(TEXT("+%d (тащат %d)"), L->Value, L->NumCarriers()) : FString::Printf(TEXT("+%d  x%d"), L->Value, L->AntsNeeded(Ant->GetStrength())),
-				L->IsCarried() && L->CarryTeam() != Ant->Team ? FLinearColor(1.f, 0.4f, 0.2f) : Gold, false);
+			Marker(LabelAt, FString::Printf(TEXT("%s — донеси в гнездо: вернёт личинку"), *L->LootName), FLinearColor(0.75f, 0.9f, 1.f), false);
+			++Count;
+		}
+		else if (L->Value >= 40)
+		{
+			const int32 Sealed = KitchenContainers::SealedAt(GetWorld(), L->GetActorLocation());
+			FString Label = L->IsCarried() ? FString::Printf(TEXT("+%d (тащат %d)"), L->Value, L->NumCarriers()) : FString::Printf(TEXT("+%d  x%d"), L->Value, L->AntsNeeded(Ant->GetStrength()));
+			if (Sealed >= 0) { Label += FString::Printf(TEXT("  за дверью (%s)"), KitchenContainers::Get(Sealed).Where); }
+			Marker(LabelAt, Label, L->IsCarried() && L->CarryTeam() != Ant->Team ? FLinearColor(1.f, 0.4f, 0.2f) : Gold, false);
 			++Count;
 		}
 	}
@@ -991,7 +1055,38 @@ void AAntHUD::DrawHelp(APawn* Me)
 	{
 		Help = TEXT("ЛКМ — плевок (кислота кончается — жди) | ПКМ — укус | Ctrl — РЫВОК | в спину — крит | E — взять/отпустить | G — сцепка | F/R — армия | Y — рой | T — тропа | P — сторона | J муха | K паук | H Человек | Tab счёт");
 	}
-	Txt(Help, Canvas->ClipX * 0.5f, Canvas->ClipY - 26.f * S, FLinearColor(1.f, 1.f, 1.f, 0.6f), GEngine->GetSmallFont(), 1.f * S, true);
+	// The long line is for the first minute; after that F1 brings it back for a while.
+	const float A = HelpAlpha();
+	if (A > 0.01f)
+	{
+		Txt(Help, Canvas->ClipX * 0.5f, Canvas->ClipY - 26.f * S, FLinearColor(1.f, 1.f, 1.f, 0.6f * A), GEngine->GetSmallFont(), 1.f * S, true);
+	}
+	else
+	{
+		Txt(TEXT("F1 — управление"), Canvas->ClipX * 0.5f, Canvas->ClipY - 26.f * S, FLinearColor(1.f, 1.f, 1.f, 0.28f), GEngine->GetSmallFont(), 0.95f * S, true);
+	}
+}
+
+float AAntHUD::HelpAlpha() const
+{
+	const float Now = GetWorld()->GetTimeSeconds();
+	const AAntPlayerController* PC = Cast<AAntPlayerController>(PlayerOwner);
+	const float SinceAsked = PC ? Now - PC->HelpAskedAt : 1.e6f;
+	const float SinceStart = FirstDrawTime >= 0.f ? Now - FirstDrawTime : 0.f;
+	const float A1 = FMath::Clamp((65.f - SinceStart) / 5.f, 0.f, 1.f);
+	const float A2 = FMath::Clamp((20.f - SinceAsked) / 3.f, 0.f, 1.f);
+	return FMath::Max(A1, A2);
+}
+
+bool AAntHUD::Aimed(const FVector& World, float Degrees) const
+{
+	if (!PlayerOwner || !PlayerOwner->PlayerCameraManager)
+	{
+		return false;
+	}
+	const FVector Cam = PlayerOwner->PlayerCameraManager->GetCameraLocation();
+	const FVector Fwd = PlayerOwner->PlayerCameraManager->GetCameraRotation().Vector();
+	return FVector::DotProduct((World - Cam).GetSafeNormal(), Fwd) > FMath::Cos(FMath::DegreesToRadians(Degrees));
 }
 
 void AAntHUD::DrawLinkState(AAntCharacter* Ant)
@@ -1149,14 +1244,19 @@ void AAntHUD::DrawTrophies(AAntGameState* GS, APawn* Me)
 			continue;
 		}
 		FString Label;
+		const FVector At = L->GetActorLocation() + FVector(0.f, 0.f, 120.f);
+		const bool bClose = FVector::Dist(L->GetActorLocation(), Ant->GetActorLocation()) < 1600.f || Aimed(At, 5.f);
 		if (L->IsCarried())
 		{
 			Label = L->CarryTeam() == Ant->Team ? FString::Printf(TEXT("%s — несём (%d)"), *L->LootName, L->NumCarriers()) : FString::Printf(TEXT("%s — ТАЩАТ ВРАГИ!"), *L->LootName);
 		}
-		else
+		else if (bClose)
 		{
+			const int32 Sealed = KitchenContainers::SealedAt(GetWorld(), L->GetActorLocation());
 			Label = FString::Printf(TEXT("ТРОФЕЙ: %s  +%d ×2  нужно %d"), *L->LootName, L->Value, L->AntsNeeded(Ant->GetStrength()));
+			if (Sealed >= 0) { Label += FString::Printf(TEXT("  ·  за дверью (%s)"), KitchenContainers::Get(Sealed).Where); }
 		}
-		Marker(L->GetActorLocation() + FVector(0.f, 0.f, 120.f), Label, L->IsCarried() && L->CarryTeam() != Ant->Team ? FLinearColor(1.f, 0.4f, 0.2f) : Gold, true);
+		// Far away and not looked at: only the small gold mark, no text.
+		Marker(At, Label, L->IsCarried() && L->CarryTeam() != Ant->Team ? FLinearColor(1.f, 0.4f, 0.2f) : Gold, L->IsCarried() || bClose);
 	}
 }

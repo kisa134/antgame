@@ -7,6 +7,7 @@
 #include "KitchenLoot.h"
 #include "AntKitchenGameMode.h"
 #include "EngineUtils.h"
+#include "AntTypes.h"
 #include "Components/CapsuleComponent.h"
 #include "EngineUtils.h"
 
@@ -34,7 +35,9 @@ void AHumanAIController::UpdateControlRotation(float DeltaTime, bool bUpdatePawn
 AAntCharacter* AHumanAIController::PickTarget(const AHumanCharacter* H) const
 {
 	AAntCharacter* Best = nullptr;
-	float BestScore = 8000.f;
+	// «Тихий шаг»: he notices ants from 30% closer.
+	const float Notice = AntCard::Has(this, AntCard::Quiet) ? 0.7f : 1.f;
+	float BestScore = 8000.f * Notice;
 	const FVector Me = H->GetActorLocation();
 	const bool bDark = !AKitchenSwitch::AreLightsOn(GetWorld());
 	for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
@@ -52,8 +55,12 @@ AAntCharacter* AHumanAIController::PickTarget(const AHumanCharacter* H) const
 		{
 			continue;
 		}
+		if (KitchenContainers::SealedAt(GetWorld(), AL) >= 0)
+		{
+			continue;   // behind a shut door
+		}
 		float Score = FVector::Dist2D(Me, AL);
-		if (bDark && Score > (Ant->IsCarrying() ? 3200.f : 2200.f))
+		if (bDark && Score > (Ant->IsCarrying() ? 3200.f : 2200.f) * Notice)
 		{
 			continue;   // lights are off: only notices ants close by
 		}
@@ -101,6 +108,16 @@ void AHumanAIController::Tick(float DeltaSeconds)
 		return;
 	}
 
+	AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>();
+	const float TimeNow = GetWorld()->GetTimeSeconds();
+	if (H->IsStunned())
+	{
+		// Something heavy landed on him: he just stands there and reels.
+		H->SetSpraying(false);
+		DesiredRotation.Pitch = 20.f;
+		return;
+	}
+
 	if (UnstickTimer > 0.f)
 	{
 		UnstickTimer -= DeltaSeconds;
@@ -123,7 +140,111 @@ void AHumanAIController::Tick(float DeltaSeconds)
 		Target = nullptr;
 	}
 
-	if (T)
+	// What he does instead of hunting: checking a noise, shutting a door left open. An ant carrying loot right
+	// in front of him is the one thing he will not walk away from.
+	const float TargetDist = T ? (float)FVector::Dist2D(T->GetActorLocation(), MyLoc) : 1.e9f;
+	const bool bHotChase = T && T->IsCarrying() && TargetDist < 2600.f;
+	bool bBusy = false;
+	if (GM && !bHotChase)
+	{
+		if (!bInvestigating && GM->BestNoise(MyLoc, Noise))
+		{
+			bInvestigating = true;
+			LookUntil = 0.f;
+			NoiseGiveUp = TimeNow + 25.f;
+			DoorTarget = nullptr;
+		}
+		if (bInvestigating)
+		{
+			bBusy = true;
+			H->SetSpraying(false);
+			if (LookUntil <= 0.f)
+			{
+				GM->SetHumanGoal(AntHumanGoal::Noise, FString::Printf(TEXT("идёт на шум: %s"), AntNoise::Name(Noise.Kind)), Noise.Loc);
+				DesiredRotation.Pitch = -10.f;
+				if (FVector::Dist2D(Noise.Loc, MyLoc) > 1150.f && TimeNow < NoiseGiveUp)
+				{
+					MoveTowards(H, Noise.Loc, 1.f);
+				}
+				else
+				{
+					LookUntil = TimeNow + 5.f;
+				}
+			}
+			else
+			{
+				// Looks around for whoever did it.
+				GM->SetHumanGoal(AntHumanGoal::Look, FString::Printf(TEXT("осматривается: %s"), AntNoise::Name(Noise.Kind)), Noise.Loc);
+				DesiredRotation.Yaw = FRotator::NormalizeAxis((float)DesiredRotation.Yaw + 75.f * DeltaSeconds);
+				DesiredRotation.Pitch = -30.f;
+				if (TimeNow >= LookUntil)
+				{
+					bInvestigating = false;
+					GM->NoiseChecked(Noise, TargetDist > 2200.f);
+				}
+			}
+		}
+		else if (TargetDist > 1500.f && GM->bHeist)
+		{
+			if (TimeNow >= NextDoorScan && !DoorTarget.IsValid())
+			{
+				NextDoorScan = TimeNow + 1.f;
+				float BestD = 7000.f;   // most of the room he is in
+				for (TActorIterator<AKitchenInteractable> It(GetWorld()); It; ++It)
+				{
+					if (It->DoorClass() > 0 && It->IsDoorOpen() && It->HumanShuts() && TimeNow - It->OpenedAt > 4.f
+						&& AKitchenBuilder::Region(It->GetActorLocation()) == AKitchenBuilder::Region(MyLoc))
+					{
+						const float D = (float)FVector::Dist2D(It->GetActorLocation(), MyLoc);
+						if (D < BestD) { BestD = D; DoorTarget = *It; }
+					}
+				}
+				if (DoorTarget.IsValid()) { DoorGiveUp = TimeNow + 12.f; }
+			}
+			if (AKitchenInteractable* Door = DoorTarget.Get())
+			{
+				if (!Door->IsDoorOpen())
+				{
+					DoorTarget = nullptr;
+				}
+				else
+				{
+					bBusy = true;
+					H->SetSpraying(false);
+					const FVector DL = Door->GetActorLocation();
+					GM->SetHumanGoal(AntHumanGoal::Shut, FString::Printf(TEXT("идёт закрыть %s"), *Door->DoorNoun()), DL);
+					DesiredRotation.Pitch = -20.f;
+					if (FVector::Dist2D(DL, MyLoc) > 1300.f && TimeNow < DoorGiveUp)
+					{
+						MoveTowards(H, DL, 0.9f);
+					}
+					else
+					{
+						Door->SetDoorOpen(false);
+						AntSfx::Everyone(this, AntSfx::FridgeDoor, DL, 1.5f);
+						UE_LOG(LogTemp, Display, TEXT("ANTHUMAN shut %s"), *Door->GetName());
+						DoorTarget = nullptr;
+					}
+				}
+			}
+		}
+	}
+	if (GM && !bBusy)
+	{
+		if (T)
+		{
+			GM->SetHumanGoal(AntHumanGoal::Hunt, FString::Printf(TEXT("гонится: %s"), *T->GetDisplayName()), T->GetActorLocation());
+		}
+		else
+		{
+			GM->SetHumanGoal(AntHumanGoal::Idle, FString(), MyLoc);
+		}
+	}
+
+	if (bBusy)
+	{
+	}
+	else if (T)
 	{
 		const FVector TL = T->GetActorLocation();
 		const FVector To = TL - MyLoc;
@@ -234,7 +355,7 @@ void AHumanAIController::Tick(float DeltaSeconds)
 					{
 						HeldSince = Now;
 						NextStealTime = Now + 14.f;
-						if (AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
+						if (GM)
 						{
 							GM->Broadcast(FString::Printf(TEXT("Человек отобрал «%s» и швыряет его!"), *L->LootName), FLinearColor(1.f, 0.35f, 0.3f));
 						}

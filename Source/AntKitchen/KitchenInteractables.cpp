@@ -6,6 +6,11 @@
 #include "AntKitchenGameMode.h"
 #include "KitchenBuilder.h"
 #include "KitchenArt.h"
+#include "AntRun.h"
+#include "AntGameState.h"
+#include "AntArmy.h"
+#include "HumanCharacter.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/PointLightComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
@@ -87,6 +92,162 @@ void AKitchenInteractable::Broadcast(const FString& Text, const FLinearColor& Co
 float AKitchenInteractable::Now() const
 {
 	return GetWorld()->GetTimeSeconds();
+}
+
+void AKitchenInteractable::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(AKitchenInteractable, PullMissing);
+}
+
+// ---------------------------------------------------------------------------------------------
+// Heavy doors: everyone holding [E] adds its strength
+// ---------------------------------------------------------------------------------------------
+
+float AKitchenInteractable::PullNeed() const
+{
+	int32 Class = DoorClass();
+	const AAntGameState* GS = GetWorld()->GetGameState<AAntGameState>();
+	if (!GS || !GS->bHeistMode)
+	{
+		return AntDoor::Need(AntDoor::Light);   // heavy doors belong to the heist run; war and the classic raid keep a plain [E]
+	}
+	if (Class > AntDoor::Light && GS->Cards.Contains(AntCard::Lever))
+	{
+		--Class;
+	}
+	return AntDoor::Need(Class);
+}
+
+float AKitchenInteractable::PullStrength(int32* OutHands, AAntCharacter** OutFirst) const
+{
+	float Have = 0.f;
+	int32 Hands = 0;
+	AAntCharacter* First = nullptr;
+	const float Reach = InteractRadius * 1.5f;
+	for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
+	{
+		AAntCharacter* A = *It;
+		if (A && !A->bDead && A->Pulling == this && DistanceTo(A->GetActorLocation()) < Reach)
+		{
+			Have += A->GetStrength();
+			++Hands;
+			if (!First) { First = A; }
+			// Its army leans on the door with it.
+			if (const AAntArmy* Army = AAntArmy::FindFor(A))
+			{
+				if (FVector::Dist(Army->GetActorLocation(), A->GetActorLocation()) < 900.f)
+				{
+					Have += FMath::Min(30.f, Army->Count * 1.5f);
+				}
+			}
+		}
+	}
+	if (First)
+	{
+		// Bots of the same colony standing at the door with nothing in their jaws help without being asked.
+		for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
+		{
+			AAntCharacter* A = *It;
+			if (A && !A->bDead && A->Pulling != this && A->Creature == 0 && A->Team == First->Team && !A->Carrying && !A->IsPlayerControlled()
+				&& DistanceTo(A->GetActorLocation()) < Reach)
+			{
+				Have += A->GetStrength();
+			}
+		}
+	}
+	if (OutHands) { *OutHands = Hands; }
+	if (OutFirst) { *OutFirst = First; }
+	return Have;
+}
+
+bool AKitchenInteractable::TryOpenByPull()
+{
+	int32 Hands = 0;
+	AAntCharacter* First = nullptr;
+	const float Have = PullStrength(&Hands, &First);
+	const float Need = PullNeed();
+	if (Hands == 0)
+	{
+		PullMissing = 0;
+		return false;
+	}
+	if (Have < Need)
+	{
+		PullMissing = (uint8)AntDoor::Missing(Need, Have);
+		return false;
+	}
+	PullMissing = 0;
+	const int32 Class = DoorClass();
+	SetDoorOpen(true);
+	UE_LOG(LogTemp, Display, TEXT("ANTDOOR %s opened by %s: strength %.0f of %.0f, hands %d, class %d"), *GetName(), First ? *First->GetDisplayName() : TEXT("-"), Have, Need, Hands, Class);
+	AntSfx::Everyone(this, AntSfx::FridgeDoor, GetActorLocation(), Class >= AntDoor::Heavy ? 0.85f : 1.3f);
+	for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
+	{
+		if (It->Pulling == this)
+		{
+			It->Pulling = nullptr;
+		}
+	}
+	if (AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
+	{
+		GM->OnDoorOpened(this, First, Class);
+	}
+	return true;
+}
+
+bool AKitchenInteractable::Pull(AAntCharacter* Ant)
+{
+	if (!HasAuthority() || !Ant || Ant->bDead || IsDoorOpen())
+	{
+		return false;
+	}
+	Ant->Pulling = this;
+	PullClock = 0.f;
+	const bool bOpened = TryOpenByPull();
+	if (!bOpened)
+	{
+		UE_LOG(LogTemp, Display, TEXT("ANTDOOR %s strains: %s pulls, missing %d"), *GetName(), *Ant->GetDisplayName(), (int32)PullMissing);
+	}
+	return bOpened;
+}
+
+void AKitchenInteractable::PullTick(float Dt)
+{
+	if (!HasAuthority() || DoorClass() == 0)
+	{
+		return;
+	}
+	PullClock += Dt;
+	if (PullClock < 0.25f)
+	{
+		return;
+	}
+	PullClock = 0.f;
+	if (IsDoorOpen())
+	{
+		PullMissing = 0;
+		return;
+	}
+	TryOpenByPull();
+}
+
+float AKitchenInteractable::StrainNow(float Dt)
+{
+	if (PullMissing == 0 || IsDoorOpen())
+	{
+		StrainT = 0.f;
+		return 0.f;
+	}
+	StrainT += Dt;
+	if (GetNetMode() != NM_DedicatedServer && StrainT >= StrainSfxAt)
+	{
+		StrainSfxAt = StrainT + FMath::FRandRange(0.7f, 1.1f);
+		AntSfx::Play(this, AntSfx::FridgeDoor, GetActorLocation(), 0.5f, FMath::FRandRange(1.7f, 2.1f));   // a creak
+	}
+	// It gives a crack, shudders and falls back.
+	const float Heave = FMath::Max(0.f, FMath::Sin(StrainT * 5.5f));
+	return 0.012f + 0.05f * Heave * Heave + 0.006f * FMath::Sin(StrainT * 41.f);
 }
 
 namespace
@@ -300,8 +461,16 @@ void AKitchenDoor::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
+	PullTick(DeltaSeconds);
+	const float Strain = StrainNow(DeltaSeconds);
 	const float Target = bOpen ? 1.f : 0.f;
-	if (!FMath::IsNearlyEqual(Alpha, Target))
+	if (!bOpen && Strain > 0.f)
+	{
+		// Not enough ants on it: it gives a crack and falls back.
+		Alpha = Strain;
+		ApplyAlpha();
+	}
+	else if (!FMath::IsNearlyEqual(Alpha, Target))
 	{
 		const float Speed = (Kind == EKitchenDoorKind::Drawer) ? 1.6f : 1.2f;
 		Alpha = FMath::FInterpConstantTo(Alpha, Target, DeltaSeconds, Speed);
@@ -326,6 +495,10 @@ void AKitchenDoor::SetOpen(bool bInOpen, float AutoClose)
 {
 	const bool bWasOpen = bOpen;
 	bOpen = bInOpen;
+	if (bOpen && !bWasOpen)
+	{
+		OpenedAt = Now();
+	}
 	if (HasAuthority() && bOpen && !bWasOpen && Kind == EKitchenDoorKind::Fridge)
 	{
 		AntSfx::Everyone(this, AntSfx::FridgeDoor, GetActorLocation(), 1.f);
@@ -344,6 +517,28 @@ void AKitchenDoor::SetOpen(bool bInOpen, float AutoClose)
 			FRandomStream R(FMath::Rand());
 			GM->SpawnGear(Base + FVector(380.f, 1250.f, 0.f), AntKit::RollWeapon(R.RandRange(1, 3), R));
 		}
+	}
+}
+
+int32 AKitchenDoor::DoorClass() const
+{
+	switch (Kind)
+	{
+	case EKitchenDoorKind::Drawer: return AntDoor::Light;
+	case EKitchenDoorKind::Microwave: return AntDoor::Medium;
+	default: return AntDoor::Heavy;   // fridge, oven, dishwasher
+	}
+}
+
+FString AKitchenDoor::DoorNoun() const
+{
+	switch (Kind)
+	{
+	case EKitchenDoorKind::Fridge: return TEXT("холодильник");
+	case EKitchenDoorKind::Oven: return TEXT("духовку");
+	case EKitchenDoorKind::Drawer: return TEXT("ящик");
+	case EKitchenDoorKind::Dishwasher: return TEXT("посудомойку");
+	default: return TEXT("микроволновку");
 	}
 }
 
@@ -488,6 +683,14 @@ void AKitchenFaucet::BeginPlay()
 void AKitchenFaucet::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	if (HasAuthority() && bOn && bNoisy && Now() >= NextNoise)
+	{
+		NextNoise = Now() + 3.f;
+		if (AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
+		{
+			GM->MakeNoise(Spout(), 0.65f, AntNoise::Faucet, this);
+		}
+	}
 
 	if (HasAuthority())
 	{
@@ -592,7 +795,9 @@ void AKitchenFaucet::Interact(AAntCharacter* Ant)
 	else
 	{
 		SetWater(true, bHotValve);
-		Ant->Toast(bHotValve ? TEXT("Горячая вода! Кипяток в раковине") : TEXT("Холодная вода пошла. Раковина наполняется"));
+		bNoisy = true;   // an ant left the tap running: the Human hears it and comes to turn it off
+		NextNoise = 0.f;
+		Ant->Toast(bHotValve ? TEXT("Горячая вода! Кипяток в раковине. Человек услышит") : TEXT("Холодная вода пошла. Раковина наполняется, Человек услышит"));
 	}
 }
 
@@ -600,6 +805,10 @@ void AKitchenFaucet::SetWater(bool bInOn, bool bHotWater)
 {
 	bOn = bInOn;
 	bHot = bHotWater;
+	if (!bOn)
+	{
+		bNoisy = false;
+	}
 }
 
 void AKitchenFaucet::AffectAnt(AAntCharacter* Ant, FAntEnv& Env) const
@@ -682,6 +891,11 @@ FString AKitchenSwitch::GetPrompt(const AAntCharacter* Ant) const
 
 void AKitchenSwitch::Interact(AAntCharacter* Ant)
 {
+	if (const AAntGameState* GS = GetWorld()->GetGameState<AAntGameState>(); GS && GS->EventId == AntEvent::Blackout)
+	{
+		if (Ant) { Ant->Toast(TEXT("Пробки выбило: выключатель не работает")); }
+		return;
+	}
 	SetLights(!bLightsOn);
 	Broadcast(bLightsOn
 		? FString::Printf(TEXT("%s включил свет"), *Ant->GetDisplayName())
@@ -898,6 +1112,10 @@ void AKitchenToaster::Pop()
 	ReadyAt = Now() + 6.f;
 	MulticastPop();
 	AntSfx::Everyone(this, AntSfx::Toaster, FVector(-6000.f, 4200.f, 1900.f), 1.f);
+	if (AAntKitchenGameMode* NoiseGM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
+	{
+		NoiseGM->MakeNoise(FVector(-6000.f, 4200.f, 1900.f), 0.9f, AntNoise::Toaster, this);
+	}
 
 	int32 Launched = 0;
 	FString Who;
@@ -1169,6 +1387,10 @@ void AKitchenTrap::Tick(float DeltaSeconds)
 	}
 	bArmed = false;
 	RearmAt = Now() + 15.f;
+	if (AAntKitchenGameMode* NoiseGM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
+	{
+		NoiseGM->MakeNoise(GetActorLocation(), 0.8f, AntNoise::Trap, this, Caught[0]);
+	}
 	for (AAntCharacter* Ant : Caught)
 	{
 		Ant->HurtBy(80.f, TEXT("попал в мышеловку"));
@@ -1183,6 +1405,7 @@ void AKitchenTrap::Tick(float DeltaSeconds)
 
 AKitchenProp::AKitchenProp()
 {
+	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
 	SetReplicatingMovement(true);
 	bAlwaysRelevant = true;
@@ -1199,6 +1422,99 @@ void AKitchenProp::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	DOREPLIFETIME(AKitchenProp, Size);
 	DOREPLIFETIME(AKitchenProp, Color);
 	DOREPLIFETIME(AKitchenProp, Mass);
+	DOREPLIFETIME(AKitchenProp, PropName);
+}
+
+void AKitchenProp::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+	if (!HasAuthority() || !Mesh->IsSimulatingPhysics())
+	{
+		return;
+	}
+	LastVelocity = Mesh->GetPhysicsLinearVelocity();
+	if (Mass < 3.f || LastVelocity.SizeSquared() > 90.f * 90.f)
+	{
+		return;   // light junk is shoved by the ants' bodies alone; this one is already moving
+	}
+	// Heavy things (a mug, a jar, a pot lid): an ant leaning on one pushes it with its strength - off the edge, if it likes.
+	const FVector C = Mesh->Bounds.Origin;
+	const float R = Mesh->Bounds.SphereRadius;
+	for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
+	{
+		AAntCharacter* A = *It;
+		if (!A || A->bDead || A->Creature != 0 || A->Carrying)
+		{
+			continue;
+		}
+		const FVector To = C - A->GetActorLocation();
+		if (To.SizeSquared() > FMath::Square(R + 16.f))
+		{
+			continue;
+		}
+		const FVector Want = A->GetCharacterMovement()->GetCurrentAcceleration().GetSafeNormal2D();
+		if (Want.IsNearlyZero() || FVector::DotProduct(Want, To.GetSafeNormal2D()) < 0.45f)
+		{
+			continue;
+		}
+		Mesh->WakeAllRigidBodies();
+		Mesh->AddForce(Want * A->GetStrength() * 900.f);
+		LastPusher = A;
+	}
+}
+
+void AKitchenProp::OnPropHit(UPrimitiveComponent* HitComp, AActor* Other, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+{
+	if (!HasAuthority() || Mass < 3.f)
+	{
+		return;
+	}
+	const float Now = GetWorld()->GetTimeSeconds();
+	const float Speed = (float)LastVelocity.Size();
+	const float ImpactSpeed = FMath::Max(0.f, -(float)FVector::DotProduct(LastVelocity, Hit.ImpactNormal));
+	AAntCharacter* By = LastPusher.Get();
+	const FString What = PropName.IsEmpty() ? FString(TEXT("Железка")) : PropName;
+	if (ImpactSpeed > 600.f && Now > NextCrash)
+	{
+		UE_LOG(LogTemp, Display, TEXT("ANTPROPHIT %s hit %s: speed %.0f, down %.0f"), *What, Other ? *Other->GetName() : TEXT("-"), Speed, -LastVelocity.Z);
+	}
+	if (AHumanCharacter* H = Cast<AHumanCharacter>(Other))
+	{
+		// Only what an ant pushed over counts (he kicks things around himself all the time).
+		if ((By || bDevPushed) && Speed > 600.f && LastVelocity.Z < -400.f)
+		{
+			H->Stun(2.5f, By, What);
+		}
+		return;
+	}
+	if (ImpactSpeed < 600.f)
+	{
+		return;
+	}
+	const uint8 Friends = By ? By->Team : 0;
+	for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
+	{
+		AAntCharacter* A = *It;
+		if (A && !A->bDead && A->Creature == 0 && A->Team != Friends && !A->IsInNest()
+			&& FVector::Dist(A->GetActorLocation(), Hit.ImpactPoint) < Mesh->Bounds.SphereRadius + 14.f)
+		{
+			UE_LOG(LogTemp, Display, TEXT("ANTCRUSH %s crushed by falling %s"), *A->GetDisplayName(), *What);
+			A->HurtBy(300.f, FString::Printf(TEXT("раздавлен: упала %s"), *What.ToLower()));
+		}
+	}
+	if (Now > NextCrash)
+	{
+		NextCrash = Now + 1.5f;
+		AntSfx::Everyone(this, AntSfx::Drop, Hit.ImpactPoint, 0.7f);
+		if (AAntGameState* CrashGS = GetWorld()->GetGameState<AAntGameState>())
+		{
+			CrashGS->MulticastCrumbs(Hit.ImpactPoint, Color, 8, 5.f);   // a few chips fly
+		}
+		if (AAntKitchenGameMode* GM = By ? GetWorld()->GetAuthGameMode<AAntKitchenGameMode>() : nullptr)   // an ant pushed it over
+		{
+			GM->MakeNoise(Hit.ImpactPoint, FMath::Clamp(0.4f + Mass * 0.05f, 0.4f, 0.9f), AntNoise::Crash, nullptr, By);
+		}
+	}
 }
 
 void AKitchenProp::BeginPlay()
@@ -1212,4 +1528,10 @@ void AKitchenProp::BeginPlay()
 	Mesh->SetMassOverrideInKg(NAME_None, Mass, true);
 	Mesh->SetLinearDamping(0.6f);
 	Mesh->SetAngularDamping(0.8f);
+	if (HasAuthority() && Mass >= 3.f)
+	{
+		Mesh->SetNotifyRigidBodyCollision(true);
+		Mesh->OnComponentHit.AddDynamic(this, &AKitchenProp::OnPropHit);
+		Mesh->SetUseCCD(true);
+	}
 }

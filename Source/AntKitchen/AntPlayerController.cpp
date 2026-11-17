@@ -3,6 +3,7 @@
 #include "HumanCharacter.h"
 #include "AntCharacter.h"
 #include "AntSwarm.h"
+#include "AntGameState.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "TimerManager.h"
@@ -253,6 +254,12 @@ void AAntPlayerController::SetupInputComponent()
 	InputComponent->BindKey(EKeys::P, IE_Pressed, this, &AAntPlayerController::SwitchTeam);
 	InputComponent->BindKey(EKeys::F9, IE_Pressed, this, &AAntPlayerController::AddAllyBot);
 	InputComponent->BindKey(EKeys::F10, IE_Pressed, this, &AAntPlayerController::AddEnemyBot);
+	InputComponent->BindKey(EKeys::MiddleMouseButton, IE_Pressed, this, &AAntPlayerController::PingPressed);
+	InputComponent->BindKey(EKeys::F1, IE_Pressed, this, &AAntPlayerController::ShowHelp);
+	// The card vote, for players without an ant right now (the ant routes its own 1-3 keys here while a vote is on).
+	InputComponent->BindKey(EKeys::One, IE_Pressed, this, &AAntPlayerController::Vote1);
+	InputComponent->BindKey(EKeys::Two, IE_Pressed, this, &AAntPlayerController::Vote2);
+	InputComponent->BindKey(EKeys::Three, IE_Pressed, this, &AAntPlayerController::Vote3);
 	InputComponent->BindAction("ToggleHuman", IE_Pressed, this, &AAntPlayerController::RequestToggleHuman);
 	InputComponent->BindAction("Scoreboard", IE_Pressed, this, &AAntPlayerController::ShowScores);
 	InputComponent->BindAction("Scoreboard", IE_Released, this, &AAntPlayerController::HideScores);
@@ -261,6 +268,57 @@ void AAntPlayerController::SetupInputComponent()
 void AAntPlayerController::RequestToggleHuman()
 {
 	ServerToggleHuman();
+}
+
+void AAntPlayerController::ShowHelp()
+{
+	HelpAskedAt = GetWorld()->GetTimeSeconds();
+}
+
+void AAntPlayerController::PingPressed()
+{
+	const float Now = GetWorld()->GetTimeSeconds();
+	if (Now < NextPingTime)
+	{
+		return;
+	}
+	NextPingTime = Now + 0.8f;
+	FVector CamLoc;
+	FRotator CamRot;
+	GetPlayerViewPoint(CamLoc, CamRot);
+	const FVector End = CamLoc + CamRot.Vector() * 30000.f;
+	FHitResult Hit;
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(AntPing), false, GetPawn());
+	const bool bHit = GetWorld()->LineTraceSingleByChannel(Hit, CamLoc, End, ECC_Visibility, Params);
+	ServerPing(bHit ? Hit.ImpactPoint : CamLoc + CamRot.Vector() * 1500.f);
+}
+
+void AAntPlayerController::ServerPing_Implementation(FVector_NetQuantize Location)
+{
+	if (AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
+	{
+		GM->Ping(this, Location);
+	}
+}
+
+bool AAntPlayerController::TryVote(int32 Option)
+{
+	const AAntGameState* GS = GetWorld()->GetGameState<AAntGameState>();
+	if (!GS || GS->Interlude != 2 || !GS->CardOffer.IsValidIndex(Option))
+	{
+		return false;
+	}
+	MyVote = Option;
+	ServerVoteCard((uint8)Option);
+	return true;
+}
+
+void AAntPlayerController::ServerVoteCard_Implementation(uint8 Option)
+{
+	if (AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
+	{
+		GM->VoteCard(this, Option);
+	}
 }
 
 void AAntPlayerController::ShowScores() { bShowScores = true; }

@@ -34,7 +34,39 @@ public:
 
 	float InteractRadius = 230.f;
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	// ---- Doors (AntDoor in AntRun.h): the heavy ones need several ants holding [E] together ----
+	/** AntDoor::EClass of this thing; 0 = not a door, a plain [E]. */
+	virtual int32 DoorClass() const { return 0; }
+	virtual bool IsDoorOpen() const { return true; }
+	/** Server: open or shut it for good (no timer), whoever did it: ants, the Human, an event. */
+	virtual void SetDoorOpen(bool bInOpen) {}
+	/** The Human shuts this when he notices it open. */
+	virtual bool HumanShuts() const { return false; }
+	/** What it is, as in "идёт закрыть <что>": "холодильник", "дверцу шкафа". */
+	virtual FString DoorNoun() const { return TEXT("дверь"); }
+	/** Server: Ant starts pulling ([E] pressed). True = it opened right away; otherwise it pulls until [E] is let go. */
+	bool Pull(AAntCharacter* Ant);
+	/** Strength of everyone pulling right now: ants holding [E], idle bots of theirs at the door, their armies. */
+	float PullStrength(int32* OutHands = nullptr, AAntCharacter** OutFirst = nullptr) const;
+	/** Strength it takes right now (the «Рычаг» card makes doors one class lighter). */
+	float PullNeed() const;
+	/** How many more workers it takes; 0 = nobody pulls. Replicated: the door strains, the HUD says how many are missing. */
+	UPROPERTY(Replicated) uint8 PullMissing = 0;
+	/** Server world time it was last opened (the Human notices doors left open). */
+	float OpenedAt = -100.f;
+
 protected:
+	/** Server, from the door's Tick: ants still pulling, helpers arriving. */
+	void PullTick(float Dt);
+	bool TryOpenByPull();
+	/** Every machine, from the door's Tick: how far (0..1 of its travel) the straining door is cracked open right now. */
+	float StrainNow(float Dt);
+	float PullClock = 0.f;
+	float StrainT = 0.f;
+	float StrainSfxAt = 0.f;
+
 	UStaticMeshComponent* Part(USceneComponent* Parent, EAntShape Shape, const FVector& Center, const FVector& Size,
 		const FLinearColor& Color, bool bCollide, const FRotator& Rot = FRotator::ZeroRotator);
 	/** Box given by local min/max corners. */
@@ -77,6 +109,11 @@ public:
 	/** Server: open/close; AutoClose < 0 keeps it open. */
 	void SetOpen(bool bInOpen, float AutoClose = -1.f);
 	bool IsOpen() const { return bOpen; }
+	virtual int32 DoorClass() const override;
+	virtual bool IsDoorOpen() const override { return bOpen; }
+	virtual void SetDoorOpen(bool bInOpen) override { SetOpen(bInOpen); }
+	virtual bool HumanShuts() const override { return true; }
+	virtual FString DoorNoun() const override;
 
 	UPROPERTY(Replicated) EKitchenDoorKind Kind = EKitchenDoorKind::Fridge;
 	UPROPERTY(Replicated) bool bOpen = false;
@@ -132,6 +169,8 @@ private:
 	UPROPERTY() UMaterialInstanceDynamic* WaterMID = nullptr;
 	UPROPERTY() class UAudioComponent* FlowAudio = nullptr;
 	float ShownLevel = 1150.f;
+	bool bNoisy = false;      // server: an ant turned it on (the Human's own dish-washing does not attract him)
+	float NextNoise = 0.f;
 	float SplashAccum = 0.f;   // cosmetic: droplets, ripples and steam where the stream lands
 	float RippleAccum = 0.f;
 	/** Modelled kitchen: the hot and the cold tap, turned while their water runs. */
@@ -298,7 +337,18 @@ public:
 	UPROPERTY(Replicated) FVector Size = FVector(60.f);
 	UPROPERTY(Replicated) FLinearColor Color = FLinearColor::White;
 	UPROPERTY(Replicated) float Mass = 2.f;
+	/** What it is, for the feed when it lands on somebody ("Банка"). Empty: just junk. */
+	UPROPERTY(Replicated) FString PropName;
+	/** Server (dev tests): counts as pushed over by an ant even though nobody touched it. */
+	bool bDevPushed = false;
+
+	virtual void Tick(float DeltaSeconds) override;
 
 private:
+	UFUNCTION() void OnPropHit(UPrimitiveComponent* HitComp, AActor* Other, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 	UPROPERTY(VisibleAnywhere) UStaticMeshComponent* Mesh;
+	/** Server: the ant that pushed it last (who dropped it on the Human). */
+	TWeakObjectPtr<AAntCharacter> LastPusher;
+	FVector LastVelocity = FVector::ZeroVector;
+	float NextCrash = 0.f;
 };

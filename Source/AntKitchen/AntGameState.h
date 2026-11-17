@@ -12,6 +12,16 @@ struct FAntFeedLine
 	float Time = 0.f;
 };
 
+/** A ping a teammate put into the world (middle mouse button). Local list, filled by MulticastPing. */
+struct FAntPingMark
+{
+	FVector Loc = FVector::ZeroVector;
+	uint8 Kind = 0;
+	uint8 Team = 0;
+	FString Who;
+	float Time = 0.f;
+};
+
 UCLASS()
 class ANTKITCHEN_API AAntGameState : public AGameStateBase
 {
@@ -58,4 +68,48 @@ public:
 
 	/** Local kill feed, filled by MulticastMessage. */
 	TArray<FAntFeedLine> Feed;
+
+	// ---- The run (AntRun.h): everything players see of cards, orders, greed, awards, events, the Human's plan ----
+	/** Cards the colony owns for this run (AntCard::EId). */
+	UPROPERTY(Replicated) TArray<uint8> Cards;
+	/** Between shifts: 0 nothing, 1 the results and awards, 2 the card vote. */
+	UPROPERTY(Replicated) uint8 Interlude = 0;
+	/** Server world time the current interlude step ends (compare with GetServerWorldTimeSeconds). */
+	UPROPERTY(Replicated) float InterludeEnds = 0.f;
+	UPROPERTY(Replicated) TArray<uint8> CardOffer;
+	UPROPERTY(Replicated) TArray<uint8> CardVotes;
+	/** The card that won the vote (255 = none yet). */
+	UPROPERTY(Replicated) uint8 CardPicked = 255;
+	/** The Queen's orders of this shift (AntOrder::EId), a bit per order when done / failed. */
+	UPROPERTY(Replicated) TArray<uint8> Orders;
+	UPROPERTY(Replicated) uint8 OrdersDone = 0;
+	UPROPERTY(Replicated) uint8 OrdersFailed = 0;
+	/** Greed: multiplier on what is delivered after the quota is met. */
+	UPROPERTY(Replicated) float Greed = 1.f;
+	UPROPERTY(Replicated) TArray<FString> Awards;
+	/** This run so far: shifts survived, everything hauled. */
+	UPROPERTY(Replicated) int32 RunShifts = 0;
+	UPROPERTY(Replicated) int32 RunHaul = 0;
+	UPROPERTY(Replicated) int32 LarvaeStart = 0;
+	/** The shift's event (AntEvent::EId) while it runs, when it ends (server time), where it is. */
+	UPROPERTY(Replicated) uint8 EventId = 0;
+	UPROPERTY(Replicated) float EventEnds = 0.f;
+	UPROPERTY(Replicated) FVector_NetQuantize EventLoc;
+	/** What the AI Human is doing (AntHumanGoal::EKind) and where he is heading. */
+	UPROPERTY(Replicated) uint8 HumanGoal = 0;
+	UPROPERTY(Replicated) FString HumanGoalText;
+	UPROPERTY(Replicated) FVector_NetQuantize HumanGoalLoc;
+
+	bool HasCard(uint8 Id) const { return Cards.Contains(Id); }
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastPing(FVector_NetQuantize Loc, uint8 Kind, uint8 Team, const FString& Who);
+	/** The run is over: every machine keeps its own best run (shown in the main menu). */
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRunOver(int32 Shifts, int32 Haul);
+	TArray<FAntPingMark> Pings;
+
+	/** Best run saved on this machine. */
+	static void LoadBestRun(int32& OutShifts, int32& OutHaul);
+	static void SaveBestRun(int32 Shifts, int32 Haul);
 };
