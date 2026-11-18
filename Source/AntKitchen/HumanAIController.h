@@ -49,4 +49,17 @@ private:
 	TWeakObjectPtr<class AKitchenInteractable> DoorTarget;
 	float NextDoorScan = 0.f;
 	float DoorGiveUp = 0.f;
+	/** The hand is out to the handle: the door shuts when it gets there. */
+	float ReachAt = 0.f;
+	/** The bare-hand slap on the floor is an extra attack the jointed body brought: the AI keeps it rare. */
+	float NextSlapTime = 0.f;
+	bool bNoiseReached = false;
+	// Lost sight of an ant that is still out there (under the cabinets, behind a door): he goes and peers under the furniture.
+	TWeakObjectPtr<AAntCharacter> LastTarget;
+	FVector LastSeen = FVector::ZeroVector;
+	float LastSeenTime = -100.f;
+	FVector PeerLoc = FVector::ZeroVector;
+	float PeerGiveUp = 0.f;
+	float PeerEnd = 0.f;
+	float NextPeerTime = 0.f;
 };

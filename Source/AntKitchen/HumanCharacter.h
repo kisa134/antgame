@@ -3,11 +3,24 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Engine/NetSerialization.h"
+#include "HumanBody.h"
 #include "HumanCharacter.generated.h"
 
 class USpringArmComponent;
 class UCameraComponent;
 class UStaticMeshComponent;
+
+/** What the Human's body is doing: HumanAct::EId, since when (server world time), at what. */
+USTRUCT()
+struct FHumanActState
+{
+	GENERATED_BODY()
+
+	UPROPERTY() uint8 Kind = 0;
+	UPROPERTY() uint8 Arg = 0;
+	UPROPERTY() float Start = -100.f;
+	UPROPERTY() FVector_NetQuantize Target;
+};
 
 /**
  * The Human: a giant who stomps ants with slippers and sprays bug spray.
@@ -26,6 +39,8 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
+	/** Ants ride him. (A character is not a base for other characters by default: the engine made every ant that got a grip on him jump straight off.) */
+	virtual bool CanBeBaseForCharacter(APawn* Pawn) const override { return true; }
 
 	static constexpr float StompRadius = 420.f;
 	static constexpr float SprayRange = 2300.f;
@@ -44,12 +59,43 @@ public:
 	float GetWalkSpeed() const { return bStunned ? 1.f : bKnockedOut ? 260.f : 720.f * (1.f + 0.12f * Rage); }
 
 	/** Server: something heavy landed on him. He reels for a moment (there is a cooldown) and gets angrier. False = no effect. */
-	bool Stun(float Seconds, class AAntCharacter* By, const FString& What);
+	bool Stun(float Seconds, class AAntCharacter* By, const FString& What, uint8 Kind = 0);
 	bool IsStunned() const { return bStunned; }
 	UPROPERTY(ReplicatedUsing = OnRep_KnockedOut) bool bStunned = false;
 	/** Where the sole of that foot is right now: a squashed ant rides on it. */
 	FVector GetSoleLocation(int32 Leg) const;
-	uint8 GetLastStompLeg() const { return PendingLeg; }
+	/** What squashed the ant just now: 0 / 1 a slipper, 2 the bare left palm, 3 the rolled newspaper. The pancake sticks to it (GetSoleLocation takes the same number). */
+	uint8 GetLastStompLeg() const;
+
+	// ---- The jointed body (HumanBody.h / HumanBody.cpp) ----
+	/** What his body is doing, since when and at what. Replicated (only when it changes): late joiners see the right pose. */
+	UPROPERTY(Replicated) FHumanActState Act;
+	/** How he takes a stun: 0 it landed on his head (he reels, holding it), 1 on his foot (he hops, holding it). */
+	UPROPERTY(Replicated) uint8 StunKind = 0;
+	bool HasJointedBody() const { return bNewBody; }
+	/** Seconds since the current action started (the server's clock on every machine). */
+	float ActTime() const;
+	/** Server: the left hand goes out to a handle or a switch at Point (the caller does the thing HumanAct::ReachTouch later). */
+	void PlayReach(const FVector& Point);
+	/** Server: crouch and peer under the furniture at Point for Seconds. */
+	void PlayPeer(const FVector& Point, float Seconds);
+	bool IsPeering() const;
+	void StopPeer();
+	/** One thing at a time: a stomp, a swat, a grab or a throw that has not landed yet keeps the body busy. */
+	bool IsBodyBusy() const;
+	/** Bent down to the floor with a hand out (slap, grab, reach): the AI stands still until he is up again. */
+	bool IsRooted() const;
+	/** The middle of a palm right now. 0 left, 1 right. */
+	FVector GetPalmLocation(int32 Side) const;
+	class UStaticMeshComponent* GetSegment(int32 Seg) const { return Segs.IsValidIndex(Seg) ? Segs[Seg] : nullptr; }
+	/** Dev (-AntDo): hold the current action at this many seconds from its start (< 0: let go). */
+	float DevFreezeAt = -1.f;
+	/** Dev: a puppet for screenshots. The AI leaves him alone; DevWalk is where he walks to (zero: stands). */
+	bool bDevPuppet = false;
+	FVector DevWalk = FVector::ZeroVector;
+	float DevWalkScale = 1.f;
+	void DevAct(const FString& What, const FVector& Target);
+	FString DevDescribe() const;
 
 	/** Server: start a stomp with leg 0 (left) / 1 (right), -1 = alternate. */
 	void TryStomp(int32 Leg = -1);
@@ -104,6 +150,26 @@ protected:
 	UFUNCTION() void OnRep_Rage();
 
 private:
+	// ---- the jointed body ----
+	void StartAct(uint8 Kind, uint8 Arg, const FVector& Target);
+	void SetupJointedBody();
+	void BuildHeldThings();
+	/** Places every segment for this frame. Runs on every machine, the server too: ants ride the same pose. */
+	void PoseBody(float DeltaSeconds);
+	/** Cosmetic, local: the spray cloud and hiss, what is shown in the hands. */
+	void BodyEffects(float DeltaSeconds);
+	void OnFootfall(int32 Leg, float Strength);
+	FTransform BodyFrame() const;
+	/** The nozzle of the spray can when the arm is out, body space: where the cloud and the damage cone start. */
+	FVector SprayNozzleBody() const;
+	FVector SwatHitPoint = FVector::ZeroVector;
+	/** One component per HumanSeg, made in the constructor: a base ants ride needs the same name on every machine. */
+	UPROPERTY(VisibleAnywhere) TArray<UStaticMeshComponent*> Segs;
+	bool bNewBody = false;
+	FHumanRig Rig;
+	FTimerHandle GrabTimer;
+	FTimerHandle ThrowTimer;
+
 	void BuildBody();
 	void DoStompImpact();
 	void DoSprayDamage(float Dt);

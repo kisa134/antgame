@@ -82,6 +82,18 @@ AHumanCharacter::AHumanCharacter()
 	BodyMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	BodyMesh->SetCanEverAffectNavigation(false);
 	BodyMesh->SetCastShadow(true);
+
+	// The jointed body: one component per segment, made here so that each has the same name on every machine
+	// (an ant standing on a shin is replicated relative to that shin). Meshes and collision come in SetupJointedBody.
+	for (int32 i = 0; i < HumanSeg::Count; ++i)
+	{
+		UStaticMeshComponent* C = CreateDefaultSubobject<UStaticMeshComponent>(FName(*FString::Printf(TEXT("Seg_%s"), HumanBody::SegName(i))));
+		C->SetupAttachment(BodyPivot);
+		C->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		C->SetCanEverAffectNavigation(false);
+		C->SetGenerateOverlapEvents(false);
+		Segs.Add(C);
+	}
 }
 
 void AHumanCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -97,14 +109,32 @@ void AHumanCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME(AHumanCharacter, SwatReadyTime);
 	DOREPLIFETIME(AHumanCharacter, StompReadyTime);
 	DOREPLIFETIME(AHumanCharacter, bStunned);
+	DOREPLIFETIME(AHumanCharacter, Act);
+	DOREPLIFETIME(AHumanCharacter, StunKind);
 }
 
 FVector AHumanCharacter::GetSoleLocation(int32 Leg) const
 {
+	if (bNewBody && Leg == 2)
+	{
+		return GetPalmLocation(0) - FVector(0.f, 0.f, AAntCharacter::BodyRadius);   // slapped flat: it sticks to the palm
+	}
+	if (bNewBody && Leg == 3)
+	{
+		// Swatted: on the business end of the rolled newspaper.
+		return Segs[HumanSeg::HandR]->GetComponentTransform().TransformPosition(FVector(1250.f, -35.f, -150.f) / HumanBody::Scale) - FVector(0.f, 0.f, AAntCharacter::BodyRadius);
+	}
+	if (bNewBody)
+	{
+		// Under the ball of the real foot, wherever it is: on the floor, in the air mid-stride, cocked for a stomp.
+		// (A squashed ant is put BodyRadius above this point: that leaves it flat against the sole, showing when the foot lifts.)
+		const UStaticMeshComponent* Foot = Segs[Leg == 0 ? HumanSeg::FootL : HumanSeg::FootR];
+		return Foot->GetComponentTransform().TransformPosition(FVector(230.f, 0.f, -163.f) / HumanBody::Scale) - FVector(0.f, 0.f, AAntCharacter::BodyRadius * 1.4f);
+	}
 	return GetActorLocation() + GetActorForwardVector() * 90.f + GetActorRightVector() * (Leg == 0 ? -180.f : 180.f) - FVector(0.f, 0.f, HalfHeight - 4.f);
 }
 
-bool AHumanCharacter::Stun(float Seconds, AAntCharacter* By, const FString& What)
+bool AHumanCharacter::Stun(float Seconds, AAntCharacter* By, const FString& What, uint8 Kind)
 {
 	const float Now = GetWorld()->GetTimeSeconds();
 	if (!HasAuthority() || bKnockedOut || bStunned || Now < NextStunTime)
@@ -112,6 +142,7 @@ bool AHumanCharacter::Stun(float Seconds, AAntCharacter* By, const FString& What
 		return false;
 	}
 	bStunned = true;
+	StunKind = Kind;
 	StunEnd = Now + Seconds;
 	NextStunTime = StunEnd + 10.f;
 	bSpraying = false;
@@ -135,6 +166,11 @@ void AHumanCharacter::BeginPlay()
 
 void AHumanCharacter::SetupBody()
 {
+	SetupJointedBody();
+	if (bNewBody)
+	{
+		return;
+	}
 	const AntArt::FPart& Dad = AntArt::Get(TEXT("SM_Human_Dad"));
 	if (!Dad.IsValid() || !BodyMesh)
 	{
@@ -162,6 +198,11 @@ void AHumanCharacter::BuildBody()
 {
 	if (GetNetMode() == NM_DedicatedServer)
 	{
+		return;
+	}
+	if (bNewBody)
+	{
+		BuildHeldThings();
 		return;
 	}
 	USceneComponent* R = VisualRoot;
@@ -337,6 +378,10 @@ void AHumanCharacter::TryShakeOff()
 	}
 	ShakeReadyTime = Now + 6.f * (1.f - 0.15f * Rage);
 	MulticastShake();
+	if (bNewBody && !bStompPending)
+	{
+		StartAct(HumanAct::Shake, 0, GetActorLocation());
+	}
 	const FVector Axis = GetActorLocation();
 	for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
 	{
@@ -364,6 +409,11 @@ void AHumanCharacter::MulticastShake_Implementation()
 
 void AHumanCharacter::AnimateBody(float DeltaSeconds)
 {
+	if (bNewBody)
+	{
+		PoseBody(DeltaSeconds);
+		return;
+	}
 	const float Now = GetWorld()->GetTimeSeconds();
 	const float Speed = GetVelocity().Size2D();
 	PrevWalkPhase = WalkPhase;
@@ -399,19 +449,46 @@ void AHumanCharacter::ServerGrabOrThrow_Implementation(FVector_NetQuantize Point
 void AHumanCharacter::TrySwat(const FVector& InPoint)
 {
 	const float Now = GetWorld()->GetTimeSeconds();
-	if (!HasAuthority() || bKnockedOut || Now < SwatReadyTime)
+	if (!HasAuthority() || bKnockedOut || Now < SwatReadyTime || IsBodyBusy())
 	{
 		return;
 	}
 	// Out of reach: slap as far as the arm goes.
 	FVector Point = InPoint;
 	const FVector Chest = GetActorLocation() + FVector(0.f, 0.f, 600.f);
-	if (FVector::Dist(Point, Chest) > SwatRange)
+	// The jointed body: a low target gets the bare left hand (he has to crouch for it), anything higher the rolled newspaper.
+	// Both land only where the arm really gets to.
+	const bool bSlap = bNewBody && Point.Z - (GetActorLocation().Z - HalfHeight) < 260.f;
+	float Delay = 0.28f;
+	if (bSlap)
+	{
+		FVector Flat = Point - GetActorLocation();
+		Flat.Z = 0.f;
+		if (Flat.Size() > 1350.f)
+		{
+			Point = FVector(GetActorLocation().X, GetActorLocation().Y, Point.Z) + Flat.GetSafeNormal() * 1350.f;
+		}
+		Delay = HumanAct::SlapHit;
+	}
+	else if (bNewBody)
+	{
+		const FVector Shoulder = GetActorLocation() + FVector(0.f, 0.f, 960.f);
+		if (FVector::Dist(Point, Shoulder) > 2500.f)
+		{
+			Point = Shoulder + (Point - Shoulder).GetSafeNormal() * 2500.f;
+		}
+		Delay = HumanAct::SwatHit;
+	}
+	else if (FVector::Dist(Point, Chest) > SwatRange)
 	{
 		Point = Chest + (Point - Chest).GetSafeNormal() * SwatRange;
 	}
 	SwatReadyTime = Now + 2.6f * (1.f - 0.15f * Rage);
 	MulticastSwat(Point);
+	if (bNewBody)
+	{
+		StartAct(bSlap ? HumanAct::Slap : HumanAct::Swat, 0, Point);
+	}
 	FTimerHandle H;
 	GetWorldTimerManager().SetTimer(H, FTimerDelegate::CreateWeakLambda(this, [this, Point]()
 	{
@@ -436,7 +513,7 @@ void AHumanCharacter::TrySwat(const FVector& InPoint)
 				It->Kick(To.GetSafeNormal() * 500.f + FVector(0.f, 0.f, 300.f), It->GetActorLocation());
 			}
 		}
-	}), 0.28f, false);
+	}), Delay, false);
 }
 
 void AHumanCharacter::GrabOrThrow(const FVector& Point, const FVector& Dir)
@@ -445,20 +522,41 @@ void AHumanCharacter::GrabOrThrow(const FVector& Point, const FVector& Dir)
 	{
 		return;
 	}
+	if (IsBodyBusy() || GetWorldTimerManager().IsTimerActive(GrabTimer) || GetWorldTimerManager().IsTimerActive(ThrowTimer))
+	{
+		return;   // the hand is on its way already
+	}
 	if (Held)
 	{
 		// Throw it: food smashes when it lands hard (and bowls ants over).
 		AKitchenLoot* L = Held;
-		Held = nullptr;
-		L->Throw(Dir.GetSafeNormal() * 2600.f + FVector(0.f, 0.f, 300.f));
+		const FVector V = Dir.GetSafeNormal() * 2600.f + FVector(0.f, 0.f, 300.f);
+		if (!bNewBody)
+		{
+			Held = nullptr;
+			L->Throw(V);
+			return;
+		}
+		// The arm goes back, whips forward and lets go.
+		StartAct(HumanAct::Throw, 0, GetActorLocation() + FVector(0.f, 0.f, 900.f) + Dir.GetSafeNormal() * 3000.f);
+		GetWorldTimerManager().SetTimer(ThrowTimer, FTimerDelegate::CreateWeakLambda(this, [this, V]()
+		{
+			AKitchenLoot* Mine = Held;
+			Held = nullptr;
+			if (IsValid(Mine) && Mine->bHeld)
+			{
+				Mine->Throw(V);
+			}
+		}), HumanAct::ThrowRelease, false);
 		return;
 	}
 	AKitchenLoot* Best = nullptr;
 	float BestD = 700.f;
+	const float MaxFlat = bNewBody ? 1700.f : 2600.f;   // the jointed body only takes what the hand can get to
 	for (TActorIterator<AKitchenLoot> It(GetWorld()); It; ++It)
 	{
 		AKitchenLoot* L = *It;
-		if (!L || L->bIsGear || L->bHeld || FVector::Dist2D(L->GetActorLocation(), GetActorLocation()) > 2600.f)
+		if (!L || L->bIsGear || L->bHeld || FVector::Dist2D(L->GetActorLocation(), GetActorLocation()) > MaxFlat)
 		{
 			continue;
 		}
@@ -469,11 +567,101 @@ void AHumanCharacter::GrabOrThrow(const FVector& Point, const FVector& Dir)
 			Best = L;
 		}
 	}
-	if (Best)
+	if (Best && !bNewBody)
 	{
 		Held = Best;
 		Best->PickUpBy(VisualRoot, FVector(700.f, 420.f, 500.f));
 	}
+	else if (Best)
+	{
+		// The left hand goes to the food; it is his (and leaves the ants' jaws) the moment the fingers close on it.
+		Held = Best;
+		StartAct(HumanAct::Grab, 0, Best->GetActorLocation());
+		GetWorldTimerManager().SetTimer(GrabTimer, FTimerDelegate::CreateWeakLambda(this, [this]()
+		{
+			AKitchenLoot* L = Held;
+			if (!IsValid(L) || L->bHeld || bKnockedOut)
+			{
+				Held = nullptr;
+				return;
+			}
+			const float Rad = FMath::Clamp((float)L->GetSimpleCollisionRadius(), 10.f, 260.f);
+			L->PickUpBy(Segs[HumanSeg::HandL], FVector(0.f, 30.f + Rad * 0.8f, -150.f) / HumanBody::Scale);   // on the open palm
+		}), HumanAct::GrabGrip, false);
+	}
+}
+
+uint8 AHumanCharacter::GetLastStompLeg() const
+{
+	if (bNewBody && (Act.Kind == HumanAct::Slap || Act.Kind == HumanAct::Swat) && ActTime() < 1.f)
+	{
+		return Act.Kind == HumanAct::Slap ? 2 : 3;
+	}
+	return PendingLeg;
+}
+
+bool AHumanCharacter::IsBodyBusy() const
+{
+	if (!bNewBody)
+	{
+		return false;
+	}
+	const float T = ActTime();
+	if (T < 0.f)
+	{
+		return false;
+	}
+	switch (Act.Kind)
+	{
+	case HumanAct::Stomp: return T < HumanAct::StompHit;
+	case HumanAct::Swat: return T < HumanAct::SwatHit;
+	case HumanAct::Slap: return T < HumanAct::SlapHit + 0.3f;
+	case HumanAct::Grab: return T < HumanAct::GrabGrip + 0.1f;
+	case HumanAct::Throw: return T < HumanAct::ThrowRelease + 0.05f;
+	default: return false;
+	}
+}
+
+bool AHumanCharacter::IsRooted() const
+{
+	if (!bNewBody || (Act.Kind != HumanAct::Slap && Act.Kind != HumanAct::Grab && Act.Kind != HumanAct::Reach))
+	{
+		return false;
+	}
+	const float T = ActTime();
+	return T >= 0.f && T < (Act.Kind == HumanAct::Slap ? HumanAct::SlapHit + 0.7f : 0.8f);
+}
+
+void AHumanCharacter::StopPeer()
+{
+	if (HasAuthority() && Act.Kind == HumanAct::Peer)
+	{
+		StartAct(HumanAct::None, 0, GetActorLocation());
+	}
+}
+
+void AHumanCharacter::DevAct(const FString& What, const FVector& Target)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+	StompReadyTime = SwatReadyTime = ShakeReadyTime = 0.f;
+	const FVector Me = GetActorLocation();
+	if (What == TEXT("stomp0") || What == TEXT("stomp1")) { TryStomp(What.EndsWith(TEXT("1")) ? 1 : 0); }
+	else if (What == TEXT("swat")) { TrySwat(Target); }
+	else if (What == TEXT("grab")) { GrabOrThrow(Target, GetActorForwardVector()); }
+	else if (What == TEXT("throw")) { GrabOrThrow(Target, (Target - Me).GetSafeNormal2D() + FVector(0.f, 0.f, 0.3f)); }
+	else if (What == TEXT("reach")) { PlayReach(Target); }
+	else if (What == TEXT("peer")) { PlayPeer(Target, 6.f); }
+	else if (What == TEXT("shake")) { TryShakeOff(); }
+	else if (What == TEXT("spray1")) { SprayFuel = 100.f; SetSpraying(true); }
+	else if (What == TEXT("spray0")) { SetSpraying(false); }
+	else if (What == TEXT("stun0") || What == TEXT("stun1")) { NextStunTime = 0.f; Stun(6.f, nullptr, TEXT("dev"), What.EndsWith(TEXT("1")) ? 1 : 0); }
+	else if (What == TEXT("ko")) { KnockOut(nullptr); }
+	else if (What.StartsWith(TEXT("rage"))) { SetRage((uint8)FCString::Atoi(*What.RightChop(4))); }
+	else { UE_LOG(LogTemp, Warning, TEXT("ANTHUMAN dev: unknown action %s"), *What); }
+	UE_LOG(LogTemp, Display, TEXT("ANTHUMAN dev %s -> %s"), *What, *DevDescribe());
 }
 
 void AHumanCharacter::MulticastSwat_Implementation(FVector_NetQuantize Point)
@@ -484,7 +672,7 @@ void AHumanCharacter::MulticastSwat_Implementation(FVector_NetQuantize Point)
 
 void AHumanCharacter::MoveForward(float Value)
 {
-	if (Controller && !FMath::IsNearlyZero(Value))
+	if (Controller && !FMath::IsNearlyZero(Value) && !IsRooted())   // down on the floor with a hand out: he gets up first
 	{
 		const FRotator Yaw(0.f, Controller->GetControlRotation().Yaw, 0.f);
 		AddMovementInput(FRotationMatrix(Yaw).GetUnitAxis(EAxis::X), Value);
@@ -493,7 +681,7 @@ void AHumanCharacter::MoveForward(float Value)
 
 void AHumanCharacter::MoveRight(float Value)
 {
-	if (Controller && !FMath::IsNearlyZero(Value))
+	if (Controller && !FMath::IsNearlyZero(Value) && !IsRooted())
 	{
 		const FRotator Yaw(0.f, Controller->GetControlRotation().Yaw, 0.f);
 		AddMovementInput(FRotationMatrix(Yaw).GetUnitAxis(EAxis::Y), Value);
@@ -516,7 +704,7 @@ void AHumanCharacter::ServerSetSpray_Implementation(bool bOn) { SetSpraying(bOn)
 
 void AHumanCharacter::TryStomp(int32 Leg)
 {
-	if (!HasAuthority() || bKnockedOut || bStompPending || bStunned)
+	if (!HasAuthority() || bKnockedOut || bStompPending || bStunned || IsBodyBusy())
 	{
 		return;
 	}
@@ -531,6 +719,10 @@ void AHumanCharacter::TryStomp(int32 Leg)
 	StompImpactTime = Now + 0.55f;
 	StompReadyTime = Now + 1.05f * (1.f - 0.18f * Rage);
 	MulticastStomp(PendingLeg);
+	if (bNewBody)
+	{
+		StartAct(HumanAct::Stomp, PendingLeg, GetStompPoint(PendingLeg));
+	}
 }
 
 void AHumanCharacter::MulticastStomp_Implementation(uint8 Leg)
@@ -604,6 +796,10 @@ void AHumanCharacter::SetSpraying(bool bOn)
 
 FVector AHumanCharacter::GetSprayOrigin() const
 {
+	if (bNewBody)
+	{
+		return BodyFrame().TransformPosition(SprayNozzleBody());   // the nozzle of the can in the outstretched right hand
+	}
 	return GetActorTransform().TransformPosition(FVector(1080.f, 470.f, 810.f));
 }
 
@@ -708,6 +904,7 @@ void AHumanCharacter::ResetHuman(const FVector& Location)
 	bKnockedOut = false;
 	bStunned = false;
 	NextStunTime = 0.f;
+	Act = FHumanActState();
 	OnRep_KnockedOut();
 	SetActorLocation(Location, false, nullptr, ETeleportType::TeleportPhysics);
 }
@@ -775,7 +972,7 @@ void AHumanCharacter::Tick(float DeltaSeconds)
 		}
 	}
 
-	if (HasAuthority() && !IsPlayerControlled() && !bKnockedOut)
+	if (HasAuthority() && !IsPlayerControlled() && !bKnockedOut && !bDevPuppet)
 	{
 		// AI: ants crawling up the legs get shaken off after a while (sooner the more there are).
 		const int32 N = CountClimbers();
@@ -787,12 +984,35 @@ void AHumanCharacter::Tick(float DeltaSeconds)
 		}
 	}
 
+	if (bDevPuppet && HasAuthority() && !DevWalk.IsZero())
+	{
+		// Dev: the puppet walks to a point (screenshots of the stride).
+		FVector To = DevWalk - GetActorLocation();
+		To.Z = 0.f;
+		if (To.Size() > 120.f)
+		{
+			AddMovementInput(To.GetSafeNormal(), DevWalkScale);
+			const FRotator Face = FMath::RInterpTo(GetActorRotation(), FRotator(0.f, (float)To.Rotation().Yaw, 0.f), DeltaSeconds, 3.5f);
+			SetActorRotation(Face);
+			if (Controller) { Controller->SetControlRotation(Face); }
+		}
+		else
+		{
+			DevWalk = FVector::ZeroVector;
+		}
+	}
+
 	AnimateBody(DeltaSeconds);
 	UpdateVisuals(DeltaSeconds);
 }
 
 void AHumanCharacter::UpdateVisuals(float DeltaSeconds)
 {
+	if (bNewBody)
+	{
+		BodyEffects(DeltaSeconds);   // footfalls come from the feet themselves (OnFootfall)
+		return;
+	}
 	if (GetNetMode() == NM_DedicatedServer || LegPivots.Num() < 2 || ArmPivots.Num() < 2)
 	{
 		return;

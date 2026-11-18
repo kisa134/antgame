@@ -1,6 +1,7 @@
 # Imports the Blender-made level art into the project as static meshes:
 #   SourceArt/Blender/kitchen/*.fbx -> /Game/Kitchen/<Name>/<Name>
 #   SourceArt/Blender/living/*.fbx  -> /Game/Living/<Name>/<Name>
+#   SourceArt/Blender/human/*.fbx   -> /Game/Human/<Name>/<Name>   (run through Tools/import_human.py)
 # One mesh per FBX (combined), material SLOT NAMES are kept (the game maps slot name -> look in code),
 # no materials / textures are imported, no Nanite, no lightmap UVs.
 # Collision: furniture and everything ants crawl on or into uses its own triangles
@@ -17,6 +18,7 @@ PROJ = unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_dir())
 SETS = [
     ("kitchen", os.path.join(PROJ, "SourceArt", "Blender", "kitchen"), "/Game/Kitchen", "kitchen_manifest.json"),
     ("living", os.path.join(PROJ, "SourceArt", "Blender", "living"), "/Game/Living", "living_manifest.json"),
+    ("human", os.path.join(PROJ, "SourceArt", "Blender", "human"), "/Game/Human", "human_manifest.json"),   # the Human's segments (Tools/import_human.py)
 ]
 EAL = unreal.EditorAssetLibrary
 AT = unreal.AssetToolsHelpers.get_asset_tools()
@@ -146,6 +148,6 @@ for set_name, src, dst, manifest_name in SETS:
     log("SET %s: imported %d of %d FBX, failed %d, manifest pieces without a mesh: %d %s" % (
         set_name, ok, len(files), len(bad), len(missing), ",".join(missing[:20])))
 
-with open(os.path.join(PROJ, "Saved", "blender_art_report.json"), "w") as f:
+with open(os.path.join(PROJ, "Saved", os.environ.get("ANT_ART_REPORT", "blender_art_report.json")), "w") as f:
     json.dump(report, f, indent=1)
 log("DONE %d meshes" % len(report))

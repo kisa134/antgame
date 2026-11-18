@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -60,6 +60,8 @@ protected:
 	virtual void PhysCustom(float DeltaTime, int32 Iterations) override;
 	/** Riding a moving body: also turn the surface normal with it. */
 	virtual void UpdateBasedMovement(float DeltaSeconds) override;
+	/** Dev (-AntRideLog): what stopped the ant from travelling with the thing it rides. */
+	virtual void OnUnableToFollowBaseMove(const FVector& DeltaPosition, const FVector& OldLocation, const FHitResult& MoveOnBaseHit) override;
 
 private:
 	void PhysCrawl(float DeltaTime);

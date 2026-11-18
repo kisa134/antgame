@@ -171,7 +171,7 @@ void AKitchenLoot::OnBodyHit(UPrimitiveComponent* HitComp, AActor* Other, UPrimi
 			// Only what ants let fall on him from above counts: not food his own stomp kicked up, not what he threw.
 			if (By && Now - LastKickTime > 4.f && Speed > 600.f && LastVelocity.Z < -400.f)
 			{
-				H->Stun(2.5f, By, LootName);
+				H->Stun(2.5f, By, LootName, Hit.ImpactPoint.Z < H->GetActorLocation().Z - 900.f ? 1 : 0);   // low: it landed on his foot
 			}
 		}
 		else if (ImpactSpeed > 600.f)

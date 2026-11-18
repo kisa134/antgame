@@ -22,6 +22,12 @@
 #include "TimerManager.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/DamageType.h"
+#include "GameFramework/HUD.h"
+#include "Camera/CameraActor.h"
+#include "Camera/CameraComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "Components/CapsuleComponent.h"
+#include "AntMovementComponent.h"
 
 namespace
 {
@@ -432,7 +438,8 @@ void AAntKitchenGameMode::OnEnemyTorn(AAntCharacter* Victim, AAntCharacter* A, A
 void AAntKitchenGameMode::OnHumanStunned(AAntCharacter* By, const FString& What)
 {
 	AAntGameState* GS = GetGameState<AAntGameState>();
-	Broadcast(FString::Printf(TEXT("БАМ! «%s» — Человеку прямо по голове. Он оглушён!"), *What), RunGold);
+	Broadcast(Human && Human->StunKind == 1 ? FString::Printf(TEXT("БАМ! «%s» — Человеку прямо по ноге. Он скачет на одной!"), *What)
+		: FString::Printf(TEXT("БАМ! «%s» — Человеку прямо по голове. Он оглушён!"), *What), RunGold);
 	if (Human && GS && Human->Rage < 3)
 	{
 		Human->SetRage(Human->Rage + 1);
@@ -1450,6 +1457,126 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 		Me->ApplyTeleport(Home + FVector(12.f, 0.f, 4.f));
 	}
 	else if (Op == TEXT("legs") && Me) { Me->TearLegOff(Me->GetActorLocation() + FVector(10.f, 10.f, 0.f)); }
+	// ---- the Human's jointed body: a puppet for looking at one pose at a time
+	else if (Op == TEXT("hpuppet") && Human)
+	{
+		// hpuppet 1|0: the AI lets go of him (he stands where he is put and does what hact says).
+		Human->bDevPuppet = Num(1, 1.f) > 0.5f;
+		Human->DevWalk = FVector::ZeroVector;
+		Human->SetSpraying(false);
+	}
+	else if (Op == TEXT("hto") && Human)
+	{
+		// hto x y yaw
+		const FRotator Rot(0.f, Num(3), 0.f);
+		Human->SetActorLocationAndRotation(FVector(Num(1), Num(2), Human->GetActorLocation().Z), Rot, false, nullptr, ETeleportType::TeleportPhysics);
+		if (AController* HC = Human->GetController()) { HC->SetControlRotation(Rot); }
+		Human->DevWalk = FVector::ZeroVector;
+	}
+	else if (Op == TEXT("hwalk") && Human) { Human->DevWalk = FVector(Num(1), Num(2), 0.f); Human->DevWalkScale = Num(3, 1.f); }   // hwalk x y [input 0..1]
+	else if (Op == TEXT("hact") && Human && A.Num() >= 2)
+	{
+		// hact stomp0|stomp1|swat|grab|throw|reach|peer|shake|spray1|spray0|stun0|stun1|ko|rageN [x y z]; without a point: at the player's ant.
+		Human->DevAct(A[1].ToLower(), A.Num() >= 5 ? Vec(2) : (Me ? Me->GetActorLocation() : Human->GetStompPoint(0)));
+	}
+	else if (Op == TEXT("hfreeze") && Human) { Human->DevFreezeAt = Num(1, -1.f); }   // hold the action at this second from its start; -1 lets go
+	else if (Op == TEXT("hinfo") && Human) { UE_LOG(LogTemp, Display, TEXT("ANTHUMAN %s"), *Human->DevDescribe()); }
+	else if (Op == TEXT("hfood") && Human)
+	{
+		// hfood [dx dy]: puts the nearest loose food on the floor in front of the Human (default 850 ahead, 250 to his left), for hact grab.
+		AKitchenLoot* Best = nullptr;
+		float BestD = 1.e9f;
+		for (TActorIterator<AKitchenLoot> It(W); It; ++It)
+		{
+			const float D = (float)FVector::Dist(It->GetActorLocation(), Human->GetActorLocation());
+			if (!It->bIsGear && !It->bHeld && !It->IsCarried() && !It->bTrophy && It->Weight <= 6 && D < BestD) { BestD = D; Best = *It; }
+		}
+		if (Best)
+		{
+			const FVector At = Human->GetActorLocation() + Human->GetActorForwardVector() * Num(1, 850.f) + Human->GetActorRightVector() * Num(2, -250.f)
+				- FVector(0.f, 0.f, Human->GetSimpleCollisionHalfHeight() - 40.f);
+			Best->SetActorLocation(At, false, nullptr, ETeleportType::TeleportPhysics);
+			UE_LOG(LogTemp, Display, TEXT("ANTHUMAN dev food «%s» put at %s"), *Best->LootName, *At.ToCompactString());
+		}
+	}
+	else if (Op == TEXT("hplay") && PC) { ToggleHuman(Cast<AAntPlayerController>(PC)); }   // the player takes the Human (again: gives him back)
+	else if (Op == TEXT("hud") && PC && PC->GetHUD()) { PC->GetHUD()->bShowHUD = Num(1, 0.f) > 0.5f; }
+	else if (Op == TEXT("shotc") && PC) { PC->ConsoleCommand(TEXT("Shot"), false); }   // a screenshot without the Slate UI
+	else if ((Op == TEXT("cam") || Op == TEXT("camw")) && PC)
+	{
+		// cam off | cam dx dy dz lookZ [fov]: from a point of the Human's frame (dx ahead of him, dy to his right, dz above the floor) at him, lookZ above the floor.
+		// camw x y z tx ty tz [fov]: from a world point at a world point.
+		static TWeakObjectPtr<ACameraActor> DevCam;
+		if (A.Num() >= 2 && A[1] == TEXT("off"))
+		{
+			PC->SetViewTargetWithBlend(PC->GetPawn(), 0.f);
+		}
+		else
+		{
+			FVector From = Vec(1), To = Vec(4);
+			float Fov = Num(7, 70.f);
+			if (Op == TEXT("cam") && Human)
+			{
+				const FTransform B(FRotator(0.f, Human->GetActorRotation().Yaw, 0.f), Human->GetActorLocation() - FVector(0.f, 0.f, Human->GetSimpleCollisionHalfHeight()));
+				From = B.TransformPosition(Vec(1));
+				To = B.TransformPosition(FVector(0.f, 0.f, Num(4, 1700.f)));
+				Fov = Num(5, 70.f);
+			}
+			if (!DevCam.IsValid())
+			{
+				DevCam = W->SpawnActor<ACameraActor>();
+			}
+			if (ACameraActor* Cam = DevCam.Get())
+			{
+				Cam->SetActorLocationAndRotation(From, (To - From).Rotation());
+				Cam->GetCameraComponent()->SetFieldOfView(Fov);
+				Cam->GetCameraComponent()->bConstrainAspectRatio = false;
+				PC->SetViewTargetWithBlend(Cam, 0.f);
+			}
+		}
+	}
+	else if (Op == TEXT("ride") && Human && Me)
+	{
+		// ride seg [height]: glues the player's ant to the front of a segment of the Human (HumanSeg index; height along the limb, uu below its joint).
+		const int32 Seg = (int32)Num(1, (float)HumanSeg::ShinL);
+		if (UStaticMeshComponent* C = Human->GetSegment(Seg))
+		{
+			// ride seg down 1: dropped onto the segment from above instead (at `down` uu ahead of its joint): lands on it like on any floor.
+			const FTransform TM = C->GetComponentTransform();
+			const bool bDrop = Num(3) > 0.5f;
+			const float Down = Num(2, 400.f) / HumanBody::Scale;
+			FHitResult Hit;
+			const FVector Out = bDrop ? TM.TransformPosition(FVector(Down, 0.f, 60.f)) : TM.TransformPosition(FVector(60.f, 0.f, -Down));
+			const FVector In = bDrop ? TM.TransformPosition(FVector(Down, 0.f, -30.f)) : TM.TransformPosition(FVector(0.f, 0.f, -Down));
+			if (C->LineTraceComponent(Hit, Out, In, FCollisionQueryParams(SCENE_QUERY_STAT(DevRide), true)))
+			{
+				const float Rad = Me->GetCapsuleComponent()->GetScaledCapsuleRadius();
+				Me->ApplyTeleport(Hit.ImpactPoint + Hit.ImpactNormal * (Rad + (bDrop ? 12.f : 0.6f)));
+				UAntMovementComponent* Move = Me->GetAntMovement();
+				if (Move && !bDrop) { Move->StartCrawl(Hit.ImpactNormal); }
+				// What the ant's own "is there a surface under me" trace sees from here.
+				FHitResult G;
+				const FVector L = Me->GetActorLocation(), N = Hit.ImpactNormal;
+				const bool bSees = W->LineTraceSingleByObjectType(G, L + N * 2.f, L - N * (Rad + 28.f * AntKit::AntShrink), UAntMovementComponent::SurfaceObjects(), FCollisionQueryParams(SCENE_QUERY_STAT(DevRide2), false, Me));
+				UE_LOG(LogTemp, Display, TEXT("ANTRIDE put on %s at %s, normal %s, radius %.1f, noclimb=%d, own trace sees %s at %.1f"), *C->GetName(), *Hit.ImpactPoint.ToCompactString(), *Hit.ImpactNormal.ToCompactString(),
+					Rad, Move && Move->bNoClimb ? 1 : 0, bSees && G.GetComponent() ? *G.GetComponent()->GetName() : TEXT("NOTHING"), bSees ? G.Distance : -1.f);
+			}
+			else
+			{
+				UE_LOG(LogTemp, Warning, TEXT("ANTRIDE no surface found on %s"), *C->GetName());
+			}
+		}
+	}
+	else if (Op == TEXT("rideinfo") && Me)
+	{
+		const UPrimitiveComponent* Base = Me->GetAntMovement() ? Me->GetAntMovement()->GetRiddenComponent() : nullptr;
+		const FVector Rel = Base ? Base->GetComponentTransform().InverseTransformPosition(Me->GetActorLocation()) * HumanBody::Scale : FVector::ZeroVector;
+		const float Sole = Human ? (float)FMath::Min(FVector::Dist(Me->GetActorLocation(), Human->GetSoleLocation(0)), FVector::Dist(Me->GetActorLocation(), Human->GetSoleLocation(1))) : -1.f;
+		UE_LOG(LogTemp, Display, TEXT("ANTRIDE base=%s onHuman=%d rel=(%.0f,%.0f,%.0f) ant=%s crawling=%d dead=%d stuck=%d toSole=%.0f humanSpeed=%.0f human=%s"),
+			Base ? *Base->GetName() : TEXT("-"), Me->GetRiddenHuman() ? 1 : 0, Rel.X, Rel.Y, Rel.Z, *Me->GetActorLocation().ToCompactString(),
+			Me->GetAntMovement() && Me->GetAntMovement()->IsCrawling() ? 1 : 0, Me->bDead ? 1 : 0, Me->StuckTo ? 1 : 0, Sole,
+			Human ? Human->GetVelocity().Size2D() : 0.f, Human ? *Human->GetActorLocation().ToCompactString() : TEXT("-"));
+	}
 	else if (Op == TEXT("pos"))
 	{
 		UE_LOG(LogTemp, Display, TEXT("ANTDEV pos me=%s human=%s goal=%d «%s» stage=%d score=%d/%d larvae=%d greed=%.1f"), Me ? *Me->GetActorLocation().ToCompactString() : TEXT("-"),

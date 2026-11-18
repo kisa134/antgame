@@ -95,6 +95,10 @@ void AHumanAIController::Tick(float DeltaSeconds)
 	{
 		return;
 	}
+	if (H->bDevPuppet)
+	{
+		return;   // dev: a puppet for screenshots
+	}
 	bMovedThisTick = false;
 	const FVector MyLoc = H->GetActorLocation();
 	const float FloorZ = MyLoc.Z - H->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
@@ -115,6 +119,13 @@ void AHumanAIController::Tick(float DeltaSeconds)
 		// Something heavy landed on him: he just stands there and reels.
 		H->SetSpraying(false);
 		DesiredRotation.Pitch = 20.f;
+		return;
+	}
+
+	if (H->IsRooted())
+	{
+		// Down on the floor with a hand out (a slap, a grab, a handle): he does not walk until he is up again.
+		H->SetSpraying(false);
 		return;
 	}
 
@@ -139,6 +150,29 @@ void AHumanAIController::Tick(float DeltaSeconds)
 		T = nullptr;
 		Target = nullptr;
 	}
+	if (T)
+	{
+		LastTarget = T;
+		LastSeen = T->GetActorLocation();
+		LastSeenTime = TimeNow;
+		if (PeerEnd > 0.f || !PeerLoc.IsZero())
+		{
+			H->StopPeer();   // there it is!
+			PeerLoc = FVector::ZeroVector;
+			PeerEnd = 0.f;
+		}
+	}
+	else if (H->HasJointedBody() && PeerLoc.IsZero() && TimeNow >= NextPeerTime && TimeNow - LastSeenTime < 1.5f)
+	{
+		// It was right there a moment ago and it is still alive somewhere he cannot see: under the furniture, most likely.
+		const AAntCharacter* Lost = LastTarget.Get();
+		if (Lost && !Lost->bDead && !Lost->IsInNest() && FVector::Dist2D(LastSeen, MyLoc) < 3500.f && LastSeen.Z - FloorZ < 700.f)
+		{
+			PeerLoc = LastSeen;
+			PeerGiveUp = TimeNow + 9.f;
+			PeerEnd = 0.f;
+		}
+	}
 
 	// What he does instead of hunting: checking a noise, shutting a door left open. An ant carrying loot right
 	// in front of him is the one thing he will not walk away from.
@@ -150,6 +184,7 @@ void AHumanAIController::Tick(float DeltaSeconds)
 		if (!bInvestigating && GM->BestNoise(MyLoc, Noise))
 		{
 			bInvestigating = true;
+			bNoiseReached = false;
 			LookUntil = 0.f;
 			NoiseGiveUp = TimeNow + 25.f;
 			DoorTarget = nullptr;
@@ -177,6 +212,11 @@ void AHumanAIController::Tick(float DeltaSeconds)
 				GM->SetHumanGoal(AntHumanGoal::Look, FString::Printf(TEXT("осматривается: %s"), AntNoise::Name(Noise.Kind)), Noise.Loc);
 				DesiredRotation.Yaw = FRotator::NormalizeAxis((float)DesiredRotation.Yaw + 75.f * DeltaSeconds);
 				DesiredRotation.Pitch = -30.f;
+				if (!bNoiseReached && TimeNow >= LookUntil - 0.45f && Noise.Source.IsValid() && FVector::Dist2D(Noise.Loc, MyLoc) < 1700.f)
+				{
+					bNoiseReached = true;
+					H->PlayReach(Noise.Loc);   // the hand goes to the tap / the button he is about to switch off
+				}
 				if (TimeNow >= LookUntil)
 				{
 					bInvestigating = false;
@@ -217,19 +257,28 @@ void AHumanAIController::Tick(float DeltaSeconds)
 					if (FVector::Dist2D(DL, MyLoc) > 1300.f && TimeNow < DoorGiveUp)
 					{
 						MoveTowards(H, DL, 0.9f);
+						ReachAt = 0.f;
 					}
-					else
+					else if (H->HasJointedBody() && ReachAt <= 0.f)
+					{
+						// The hand goes out to the door; it shuts when the hand gets there.
+						H->PlayReach(DL);
+						ReachAt = TimeNow + HumanAct::ReachTouch;
+						DesiredRotation.Yaw = (float)(DL - MyLoc).Rotation().Yaw;
+					}
+					else if (TimeNow >= ReachAt)
 					{
 						Door->SetDoorOpen(false);
 						AntSfx::Everyone(this, AntSfx::FridgeDoor, DL, 1.5f);
 						UE_LOG(LogTemp, Display, TEXT("ANTHUMAN shut %s"), *Door->GetName());
 						DoorTarget = nullptr;
+						ReachAt = 0.f;
 					}
 				}
 			}
 		}
 	}
-	if (GM && !bBusy)
+	if (GM && !bBusy && (T || PeerLoc.IsZero()))
 	{
 		if (T)
 		{
@@ -239,6 +288,40 @@ void AHumanAIController::Tick(float DeltaSeconds)
 		{
 			GM->SetHumanGoal(AntHumanGoal::Idle, FString(), MyLoc);
 		}
+	}
+
+	if (!bBusy && !T && !PeerLoc.IsZero())
+	{
+		// Peering under the furniture where the ant went.
+		bBusy = true;
+		H->SetSpraying(false);
+		if (GM)
+		{
+			GM->SetHumanGoal(AntHumanGoal::Look, TEXT("заглядывает под мебель"), PeerLoc);
+		}
+		const FVector To = PeerLoc - MyLoc;
+		DesiredRotation.Yaw = (float)To.Rotation().Yaw;
+		DesiredRotation.Pitch = -40.f;
+		if (PeerEnd <= 0.f && To.Size2D() > 1150.f && TimeNow < PeerGiveUp)
+		{
+			MoveTowards(H, PeerLoc, 0.8f);
+		}
+		else if (PeerEnd <= 0.f)
+		{
+			H->PlayPeer(PeerLoc, 3.2f);
+			PeerEnd = TimeNow + 3.2f;
+			UE_LOG(LogTemp, Display, TEXT("ANTHUMAN peers under the furniture at %s"), *PeerLoc.ToCompactString());
+		}
+		else if (TimeNow >= PeerEnd)
+		{
+			PeerLoc = FVector::ZeroVector;
+			PeerEnd = 0.f;
+			NextPeerTime = TimeNow + 14.f;
+		}
+	}
+	else if (bBusy && !PeerLoc.IsZero() && PeerEnd <= 0.f)
+	{
+		PeerLoc = FVector::ZeroVector;   // something louder came up
 	}
 
 	if (bBusy)
@@ -272,6 +355,12 @@ void AHumanAIController::Tick(float DeltaSeconds)
 			{
 				const float Side = FVector::DotProduct(To, H->GetActorRightVector());
 				H->TryStomp(Side < 0.f ? 0 : 1);
+			}
+			else if (H->HasJointedBody() && Dist >= 760.f && Dist < 1250.f && YawErr < 35.f && TimeNow >= H->SwatReadyTime && TimeNow >= NextSlapTime)
+			{
+				// Just out of the slipper's reach: he bends down and slaps the floor with his bare hand (not more than once in 6 s).
+				NextSlapTime = TimeNow + 6.f;
+				H->TrySwat(TL);
 			}
 		}
 		else
@@ -348,7 +437,7 @@ void AHumanAIController::Tick(float DeltaSeconds)
 			for (TActorIterator<AKitchenLoot> It(GetWorld()); It; ++It)
 			{
 				AKitchenLoot* L = *It;
-				if (L && L->IsCarried() && L->Value >= 50 && FVector::Dist2D(L->GetActorLocation(), MyLoc) < 1800.f && L->GetActorLocation().Z < 2000.f)
+				if (L && L->IsCarried() && L->Value >= 50 && FVector::Dist2D(L->GetActorLocation(), MyLoc) < (H->HasJointedBody() ? 1500.f : 1800.f) && L->GetActorLocation().Z < 2000.f)
 				{
 					H->GrabOrThrow(L->GetActorLocation(), FVector::UpVector);
 					if (H->Held)

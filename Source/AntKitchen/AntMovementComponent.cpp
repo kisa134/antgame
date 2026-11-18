@@ -8,6 +8,8 @@
 #include "PhysicsEngine/BodySetup.h"
 #include "Engine/StaticMesh.h"
 #include "Components/StaticMeshComponent.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 
 UAntMovementComponent::UAntMovementComponent()
 {
@@ -144,6 +146,26 @@ void UAntMovementComponent::UpdateBasedMovement(float DeltaSeconds)
 		}
 	}
 	Super::UpdateBasedMovement(DeltaSeconds);
+}
+
+namespace
+{
+	bool RideLog()
+	{
+		static const bool bOn = FParse::Param(FCommandLine::Get(), TEXT("AntRideLog"));
+		return bOn;
+	}
+}
+
+void UAntMovementComponent::OnUnableToFollowBaseMove(const FVector& DeltaPosition, const FVector& OldLocation, const FHitResult& MoveOnBaseHit)
+{
+	Super::OnUnableToFollowBaseMove(DeltaPosition, OldLocation, MoveOnBaseHit);
+	if (RideLog() && CharacterOwner && CharacterOwner->IsPlayerControlled())
+	{
+		UE_LOG(LogTemp, Display, TEXT("ANTRIDE could not follow %s by %.1f: blocked by %s of %s (start penetrating %d)"),
+			CharacterOwner->GetMovementBase() ? *CharacterOwner->GetMovementBase()->GetName() : TEXT("-"), DeltaPosition.Size(),
+			MoveOnBaseHit.GetComponent() ? *MoveOnBaseHit.GetComponent()->GetName() : TEXT("?"), MoveOnBaseHit.GetActor() ? *MoveOnBaseHit.GetActor()->GetName() : TEXT("?"), MoveOnBaseHit.bStartPenetrating ? 1 : 0);
+	}
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -352,6 +374,10 @@ void UAntMovementComponent::PhysCrawl(float DeltaTime)
 		}
 		if (!bWrapped)
 		{
+			if (RideLog() && CharacterOwner && CharacterOwner->IsPlayerControlled() && GetRiddenComponent())
+			{
+				UE_LOG(LogTemp, Display, TEXT("ANTRIDE lost the surface of %s (normal %s, speed %.0f)"), *GetRiddenComponent()->GetName(), *N.ToCompactString(), Velocity.Size());
+			}
 			SurfaceNormal = N;
 			Detach(N * 40.f * AntKit::JumpK);
 			return;

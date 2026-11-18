@@ -1509,7 +1509,7 @@ void AKitchenProp::OnPropHit(UPrimitiveComponent* HitComp, AActor* Other, UPrimi
 		// Only what an ant pushed over counts (he kicks things around himself all the time).
 		if ((By || bDevPushed) && Speed > 600.f && LastVelocity.Z < -400.f)
 		{
-			H->Stun(2.5f, By, What);
+			H->Stun(2.5f, By, What, Hit.ImpactPoint.Z < H->GetActorLocation().Z - 900.f ? 1 : 0);   // low: it landed on his foot
 		}
 		return;
 	}
