@@ -1,4 +1,5 @@
 ﻿#include "HumanAIController.h"
+#include "AntSquad.h"
 #include "HumanCharacter.h"
 #include "AntCharacter.h"
 #include "KitchenBuilder.h"
@@ -338,6 +339,7 @@ void AHumanAIController::Tick(float DeltaSeconds)
 					}
 					else if (TimeNow >= ReachAt)
 					{
+						if (Door->IsHeldOpen()) { AntSquad::OnDoorSlammed(Door); }   // a squad holds it: he slams it on them (it stays open while they stand)
 						Door->SetDoorOpen(false);
 						AntSfx::Everyone(this, AntSfx::FridgeDoor, DL, 1.5f);
 						UE_LOG(LogTemp, Display, TEXT("ANTHUMAN shut %s"), *Door->GetName());

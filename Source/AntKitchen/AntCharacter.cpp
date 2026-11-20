@@ -7,6 +7,8 @@
 #include "KitchenInteractables.h"
 #include "AntSwarm.h"
 #include "AntKitchenGameMode.h"
+#include "AntRaid.h"
+#include "AntSquad.h"
 #include "AntPlayerController.h"
 #include "AntPlayerState.h"
 #include "Camera/CameraComponent.h"
@@ -1747,6 +1749,10 @@ void AAntCharacter::ServerCommand_Implementation(uint8 Cmd, FVector_NetQuantize 
 	{
 		return;
 	}
+	if (AntSquad::HandleCommand(this, Cmd, Point))
+	{
+		return;   // a raid: F / R / Z / X / C command the squad (AntSquad.cpp)
+	}
 	AAntArmy* Army = AAntArmy::FindFor(this);
 	if (Cmd == 0)
 	{
@@ -1997,6 +2003,10 @@ bool AAntCharacter::IsInNest() const
 	if (Team >= 2)
 	{
 		return false;   // monsters have no safe place
+	}
+	if (Team == 1 && AAntRaid::HillOpen())
+	{
+		return false;   // a raid: while the stolen cake is in their hill, the hill is no safe place (AntRaid.cpp)
 	}
 	const FVector L = GetActorLocation();
 	// (level v2: the fire ants' nest is a mound 427 high in the yard: standing on it is being home)

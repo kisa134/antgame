@@ -1,5 +1,6 @@
 ﻿#include "AntSwarm.h"
 #include "AntArmy.h"
+#include "AntRaid.h"
 #include "AntCharacter.h"
 #include "AntKitchenGameMode.h"
 #include "KitchenBuilder.h"
@@ -494,6 +495,14 @@ int32 AAntSwarm::CreateStream(const TArray<FVector>& Points, const TArray<FVecto
 	{
 		Why = TEXT("Тропа слишком короткая");
 		return 0;
+	}
+	if (const AAntRaid* Raid = AAntRaid::Get(GetWorld()))
+	{
+		if (Raid->Nest.Tier_(AntUp::Carriers) < 3)
+		{
+			Why = TEXT("Рой пойдёт по тропе, когда в гнезде будет «Натоптанная тропа» (Носильщики III)");
+			return 0;
+		}
 	}
 	const FString TrailOwner = By ? By->GetDisplayName() : FString(TEXT("Колония"));
 	if (CountStreams(TrailOwner) >= MaxStreamsPerPlayer)

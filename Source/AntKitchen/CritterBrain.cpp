@@ -1577,6 +1577,11 @@ void ACritter::DoLick()
 	UE_LOG(LogTemp, Display, TEXT("ANTDOG lick at %s: %s (%s)"), *P.ToCompactString(), *Got->GetDisplayName(), HeldAnt.IsValid() ? TEXT("on the tongue") : TEXT("slobbered"));
 }
 
+void ACritter::BaitWith(AKitchenLoot* Food)
+{
+	if (Food) { LeftFood.Add(Food, GetWorld()->GetTimeSeconds() - 10.f); }
+}
+
 AKitchenLoot* ACritter::FindLeftFood(const FVector& Nose, float Range, float Now) const
 {
 	const UWorld* W = GetWorld();

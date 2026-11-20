@@ -18,6 +18,9 @@ class ANTKITCHEN_API AAntHUD : public AHUD
 
 public:
 	virtual void DrawHUD() override;
+	/** Tests without a window: the nest screen's mouse (0..1 of the screen) and a click, from "-AntDo nest click X Y". */
+	static FVector2D DevClickAt;
+	static int32 DevClickFrames;
 
 private:
 	void Txt(const FString& S, float X, float Y, const FLinearColor& C, UFont* F, float Scale, bool bCenter = false);
@@ -59,6 +62,18 @@ private:
 	void DrawRaid(class AAntRaid* Raid, AAntGameState* GS, APawn* Me);
 	void DrawRaidResults(class AAntRaid* Raid, AAntGameState* GS);
 	void DrawNest(class AAntRaid* Raid, AAntGameState* GS);
+	bool NestHover(float X, float Y, float BW, float BH) const;
+	/** A button of the nest screen. True in the frame it is clicked. Tip: what the bottom line says while the mouse is on it. */
+	bool NestBtn(const FString& Label, float X, float Y, float BW, float BH, bool bEnabled, const FString& Tip = FString(), bool bOn = false, float TextScale = 1.15f);
+	/** Text broken into lines no wider than MaxW. Returns the height it took. */
+	float WrapTxt(const FString& Str, float X, float Y, float MaxW, const FLinearColor& C, UFont* F, float Scale, int32 MaxLines = 8);
+	FVector2D NestMouse = FVector2D::ZeroVector;
+	bool bNestClick = false;
+	FString NestTip;
+	float NestFs = 1.f;
+	float NewColonyArmedAt = -100.f;
+	TArray<TWeakObjectPtr<class AKitchenLoot>> SpecialFinds;
+	float SpecialScanAt = -100.f;
 	uint8 SeenCake = 255;
 	bool bNestUi = false;
 	TWeakObjectPtr<APawn> NestFrozenPawn;
@@ -66,6 +81,8 @@ private:
 	bool bLeaveSent = false;
 	bool bHintCake = false;
 	int32 BeenOutRaid = -1;      // the raid in which this player has already left the nest once
+	uint8 SeenClan = 0;
+	uint8 SeenAmbush = 0;
 
 	/** The shift ("heist run"): quota bar, larvae, what the Human is up to. */
 	void DrawShift(AAntGameState* GS);

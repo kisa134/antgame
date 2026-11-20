@@ -22,6 +22,7 @@
 #include "Engine/PostProcessVolume.h"
 #include "AntFx.h"
 #include "AntRaid.h"
+#include "AntSquad.h"
 #include "EngineUtils.h"
 
 void AAntPlayerController::BeginPlay()
@@ -257,6 +258,10 @@ void AAntPlayerController::SetupInputComponent()
 	InputComponent->BindKey(EKeys::F10, IE_Pressed, this, &AAntPlayerController::AddEnemyBot);
 	InputComponent->BindKey(EKeys::MiddleMouseButton, IE_Pressed, this, &AAntPlayerController::PingPressed);
 	InputComponent->BindKey(EKeys::F1, IE_Pressed, this, &AAntPlayerController::ShowHelp);
+	InputComponent->BindKey(EKeys::Q, IE_Pressed, this, &AAntPlayerController::SquadHaul);
+	InputComponent->BindKey(EKeys::B, IE_Pressed, this, &AAntPlayerController::SquadHold);
+	InputComponent->BindKey(EKeys::Five, IE_Pressed, this, &AAntPlayerController::UseTool0);
+	InputComponent->BindKey(EKeys::Six, IE_Pressed, this, &AAntPlayerController::UseTool1);
 	// The card vote, for players without an ant right now (the ant routes its own 1-3 keys here while a vote is on).
 	InputComponent->BindKey(EKeys::One, IE_Pressed, this, &AAntPlayerController::Vote1);
 	InputComponent->BindKey(EKeys::Two, IE_Pressed, this, &AAntPlayerController::Vote2);
@@ -319,6 +324,53 @@ void AAntPlayerController::ServerVoteCard_Implementation(uint8 Option)
 	if (AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
 	{
 		GM->VoteCard(this, Option);
+	}
+}
+
+FVector AAntPlayerController::CrosshairPoint() const
+{
+	FVector CamLoc;
+	FRotator CamRot;
+	GetPlayerViewPoint(CamLoc, CamRot);
+	FHitResult Hit;
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(AntSquadAim), false, GetPawn());
+	if (GetWorld()->LineTraceSingleByChannel(Hit, CamLoc, CamLoc + CamRot.Vector() * 20000.f, ECC_Visibility, Params))
+	{
+		return Hit.ImpactPoint;
+	}
+	return CamLoc + CamRot.Vector() * 1500.f;
+}
+
+void AAntPlayerController::SquadHaul()
+{
+	if (Cast<AAntCharacter>(GetPawn()) && AAntRaid::Get(GetWorld())) { ServerSquad(AntSquad::Haul, CrosshairPoint()); }
+}
+
+void AAntPlayerController::SquadHold()
+{
+	if (Cast<AAntCharacter>(GetPawn()) && AAntRaid::Get(GetWorld())) { ServerSquad(AntSquad::Hold, CrosshairPoint()); }
+}
+
+void AAntPlayerController::UseTool0()
+{
+	if (Cast<AAntCharacter>(GetPawn()) && AAntRaid::Get(GetWorld())) { ServerSquad(100, CrosshairPoint()); }
+}
+
+void AAntPlayerController::UseTool1()
+{
+	if (Cast<AAntCharacter>(GetPawn()) && AAntRaid::Get(GetWorld())) { ServerSquad(101, CrosshairPoint()); }
+}
+
+void AAntPlayerController::ServerSquad_Implementation(uint8 Order, FVector_NetQuantize Aim)
+{
+	AAntRaid* Raid = AAntRaid::Get(GetWorld());
+	if (Raid && Raid->InRaid() && Order >= 100)
+	{
+		Raid->UseTool(this, Order - 100, Aim);   // a tool out of a pocket travels the same way: it is aimed too
+	}
+	else if (Raid && Raid->InRaid())
+	{
+		AntSquad::Order(Cast<AAntCharacter>(GetPawn()), Order, Aim);
 	}
 }
 

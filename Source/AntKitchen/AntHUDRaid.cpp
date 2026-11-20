@@ -10,6 +10,7 @@
 #include "KitchenLoot.h"
 #include "KitchenArt.h"
 #include "LevelV2.h"
+#include "AntTypes.h"
 #include "Engine/Canvas.h"
 #include "Engine/Engine.h"
 #include "Engine/Font.h"
@@ -293,6 +294,126 @@ void AAntHUD::DrawRaid(AAntRaid* Raid, AAntGameState* GS, APawn* Me)
 			const int32 Metres = FMath::RoundToInt(FVector::Dist(At, Ant->GetActorLocation()) / 1900.f * 10.f);
 			Marker(At, FString::Printf(TEXT("%s  %d.%d м"), Raid->Cake == AntCake::Lying ? TEXT("ТОРТ") : Raid->Cake == AntCake::Clan ? TEXT("ТОРТ У КРАСНЫХ") : TEXT("ТОРТ В ХОЛМЕ"), Metres / 10, Metres % 10),
 				Raid->Cake == AntCake::Lying ? QGold : QFire, true);
+		}
+	}
+
+	// --- My squad: how many are left, what they are doing, the keys ---
+	{
+		const APlayerState* MyPS = PlayerOwner ? PlayerOwner->PlayerState : nullptr;
+		const AAntArmy* Sq = nullptr;
+		for (TActorIterator<AAntArmy> It(GetWorld()); It; ++It)
+		{
+			if (It->bSquad && (It->Commander == Ant || (MyPS && It->OwnerPS == MyPS))) { Sq = *It; break; }
+		}
+		const float SX = 30.f * S, SY = H - 232.f * S;
+		if (Sq && !Ant->bDead)
+		{
+			FString What;
+			FLinearColor C = QGold;
+			if (Sq->bOrphan) { What = TEXT("ждёт у твоего тела: донеси тело в гнездо"); C = QRed; }
+			else if (Sq->Cargo && Sq->bCargoHeld) { What = FString::Printf(TEXT("несут «%s» %s"), *Sq->Cargo->LootName, Sq->bCargoHome ? TEXT("домой сами") : TEXT("рядом с тобой")); C = QGreen; }
+			else if (Sq->Cargo) { What = FString::Printf(TEXT("идут за «%s»"), *Sq->Cargo->LootName); }
+			else if (Sq->Mode == EArmyMode::Attack) { What = TEXT("В АТАКЕ"); C = QFire; }
+			else if (Sq->Mode == EArmyMode::Hold) { What = TEXT("держат место"); }
+			else if (Sq->bForaging) { What = TEXT("вольно: ищут еду"); }
+			else { What = TEXT("за тобой"); }
+			DrawRect(FLinearColor(0.f, 0.f, 0.f, 0.4f), SX - 8.f * S, SY - 6.f * S, 470.f * S, 60.f * S);
+			Txt(FString::Printf(TEXT("ОТРЯД %d"), Sq->Count), SX, SY, C, Med, 0.95f * S);
+			Txt(What, SX + 150.f * S, SY + 7.f * S, C, Small, 1.15f * S);
+			Txt(TEXT("[Z] за мной  [X] фас  [C] вольно  [Q] нести  [B] держать  [G] мост"), SX, SY + 32.f * S, FLinearColor(1.f, 1.f, 1.f, 0.6f), Small, 0.98f * S);
+			// Where they are, when they are not at my side.
+			if (FVector::Dist(Sq->GetActorLocation(), Ant->GetActorLocation()) > 450.f)
+			{
+				Marker(Sq->GetActorLocation() + FVector(0.f, 0.f, 50.f), FString::Printf(TEXT("ОТРЯД %d"), Sq->Count), FLinearColor(C.R, C.G, C.B, 0.9f), true);
+			}
+			if (Sq->Mode == EArmyMode::Attack)
+			{
+				Marker(FVector(Sq->Target) + FVector(0.f, 0.f, 40.f), TEXT("цель отряда"), QFire, false);
+			}
+		}
+		else if (Sq && Ant->bDead)
+		{
+			Txt(FString::Printf(TEXT("Отряд: %d рабочих ждут у твоего тела"), Sq->Count), W * 0.5f, H * 0.36f + 124.f * S, QGold, Small, 1.15f * S, true);
+		}
+		else if (!Ant->bDead)
+		{
+			Txt(TEXT("ОТРЯДА НЕТ"), SX, SY + 8.f * S, QDim, Small, 1.1f * S);
+		}
+	}
+
+	// --- The rival clan: what it is up to, and the ambush tell ---
+	if (Raid->ClanAlert != SeenClan)
+	{
+		if (Raid->ClanAlert == 1 && SeenClan == 0) { Announce(TEXT("КРАСНЫЕ ВЫШЛИ НА РАЗВЕДКУ"), TEXT("Их холм во дворе за гостиной. Они тоже ищут торт"), QFire); }
+		else if (Raid->ClanAlert == 2 && SeenClan < 2) { Announce(TEXT("КРАСНЫЕ НАШЛИ ТОРТ"), TEXT("Их отряд идёт за ним: успейте раньше или отбейте по дороге"), QFire); }
+		SeenClan = Raid->ClanAlert;
+	}
+	if (Raid->AmbushState != SeenAmbush)
+	{
+		SeenAmbush = Raid->AmbushState;
+		if (SeenAmbush == 3 && !Ant->bDead)
+		{
+			Announce(TEXT("ДОЗОРНЫЕ: ВПЕРЕДИ ЗАСАДА"), TEXT("Красные сидят у отмеченного места. Обойдите — или ударьте первыми"), QFire);
+		}
+		else if (!Ant->bDead && FVector::Dist(FVector(Raid->AmbushLoc), Ant->GetActorLocation()) < 4500.f)
+		{
+			if (SeenAmbush == 1)
+			{
+				Announce(TEXT("ШОРОХ ВПЕРЕДИ"), TEXT("Красные в засаде: сейчас кинутся. Бросай груз и дерись — или назад"), QFire);
+				AntSfx::Play2D(this, AntSfx::Hiss, 0.7f, 0.8f);
+			}
+			else if (SeenAmbush == 2)
+			{
+				Announce(TEXT("ЗАСАДА!"), TEXT("Они бьют рывком и отнимают груз. Отряд на них — [X]"), QRed);
+			}
+		}
+	}
+	if (Raid->AmbushState != 0 && !Ant->bDead)
+	{
+		const float Beat = 0.6f + 0.4f * FMath::Abs(FMath::Sin(Now * 7.f));
+		Marker(FVector(Raid->AmbushLoc), Raid->AmbushState == 1 ? TEXT("ШОРОХ: ЗАСАДА") : Raid->AmbushState == 3 ? TEXT("ЗАСАДА (дозорные)") : TEXT("ЗАСАДА КРАСНЫХ"),
+			FLinearColor(1.f, 0.35f, 0.15f, Raid->AmbushState == 3 ? 0.85f : Beat), true);
+	}
+
+	// --- Special finds: a mark from a few steps away ---
+	if (Raid->SpecialsLeft > 0 && !Ant->bDead)
+	{
+		if (Now - SpecialScanAt > 1.f)
+		{
+			SpecialScanAt = Now;
+			SpecialFinds.Reset();
+			for (TActorIterator<AKitchenLoot> It(GetWorld()); It; ++It)
+			{
+				if (It->Special != 0) { SpecialFinds.Add(*It); }
+			}
+		}
+		for (const TWeakObjectPtr<AKitchenLoot>& F : SpecialFinds)
+		{
+			const AKitchenLoot* L = F.Get();
+			if (L && !L->IsCarried() && FVector::Dist(L->GetActorLocation(), Ant->GetActorLocation()) < 2600.f)
+			{
+				Marker(L->GetActorLocation() + FVector(0.f, 0.f, 40.f), FString::Printf(TEXT("НАХОДКА: %s"), *L->LootName), QJelly, false);
+			}
+		}
+	}
+
+	// --- My pockets ---
+	if (const AAntPlayerState* PS = PlayerOwner ? PlayerOwner->GetPlayerState<AAntPlayerState>() : nullptr)
+	{
+		if ((PS->Tool0 != 0 || PS->Tool1 != 0) && !Ant->bDead)
+		{
+			const float TX = 30.f * S, TY = H - 270.f * S;
+			FString Line;
+			for (int32 p = 0; p < 2; ++p)
+			{
+				const uint8 Tool = p == 0 ? PS->Tool0 : PS->Tool1;
+				const int32 Ch = p == 0 ? PS->Charges0 : PS->Charges1;
+				if (Tool != 0) { Line += FString::Printf(TEXT("%s[%d] %s x%d"), Line.IsEmpty() ? TEXT("") : TEXT("    "), 5 + p, AntTool::Name(Tool), Ch); }
+			}
+			float LW = 0.f, LH = 0.f;
+			GetTextSize(Line, LW, LH, Small, 1.1f * S);
+			DrawRect(FLinearColor(0.f, 0.f, 0.f, 0.4f), TX - 8.f * S, TY - 4.f * S, LW + 16.f * S, 28.f * S);
+			Txt(Line, TX, TY, FLinearColor(0.85f, 0.8f, 1.f), Small, 1.1f * S);
 		}
 	}
 

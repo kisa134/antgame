@@ -30,11 +30,17 @@ public:
 	bool IsWarCommander() const { return bWarCommander; }
 	bool IsFree() const { return OrderMode == 0 && !bWarCommander && !WarLeader.IsValid(); }
 
-private:
+protected:   // (the rival clan's ants, AAntClanBot, build on this)
+	/** Walks straight at its goal even with an enemy in sight (no keeping its distance, no strafing). */
+	bool bNoStrafe = false;
+	/** Keeps away from the Human: does not shoot at him and does not climb him. */
+	bool bShy = false;
 	void Think(AAntCharacter* Ant);
 	bool ThinkWar(AAntCharacter* Ant);
 	bool ThinkChain(AAntCharacter* Ant);
 	void Steer(AAntCharacter* Ant, const FVector& Goal, float Dt);
+	/** Carrying a load somebody else leads (CarryLeader): keeps under its own bite point and goes where he goes. False: it has no hold. */
+	bool CarryFollow(AAntCharacter* Ant);
 	void Shoot(AAntCharacter* Ant, float Dt);
 	AKitchenLoot* PickFood(AAntCharacter* Ant) const;
 	AActor* PickShootTarget(AAntCharacter* Ant) const;

@@ -33,6 +33,7 @@ public:
 	virtual bool IsDoorOpen() const override { return bOpen; }
 	virtual void SetDoorOpen(bool bInOpen) override;
 	virtual bool CanPull(AAntCharacter* Ant, bool bTell) const override;
+	virtual bool CanPullFrom(const FVector& P) const override;
 	/** Level v2: the cat flap in the living room's wall. Latched: only ants on the living-room side can open it. */
 	bool IsCatFlap() const;
 	virtual bool HumanShuts() const override;

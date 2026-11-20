@@ -58,6 +58,13 @@ public:
 	void Vote3() { TryVote(2); }
 	/** The raid and the nest (AntRaidCmd): leave, ready, start, buy, squad size, tools, orders to the squad. */
 	UFUNCTION(Server, Reliable) void ServerRaid(uint8 Cmd, int32 A, int32 B);
+	/** An order to my squad (AntSquad::EOrder) with the point under the crosshair: [Q] haul, [B] hold. */
+	UFUNCTION(Server, Reliable) void ServerSquad(uint8 Order, FVector_NetQuantize Aim);
+	void SquadHaul();
+	void SquadHold();
+	void UseTool0();
+	void UseTool1();
+	FVector CrosshairPoint() const;
 	/** F1: show the controls line again for a while (it fades after the first minute). */
 	void ShowHelp();
 	float HelpAskedAt = -100.f;

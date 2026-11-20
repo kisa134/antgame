@@ -13,6 +13,7 @@ class AAntPlayerController;
 class AAntPlayerState;
 class AKitchenLoot;
 class AController;
+class AAntClan;
 
 /** NEST -> RAID -> NEST. */
 namespace AntRaidPhase { enum : uint8 { Nest, Raid, Results }; }
@@ -116,6 +117,20 @@ public:
 	UPROPERTY(Replicated) FAntRaidResult Result;
 	/** A line for whoever opens the nest screen ("the save was damaged, the backup was read"...). */
 	UPROPERTY(Replicated) FString NestNote;
+	/** Food the rival clan carried into its hill during this raid. */
+	UPROPERTY(Replicated) int32 Stolen = 0;
+	/** Special finds still hidden in the house this raid. */
+	UPROPERTY(Replicated) uint8 SpecialsLeft = 0;
+	/** What the next raid costs at the door (one-raid boosts, the tools in everybody's pockets), for the nest screen. */
+	UPROPERTY(Replicated) int32 StartCost = 0;
+
+	// ---- the rival clan (AntClan.h)
+	UPROPERTY() AAntClan* Clan = nullptr;
+	/** Server: the red ants brought the cake to their hill. It stays there, being eaten, for the tier's window. */
+	bool OnClanCakeHome(AKitchenLoot* CakeLoot);
+	/** Server: the stolen cake is in the red hill right now, so the hill is no safe zone for its ants. */
+	static bool HillOpen();
+	float ClanRespawn() const;
 
 	bool InRaid() const { return Phase == AntRaidPhase::Raid; }
 	const AntTier::FDef& TierDef() const { return AntTier::Def(Tier); }
@@ -139,6 +154,8 @@ public:
 	/** Boldness of a house creature right now (NpcWho), by tier and by how far the raid has got. */
 	int32 NpcLevel(uint8 Who) const;
 	void PlayerCommand(AAntPlayerController* PC, uint8 Cmd, int32 A, int32 B);
+	/** A tool out of a pocket (0 or 1), aimed at a point. */
+	void UseTool(AAntPlayerController* PC, int32 Pocket, const FVector& Aim);
 	void OnPlayerJoined(AController* C);
 	/** Dev (-AntDo): "raid ...", "nest ...". True if the command was one of them. */
 	bool DevCommand(const TArray<FString>& Args);
@@ -157,6 +174,15 @@ public:
 private:
 	void PhaseSecond();
 	void TrackCake();
+	void HillTick();
+	void StartClan();
+	void StartSquads();
+	void StartSpecials();
+	void SpawnGuards();
+	void CountStartCost();
+	int32 MoodGift = 0;
+	bool bSecondEvent = false;
+	int32 CakeBaseHalf = 0;
 	void ExitTick();
 	void CancelExit(const FString& Why);
 	void BuildResult(uint8 How);

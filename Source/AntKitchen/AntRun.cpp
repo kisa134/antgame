@@ -1408,6 +1408,17 @@ void AAntKitchenGameMode::DevScriptTick()
 			++i;
 		}
 	}
+	// "q <command>": a queue. The next one runs a second after the one before it, and never while the walker ("go") is still
+	// on its way: a script that does not depend on how long a walk takes. "q wait N" waits N seconds.
+	if (DevQueue.Num() > 0 && DevGoPts.Num() == 0 && Now >= DevQueueAt)
+	{
+		const FString Cmd = DevQueue[0];
+		DevQueue.RemoveAt(0);
+		DevQueueAt = Now + 1.f;
+		UE_LOG(LogTemp, Display, TEXT("ANTDEV %.1f (queue, %d left): %s"), Now, DevQueue.Num(), *Cmd);
+		if (Cmd.StartsWith(TEXT("wait "))) { DevQueueAt = Now + FCString::Atof(*Cmd.Mid(5)); }
+		else { DevCommand(Cmd); }
+	}
 	// "go x y z ...": the player's ant walks the points one after another (AAntCharacter::bDevGo steers it every frame).
 	if (DevGoPts.Num() > 0)
 	{
@@ -1415,7 +1426,8 @@ void AAntKitchenGameMode::DevScriptTick()
 		AAntCharacter* Me = PC ? Cast<AAntCharacter>(PC->GetPawn()) : nullptr;
 		if (!Me || Me->bDead)
 		{
-			UE_LOG(LogTemp, Display, TEXT("ANTV2 go: FAILED, the ant is dead or gone (%d points left)"), DevGoPts.Num());
+			UE_LOG(LogTemp, Display, TEXT("ANTV2 go: FAILED, the ant is dead or gone (%d points left, %d queued commands dropped)"), DevGoPts.Num(), DevQueue.Num());
+			DevQueue.Reset();
 			DevGoPts.Reset();
 			if (Me) { Me->bDevGo = false; }
 			return;
@@ -1452,6 +1464,8 @@ void AAntKitchenGameMode::DevScriptTick()
 		{
 			UE_LOG(LogTemp, Display, TEXT("ANTV2 go: STUCK at %s, %.0f from (%.0f, %.0f, %.0f), %d points left, load %s (ratio %.2f, carriers %d), falling %d"), *P.ToCompactString(), D, T.X, T.Y, T.Z,
 				DevGoPts.Num(), C ? *C->LootName : TEXT("-"), C ? C->CarryRatio() : 0.f, C ? C->NumCarriers() : 0, Me->GetCharacterMovement()->IsFalling() ? 1 : 0);
+			if (DevQueue.Num() > 0) { UE_LOG(LogTemp, Display, TEXT("ANTDEV queue: %d commands dropped (the walker is stuck)"), DevQueue.Num()); }
+			DevQueue.Reset();
 			DevGoPts.Reset();
 			Me->bDevGo = false;
 			return;
@@ -1467,6 +1481,11 @@ void AAntKitchenGameMode::DevScriptTick()
 
 void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 {
+	if (Cmd.StartsWith(TEXT("q ")))
+	{
+		DevQueue.Add(Cmd.Mid(2).TrimStartAndEnd());
+		return;
+	}
 	TArray<FString> A;
 	Cmd.ParseIntoArrayWS(A);
 	if (A.Num() == 0)

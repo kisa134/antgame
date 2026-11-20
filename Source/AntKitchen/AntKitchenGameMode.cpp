@@ -170,7 +170,7 @@ void AAntKitchenGameMode::BeginPlay()
 		TargetScore = 300;      // the quota; StartShift sets the real one
 		MatchLength = 480.f;
 		AllyBots = 1;
-		RivalBots = 2;
+		RivalBots = bRaid ? 0 : 2;   // a raid: the red clan brings its own parties (AntClan.cpp)
 	}
 
 	if (AAntGameState* GS = GetGameState<AAntGameState>())
@@ -1257,10 +1257,12 @@ void AAntKitchenGameMode::OnAntKilled(AAntCharacter* Ant, AController* Killer, A
 	}
 	TWeakObjectPtr<AController> WeakC = Ant->GetController();
 	FTimerHandle Handle;
+	// (a raid: the rival clan's dead come back as reinforcements, later the lower the threat)
+	const float Delay = (bRaid && Raid && Ant->Team == 1 && Ant->Creature == 0 && !Cast<APlayerController>(Ant->GetController())) ? Raid->ClanRespawn() : RespawnDelay;
 	GetWorldTimerManager().SetTimer(Handle, FTimerDelegate::CreateWeakLambda(this, [this, WeakC]()
 	{
 		RespawnAnt(WeakC.Get());
-	}), RespawnDelay, false);
+	}), Delay, false);
 }
 
 void AAntKitchenGameMode::OnHumanKnockedOut(AController* By)

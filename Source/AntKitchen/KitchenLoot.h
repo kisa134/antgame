@@ -94,6 +94,14 @@ public:
 	 *  the army of a carrier leans on it the way it leans on a heavy door (up to 30 strength). */
 	bool bMain = false;
 
+	/** Server: a raid squad lifts it (it rides on the squad) / puts it down. Any ant that bites into it takes it away from the squad. */
+	void SquadPick(AActor* Squad, USceneComponent* At, const FVector& RelativeLocation);
+	void SquadDrop();
+	TWeakObjectPtr<AActor> SquadHolder;
+	/** Server. A special find (AntFind id, 0 = plain food): its own small effect when it gets home. */
+	UPROPERTY(Replicated) uint8 Special = 0;
+	/** Server: where the main object last lay inside the world. */
+	FVector LastSafe = FVector::ZeroVector;
 	/** Server: the Human picks it up (attached to his hand) / throws it. */
 	void PickUpBy(USceneComponent* Hand, const FVector& RelativeLocation);
 	void Throw(const FVector& Velocity);

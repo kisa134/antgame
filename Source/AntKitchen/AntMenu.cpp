@@ -1,4 +1,5 @@
 ﻿#include "AntMenu.h"
+#include "AntNest.h"
 #include "AntSession.h"
 #include "AntPlayerController.h"
 #include "AntGameState.h"
@@ -100,10 +101,12 @@ void SAntMenu::Rebuild()
 		{
 			AddLabel(FString::Printf(TEXT("Лучший забег: смен пройдено %d, добыча %d"), BestShifts, BestHaul), 15, Gold, 4.f);
 		}
-		else if (!bPause)
-		{
-			AddLabel(TEXT("Лучший забег: пока нет. Пройди первую смену"), 13, Dim, 4.f);
-		}
+	}
+	if (!bPause)
+	{
+		// The colony of this machine (the host's save: what the raids have built).
+		const FString Colony = AntNest::Summary();
+		AddLabel(Colony.IsEmpty() ? FString(TEXT("Колония ещё не основана. Первый рейд — «Будний день»: дом сонный, красных мало")) : Colony, 14, Colony.IsEmpty() ? Dim : Gold, 4.f);
 	}
 
 	if (S && !S->Status.IsEmpty())
@@ -135,6 +138,29 @@ void SAntMenu::Rebuild()
 			{
 				AddButton(FString::Printf(TEXT("Войти:  %s"), *S->Games[i].Label), [WeakPC, S, i]() { if (WeakPC.IsValid()) { S->Join(i); } }, FLinearColor(0.55f, 0.9f, 0.45f));
 			}
+		}
+		if (S && !AntNest::Summary().IsEmpty())
+		{
+			// Starting over: asked twice. The old colony is moved aside (Saved/Nest/colony.old), not deleted.
+			static double ArmedAt = -100.0;
+			const bool bArmed = FPlatformTime::Seconds() - ArmedAt < 5.0;
+			AddButton(bArmed ? TEXT("Точно стереть колонию? Нажми ещё раз") : TEXT("Новая колония"), [WeakPC, S]()
+			{
+				if (!WeakPC.IsValid() || !S) { return; }
+				if (FPlatformTime::Seconds() - ArmedAt < 5.0)
+				{
+					ArmedAt = -100.0;
+					AntNest::Reset();
+					S->Status = TEXT("Новая колония основана. Старая лежит рядом с сохранением как colony.old");
+					S->OnChanged.Broadcast();
+				}
+				else
+				{
+					ArmedAt = FPlatformTime::Seconds();
+					S->Status = TEXT("Новая колония сотрёт постройки и запасы. Нажми ещё раз за 5 секунд");
+					S->OnChanged.Broadcast();
+				}
+			}, FLinearColor(0.85f, 0.6f, 0.5f));
 		}
 	}
 

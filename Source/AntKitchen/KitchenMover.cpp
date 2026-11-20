@@ -279,6 +279,11 @@ bool AKitchenMover::IsCatFlap() const
 	return All.IsValidIndex(PartIndex) && FCString::Strcmp(KitchenArt::Instances()[All[PartIndex].Inst].Name, TEXT("SM_L_CatFlap_Leaf")) == 0;
 }
 
+bool AKitchenMover::CanPullFrom(const FVector& P) const
+{
+	return !IsCatFlap() || LevelV2::OnLatchSideOfCatFlap(P);
+}
+
 bool AKitchenMover::CanPull(AAntCharacter* Ant, bool bTell) const
 {
 	if (!Ant || !IsCatFlap() || LevelV2::OnLatchSideOfCatFlap(Ant->GetActorLocation()))
@@ -306,6 +311,11 @@ void AKitchenMover::SetDoorOpen(bool bInOpen)
 
 void AKitchenMover::SetOpen(bool bInOpen, float AutoClose)
 {
+	if (!bInOpen && bOpen && IsHeldOpen())
+	{
+		AutoCloseAt = AutoCloseAt > 0.f ? Now() + 1.f : AutoCloseAt;   // a squad holds it open: it falls shut only when they let go
+		return;
+	}
 	if (bInOpen && !bOpen)
 	{
 		OpenedAt = Now();

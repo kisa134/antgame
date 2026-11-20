@@ -26,6 +26,8 @@ class ANTKITCHEN_API ACritter : public AActor
 
 public:
 	ACritter();
+	/** A raid tool: this piece smells like food the ants have just dropped (the dog goes for it when he is near enough to smell it). */
+	void BaitWith(class AKitchenLoot* Food);
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;

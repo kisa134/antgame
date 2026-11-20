@@ -94,7 +94,7 @@ AActor* AAntBotController::PickShootTarget(AAntCharacter* Ant) const
 			Best = E;
 		}
 	}
-	if (!Best && !Ant->IsMonster())
+	if (!Best && !Ant->IsMonster() && !bShy)
 	{
 		for (TActorIterator<AHumanCharacter> It(GetWorld()); It; ++It)
 		{
@@ -302,7 +302,7 @@ void AAntBotController::Think(AAntCharacter* Ant)
 	// Board the Human: a third of the colony climbs up his legs and chews on him. Riders keep at it until shaken off.
 	{
 		AHumanCharacter* H = Ant->GetRiddenHuman();
-		if (!H && !Ant->IsMonster() && GetUniqueID() % 3 == 0)
+		if (!H && !Ant->IsMonster() && GetUniqueID() % 3 == 0 && !bShy)
 		{
 			H = Cast<AHumanCharacter>(ShootTarget.Get());
 		}
@@ -391,7 +391,7 @@ void AAntBotController::Steer(AAntCharacter* Ant, const FVector& FinalTarget, fl
 	FVector To = Target - Me;
 
 	// Fight: keep a comfortable distance and strafe.
-	if (AAntCharacter* E = Cast<AAntCharacter>(ShootTarget.Get()); E && !Ant->IsCarrying() && !FoodTarget.IsValid() && Ant->Creature != 2)
+	if (AAntCharacter* E = Cast<AAntCharacter>(ShootTarget.Get()); E && !Ant->IsCarrying() && !FoodTarget.IsValid() && Ant->Creature != 2 && !bNoStrafe)
 	{
 		const FVector ToE = E->GetActorLocation() - Me;
 		const float D = (float)ToE.Size();
@@ -494,45 +494,55 @@ void AAntBotController::Tick(float DeltaSeconds)
 			ThinkChain(Ant);
 		}
 	}
-	FVector Bite;
-	if (bCarryWithPlayer && Ant->Carrying && Ant->Carrying->GrabPointOf(Ant, Bite))
+	if (bCarryWithPlayer && CarryFollow(Ant))
 	{
-		// Carrying with a player: it keeps under its own bite point, so it bears its share of the weight and goes wherever the
-		// player takes the load. (Walking at the player it stood on his heels and its jaws held the load back.)
-		// It also walks the way the player walks (0.35 s ahead): following only the load it lagged and braked it.
-		const FVector Lead = CarryLeader.IsValid() ? CarryLeader->GetVelocity() * 0.35f : FVector::ZeroVector;
-		// And it leans towards him while he is further than a step away: when he has gone on (down off a shelf, round a corner)
-		// and stands waiting, the helpers bring the load to him instead of holding it where they are.
-		FVector Lean = FVector::ZeroVector;
-		if (CarryLeader.IsValid())
-		{
-			const FVector D = CarryLeader->GetActorLocation() - Ant->GetActorLocation();
-			if (D.Size() > 25.f) { Lean = D.GetClampedToMaxSize(80.f); }   // (25: closer than the 90 at which a careful leader stops to wait)
-		}
-		FVector Want = Bite - Ant->GetHoldPoint() + Lead + Lean;
-		if (CarryLeader.IsValid() && CarryLeader->GetActorLocation().Z < Ant->GetActorLocation().Z - 30.f && FVector::Dist(Bite, Ant->GetHoldPoint()) < 120.f)
-		{
-			// He is below (stepped down off a shelf): down to him first, then pull. Hanging on the face under its bite point it
-			// held the load on the edge for ever.
-			Want = (CarryLeader->GetActorLocation() - Ant->GetActorLocation()).GetClampedToMaxSize(120.f);
-		}
-		FVector To = FVector::VectorPlaneProject(Want, Ant->GetVisualUp());
-		if (Ant->GetVisualUp().Z < 0.6f && (Want | Ant->GetVisualUp()) < -8.f)
-		{
-			// a lip in the way (the carpet's edge, a threshold): over it, as Steer does
-			const FVector UpOnWall = FVector::UpVector - Ant->GetVisualUp() * Ant->GetVisualUp().Z;
-			To += UpOnWall.GetSafeNormal() * (float)Want.Size();
-		}
-		if (To.Size() > 10.f)
-		{
-			Ant->AddMovementInput(To.GetSafeNormal(), FMath::Clamp((float)To.Size() / 50.f, 0.25f, 1.f));
-		}
+		// walking with the leader of the load
 	}
 	else if (bHasGoal)
 	{
 		Steer(Ant, Goal, DeltaSeconds);
 	}
 	Shoot(Ant, DeltaSeconds);
+}
+
+bool AAntBotController::CarryFollow(AAntCharacter* Ant)
+{
+	FVector Bite;
+	if (!Ant->Carrying || !Ant->Carrying->GrabPointOf(Ant, Bite))
+	{
+		return false;
+	}
+	// Carrying with a player: it keeps under its own bite point, so it bears its share of the weight and goes wherever the
+	// player takes the load. (Walking at the player it stood on his heels and its jaws held the load back.)
+	// It also walks the way the player walks (0.35 s ahead): following only the load it lagged and braked it.
+	const FVector Lead = CarryLeader.IsValid() ? CarryLeader->GetVelocity() * 0.35f : FVector::ZeroVector;
+	// And it leans towards him while he is further than a step away: when he has gone on (down off a shelf, round a corner)
+	// and stands waiting, the helpers bring the load to him instead of holding it where they are.
+	FVector Lean = FVector::ZeroVector;
+	if (CarryLeader.IsValid())
+	{
+		const FVector D = CarryLeader->GetActorLocation() - Ant->GetActorLocation();
+		if (D.Size() > 25.f) { Lean = D.GetClampedToMaxSize(80.f); }   // (25: closer than the 90 at which a careful leader stops to wait)
+	}
+	FVector Want = Bite - Ant->GetHoldPoint() + Lead + Lean;
+	if (CarryLeader.IsValid() && CarryLeader->GetActorLocation().Z < Ant->GetActorLocation().Z - 30.f && FVector::Dist(Bite, Ant->GetHoldPoint()) < 120.f)
+	{
+		// He is below (stepped down off a shelf): down to him first, then pull. Hanging on the face under its bite point it
+		// held the load on the edge for ever.
+		Want = (CarryLeader->GetActorLocation() - Ant->GetActorLocation()).GetClampedToMaxSize(120.f);
+	}
+	FVector To = FVector::VectorPlaneProject(Want, Ant->GetVisualUp());
+	if (Ant->GetVisualUp().Z < 0.6f && (Want | Ant->GetVisualUp()) < -8.f)
+	{
+		// a lip in the way (the carpet's edge, a threshold): over it, as Steer does
+		const FVector UpOnWall = FVector::UpVector - Ant->GetVisualUp() * Ant->GetVisualUp().Z;
+		To += UpOnWall.GetSafeNormal() * (float)Want.Size();
+	}
+	if (To.Size() > 10.f)
+	{
+		Ant->AddMovementInput(To.GetSafeNormal(), FMath::Clamp((float)To.Size() / 50.f, 0.25f, 1.f));
+	}
+	return true;
 }
 
 void AAntBotController::SetWarRole(bool bCommander, AAntCharacter* Leader)

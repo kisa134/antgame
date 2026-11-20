@@ -9,6 +9,7 @@
 #include "AntCharacter.h"
 #include "AntMovementComponent.h"
 #include "AntKitchenGameMode.h"
+#include "AntRaid.h"
 #include "KitchenBuilder.h"
 #include "KitchenArt.h"
 #include "LevelV2.h"
@@ -87,6 +88,7 @@ void AKitchenLoot::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	DOREPLIFETIME(AKitchenLoot, CarrierTeam);
 	DOREPLIFETIME(AKitchenLoot, bHeld);
 	DOREPLIFETIME(AKitchenLoot, bVault);
+	DOREPLIFETIME(AKitchenLoot, Special);
 	DOREPLIFETIME(AKitchenLoot, bTrophy);
 	DOREPLIFETIME(AKitchenLoot, bBody);
 	DOREPLIFETIME(AKitchenLoot, ShardPath);
@@ -544,10 +546,32 @@ void AKitchenLoot::PickUpBy(USceneComponent* Hand, const FVector& RelativeLocati
 		return;
 	}
 	ReleaseAll();
+	SquadHolder = nullptr;
 	bHeld = true;
 	OnRep_Held();
 	AttachToComponent(Hand, FAttachmentTransformRules::KeepWorldTransform);
 	SetActorRelativeLocation(RelativeLocation);
+}
+
+void AKitchenLoot::SquadPick(AActor* Squad, USceneComponent* At, const FVector& RelativeLocation)
+{
+	if (!HasAuthority() || !Squad || !At)
+	{
+		return;
+	}
+	PickUpBy(At, RelativeLocation);
+	SetActorRotation(FRotator::ZeroRotator);
+	SquadHolder = Squad;
+}
+
+void AKitchenLoot::SquadDrop()
+{
+	if (HasAuthority() && bHeld && SquadHolder.IsValid())
+	{
+		SquadHolder = nullptr;
+		Throw(FVector::ZeroVector);
+		Body->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
+	}
 }
 
 void AKitchenLoot::Throw(const FVector& Velocity)
@@ -580,6 +604,10 @@ bool AKitchenLoot::TryGrab(AAntCharacter* Ant, FString& Why)
 	if (!Ant || bIsGear || Ant->bDead)
 	{
 		return false;
+	}
+	if (bHeld && SquadHolder.IsValid())
+	{
+		SquadDrop();   // snatched out of a squad's jaws (the squad notices by itself)
 	}
 	if (bHeld)
 	{
@@ -650,6 +678,20 @@ void AKitchenLoot::ReleaseAll()
 
 void AKitchenLoot::ServerCarryTick(float Dt)
 {
+	if (bMain && GetActorLocation().Z > -60.f && !bHeld)
+	{
+		LastSafe = GetActorLocation();
+	}
+	if (bMain && GetActorLocation().Z < -350.f && !LastSafe.IsZero())
+	{
+		// The main object fell through the world (pushed through a floor by a crowd): back to where it last lay.
+		UE_LOG(LogTemp, Display, TEXT("ANTCARRY «%s» fell out of the world at %s: put back at %s"), *LootName, *GetActorLocation().ToCompactString(), *LastSafe.ToCompactString());
+		ReleaseAll();
+		Body->SetPhysicsLinearVelocity(FVector::ZeroVector);
+		Body->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
+		SetActorLocation(LastSafe + FVector(0.f, 0.f, 60.f), false, nullptr, ETeleportType::TeleportPhysics);
+		return;
+	}
 	if (!bIsGear && GetActorLocation().Z < -900.f)
 	{
 		ReleaseAll();
@@ -694,9 +736,18 @@ void AKitchenLoot::ServerCarryTick(float Dt)
 	{
 		AAntCharacter* A = Carriers[i];
 		Str[FMath::Clamp<int32>(A->Team, 0, 1)] += A->GetStrength();   // flies (team 2) count as the second side
-		if (bMain)
+		const AAntArmy* Army = AAntArmy::FindFor(A);
+		if (Army && Army->bSquad)
 		{
-			const AAntArmy* Army = AAntArmy::FindFor(A);
+			// A raid: the squad that follows its commander helps him carry anything he takes hold of.
+			if (Army->HelpsCommander(A))
+			{
+				Extra[i] = Army->Strength();
+				Str[FMath::Clamp<int32>(A->Team, 0, 1)] += Extra[i];
+			}
+		}
+		else if (bMain)
+		{
 			if (Army && FVector::Dist(Army->GetActorLocation(), A->GetActorLocation()) < 900.f)
 			{
 				Extra[i] = FMath::Min(30.f, Army->Count * 1.5f);
@@ -757,7 +808,8 @@ void AKitchenLoot::ServerCarryTick(float Dt)
 	const FVector L = GetActorLocation();
 	// Level v2: our colony has a second way in, the south entrance of the nest at the house corner (through the cat flap and the yard).
 	const bool bSouth = CarrierTeam == 0 && KitchenArt::Enabled() && FVector::Dist2D(L, LevelV2::SouthEntrance()) < LevelV2::SouthEntranceRadius() && L.Z < 500.f;
-	if (!bVault && CarrierTeam < 2 && (bSouth || (FVector::Dist2D(L, AKitchenBuilder::NestLocation(CarrierTeam)) < AKitchenBuilder::NestRadius(CarrierTeam)
+	const float HomeRadius = (CarrierTeam == 1 && KitchenArt::Enabled()) ? 800.f : AKitchenBuilder::NestRadius(CarrierTeam);   // (the red mound is 700 wide at its foot)
+	if (!bVault && CarrierTeam < 2 && (bSouth || (FVector::Dist2D(L, AKitchenBuilder::NestLocation(CarrierTeam)) < HomeRadius
 		&& L.Z < ((CarrierTeam == 1 && KitchenArt::Enabled()) ? 800.f : 500.f))))
 	{
 		if (bSouth)
@@ -766,6 +818,10 @@ void AKitchenLoot::ServerCarryTick(float Dt)
 		}
 		if (AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
 		{
+			if (bMain && CarrierTeam == 1 && GM->Raid && GM->Raid->OnClanCakeHome(this))
+			{
+				return;   // a raid: the cake lies in the rival clan's hill now, being eaten; it can still be taken back
+			}
 			TArray<AAntCharacter*> Team;
 			for (AAntCharacter* A : Carriers)
 			{

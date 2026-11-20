@@ -157,7 +157,11 @@ void AAntChain::Dissolve()
 	{
 		return;
 	}
-	const int32 Workers = ArmyLinks;
+	int32 Workers = ArmyLinks;
+	if (WorkersIn > 0)
+	{
+		Workers = LinksAtStart > 0 ? FMath::RoundToInt((float)WorkersIn * ArmyLinks / LinksAtStart) : WorkersIn;
+	}
 	ArmyLinks = 0;
 	TArray<AAntCharacter*> All = Links;
 	Links.Reset();

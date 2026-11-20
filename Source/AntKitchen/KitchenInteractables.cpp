@@ -10,6 +10,7 @@
 #include "AntRun.h"
 #include "AntGameState.h"
 #include "AntArmy.h"
+#include "AntRaid.h"
 #include "HumanCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -105,6 +106,11 @@ void AKitchenInteractable::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 // Heavy doors: everyone holding [E] adds its strength
 // ---------------------------------------------------------------------------------------------
 
+bool AKitchenInteractable::IsHeldOpen() const
+{
+	return GetWorld() && HeldOpenUntil > GetWorld()->GetTimeSeconds();
+}
+
 float AKitchenInteractable::PullNeed() const
 {
 	int32 Class = DoorClass();
@@ -112,6 +118,11 @@ float AKitchenInteractable::PullNeed() const
 	if (!GS || !GS->bHeistMode)
 	{
 		return AntDoor::Need(AntDoor::Light);   // heavy doors belong to the heist run; war and the classic raid keep a plain [E]
+	}
+	if (const AAntRaid* Raid = AAntRaid::Get(GetWorld()))
+	{
+		// A raid on a harder day: every real door (not the light ones) is a class heavier.
+		if (Class > AntDoor::Light && Raid->InRaid()) { Class = FMath::Min<int32>(AntDoor::Heavy, Class + Raid->TierDef().DoorBias); }
 	}
 	if (Class > AntDoor::Light && GS->Cards.Contains(AntCard::Lever))
 	{
@@ -137,7 +148,11 @@ float AKitchenInteractable::PullStrength(int32* OutHands, AAntCharacter** OutFir
 			// Its army leans on the door with it.
 			if (const AAntArmy* Army = AAntArmy::FindFor(A))
 			{
-				if (FVector::Dist(Army->GetActorLocation(), A->GetActorLocation()) < 900.f)
+				if (Army->bSquad)
+				{
+					if (Army->HelpsCommander(A)) { Have += Army->Strength(); }   // a raid: the squad at its commander's side pulls with him
+				}
+				else if (FVector::Dist(Army->GetActorLocation(), A->GetActorLocation()) < 900.f)
 				{
 					Have += FMath::Min(30.f, Army->Count * 1.5f);
 				}
@@ -498,6 +513,10 @@ void AKitchenDoor::Tick(float DeltaSeconds)
 
 void AKitchenDoor::SetOpen(bool bInOpen, float AutoClose)
 {
+	if (!bInOpen && bOpen && IsHeldOpen())
+	{
+		return;   // a squad holds it open
+	}
 	const bool bWasOpen = bOpen;
 	bOpen = bInOpen;
 	if (bOpen && !bWasOpen)

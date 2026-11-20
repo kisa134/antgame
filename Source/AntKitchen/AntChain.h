@@ -66,6 +66,9 @@ public:
 	void Dissolve();
 	/** Lifetime for army bridges (0 = until everyone leaves). */
 	float MaxLife = 0.f;
+	/** Server: a raid squad built it out of this many workers (each stands for several links); > 0: these come back, not the links. */
+	int32 WorkersIn = 0;
+	int32 LinksAtStart = 0;
 
 	static AAntChain* FindNearTail(UWorld* World, uint8 Team, const FVector& P, float Radius);
 

@@ -689,8 +689,8 @@ void AAntHUD::DrawAnt(AAntCharacter* Ant)
 	{
 		Txt(FString::Printf(TEXT("%s — сила %.0f"), Cls.Name, Cls.Strength), X, Y + 34.f * S, Gold, Small, 1.2f * S);
 	}
-	// Commander: army + squad.
-	if (Ant->Creature == 0)
+	// Commander: army + squad. (A raid: the squad's own panel, AntHUDRaid.cpp.)
+	if (Ant->Creature == 0 && !AAntRaid::Get(GetWorld()))
 	{
 		const AAntArmy* Army = nullptr;
 		for (TActorIterator<AAntArmy> It(GetWorld()); It; ++It)
@@ -1099,6 +1099,10 @@ void AAntHUD::DrawHelp(APawn* Me)
 	else if (const AAntCharacter* C2 = Cast<AAntCharacter>(Me); C2 && C2->Creature == 2)
 	{
 		Help = TEXT("ПАУК: по стенам и потолку | ПКМ (держать) — полёт на паутине, отпустить — бросок | Пробел — подтянуться | ЛКМ — паутина | Q — укус | K — снова муравей");
+	}
+	else if (AAntRaid::Get(GetWorld()))
+	{
+		Help = TEXT("ЛКМ — плевок | ПКМ — укус | Ctrl — РЫВОК | E — взять/отпустить, держать — тянуть дверь | ОТРЯД: Z за мной · X фас · C вольно · Q нести · B держать · G мост | L у входа (держать) — уйти домой | СКМ — метка | Tab счёт");
 	}
 	else
 	{

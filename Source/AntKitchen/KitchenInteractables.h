@@ -58,6 +58,11 @@ public:
 	UPROPERTY(Replicated) uint8 PullMissing = 0;
 	/** Server world time it was last opened (the Human notices doors left open). */
 	float OpenedAt = -100.f;
+	/** Server: a raid squad stands at it and keeps it open until this world time (refreshed while it holds). Nothing shuts it meanwhile. */
+	float HeldOpenUntil = -100.f;
+	bool IsHeldOpen() const;
+	/** Could it be pulled open by something standing at P? (The cat flap: only from the living-room side.) */
+	virtual bool CanPullFrom(const FVector& P) const { return true; }
 
 protected:
 	/** Server, from the door's Tick: ants still pulling, helpers arriving. */

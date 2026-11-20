@@ -153,6 +153,9 @@ private:
 	void DevScriptTick();
 	void DevCommand(const FString& Cmd);
 	TArray<TPair<float, FString>> DevScript;
+	/** Dev: "q <command>" - commands that run one after another, each once the walker ("go") has finished. */
+	TArray<FString> DevQueue;
+	float DevQueueAt = 0.f;
 
 public:
 

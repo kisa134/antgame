@@ -7,6 +7,7 @@
 #include "AntGameState.h"
 #include "AntKitchenGameMode.h"
 #include "AntChain.h"
+#include "AntSquad.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
@@ -40,6 +41,13 @@ void AAntArmy::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetime
 	DOREPLIFETIME(AAntArmy, Trail);
 	DOREPLIFETIME(AAntArmy, TrailHead);
 	DOREPLIFETIME(AAntArmy, bSwarming);
+	DOREPLIFETIME(AAntArmy, bSquad);
+	DOREPLIFETIME(AAntArmy, Cargo);
+	DOREPLIFETIME(AAntArmy, bCargoHeld);
+	DOREPLIFETIME(AAntArmy, bCargoHome);
+	DOREPLIFETIME(AAntArmy, bForaging);
+	DOREPLIFETIME(AAntArmy, bOrphan);
+	DOREPLIFETIME(AAntArmy, OwnerPS);
 }
 
 void AAntArmy::BeginPlay()
@@ -114,15 +122,30 @@ int32 AAntArmy::Lose(int32 N)
 	const int32 Dead = FMath::Clamp(N, 0, Count);
 	Count -= Dead;
 	const AAntGameState* GS = GetWorld()->GetGameState<AAntGameState>();
-	if (Team == 0 && Dead > 0 && !(GS && GS->bWarMode))
+	if (Team == 0 && Dead > 0 && !(GS && GS->bWarMode) && !bSquad)   // (a squad's workers are the nest's own stock, not the trail swarm)
 	{
 		if (AAntSwarm* S = AAntSwarm::Get(GetWorld())) { S->Population = FMath::Max(0, S->Population - Dead); }
 	}
 	if (Count <= 0)
 	{
+		if (bSquad && IsValid(Commander)) { Commander->Toast(TEXT("ОТРЯД ПОГИБ. Новых рабочих вырастят только в гнезде")); }
 		Destroy();
 	}
 	return Dead;
+}
+
+bool AAntArmy::HelpsCommander(const AAntCharacter* Cmd) const
+{
+	return bSquad && Cmd && Commander == Cmd && Mode == EArmyMode::Follow && !bCargoHeld && FVector::Dist(GetActorLocation(), Cmd->GetActorLocation()) < 700.f;
+}
+
+void AAntArmy::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (HasAuthority() && Cargo && bCargoHeld && IsValid(Cargo))
+	{
+		Cargo->SquadDrop();   // whatever it carried falls where it stood
+	}
+	Super::EndPlay(EndPlayReason);
 }
 
 void AAntArmy::Disband()
@@ -143,7 +166,14 @@ int32 AAntArmy::KillInSphere(UWorld* World, const FVector& Center, float R, int3
 	{
 		AAntArmy* A = *It;
 		// The ants actually under the foot die (a column loses a chunk, a swarm loses its middle).
-		const int32 Under = A->CountNear(Center, R, FMath::Max(R, 250.f));
+		int32 Under = A->CountNear(Center, R, FMath::Max(R, 250.f));
+		if (A->bSquad)
+		{
+			// A raid squad is small and walks in a knot: one blow (a slipper, a paw, a lick) takes a third of it at most
+			// (two at least), or it would be gone whole the first time anything touched it.
+			Under = FMath::Min(Under, FMath::Max(2, (A->Count + 2) / 3));
+			if (A->bArmor) { Under = (Under + 1) / 2; }   // «Панцири»: half of those live
+		}
 		if (Under > 0)
 		{
 			Total += A->Lose(FMath::Min(MaxKills - Total, Under));
@@ -178,7 +208,8 @@ void AAntArmy::KillInCone(UWorld* World, const FVector& Origin, const FVector& D
 		}
 		if (InCone > 0)
 		{
-			It->StealAccum += (60.f + FMath::Min(InCone, It->Count) * 0.25f) * Dt;   // reuse accumulator: spray deaths
+			// (a squad is a dozen ants, not thousands: the spray takes them a few a second)
+			It->StealAccum += (It->bSquad ? (It->bArmor ? 1.5f : 3.f) : 60.f + FMath::Min(InCone, It->Count) * 0.25f) * Dt;   // reuse accumulator: spray deaths
 			const int32 N = FMath::FloorToInt(It->StealAccum);
 			It->StealAccum -= N;
 			It->Lose(N);
@@ -192,32 +223,43 @@ void AAntArmy::Tick(float Dt)
 	if (HasAuthority())
 	{
 		Life += Dt;
-		if (!Commander && Mode == EArmyMode::Attack && Life > 75.f)
-		{
-			Disband();   // AI raid is over
-		}
-		// Where to go.
-		FVector Goal = FVector(Target);
-		if (Mode == EArmyMode::Follow)
-		{
-			if (!IsValid(Commander) || Commander->bDead)
-			{
-				Disband();
-			}
-			else
-			{
-				Goal = Commander->GetActorLocation() - Commander->GetActorForwardVector() * (Radius() + 60.f * AAntCharacter::AntShrink);
-			}
-		}
-		Goal = GroundAt(Goal);
 		const FVector Me = GetActorLocation();
-		ServerMove(Goal, Dt);
+		FVector Goal = FVector(Target);
+		if (bSquad)
+		{
+			// A raid squad walks, carries and waits by its own rules (AntSquad.cpp).
+			if (!SquadTick(Dt, Goal))
+			{
+				return;
+			}
+		}
+		else
+		{
+			if (!Commander && Mode == EArmyMode::Attack && Life > 75.f)
+			{
+				Disband();   // AI raid is over
+			}
+			// Where to go.
+			if (Mode == EArmyMode::Follow)
+			{
+				if (!IsValid(Commander) || Commander->bDead)
+				{
+					Disband();
+				}
+				else
+				{
+					Goal = Commander->GetActorLocation() - Commander->GetActorForwardVector() * (Radius() + 60.f * AAntCharacter::AntShrink);
+				}
+			}
+			Goal = GroundAt(Goal);
+			ServerMove(Goal, Dt);
+		}
 		// Column while marching; a swarm when there, fighting or waiting.
 		const bool bMovedNow = FVector::DistSquared(GetActorLocation(), Me) > FMath::Square(40.f * Dt);
 		StillTime = bMovedNow ? 0.f : StillTime + Dt;
 		FightHeat = FMath::Max(0.f, FightHeat - Dt);
-		const bool bArrived = Mode == EArmyMode::Attack && FVector::Dist(Me, Goal) < Radius() * 1.2f;
-		bSwarming = bArrived || FightHeat > 0.f || StillTime > 1.5f;
+		const bool bArrived = (Mode == EArmyMode::Attack || Mode == EArmyMode::Hold) && FVector::Dist(Me, Goal) < Radius() * 1.2f;
+		bSwarming = bArrived || FightHeat > 0.f || StillTime > (bSquad ? 0.6f : 1.5f) || (bSquad && (bCargoHeld || bOrphan));
 
 		if (Mode == EArmyMode::Home && FVector::Dist2D(Me, Goal) < 300.f && FMath::Abs(Me.Z - Goal.Z) < 150.f)
 		{
@@ -372,6 +414,28 @@ FVector AAntArmy::SlotPos(int32 i, int32 N, FVector* OutDir) const
 {
 	const FVector Head = GetActorLocation();
 	N = FMath::Max(N, 1);
+	if (bSquad && bSwarming && FightHeat <= 0.f)
+	{
+		if (OutDir) { *OutDir = MoveDir; }
+		if (bCargoHeld && Cargo)
+		{
+			// Carrying: a ring of workers under the load.
+			const float R = Cargo->GetRadius() * 0.75f + 4.f;
+			const float A = i * 2.f * PI / N;
+			return FVector(Head.X + FMath::Cos(A) * R, Head.Y + FMath::Sin(A) * R, Head.Z);
+		}
+		if (Mode == EArmyMode::Follow && IsValid(Commander))
+		{
+			// Standing with its commander: a crescent behind him, open in the middle (the camera looks along that line).
+			const FVector Fwd = Commander->GetActorForwardVector().GetSafeNormal2D(), Right = FVector::CrossProduct(FVector::UpVector, Fwd);
+			const int32 k = i / 2, Row = k / 4;
+			const float Side = (i % 2 == 0) ? 1.f : -1.f;
+			const float Ang = (0.50f + 0.27f * (k % 4)) * Side;
+			const float R = 30.f + 11.f * Row;
+			const FVector At = Commander->GetActorLocation() + (-Fwd * FMath::Cos(Ang) + Right * FMath::Sin(Ang)) * R;
+			return FVector(At.X, At.Y, Head.Z);
+		}
+	}
 	if (bSwarming || Path.Num() < 2)
 	{
 		// Sunflower spread: even, deterministic, no clumps.
@@ -446,11 +510,18 @@ AAntChain* AAntArmy::BuildBridge(const FVector& From, const FVector& To)
 		return nullptr;
 	}
 	const int32 Need = FMath::CeilToInt((float)FVector::Dist(From, To) / AAntChain::LinkLen) + 1;
-	if (Need > AAntChain::MaxLinks || Count < Need)
+	// A squad: every worker stands for several links (they stretch out: «Длинные мосты» triples that); a slope needs «Живой пандус».
+	const int32 Workers = bSquad ? FMath::Max(1, FMath::CeilToInt((float)Need / FMath::Max(1, BridgeMul))) : Need;
+	if (bSquad && !bRamps && FMath::Abs((To - From).GetSafeNormal().Z) > 0.34f)
+	{
+		if (Commander) { Commander->Toast(TEXT("Вверх и вниз мост не построить: это «Живой пандус» (Инженеры III). Целься через провал, на тот же уровень")); }
+		return nullptr;
+	}
+	if (Need > AAntChain::MaxLinks || Count < Workers)
 	{
 		if (Commander)
 		{
-			Commander->Toast(FString::Printf(TEXT("Мало муравьёв для моста: нужно %d, в армии %d"), Need, Count));
+			Commander->Toast(FString::Printf(TEXT("Мало муравьёв для моста: нужно %d, в армии %d"), Workers, Count));
 		}
 		return nullptr;
 	}
@@ -462,7 +533,10 @@ AAntChain* AAntArmy::BuildBridge(const FVector& From, const FVector& To)
 	C->ArmyLinks = Need;
 	C->Builder = Commander;
 	C->MaxLife = 120.f;
-	Count -= Need;
+	C->WorkersIn = bSquad ? Workers : 0;
+	C->LinksAtStart = Need;
+	Count -= Workers;
+	if (bSquad && Commander) { Commander->Toast(FString::Printf(TEXT("Мост из %d рабочих: стоит 2 минуты, потом они вернутся в отряд"), Workers)); }
 	AntSfx::Everyone(this, AntSfx::ArmyCharge, From, 1.2f);
 	if (Count <= 0)
 	{
@@ -471,19 +545,19 @@ AAntChain* AAntArmy::BuildBridge(const FVector& From, const FVector& To)
 	return C;
 }
 
-void AAntArmy::ServerMove(const FVector& Goal, float Dt)
+void AAntArmy::ServerMove(const FVector& Goal, float Dt, float SpeedMul)
 {
 	const FVector Me = GetActorLocation();
-	const FVector Way = AKitchenBuilder::Route(Me, Goal);
-	const float Speed = (Mode == EArmyMode::Home ? 700.f : 560.f) * AAntCharacter::SpeedK;
-	const FVector To = Way - Me;
+	const FVector Step = AKitchenBuilder::Route(Me, Goal);
+	const float Speed = (Mode == EArmyMode::Home ? 700.f : 560.f) * AAntCharacter::SpeedK * SpeedMul;
+	const FVector To = Step - Me;
 	const float Flat = (float)To.Size2D();
 	FVector New = Me;
 	FCollisionQueryParams Q(SCENE_QUERY_STAT(ArmyMove), false, this);
 	if (Flat < 120.f * AAntCharacter::AntShrink && To.Z > 60.f * AAntCharacter::AntShrink)
 	{
 		// Right under the target (a table top, a sill): straight up the leg / wall.
-		New.Z = FMath::Min(Way.Z, Me.Z + Speed * 0.8f * Dt);
+		New.Z = FMath::Min(Step.Z, Me.Z + Speed * 0.8f * Dt);
 		New.X += To.X * FMath::Min(1.f, Dt * 2.f);
 		New.Y += To.Y * FMath::Min(1.f, Dt * 2.f);
 	}
@@ -494,7 +568,7 @@ void AAntArmy::ServerMove(const FVector& Goal, float Dt)
 		const FVector Eye = Me + FVector(0.f, 0.f, 25.f * AAntCharacter::AntShrink);
 		const bool bWall = GetWorld()->LineTraceSingleByObjectType(Wall, Eye, Eye + Dir2 * 70.f * AAntCharacter::AntShrink, FCollisionObjectQueryParams(ECC_WorldStatic), Q)
 			&& FMath::Abs(Wall.ImpactNormal.Z) < 0.5f;
-		if (bWall && Way.Z > Me.Z - 100.f * AAntCharacter::AntShrink && Me.Z < 6000.f)
+		if (bWall && Step.Z > Me.Z - 100.f * AAntCharacter::AntShrink && Me.Z < 6000.f)
 		{
 			// An obstacle in the way: climb it like ants do.
 			New.Z += Speed * 0.8f * Dt;
@@ -509,7 +583,7 @@ void AAntArmy::ServerMove(const FVector& Goal, float Dt)
 	}
 	else
 	{
-		New.Z = FMath::FInterpConstantTo(Me.Z, Way.Z, Dt, Speed);
+		New.Z = FMath::FInterpConstantTo(Me.Z, Step.Z, Dt, Speed);
 	}
 	SetActorLocation(New);
 	PushTrail(New);
@@ -564,10 +638,10 @@ void AAntArmy::ServerFight(float Dt)
 			FightHeat = 3.f;
 			E->LastHazard = TEXT("загрызен армией муравьёв");
 			E->LastHazardTime = GetWorld()->GetTimeSeconds();
-			UGameplayStatics::ApplyDamage(E, (6.f + FMath::Sqrt((float)Biters) * 2.2f) * Dt, Commander ? Commander->GetController() : nullptr, this, UDamageType::StaticClass());
+			UGameplayStatics::ApplyDamage(E, (6.f + FMath::Sqrt((float)Biters) * 2.2f) * BiteMul * Dt, Commander ? Commander->GetController() : nullptr, this, UDamageType::StaticClass());
 			if (E->Carrying) { E->LetGo(); }
-			// They fight back.
-			StealAccum += (E->Creature == 2 ? 30.f : 8.f) * Dt;
+			// They fight back. (A squad: one enemy ant kills a worker every three seconds or so, not eight a second.)
+			StealAccum += (bSquad ? (E->Creature == 2 ? 1.5f : 0.35f) : (E->Creature == 2 ? 30.f : 8.f)) * Dt;
 		}
 	}
 	// The Human's feet.
@@ -609,6 +683,10 @@ void AAntArmy::ServerFight(float Dt)
 	AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>();
 	// Raid: inside the other colony's nest, carry their sweetness home.
 	const uint8 Other = Team == 0 ? 1 : 0;
+	if (bSquad)
+	{
+		return;   // a raid squad neither robs a nest's score nor eats food on the spot: loot counts when it is carried home
+	}
 	if (GS && GM && Team < 2 && FVector::Dist2D(Me, AKitchenBuilder::NestLocation(Other)) < AKitchenBuilder::NestRadius(Other) + R)
 	{
 		int32& TheirScore = Other == 0 ? GS->TeamScore : GS->RivalScore;
