@@ -32,6 +32,7 @@
 #include "LevelV2.h"
 #include "KitchenBuilder.h"
 #include "HumanCharacter.h"
+#include "AntRaid.h"
 
 namespace
 {
@@ -474,6 +475,11 @@ void AAntKitchenGameMode::SpawnMainObject(int32 ForceSpot)
 	int32 Pick = ForceSpot;
 	if (!Spots.IsValidIndex(Pick))
 	{
+		int32 DevSpot = 0;
+		if (FParse::Value(FCommandLine::Get(), TEXT("AntCakeSpot="), DevSpot)) { Pick = DevSpot - 1; }   // dev: -AntCakeSpot=1..3
+	}
+	if (!Spots.IsValidIndex(Pick))
+	{
 		int32 Roll = Rng.RandRange(0, 99);
 		Pick = Spots.Num() - 1;
 		for (int32 i = 0; i < Spots.Num(); ++i)
@@ -487,6 +493,14 @@ void AAntKitchenGameMode::SpawnMainObject(int32 ForceSpot)
 	D.Name = TEXT("Кусок именинного торта");
 	D.Value = LevelV2::MainValue() / 2;   // a trophy: delivered whole it pays double
 	D.Weight = MainWeight();
+	if (bRaid && Raid)
+	{
+		// A raid: the threat tier decides how big the slice is.
+		D.Value = Raid->TierDef().CakeValue / 2;
+		int32 W = Raid->TierDef().CakeWeight;
+		FParse::Value(FCommandLine::Get(), TEXT("AntCakeWeight="), W);
+		D.Weight = FMath::Clamp(W, 6, 200);
+	}
 	D.Color = FLinearColor(1.f, 0.62f, 0.8f);
 	D.Shape = EAntShape::Cube;
 	D.Scale = FVector(0.8f, 0.55f, 0.45f);
@@ -501,14 +515,18 @@ void AAntKitchenGameMode::SpawnMainObject(int32 ForceSpot)
 	L->bMain = true;
 	L->FinishSpawning(FTransform(Where));
 	MainObject = L;
-	Broadcast(FString::Printf(TEXT("ИМЕНИННЫЙ ТОРТ! Кусок лежит %s. Целым он стоит %d, но он тяжёлый: тащите всей колонной (F — армия)"), S.Where, LevelV2::MainValue()), RunGold);
-	UE_LOG(LogTemp, Display, TEXT("ANTV2 cake: spot %d of %d (%d%%) «%s» at %s, weight %d, value %d whole"), Pick + 1, Spots.Num(), S.Chance, S.Where, *Where.ToCompactString(), D.Weight, LevelV2::MainValue());
+	if (!bRaid)   // (a raid: where it lies is for the scouts to know or for the team to find out)
+	{
+		Broadcast(FString::Printf(TEXT("ИМЕНИННЫЙ ТОРТ! Кусок лежит %s. Целым он стоит %d, но он тяжёлый: тащите всей колонной (F — армия)"), S.Where, LevelV2::MainValue()), RunGold);
+	}
+	UE_LOG(LogTemp, Display, TEXT("ANTV2 cake: spot %d of %d (%d%%) «%s» at %s, weight %d, value %d whole"), Pick + 1, Spots.Num(), S.Chance, S.Where, *Where.ToCompactString(), D.Weight, D.Value * 2);
 }
 
 void AAntKitchenGameMode::OnTrophyBroken(AKitchenLoot* Trophy)
 {
 	if (Trophy && Trophy->bMain)
 	{
+		if (bRaid && Raid) { Raid->OnCakeBroken(Trophy->LastCarrier.Get()); }
 		Broadcast(TEXT("Именинный торт разбился! Куски стоят вдвое меньше целого"), RunBad);
 		UE_LOG(LogTemp, Display, TEXT("ANTV2 cake broken at %s"), *Trophy->GetActorLocation().ToCompactString());
 	}
@@ -584,12 +602,12 @@ void AAntKitchenGameMode::SpawnBody(AAntCharacter* Ant)
 		L->InitFood(D);
 		L->bBody = true;
 		L->BodyOf = C;
-		L->ExpireAt = GetWorld()->GetTimeSeconds() + 60.f;
+		L->ExpireAt = GetWorld()->GetTimeSeconds() + (bRaid ? 90.f : 60.f);
 		L->FinishSpawning(FTransform(At));
 		Ant->StuckTo = nullptr;
 		Ant->bCorpseGone = true;
 		Ant->OnRep_Corpse();
-		UE_LOG(LogTemp, Display, TEXT("ANTBODY body of %s lies at %s for 60 s"), *Ant->GetDisplayName(), *At.ToCompactString());
+		UE_LOG(LogTemp, Display, TEXT("ANTBODY body of %s lies at %s for %d s"), *Ant->GetDisplayName(), *At.ToCompactString(), bRaid ? 90 : 60);
 	}
 }
 
@@ -606,7 +624,7 @@ void AAntKitchenGameMode::CompleteOrder(uint8 OrderId)
 		return;
 	}
 	GS->OrdersDone |= (uint8)(1 << i);
-	const int32 Bonus = 40 + 10 * GS->Shift;
+	const int32 Bonus = (bRaid && Raid) ? Raid->ContractBonus(OrderId) : 40 + 10 * GS->Shift;
 	UE_LOG(LogTemp, Display, TEXT("ANTORDER done: %s (+%d)"), AntOrder::Name(OrderId), Bonus);
 	Broadcast(FString::Printf(TEXT("ПРИКАЗ КОРОЛЕВЫ ВЫПОЛНЕН: %s (+%d)"), AntOrder::Name(OrderId), Bonus), RunGold);
 	AddScore(0, Bonus);
@@ -869,8 +887,8 @@ void AAntKitchenGameMode::RunStartShift()
 	{
 		EndEvent();
 	}
-	// A new run starts clean: the cards belong to the run that was lost.
-	if (ShiftNumber == 1)
+	// A new run starts clean: the cards belong to the run that was lost. (A raid: the nest has set them already.)
+	if (ShiftNumber == 1 && !bRaid)
 	{
 		GS->Cards.Reset();
 		GS->RunShifts = 0;
@@ -1105,7 +1123,7 @@ void AAntKitchenGameMode::RunEndShift(bool bWon)
 	}
 	UE_LOG(LogTemp, Display, TEXT("ANTRUN shift %d %s: haul %d, run so far: %d shifts, %d haul, orders done mask %d"), ShiftNumber, bWon ? TEXT("WON") : TEXT("LOST"),
 		GS->TeamScore, GS->RunShifts, GS->RunHaul, (int32)GS->OrdersDone);
-	if (!bWon)
+	if (!bWon && !bRaid)
 	{
 		GS->MulticastRunOver(GS->RunShifts, GS->RunHaul);
 	}
@@ -1458,6 +1476,10 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 	if (NpcWorld::DevCommand(this, A))
 	{
 		return;   // the pets and the family: cat ..., dog ..., gran ..., kid ..., npclevel N (CritterBrain.cpp)
+	}
+	if (Raid && Raid->DevCommand(A))
+	{
+		return;   // raid ..., nest ... (AntRaid.cpp)
 	}
 	const FString Op = A[0].ToLower();
 	auto Num = [&A](int32 i, float Def = 0.f) { return A.IsValidIndex(i) ? FCString::Atof(*A[i]) : Def; };

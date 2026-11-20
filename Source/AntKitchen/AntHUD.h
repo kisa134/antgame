@@ -54,6 +54,19 @@ private:
 	float HintsDoneAt = -1.f;
 	int32 HintShift = -1;
 
+	// ---- The raid (AntHUDRaid.cpp) and the nest between raids (AntHUDNest.cpp) ----
+	void DrawRaidTop(class AAntRaid* Raid, AAntGameState* GS);
+	void DrawRaid(class AAntRaid* Raid, AAntGameState* GS, APawn* Me);
+	void DrawRaidResults(class AAntRaid* Raid, AAntGameState* GS);
+	void DrawNest(class AAntRaid* Raid, AAntGameState* GS);
+	uint8 SeenCake = 255;
+	bool bNestUi = false;
+	TWeakObjectPtr<APawn> NestFrozenPawn;
+	float LeaveHold = 0.f;
+	bool bLeaveSent = false;
+	bool bHintCake = false;
+	int32 BeenOutRaid = -1;      // the raid in which this player has already left the nest once
+
 	/** The shift ("heist run"): quota bar, larvae, what the Human is up to. */
 	void DrawShift(AAntGameState* GS);
 	/** A big line across the screen for a few seconds (stage change, quota met). */

@@ -20,6 +20,7 @@
 #include "KitchenGadgets.h"
 #include "KitchenArt.h"
 #include "KitchenMover.h"
+#include "AntRaid.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "EngineUtils.h"
@@ -154,6 +155,8 @@ void AAntKitchenGameMode::BeginPlay()
 	// Mode: heist by default; -AntWar, -AntClassic switch.
 	bWar = FParse::Param(FCommandLine::Get(), TEXT("AntWar"));
 	bHeist = !bWar && !FParse::Param(FCommandLine::Get(), TEXT("AntClassic"));
+	// The heist is an extraction raid now (the level v2 flat only: the main object lives there). -AntShifts: the old run of shifts.
+	bRaid = bHeist && KitchenArt::Enabled() && !FParse::Param(FCommandLine::Get(), TEXT("AntShifts"));
 	if (bWar)
 	{
 		TargetScore = 3000;
@@ -221,9 +224,20 @@ void AAntKitchenGameMode::BeginPlay()
 	{
 		for (int32 i = 0; i < 3; ++i) { SpawnTrophy(i); }
 		GetWorldTimerManager().SetTimer(HeistTimer, this, &AAntKitchenGameMode::HeistTick, 5.f, true, 10.f);
-		StartShift();
-		SpawnMainObject();
-		Broadcast(TEXT("ХАЙСТ: трофеи лежат высоко — снимите и дотащите домой ЦЕЛЫМИ (×2). Разбитый — куски за обычную цену"), Gold);
+		if (bRaid)
+		{
+			// The colony is loaded and everybody starts in the nest; the raid (and its cake) begins when the host says so.
+			FActorSpawnParameters RP;
+			RP.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+			Raid = GetWorld()->SpawnActor<AAntRaid>(AAntRaid::StaticClass(), FTransform::Identity, RP);
+			if (Raid) { Raid->ServerInit(this); }
+		}
+		else
+		{
+			StartShift();
+			SpawnMainObject();
+			Broadcast(TEXT("ХАЙСТ: трофеи лежат высоко — снимите и дотащите домой ЦЕЛЫМИ (×2). Разбитый — куски за обычную цену"), Gold);
+		}
 	}
 	GetWorldTimerManager().SetTimer(MatchTimer, this, &AAntKitchenGameMode::MatchTick, 1.f, true);
 	GetWorldTimerManager().SetTimer(RefillTimer, this, &AAntKitchenGameMode::RefillLoot, 10.f, true);
@@ -395,6 +409,10 @@ void AAntKitchenGameMode::AddScore(uint8 Team, int32 Value)
 	}
 	(Team == 0 ? GS->TeamScore : GS->RivalScore) += Value;
 	UpdateRage();
+	if (bRaid)
+	{
+		return;   // a raid has no quota: what counts is getting home (AntRaid.cpp)
+	}
 	if (bHeist)
 	{
 		// The shift: hitting the quota does not end it. Everyone still has to make it home (ShiftTick), or stay for more.
@@ -437,9 +455,9 @@ void AAntKitchenGameMode::UpdateRage()
 void AAntKitchenGameMode::RivalWarTick()
 {
 	AAntGameState* GS = GetGameState<AAntGameState>();
-	if (!GS || GS->Phase != 0 || GS->RivalWorkers < 400)
+	if (!GS || GS->Phase != 0 || GS->RivalWorkers < 400 || bRaid)
 	{
-		return;
+		return;   // (a raid: the rival clan plays the raid with its own parties, AntClan.cpp; no army of hundreds)
 	}
 	for (TActorIterator<AAntArmy> It(GetWorld()); It; ++It)
 	{
@@ -685,6 +703,7 @@ void AAntKitchenGameMode::PostLogin(APlayerController* NewPlayer)
 		++ColorIndex;
 	}
 	Super::PostLogin(NewPlayer);
+	if (Raid) { Raid->OnPlayerJoined(NewPlayer); }
 
 	if (NewPlayer && NewPlayer->PlayerState)
 	{
@@ -1008,6 +1027,7 @@ void AAntKitchenGameMode::OnFoodDelivered(uint8 Team, AKitchenLoot* Food, const 
 		}
 		AController* BodyOwner = Food->BodyOf.Get();
 		const FString Name = Food->LootName.Replace(TEXT("Тело: "), TEXT(""));
+		if (bRaid && Raid) { Raid->OnBodyHome(BodyOwner, Name, Carriers); }
 		for (AAntCharacter* A : Carriers)
 		{
 			if (AAntPlayerState* PS = A ? A->GetPlayerState<AAntPlayerState>() : nullptr) { PS->BodiesHome++; }
@@ -1057,6 +1077,10 @@ void AAntKitchenGameMode::OnFoodDelivered(uint8 Team, AKitchenLoot* Food, const 
 			TrophyLostAt = GetWorld()->GetTimeSeconds();
 			Broadcast(FString::Printf(TEXT("ЦЕЛЫЙ ТРОФЕЙ! «%s» доставлен без единой трещины: ×2 = %d"), *Food->LootName, Value), Gold);
 		}
+	}
+	if (bRaid && Raid)
+	{
+		Raid->OnDelivered(Team, Food, Carriers, Value);   // the tier's price, the cake, what the Queen thinks of it
 	}
 	if (Team == 0)
 	{
@@ -1204,6 +1228,7 @@ void AAntKitchenGameMode::OnAntKilled(AAntCharacter* Ant, AController* Killer, A
 	{
 		++Run.DeathsThisShift;
 		FailOrder(AntOrder::NoDeaths);
+		if (bRaid && Raid) { Raid->OnPlayerDied(Ant, How); }
 		// The body stays behind for a minute (after the pancake has had its ride on the slipper): bring it home for a larva.
 		{
 			TWeakObjectPtr<AAntCharacter> WeakBody = Ant;
@@ -1216,7 +1241,8 @@ void AAntKitchenGameMode::OnAntKilled(AAntCharacter* Ant, AController* Killer, A
 		if (GS->Larvae <= 0)
 		{
 			Run.OutPlayers.Add(Ant->GetController());
-			Ant->Toast(TEXT("Личинок не осталось: ты выбыл до конца смены. Вернуть тебя могут, если принесут тело домой"));
+			Ant->Toast(bRaid ? TEXT("Личинок не осталось: ты выбыл до конца рейда. Вернуть тебя могут, если принесут тело домой")
+				: TEXT("Личинок не осталось: ты выбыл до конца смены. Вернуть тебя могут, если принесут тело домой"));
 			if (!AnyAllyPlayerAlive(false))
 			{
 				EndMatch(2);
@@ -1278,7 +1304,7 @@ void AAntKitchenGameMode::MatchTick()
 	GS->RivalWorkers += 4;   // their queen keeps laying eggs
 	if (bHeist)
 	{
-		ShiftTick();
+		if (bRaid && Raid) { Raid->RaidSecond(); } else { ShiftTick(); }
 		return;
 	}
 	if (GS->TimeRemaining <= 0.f)
@@ -1293,6 +1319,12 @@ void AAntKitchenGameMode::EndMatch(uint8 Winner)
 	AAntGameState* GS = GetGameState<AAntGameState>();
 	if (!GS || GS->Phase != 0)
 	{
+		return;
+	}
+	if (bRaid && Raid)
+	{
+		// (asked for by a dev command, or the last ant died with no larva left)
+		Raid->EndRaid(Winner == 1 ? AntRaidEnd::Left : AntRaidEnd::Wiped);
 		return;
 	}
 	if (bHeist)
@@ -1368,7 +1400,7 @@ void AAntKitchenGameMode::ResetMatch()
 			if (!It->PropName.IsEmpty()) { It->Destroy(); }
 		}
 		SpawnHighProps();
-		StartShift();
+		if (bRaid && Raid) { Raid->OnWorldReset(); } else { StartShift(); }
 	}
 	for (TActorIterator<AAntBotController> It(GetWorld()); It; ++It)
 	{
@@ -1408,7 +1440,10 @@ void AAntKitchenGameMode::ResetMatch()
 		}
 		RestartPlayer(PC);
 	}
-	Broadcast(bWar ? TEXT("Новый раунд войны! Захватывайте территории!") : bHeist ? TEXT("Новая смена! Трофеи снова на местах — тащите целыми") : TEXT("Новый раунд! Тащите всё сладкое в муравейник!"), Gold);
+	if (!bRaid)
+	{
+		Broadcast(bWar ? TEXT("Новый раунд войны! Захватывайте территории!") : bHeist ? TEXT("Новая смена! Трофеи снова на местах — тащите целыми") : TEXT("Новый раунд! Тащите всё сладкое в муравейник!"), Gold);
+	}
 }
 
 // ---------------------------------------------------------------------------------------------

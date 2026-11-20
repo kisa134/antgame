@@ -9,6 +9,7 @@
 #include "KitchenLoot.h"
 #include "KitchenArt.h"
 #include "LevelV2.h"
+#include "AntRaid.h"
 #include "Engine/Canvas.h"
 #include "Engine/Engine.h"
 #include "Engine/Font.h"
@@ -75,6 +76,11 @@ void AAntHUD::DrawRun(AAntGameState* GS, APawn* Me)
 	{
 		return;
 	}
+	const bool bRaidHud = AAntRaid::Get(GetWorld()) != nullptr;   // a raid has its own top panel, results and nest (AntHUDRaid.cpp)
+	if (bRaidHud && GS->Phase != 0)
+	{
+		return;
+	}
 	if (GS->Phase != 0 || CardTest())
 	{
 		DrawInterlude(GS);
@@ -86,7 +92,7 @@ void AAntHUD::DrawRun(AAntGameState* GS, APawn* Me)
 	const float ServerNow = GS->GetServerWorldTimeSeconds();
 
 	// --- Under the shift panel: greed, the running event ---
-	float RowY = 128.f * S;
+	float RowY = (bRaidHud ? 150.f : 128.f) * S;
 	if (GS->bQuotaMet)
 	{
 		const float Beat = 0.8f + 0.2f * FMath::Abs(FMath::Sin(Now * 3.f));
@@ -124,7 +130,7 @@ void AAntHUD::DrawRun(AAntGameState* GS, APawn* Me)
 	float X = 30.f * S, Y = 150.f * S;
 	if (GS->Orders.Num() > 0)
 	{
-		Txt(TEXT("ПРИКАЗЫ КОРОЛЕВЫ"), X, Y, FLinearColor(1.f, 0.8f, 0.2f, 0.9f), Small, 1.05f * S);
+		Txt(bRaidHud ? TEXT("КОНТРАКТЫ КОРОЛЕВЫ") : TEXT("ПРИКАЗЫ КОРОЛЕВЫ"), X, Y, FLinearColor(1.f, 0.8f, 0.2f, 0.9f), Small, 1.05f * S);
 		Y += 22.f * S;
 		for (int32 i = 0; i < GS->Orders.Num(); ++i)
 		{
@@ -150,7 +156,7 @@ void AAntHUD::DrawRun(AAntGameState* GS, APawn* Me)
 		}
 		Y += 8.f * S;
 	}
-	if (GS->Cards.Num() > 0)
+	if (GS->Cards.Num() > 0 && !bRaidHud)   // (a raid: the cards are what the nest has built, shown in the nest)
 	{
 		FString Line = TEXT("Карты: ");
 		for (int32 i = 0; i < GS->Cards.Num(); ++i)
@@ -168,7 +174,7 @@ void AAntHUD::DrawRun(AAntGameState* GS, APawn* Me)
 	}
 
 	// --- First shift only: three steps for somebody who has never played ---
-	if (Ant && Ant->Creature == 0 && Ant->Team == 0 && GS->Shift == 1 && GS->RunShifts == 0 && GS->Phase == 0)
+	if (Ant && Ant->Creature == 0 && Ant->Team == 0 && GS->Shift == 1 && GS->RunShifts == 0 && GS->Phase == 0 && !bRaidHud)
 	{
 		if (HintShift != GS->Shift)
 		{

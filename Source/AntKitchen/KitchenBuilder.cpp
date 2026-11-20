@@ -319,7 +319,8 @@ FVector AKitchenBuilder::Route(const FVector& From, const FVector& To, bool bFly
 	const FVector D = Doorway();
 	const float Z = FMath::Clamp((float)FMath::Min(From.Z, To.Z), 0.f, 2800.f);
 	// At the door: step through to the other side. Otherwise head for our side of the door.
-	if (FMath::Abs(From.Y - D.Y) < 700.f && FMath::Abs(From.X - D.X) < 600.f)
+	// (650, not 600: "our side of the door" below is exactly 600 from it, and an army walks to that point exactly: it stood there for ever)
+	if (FMath::Abs(From.Y - D.Y) < 700.f && FMath::Abs(From.X - D.X) < 650.f)
 	{
 		return FVector(bToKitchen ? 6200.f : 8000.f, D.Y, Z);
 	}

@@ -2,6 +2,7 @@
 #include "AntCharacter.h"
 #include "AntArmy.h"
 #include "AntKitchenGameMode.h"
+#include "AntRaid.h"
 #include "AntMovementComponent.h"
 #include "KitchenLoot.h"
 #include "Components/StaticMeshComponent.h"
@@ -237,6 +238,10 @@ int32 Level(const UWorld* World, uint8 Who)
 	if (!GM || !GM->bHeist)
 	{
 		return 1;
+	}
+	if (GM->bRaid && GM->Raid)
+	{
+		return GM->Raid->NpcLevel(Who);   // a raid: by the threat tier and by how far the raid has got
 	}
 	// The heist run: one more thing to watch out for each shift, so that shift 1 can be won alone.
 	const int32 S = GM->ShiftNumber;

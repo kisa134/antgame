@@ -11,4 +11,11 @@ void AAntPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME(AAntPlayerState, AntColor);
 	DOREPLIFETIME(AAntPlayerState, Team);
 	DOREPLIFETIME(AAntPlayerState, AntClass);
+	DOREPLIFETIME(AAntPlayerState, SquadWant);
+	DOREPLIFETIME(AAntPlayerState, Tool0);
+	DOREPLIFETIME(AAntPlayerState, Tool1);
+	DOREPLIFETIME(AAntPlayerState, Charges0);
+	DOREPLIFETIME(AAntPlayerState, Charges1);
+	DOREPLIFETIME(AAntPlayerState, bNestReady);
+	DOREPLIFETIME(AAntPlayerState, bHome);
 }

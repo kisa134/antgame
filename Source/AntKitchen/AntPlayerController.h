@@ -56,6 +56,8 @@ public:
 	void Vote1() { TryVote(0); }
 	void Vote2() { TryVote(1); }
 	void Vote3() { TryVote(2); }
+	/** The raid and the nest (AntRaidCmd): leave, ready, start, buy, squad size, tools, orders to the squad. */
+	UFUNCTION(Server, Reliable) void ServerRaid(uint8 Cmd, int32 A, int32 B);
 	/** F1: show the controls line again for a while (it fades after the first minute). */
 	void ShowHelp();
 	float HelpAskedAt = -100.f;

@@ -26,6 +26,7 @@
 #include "Misc/App.h"
 #include "AntFx.h"
 #include "AntRun.h"
+#include "AntRaid.h"
 
 namespace
 {
@@ -195,6 +196,14 @@ void AAntHUD::DrawHUD()
 	AAntPlayerController* PC = Cast<AAntPlayerController>(PlayerOwner);
 	APawn* Me = PlayerOwner ? PlayerOwner->GetPawn() : nullptr;
 
+	// A raid: the nest screen and the results cover everything else.
+	AAntRaid* Raid = (GS && GS->bHeistMode) ? AAntRaid::Get(GetWorld()) : nullptr;
+	if (Raid && Raid->Phase != AntRaidPhase::Raid)
+	{
+		DrawRaid(Raid, GS, Me);
+		DrawToastsAndNumbers(PC);
+		return;
+	}
 	const bool bVoteScreen = GS && GS->bHeistMode && GS->Interlude >= 2;
 	if (!bVoteScreen)
 	{
@@ -219,6 +228,7 @@ void AAntHUD::DrawHUD()
 	DrawWar(GS, Me);
 	DrawTrophies(GS, Me);
 	DrawRun(GS, Me);
+	if (Raid) { DrawRaid(Raid, GS, Me); }
 	DrawFeed(GS);
 	DrawToastsAndNumbers(PC);
 	DrawHelp(Me);
@@ -239,6 +249,12 @@ void AAntHUD::DrawTop(AAntGameState* GS)
 	UFont* Big = GEngine->GetLargeFont();
 
 	const FLinearColor Fire(1.f, 0.4f, 0.2f);
+	AAntRaid* Raid = GS->bHeistMode ? AAntRaid::Get(GetWorld()) : nullptr;
+	if (Raid)
+	{
+		DrawRaidTop(Raid, GS);
+		return;   // (how a raid ended is the results screen's business)
+	}
 	if (GS->bHeistMode)
 	{
 		DrawShift(GS);
@@ -638,7 +654,7 @@ void AAntHUD::DrawAnt(AAntCharacter* Ant)
 		if (District || Callout)
 		{
 			const FString Place = (District && Callout && FCString::Strcmp(District, Callout) != 0) ? FString::Printf(TEXT("%s  ·  %s"), District, Callout) : FString(District ? District : Callout);
-			Txt(Place, W * 0.5f, 14.f * S, FLinearColor(0.85f, 0.85f, 0.8f, 0.75f), Small, 1.05f * S, true);
+			Txt(Place, 30.f * S, 14.f * S, FLinearColor(0.85f, 0.85f, 0.8f, 0.8f), Small, 1.1f * S);   // (top left: the middle belongs to the clock)
 		}
 	}
 
@@ -1269,6 +1285,7 @@ void AAntHUD::DrawTrophies(AAntGameState* GS, APawn* Me)
 	{
 		return;
 	}
+	const AAntRaid* RaidOfHud = AAntRaid::Get(GetWorld());
 	for (TActorIterator<AKitchenLoot> It(GetWorld()); It; ++It)
 	{
 		AKitchenLoot* L = *It;
@@ -1279,6 +1296,10 @@ void AAntHUD::DrawTrophies(AAntGameState* GS, APawn* Me)
 		FString Label;
 		const FVector At = L->GetActorLocation() + FVector(0.f, 0.f, 120.f);
 		const bool bClose = FVector::Dist(L->GetActorLocation(), Ant->GetActorLocation()) < 1600.f || Aimed(At, 5.f);
+		if (RaidOfHud && !bClose && !L->IsCarried() && L->LootName == AAntRaid::CakeName())
+		{
+			continue;   // a raid: the cake has to be found (once it is, the raid HUD marks it)
+		}
 		if (L->IsCarried())
 		{
 			Label = L->CarryTeam() == Ant->Team ? FString::Printf(TEXT("%s — несём (%d)"), *L->LootName, L->NumCarriers()) : FString::Printf(TEXT("%s — ТАЩАТ ВРАГИ!"), *L->LootName);

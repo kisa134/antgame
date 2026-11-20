@@ -16,6 +16,7 @@ class AKitchenFaucet;
 class AAntTerritory;
 class AAntCashout;
 class AAntBotController;
+class AAntRaid;
 
 /**
  * Server-side rules:
@@ -77,6 +78,10 @@ public:
 	/** Modes: «Хайст» (default: co-op heist, trophies up high), «Война» (-AntWar: territories + cashouts), «Набег» (-AntClassic). */
 	UPROPERTY(EditDefaultsOnly, Category = "Match") bool bWar = false;
 	UPROPERTY(EditDefaultsOnly, Category = "Match") bool bHeist = true;
+	/** The heist as an extraction game: NEST -> RAID -> NEST (AntRaid.h). The default; -AntShifts gives the old run of shifts. */
+	bool bRaid = false;
+	UPROPERTY() AAntRaid* Raid = nullptr;
+	friend class AAntRaid;
 	/** Heist: keeps 3 trophies in the kitchen. */
 	void HeistTick();
 	/** The run: a quota per shift that grows, a shared pool of respawns, the Human escalating over the shift. */

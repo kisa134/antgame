@@ -21,6 +21,18 @@ public:
 	UPROPERTY(Replicated) EAntClass AntClass = EAntClass::Worker;
 	UPROPERTY(Replicated) FLinearColor AntColor = FLinearColor(0.12f, 0.04f, 0.03f);
 
+	// ---- The raid (AntRaid.h): what this player takes out of the nest, and where he is when the team leaves.
+	/** Squad workers asked for (255 = as many as the nest allows). */
+	UPROPERTY(Replicated) uint8 SquadWant = 255;
+	/** Two pockets of tools (AntTool ids) and the charges left in each. */
+	UPROPERTY(Replicated) uint8 Tool0 = 0;
+	UPROPERTY(Replicated) uint8 Tool1 = 0;
+	UPROPERTY(Replicated) uint8 Charges0 = 0;
+	UPROPERTY(Replicated) uint8 Charges1 = 0;
+	UPROPERTY(Replicated) bool bNestReady = false;
+	/** Inside a nest entrance right now (the leaving countdown counts these). */
+	UPROPERTY(Replicated) bool bHome = true;
+
 	// Server only: what this ant did this shift, for the awards at the end of it.
 	int32 Squashed = 0;       // flattened by the slipper or a paw
 	int32 TrophyBreaks = 0;   // let a trophy smash

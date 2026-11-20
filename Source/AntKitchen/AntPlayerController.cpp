@@ -21,6 +21,7 @@
 #include "KitchenLoot.h"
 #include "Engine/PostProcessVolume.h"
 #include "AntFx.h"
+#include "AntRaid.h"
 #include "EngineUtils.h"
 
 void AAntPlayerController::BeginPlay()
@@ -318,6 +319,14 @@ void AAntPlayerController::ServerVoteCard_Implementation(uint8 Option)
 	if (AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
 	{
 		GM->VoteCard(this, Option);
+	}
+}
+
+void AAntPlayerController::ServerRaid_Implementation(uint8 Cmd, int32 A, int32 B)
+{
+	if (AAntRaid* Raid = AAntRaid::Get(GetWorld()))
+	{
+		Raid->PlayerCommand(this, Cmd, A, B);
 	}
 }
 
