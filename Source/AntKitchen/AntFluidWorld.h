@@ -116,6 +116,7 @@ private:
 	TArray<FColumn> Columns;
 	void NoteColumn(const FVector& Top, const FVector& Bottom, float Volume, uint8 Liquid, const FVector2f& Vel);
 	double Accum = 0.;
+	int32 MaxSteps = 3;
 	bool bReady = false, bFrozen = false, bTriedBuild = false;
 	float SimMs = 0.f, ViewMs = 0.f, CoupleMs = 0.f, DropMs = 0.f;
 	double LostVolume = 0.;
@@ -155,6 +156,8 @@ private:
 	UPROPERTY() UInstancedStaticMeshComponent* DropMesh = nullptr;
 	void TickDrops(float Dt);
 	void DrawDrops();
+	UPROPERTY() UInstancedStaticMeshComponent* StreamMesh = nullptr;
+	void DrawStreams();
 	float TapDripAt = -1.f;
 	bool bDrip = false;
 

@@ -13,6 +13,7 @@
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Camera/CameraActor.h"
+#include "Engine/StaticMeshActor.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/PlayerController.h"
@@ -40,7 +41,7 @@ namespace
 	const FBasinDef BasinDefs[] =
 	{
 		// the worktop with the sink sunk into it: one height field, so the sink fills and slops over its own rim
-		{ TEXT("worktop"), -7000.f, 3000.f, -1300.f, 5000.f, 20.f, -5200.f, 3700.f, 1710.f, 70.f, 640.f, 2 },
+		{ TEXT("worktop"), -7600.f, 1900.f, -500.f, 5200.f, 20.f, -5200.f, 3700.f, 1710.f, 70.f, 640.f, 2 },
 		// the kitchen floor, through the doorway and a little into the living room
 		{ TEXT("floor"), -7050.f, -5150.f, 7700.f, 5000.f, 25.f, 2500.f, 1500.f, 0.f, 45.f, 40.f, 1 },
 	};
@@ -84,6 +85,8 @@ void UAntFluidWorld::Tick(float DeltaTime)
 		if (W->GetNetMode() != NM_DedicatedServer) { BuildViews(); }
 		FParse::Value(FCommandLine::Get(), TEXT("AntFluidDemo="), Demo);
 		FParse::Value(FCommandLine::Get(), TEXT("AntFluidQuality="), Quality);
+		FParse::Value(FCommandLine::Get(), TEXT("AntFluidCatchUp="), MaxSteps);   // dev: more steps per frame when a test runs at a low frame rate
+		if (Demo == 0 && FCString::Stristr(FCommandLine::Get(), TEXT("-AntFluidScript=")) != nullptr) { Demo = 99; }   // a script with no built-in demo
 		bReady = true;
 		UE_LOG(LogTemp, Display, TEXT("ANTFLUID ready: %d basins, demo %d, quality %d"), Basins.Num(), Demo, Quality);
 		return;
@@ -106,6 +109,7 @@ void UAntFluidWorld::Tick(float DeltaTime)
 	{
 		UpdateViews();
 		DrawDrops();
+		DrawStreams();
 		TickVolumes(Dt);
 	}
 	double T4 = FPlatformTime::Seconds();
@@ -286,6 +290,7 @@ void UAntFluidWorld::NoteColumn(const FVector& Top, const FVector& Bottom, float
 void UAntFluidWorld::HandleSpills(int32 b)
 {
 	FBasin& B = *Basins[b];
+	TMap<int64, int32> Merge;
 	for (const FSpill& S : B.Spills)
 	{
 		const int32 I = S.Cell % B.Nx, J = S.Cell / B.Nx;
@@ -306,7 +311,11 @@ void UAntFluidWorld::HandleSpills(int32 b)
 		T.Sample((float)Land.X, (float)Land.Y, S2);
 		if (!S2.bInside || S2.Cell != Open) { Land = FVector(C.X, C.Y, Smp.Surface); }
 		FFall F; F.From = From; F.To = Land; F.Dur = Dur; F.Volume = S.Volume; F.Liquid = Liquid; F.Vel = Vel; F.ToBasin = To;
-		Falls.Add(F);
+		int32 LI = 0, LJ = 0;
+		T.CellAt((float)Land.X, (float)Land.Y, LI, LJ);
+		const int64 Key = ((int64)To << 48) | ((int64)(LJ / 2 + 1) << 24) | (int64)(LI / 2 + 1) | ((int64)Liquid << 56);
+		if (const int32* Ex = Merge.Find(Key)) { Falls[*Ex].Volume += S.Volume; }
+		else { Merge.Add(Key, Falls.Add(F)); }
 		NoteColumn(From, Land, S.Volume, Liquid, Vel);
 	}
 	B.Spills.Reset();
@@ -316,7 +325,7 @@ void UAntFluidWorld::StepSim(float Dt)
 {
 	Accum += Dt;
 	int32 Steps = 0;
-	while (Accum >= StepDt && Steps < 3)
+	while (Accum >= StepDt && Steps < MaxSteps)
 	{
 		Accum -= StepDt; ++Steps;
 		// sources
@@ -335,7 +344,7 @@ void UAntFluidWorld::StepSim(float Dt)
 			const float Fall = FMath::Max(0.f, (float)S.Pos.Z - Smp.Surface);
 			const float Impact = FMath::Sqrt(2.f * B.Gravity * Fall);
 			if (S.Liquid != Honey) { B.Kick((float)S.Pos.X, (float)S.Pos.Y, S.Radius * 2.2f, FMath::Min(Impact * 0.45f, 0.4f * B.Dx / (B.Dt / B.SubSteps)), 0.5f); }
-			if (S.Liquid == Water || S.Liquid == Cola) { B.AddFoam((float)S.Pos.X, (float)S.Pos.Y, S.Radius * 2.f, FMath::Min(0.25f, Impact / 6000.f)); }
+			if (S.Liquid == Water || S.Liquid == Cola) { B.AddFoam((float)S.Pos.X, (float)S.Pos.Y, S.Radius * 1.5f, FMath::Min(0.06f, Impact / 20000.f)); }
 			NoteColumn(S.Pos, FVector(S.Pos.X, S.Pos.Y, Smp.Surface), Vol, S.Liquid, FVector2f::ZeroVector);
 		}
 		// what is in the air lands
@@ -348,7 +357,7 @@ void UAntFluidWorld::StepSim(float Dt)
 			{
 				FBasin& T = *Basins[F.ToBasin];
 				LostVolume += T.AddVolume((ELiquid)F.Liquid, (float)F.To.X, (float)F.To.Y, T.Dx * 1.3f, F.Volume, F.Vel * 0.5f);
-				if (F.Liquid == Water || F.Liquid == Cola) { T.AddFoam((float)F.To.X, (float)F.To.Y, T.Dx * 2.f, 0.12f); }
+				if (F.Liquid == Water || F.Liquid == Cola) { T.AddFoam((float)F.To.X, (float)F.To.Y, T.Dx * 1.5f, FMath::Min(0.08f, F.Volume / (T.Dx * T.Dx * 40.f))); }
 			}
 			Falls.RemoveAtSwap(i, EAllowShrinking::No);
 		}
@@ -358,7 +367,7 @@ void UAntFluidWorld::StepSim(float Dt)
 			HandleSpills(b);
 		}
 	}
-	if (Steps == 3) { Accum = FMath::Min(Accum, (double)StepDt); }   // the frame rate fell under 20: the liquid slows down rather than the game
+	if (Steps == MaxSteps) { Accum = FMath::Min(Accum, (double)StepDt); }   // the frame rate fell under 20: the liquid slows down rather than the game
 }
 
 // =============================================================================================
@@ -494,6 +503,14 @@ void UAntFluidWorld::BuildViews()
 	DropMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	DropMesh->SetCastShadow(false);
 	DropMesh->RegisterComponent();
+	StreamMesh = NewObject<UInstancedStaticMeshComponent>(Holder);
+	StreamMesh->SetupAttachment(Root);
+	StreamMesh->SetStaticMesh(LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cylinder.Cylinder")));
+	if (UMaterialInterface* SM = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Fluid/M_AntStream.M_AntStream"))) { StreamMesh->SetMaterial(0, SM); }
+	else if (DropMat) { StreamMesh->SetMaterial(0, DropMat); }
+	StreamMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	StreamMesh->SetCastShadow(false);
+	StreamMesh->RegisterComponent();
 
 	FlipHose = LoadObject<UNiagaraSystem>(nullptr, TEXT("/Game/Fluid/NS_FlipHose.NS_FlipHose"));
 	FlipPool = LoadObject<UNiagaraSystem>(nullptr, TEXT("/Game/Fluid/NS_FlipPool.NS_FlipPool"));
@@ -569,8 +586,8 @@ void UAntFluidWorld::UpdateLayerView(int32 b, int32 L)
 					}
 				}
 				if (BestS > -1.e8f) { S = BestS; E = BestE; }
-				else if (bLow) { S = LowS - 1.6f * B.Dx; E = 0.f; }   // past a brink: the sheet curls over the edge and ends; the fall itself is the 3D layer's
-				else if (B.Kind[c] == Wall) { S = 0.f; E = 0.f; }
+				else if (bLow) { S = LowS - 0.5f * B.Dx; E = 0.f; }   // past a brink the sheet just ends at the edge; the fall is drawn by the streams
+				else if (B.Kind[c] == Wall || B.Kind[c] == Void) { S = 0.f; E = 0.f; }
 			}
 			Pa[0] = S; Pa[1] = E;
 			Pa[2] = 0.5f * (Ly.U[j * UW + i] + Ly.U[j * UW + i + 1]);
@@ -613,6 +630,7 @@ namespace
 	{
 		if (A->ActorHasTag(TEXT("AntSponge"))) { return 3.2f; }
 		if (A->ActorHasTag(TEXT("AntSinks"))) { return 0.45f; }
+		if (A->ActorHasTag(TEXT("AntFloat"))) { return 1.6f; }
 		if (const AKitchenLoot* L = Cast<AKitchenLoot>(A))
 		{
 			// by what it is: sugar, cheese, grapes, coins, jam go down; crumbs, bread, cereal, chips, crackers ride on top
@@ -1208,6 +1226,7 @@ bool UAntFluidWorld::DevCommand(const TArray<FString>& A)
 			DevCam->GetCameraComponent()->SetFieldOfView(NumAt(A, 8, 70.f));
 			DevCam->GetCameraComponent()->bConstrainAspectRatio = false;
 			PC->SetViewTargetWithBlend(DevCam, 0.f);
+			if (PC->MyHUD) { PC->MyHUD->bShowHUD = false; }
 		}
 		return true;
 	}
@@ -1275,6 +1294,7 @@ bool UAntFluidWorld::DevCommand(const TArray<FString>& A)
 	else if (Op == TEXT("freeze")) { bFrozen = A.Num() >= 3 && A[2] == TEXT("on"); }
 	else if (Op == TEXT("clear")) { for (TUniquePtr<FBasin>& B : Basins) { for (int32 L = 0; L < LCount; ++L) { B->Layers[L].H.Init(0.f, B->Nx * B->Ny); B->Layers[L].X1 = B->Layers[L].X0; } } Falls.Reset(); Drops.Reset(); }
 	else if (Op == TEXT("stats")) { LogStats(); }
+	else if (Op == TEXT("profile") && PC) { PC->ConsoleCommand(TEXT("ProfileGPU"), false); }   // one frame of GPU passes into the log
 	else if (Op == TEXT("map"))
 	{
 		const int32 b = FMath::Clamp((int32)NumAt(A, 2), 0, Basins.Num() - 1);
@@ -1287,6 +1307,87 @@ bool UAntFluidWorld::DevCommand(const TArray<FString>& A)
 		UNiagaraComponent* NC = AddVolume(FName(*FString::Printf(TEXT("dev%d"), (int32)NumAt(A, 2))), (int32)NumAt(A, 2), FBox(C - E * 0.5f, C + E * 0.5f), (int32)NumAt(A, 9, 64.f), NumAt(A, 10, -1.f), NumAt(A, 11, 0.f));
 		if (NC && A.Num() >= 13) { NC->SetWorldRotation(FRotator(NumAt(A, 13), NumAt(A, 12), 0.f)); }
 		UE_LOG(LogTemp, Display, TEXT("ANTFLUID vol: %s"), NC ? TEXT("spawned") : TEXT("FAILED (quality 0 or no asset)"));
+	}
+	else if (Op == TEXT("probe"))
+	{
+		// fluid probe x0 y0 x1 y1 n [ztop]: what falls straight down along a line lands on first (Z and the component)
+		const FVector P0(NumAt(A, 2), NumAt(A, 3), 0.f), P1(NumAt(A, 4), NumAt(A, 5), 0.f);
+		const int32 N = FMath::Clamp((int32)NumAt(A, 6, 20.f), 2, 400);
+		const float ZTop = NumAt(A, 7, 2600.f);
+		FCollisionObjectQueryParams Obj(ECC_WorldStatic);
+		Obj.AddObjectTypesToQuery(ECC_AntClimbable);
+		for (int32 i = 0; i < N; ++i)
+		{
+			const FVector P = FMath::Lerp(P0, P1, (float)i / (N - 1));
+			FHitResult H;
+			if (W->LineTraceSingleByObjectType(H, FVector(P.X, P.Y, ZTop), FVector(P.X, P.Y, -200.f), Obj))
+			{
+				UE_LOG(LogTemp, Display, TEXT("ANTFLUID probe (%.0f, %.0f): z %.0f %s"), P.X, P.Y, H.ImpactPoint.Z, H.GetComponent() ? *H.GetComponent()->GetName() : TEXT("-"));
+			}
+			else { UE_LOG(LogTemp, Display, TEXT("ANTFLUID probe (%.0f, %.0f): nothing"), P.X, P.Y); }
+		}
+	}
+	else if (Op == TEXT("prop"))
+	{
+		// fluid prop sponge|block|brick x y z [sx sy sz]: a physics box for the water to carry (sponge: very light, floats high)
+		const FString Kind = A.IsValidIndex(2) ? A[2].ToLower() : FString(TEXT("block"));
+		const FVector At(NumAt(A, 3), NumAt(A, 4), NumAt(A, 5));
+		FVector Size = Kind == TEXT("sponge") ? FVector(180.f, 120.f, 60.f) : (Kind == TEXT("brick") ? FVector(90.f, 60.f, 40.f) : FVector(70.f, 70.f, 70.f));
+		if (A.Num() >= 9) { Size = FVector(NumAt(A, 6), NumAt(A, 7), NumAt(A, 8)); }
+		FActorSpawnParameters SP; SP.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		AStaticMeshActor* Box = W->SpawnActor<AStaticMeshActor>(At, FRotator(0.f, NumAt(A, 9), 0.f), SP);
+		if (Box)
+		{
+			UStaticMeshComponent* M = Box->GetStaticMeshComponent();
+			M->SetMobility(EComponentMobility::Movable);
+			M->SetStaticMesh(LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cube.Cube")));
+			Box->SetActorScale3D(Size / 100.f);
+			if (UMaterialInterface* Base = LoadObject<UMaterialInterface>(nullptr, TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial")))
+			{
+				UMaterialInstanceDynamic* MID = UMaterialInstanceDynamic::Create(Base, Box);
+				MID->SetVectorParameterValue(TEXT("Color"), Kind == TEXT("sponge") ? FLinearColor(0.95f, 0.8f, 0.15f) : (Kind == TEXT("brick") ? FLinearColor(0.5f, 0.2f, 0.12f) : FLinearColor(0.75f, 0.55f, 0.3f)));
+				M->SetMaterial(0, MID);
+			}
+			M->SetCollisionProfileName(TEXT("PhysicsActor"));
+			M->SetSimulatePhysics(true);
+			M->SetMassOverrideInKg(NAME_None, Kind == TEXT("sponge") ? 0.004f : (Kind == TEXT("brick") ? 0.2f : 0.03f), true);
+			Box->Tags.Add(Kind == TEXT("sponge") ? FName(TEXT("AntSponge")) : (Kind == TEXT("brick") ? FName(TEXT("AntSinks")) : FName(TEXT("AntFloat"))));
+			UE_LOG(LogTemp, Display, TEXT("ANTFLUID prop %s at %s, size %s, mass %.4f kg"), *Kind, *At.ToCompactString(), *Size.ToCompactString(), M->GetMass());
+		}
+	}
+	else if (Op == TEXT("loot"))
+	{
+		// fluid loot n x y z: the n nearest loose pieces of food are dropped around a point
+		const FVector At(NumAt(A, 3), NumAt(A, 4), NumAt(A, 5));
+		TArray<AKitchenLoot*> All;
+		for (TActorIterator<AKitchenLoot> It(W); It; ++It) { if (!It->IsCarried() && !It->bTrophy && !It->bIsGear) { All.Add(*It); } }
+		All.Sort([&At](const AKitchenLoot& L1, const AKitchenLoot& L2) { return FVector::DistSquared(L1.GetActorLocation(), At) < FVector::DistSquared(L2.GetActorLocation(), At); });
+		const int32 N = FMath::Min((int32)NumAt(A, 2, 3.f), All.Num());
+		for (int32 i = 0; i < N; ++i)
+		{
+			const float Ang = i * 2.4f;
+			All[i]->SetActorLocation(At + FVector(FMath::Cos(Ang), FMath::Sin(Ang), 0.f) * (60.f + 40.f * i) + FVector(0.f, 0.f, 30.f * i), false, nullptr, ETeleportType::TeleportPhysics);
+			UE_LOG(LogTemp, Display, TEXT("ANTFLUID loot %s dropped at %s (floats: %s)"), *All[i]->LootName, *All[i]->GetActorLocation().ToCompactString(), FloatOf(All[i]) > 1.f ? TEXT("yes") : TEXT("no"));
+		}
+	}
+	else if (Op == TEXT("ant") && PC)
+	{
+		// fluid ant x y z: the player's ant is put there (onto a sponge, into the water)
+		if (AAntCharacter* Me = Cast<AAntCharacter>(PC->GetPawn())) { Me->ApplyTeleport(FVector(NumAt(A, 2), NumAt(A, 3), NumAt(A, 4))); }
+	}
+	else if (Op == TEXT("track"))
+	{
+		// fluid track: where the props, the loot in liquid and the ants in liquid are, and what the liquid does there
+		for (TActorIterator<AActor> It(W); It; ++It)
+		{
+			const bool bProp = It->ActorHasTag(TEXT("AntSponge")) || It->ActorHasTag(TEXT("AntSinks")) || It->ActorHasTag(TEXT("AntFloat"));
+			if (!bProp && !It->IsA<AKitchenLoot>() && !It->IsA<AAntCharacter>()) { continue; }
+			FSample S;
+			if (!SampleAt(It->GetActorLocation(), S) || S.Total < 0.3f) { continue; }
+			UE_LOG(LogTemp, Display, TEXT("ANTFLUID track %s at %s v %s | surface %.0f depth %.1f current (%.0f, %.0f)%s"), *It->GetName(), *It->GetActorLocation().ToCompactString(),
+				*It->GetVelocity().ToCompactString(), S.Surface, S.Total, S.Vel.X, S.Vel.Y,
+				It->IsA<AAntCharacter>() ? (Cast<AAntCharacter>(*It)->GetCharacterMovement()->MovementMode == MOVE_Flying ? TEXT(" SWIMMING") : TEXT(" walking")) : TEXT(""));
+		}
 	}
 	else if (Op == TEXT("dump")) { DumpNiagara(FlipHose); DumpNiagara(FlipPool); DumpNiagara(FlipSplash); }
 	else if (Op == TEXT("bench"))
@@ -1353,7 +1454,24 @@ void UAntFluidWorld::RunDemo(int32 N)
 			// D1: tap -> sink -> over the rim -> along the worktop -> off the edge -> the floor, round the furniture, to the door
 			At(0.f, TEXT("fluid map 0"));
 			At(0.f, TEXT("fluid map 1"));
-			At(0.5f, TEXT("fluid tap on 6"));
+			At(0.5f, TEXT("fluid tap on 8"));
+		}
+		else if (N == 2)
+		{
+			// D2: things float and drift in the full sink; an ant rides the sponge, then swims and is carried
+			At(0.5f, TEXT("fluid tap on 10"));
+			At(11.f, TEXT("fluid tap on 1.5"));
+			At(11.5f, TEXT("fluid prop sponge -3600 3750 1720"));
+			At(11.5f, TEXT("fluid prop block -3250 3650 1720"));
+			At(11.5f, TEXT("fluid prop brick -3800 4150 1720"));
+			At(12.f, TEXT("fluid loot 3 -3350 4050 1720"));
+			At(15.f, TEXT("fluid ant -3600 3750 1800"));
+			At(16.f, TEXT("fluid track"));
+			At(26.f, TEXT("fluid track"));
+			At(36.f, TEXT("fluid ant -3250 4250 1650"));
+			At(38.f, TEXT("fluid track"));
+			At(46.f, TEXT("fluid track"));
+			At(56.f, TEXT("fluid track"));
 		}
 		UE_LOG(LogTemp, Display, TEXT("ANTFLUID demo %d: %d scripted commands"), N, DemoScript.Num());
 	}
@@ -1369,5 +1487,70 @@ void UAntFluidWorld::RunDemo(int32 N)
 			DevCommand(A);
 		}
 		else { ++i; }
+	}
+}
+
+// =============================================================================================
+// Layer B (3): falling liquid as refracting streams. The tap's jet and every pour off an edge that layer A reports (Columns):
+// a chain of cylinder segments along the ballistic path, as thick as the flow. Cheap (one instanced mesh), always on.
+// =============================================================================================
+
+void UAntFluidWorld::DrawStreams()
+{
+	if (!StreamMesh) { return; }
+	UWorld* W = GetWorld();
+	const float Now = W->GetTimeSeconds();
+	const float G = FMath::Abs(W->GetGravityZ());
+	TArray<FTransform> Xf;
+	auto Chain = [&](const FVector& Top, const FVector2f& Vel, float Bottom, float R0, float R1, int32 Seg, float Phase)
+	{
+		const float H = FMath::Max(1.f, (float)Top.Z - Bottom);
+		const float Dur = FMath::Sqrt(2.f * H / G);
+		FVector Prev = Top;
+		for (int32 s = 1; s <= Seg; ++s)
+		{
+			const float T = Dur * (float)s / Seg;
+			const FVector P(Top.X + Vel.X * T, Top.Y + Vel.Y * T, Top.Z - 0.5f * G * T * T);
+			const FVector D = P - Prev;
+			const float Len = (float)D.Size();
+			if (Len > 0.5f)
+			{
+				// thinner as it speeds up (continuity), with a little ripple running down it
+				const float A = (float)(s - 0.5f) / Seg;
+				const float R = FMath::Lerp(R0, R1, FMath::Sqrt(A)) * (1.f + 0.08f * FMath::Sin(Now * 31.f + s * 1.7f + Phase));
+				const FQuat Q = FRotationMatrix::MakeFromZ(D / Len).ToQuat();
+				Xf.Add(FTransform(Q, (P + Prev) * 0.5, FVector(R / 50.f, R / 50.f, Len * 1.08f / 100.f)));
+			}
+			Prev = P;
+		}
+	};
+	if (Quality > 0)
+	{
+		for (const FSource& S : Sources)
+		{
+			if (!S.bOn || S.Liquid == Honey) { continue; }
+			FSample Smp;
+			const float Bottom = SampleAt(S.Pos - FVector(0.f, 0.f, 50.f), Smp) ? Smp.Surface : (float)S.Pos.Z - 600.f;
+			const float R0 = FMath::Clamp(FMath::Sqrt(S.Rate / Litre) * 10.f, 5.f, 32.f);
+			Chain(S.Pos, FVector2f::ZeroVector, Bottom, R0, R0 * 0.62f, Quality >= 2 ? 10 : 5, 0.f);
+		}
+		for (const FColumn& C : Columns)
+		{
+			if (C.Rate < 0.01f * Litre || Now - C.Seen > 0.6f) { continue; }
+			bool bTap = false;
+			for (const FSource& S : Sources) { bTap |= FVector::DistSquared2D(S.Pos, C.Top) < 100.f * 100.f; }
+			if (bTap) { continue; }
+			const float R0 = FMath::Clamp(FMath::Sqrt(C.Rate / Litre) * 14.f, 2.5f, 30.f);
+			Chain(C.Top, C.Vel, (float)C.Bottom.Z, R0, R0 * 0.7f, Quality >= 2 ? 8 : 4, C.Top.X * 0.01f);
+		}
+	}
+	if (StreamMesh->GetInstanceCount() != Xf.Num())
+	{
+		StreamMesh->ClearInstances();
+		if (Xf.Num() > 0) { StreamMesh->AddInstances(Xf, false, true, false); }
+	}
+	else if (Xf.Num() > 0)
+	{
+		StreamMesh->BatchUpdateInstancesTransforms(0, Xf, true, true, false);
 	}
 }

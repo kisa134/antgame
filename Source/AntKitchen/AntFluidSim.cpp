@@ -229,7 +229,7 @@ namespace AntFluid
 		float* Hn = Tmp.GetData(); float* Dn = Tmp2.GetData(); float* Fn = Tmp3.GetData();
 		float* Dye = Ly.Dye.Num() ? Ly.Dye.GetData() : nullptr;
 		float* Foam = Ly.Foam.Num() ? Ly.Foam.GetData() : nullptr;
-		const float FoamKeep = 1.f - dt * 0.55f;
+		const float FoamKeep = 1.f - dt * 1.1f;
 		ParallelFor(CY1 - CY0, [&](int32 Row)
 		{
 			const int32 j = CY0 + Row;
@@ -260,7 +260,7 @@ namespace AntFluid
 					const float Sp2 = uc * uc + vc * vc;
 					// white water where it runs fast and shallow (supercritical) and where the flow piles up
 					const float Fr2 = Sp2 / (Gravity * FMath::Max(h, 0.5f));
-					if (Fr2 > 1.2f && h > 1.f) { f += dt * 1.5f * FMath::Min(Fr2 - 1.2f, 2.f); }
+					if (Fr2 > 3.f && h > 2.f) { f += dt * 0.5f * FMath::Min(Fr2 - 3.f, 2.f); }
 					Fn[c] = h > DryEps ? FMath::Min(f, 1.f) : 0.f;
 				}
 				if (h < P.Film && P.Evaporation > 0.f) { h = FMath::Max(0.f, h - P.Evaporation * dt); }
