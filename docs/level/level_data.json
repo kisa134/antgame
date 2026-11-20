@@ -1,7 +1,7 @@
 {
  "meta": {
   "title": "Ant Kitchen: level v2 (in the game since 2026-11-20)",
-  "generated": "2026-11-20 14:38",
+  "generated": "2026-11-20 16:19",
   "units": "Unreal units (uu); 1 m = 1900 uu; X west(-) -> east(+), Y south(-) -> north(+), floor Z = 0",
   "tool": "Tools/level/build_level_v2.py",
   "mode": "the level as it is in the game: the placement table (KitchenArtData.inl, gen_level_v2_art.py --install) and the gameplay tables (LevelV2Data.inl, gen_level_v2_code.py) are generated from this file; the constants that live in the C++ are checked against it by verify_level_v2_code.py",
@@ -734,7 +734,9 @@
     "kitchen",
     "street"
    ],
-   "src": "KitchenHouse.cpp:79"
+   "src": "KitchenHouse.cpp:79",
+   "note": "v2: в толще стены положен пол (-7200..-7000). В v1 там была бездонная щель шириной 200: боты, выходя из гнезда, падали под мир",
+   "v2": "fixed"
   },
   {
    "id": "window_crack",
@@ -751,7 +753,9 @@
     "kitchen",
     "yard"
    ],
-   "src": "KitchenHouse.cpp:80"
+   "src": "KitchenHouse.cpp:80",
+   "note": "v2: в толще стены положен пол (y -5200..-5000), как в щели гнезда",
+   "v2": "fixed"
   },
   {
    "id": "window",
@@ -837,6 +841,7 @@
     "street",
     "kitchen"
    ],
+   "note": "в толще стены свой кусок пола (-7200..-7000): плита пола кухни кончается у внутренней грани стены",
    "src": "level_v2_layout.py",
    "v2": "new"
   },
@@ -873,6 +878,7 @@
     "living",
     "yard"
    ],
+   "note": "порог 30 uu; с обеих сторон клин-пандус длиной 150 (код, BuildLivingRoom): без него муравей упирался в кромку рамы; открытая створка висит на z ~490, проём 500 x 460",
    "src": "level_v2_layout.py",
    "v2": "new"
   },
@@ -31905,31 +31911,23 @@
     "p": [
      18800.0,
      900.0,
-     800.0
+     735.0
     ],
     "tier_loot": 1,
     "group": "Living room",
     "label": "plant pot soil",
     "src": "KitchenBuilder.cpp:393",
     "how": "literal in the code",
-    "probe": {
-     "above": [
-      "SM_L_PottedPlant",
-      1172
-     ],
-     "below": [
-      "SM_L_PottedPlant",
-      730
-     ],
-     "ceil": [
-      "SM_L_PottedPlant",
-      1159
-     ]
-    },
     "area": "living",
     "ev": 27.8,
     "tier": "work",
-    "t_nest": 61.5
+    "was": [
+     18800,
+     900,
+     800
+    ],
+    "v2": "fixed",
+    "t_nest": 61.3
    },
    {
     "i": 154,
@@ -32441,35 +32439,26 @@
     "p": [
      8050.0,
      700.0,
-     320.0
+     205.0
     ],
     "tier_loot": 2,
     "group": "Inside the house: new hiding places",
     "label": "under the newspaper, in the shoe",
     "src": "KitchenBuilder.cpp:411",
     "how": "literal in the code",
-    "probe": {
-     "above": [
-      "SM_K_Shoe",
-      386
-     ],
-     "below": [
-      "SM_K_Shoe",
-      197
-     ],
-     "ceil": [
-      "-",
-      0
-     ]
-    },
     "area": "living",
     "ev": 77.3,
     "space": "shoe",
     "where_ru": "в ботинке",
     "tier": "int",
     "dog_eats": true,
-    "v2": "moved",
-    "t_nest": 37.4
+    "v2": "fixed",
+    "was": [
+     8050,
+     700,
+     320
+    ],
+    "t_nest": 37.1
    },
    {
     "i": 173,
@@ -32790,20 +32779,26 @@
    {
     "i": 186,
     "p": [
-     -6990.0,
+     -6880.0,
      -3600.0,
-     2310.0
+     5.0
     ],
-    "tier_loot": 1,
+    "tier_loot": 0,
     "group": "level v2",
-    "label": "на календаре",
+    "label": "под календарём, у плинтуса",
     "src": "level_v2_layout.LOOT_ADD",
     "how": "design",
     "area": "kitchen",
-    "v2": "new",
-    "tier": "top",
-    "t_nest": 9.8,
-    "ev": 27.8
+    "v2": "new, put to rest",
+    "tier": "floor",
+    "was": [
+     -6990,
+     -3600,
+     2310
+    ],
+    "t_nest": 3.7,
+    "tier_v1": 1,
+    "ev": 8.8
    },
    {
     "i": 187,
@@ -32854,17 +32849,22 @@
     "p": [
      -5650.0,
      4700.0,
-     2815.0
+     2515.0
     ],
     "tier_loot": 1,
     "group": "level v2",
-    "label": "на ручках ножей",
+    "label": "на подставке для ножей",
     "src": "level_v2_layout.LOOT_ADD",
     "how": "design",
     "area": "kitchen",
-    "v2": "new",
+    "v2": "new, put to rest",
     "tier": "top",
-    "t_nest": 25.4,
+    "was": [
+     -5650,
+     4700,
+     2815
+    ],
+    "t_nest": 24.6,
     "ev": 27.8
    },
    {
@@ -33008,37 +33008,49 @@
    {
     "i": 197,
     "p": [
-     -6960.0,
-     2700.0,
-     2520.0
+     -6700.0,
+     3350.0,
+     2315.0
     ],
     "tier_loot": 2,
     "group": "level v2",
-    "label": "на вязанке перцев",
+    "label": "на хлебнице, под вязанкой перцев",
     "src": "level_v2_layout.LOOT_ADD",
     "how": "design",
     "area": "kitchen",
-    "v2": "new",
-    "tier": "top",
-    "t_nest": 19.2,
+    "v2": "new, put to rest",
+    "tier": "int",
+    "was": [
+     -6960,
+     2700,
+     2520
+    ],
+    "space": "breadbox_0",
+    "where_ru": "в хлебнице",
+    "t_nest": 20.2,
     "ev": 77.3
    },
    {
     "i": 198,
     "p": [
-     -6940.0,
-     1900.0,
-     1010.0
+     -6600.0,
+     700.0,
+     5.0
     ],
     "tier_loot": 0,
     "group": "level v2",
-    "label": "на метле",
+    "label": "у метлы на полу",
     "src": "level_v2_layout.LOOT_ADD",
     "how": "design",
     "area": "kitchen",
-    "v2": "new",
-    "tier": "work",
-    "t_nest": 13.4,
+    "v2": "new, put to rest",
+    "tier": "floor",
+    "was": [
+     -6940,
+     1900,
+     1010
+    ],
+    "t_nest": 8.5,
     "ev": 8.8
    },
    {
@@ -33344,38 +33356,49 @@
    {
     "i": 215,
     "p": [
-     500.0,
-     -500.0,
-     2500.0
+     400.0,
+     -420.0,
+     1435.0
     ],
     "tier_loot": 1,
     "group": "level v2",
-    "label": "на липкой ленте",
+    "label": "на столе, под липкой лентой",
     "src": "level_v2_layout.LOOT_ADD",
     "how": "design",
     "area": "kitchen",
-    "v2": "new",
-    "tier": "top",
-    "t_nest": 25.9,
+    "v2": "new, put to rest",
+    "tier": "work",
+    "was": [
+     500,
+     -500,
+     2500
+    ],
+    "t_nest": 22.8,
     "ev": 27.8
    },
    {
     "i": 216,
     "p": [
-     500.0,
-     -500.0,
-     3810.0
+     620.0,
+     -600.0,
+     1435.0
     ],
-    "tier_loot": 2,
+    "tier_loot": 1,
     "group": "level v2",
-    "label": "на лампе над столом",
+    "label": "на столе, под лампой",
     "src": "level_v2_layout.LOOT_ADD",
     "how": "design",
     "area": "kitchen",
-    "v2": "new",
-    "tier": "top",
-    "t_nest": 29.4,
-    "ev": 77.3
+    "v2": "new, put to rest",
+    "tier": "work",
+    "was": [
+     500,
+     -500,
+     3810
+    ],
+    "t_nest": 23.2,
+    "tier_v1": 2,
+    "ev": 27.8
    },
    {
     "i": 217,
@@ -33420,21 +33443,26 @@
    {
     "i": 219,
     "p": [
-     5800.0,
+     5500.0,
      2950.0,
-     270.0
+     30.0
     ],
     "tier_loot": 2,
     "group": "level v2",
-    "label": "на яблоке",
+    "label": "в пакете с продуктами, под яблоком",
     "src": "level_v2_layout.LOOT_ADD",
     "how": "design",
     "area": "kitchen",
-    "v2": "new",
+    "v2": "new, put to rest",
     "tier": "int",
     "space": "grocerybag_0",
     "where_ru": "в пакете с продуктами",
-    "t_nest": 34.2,
+    "was": [
+     5800,
+     2950,
+     270
+    ],
+    "t_nest": 32.9,
     "ev": 77.3
    },
    {
@@ -33777,7 +33805,7 @@
     "p": [
      18150.0,
      -7900.0,
-     330.0
+     172.0
     ],
     "tier_loot": 2,
     "group": "level v2",
@@ -33785,9 +33813,14 @@
     "src": "level_v2_layout.LOOT_ADD",
     "how": "design",
     "area": "living",
-    "v2": "new",
-    "tier": "work",
-    "t_nest": 60.5,
+    "v2": "new, put to rest",
+    "tier": "floor",
+    "was": [
+     18150,
+     -7900,
+     330
+    ],
+    "t_nest": 60.1,
     "ev": 77.3
    },
    {
@@ -33847,19 +33880,24 @@
    {
     "i": 241,
     "p": [
-     10250.0,
-     -4450.0,
-     300.0
+     10358.0,
+     -4255.0,
+     207.0
     ],
     "tier_loot": 2,
     "group": "level v2",
-    "label": "в корзине с вязанием",
+    "label": "в корзине с вязанием, на клубках",
     "src": "level_v2_layout.LOOT_ADD",
     "how": "design",
     "area": "living",
-    "v2": "new",
-    "tier": "work",
-    "t_nest": 40.6,
+    "v2": "new, put to rest",
+    "tier": "floor",
+    "was": [
+     10250,
+     -4450,
+     300
+    ],
+    "t_nest": 40.4,
     "ev": 77.3
    },
    {
@@ -33867,7 +33905,7 @@
     "p": [
      9900.0,
      -7450.0,
-     60.0
+     5.0
     ],
     "tier_loot": 0,
     "group": "level v2",
@@ -33875,9 +33913,14 @@
     "src": "level_v2_layout.LOOT_ADD",
     "how": "design",
     "area": "living",
-    "v2": "new",
+    "v2": "new, put to rest",
     "tier": "floor",
-    "t_nest": 42.0,
+    "was": [
+     9900,
+     -7450,
+     60
+    ],
+    "t_nest": 41.9,
     "ev": 8.8
    },
    {
@@ -34235,7 +34278,7 @@
     "p": [
      12500.0,
      300.0,
-     960.0
+     862.0
     ],
     "tier_loot": 2,
     "group": "level v2",
@@ -34243,9 +34286,14 @@
     "src": "level_v2_layout.LOOT_ADD",
     "how": "design",
     "area": "living",
-    "v2": "new",
+    "v2": "new, put to rest",
     "tier": "work",
-    "t_nest": 49.1,
+    "was": [
+     12500,
+     300,
+     960
+    ],
+    "t_nest": 48.8,
     "ev": 77.3
    },
    {
@@ -34253,7 +34301,7 @@
     "p": [
      14500.0,
      300.0,
-     960.0
+     910.0
     ],
     "tier_loot": 3,
     "group": "level v2",
@@ -34261,9 +34309,14 @@
     "src": "level_v2_layout.LOOT_ADD",
     "how": "design",
     "area": "living",
-    "v2": "new",
+    "v2": "new, put to rest",
     "tier": "work",
-    "t_nest": 53.3,
+    "was": [
+     14500,
+     300,
+     960
+    ],
+    "t_nest": 53.2,
     "ev": 182.0
    },
    {
@@ -34325,17 +34378,22 @@
     "p": [
      13200.0,
      -4250.0,
-     3790.0
+     16.0
     ],
     "tier_loot": 2,
     "group": "level v2",
-    "label": "на гирлянде",
+    "label": "на ковре под гирляндой",
     "src": "level_v2_layout.LOOT_ADD",
     "how": "design",
     "area": "living",
-    "v2": "new",
-    "tier": "top",
-    "t_nest": 56.2,
+    "v2": "new, put to rest",
+    "tier": "floor",
+    "was": [
+     13200,
+     -4250,
+     3790
+    ],
+    "t_nest": 46.1,
     "ev": 77.3
    },
    {
@@ -34343,17 +34401,22 @@
     "p": [
      11400.0,
      -4200.0,
-     880.0
+     16.0
     ],
     "tier_loot": 1,
     "group": "level v2",
-    "label": "на нитке",
+    "label": "на ковре под ниткой",
     "src": "level_v2_layout.LOOT_ADD",
     "how": "design",
     "area": "living",
-    "v2": "new",
-    "tier": "work",
-    "t_nest": 44.5,
+    "v2": "new, put to rest",
+    "tier": "floor",
+    "was": [
+     11400,
+     -4200,
+     880
+    ],
+    "t_nest": 42.2,
     "ev": 27.8
    },
    {
@@ -34620,7 +34683,7 @@
     "p": [
      -8600.0,
      -6300.0,
-     170.0
+     47.0
     ],
     "tier_loot": 0,
     "group": "level v2",
@@ -34628,10 +34691,15 @@
     "src": "level_v2_layout.LOOT_ADD",
     "how": "design",
     "area": "yard",
-    "v2": "new",
+    "v2": "new, put to rest",
     "tier": "floor",
-    "t_nest": 9.3,
-    "tier_wanted": 1,
+    "was": [
+     -8600,
+     -6300,
+     170
+    ],
+    "t_nest": 9.0,
+    "tier_v1": 1,
     "ev": 8.8
    },
    {
@@ -34765,27 +34833,32 @@
    {
     "i": 291,
     "p": [
-     6400.0,
-     -10700.0,
-     5700.0
+     6650.0,
+     -10450.0,
+     5.0
     ],
     "tier_loot": 2,
     "group": "level v2",
-    "label": "на ветке дерева",
+    "label": "под веткой дерева",
     "src": "level_v2_layout.LOOT_ADD",
     "how": "design",
     "area": "yard",
-    "v2": "new",
-    "tier": "top",
-    "t_nest": 53.6,
+    "v2": "new, put to rest",
+    "tier": "floor",
+    "was": [
+     6400,
+     -10700,
+     5700
+    ],
+    "t_nest": 38.1,
     "ev": 77.3
    },
    {
     "i": 292,
     "p": [
-     18600.0,
-     -11000.0,
-     2880.0
+     18576.0,
+     -10998.0,
+     2828.0
     ],
     "tier_loot": 3,
     "group": "level v2",
@@ -34793,17 +34866,22 @@
     "src": "level_v2_layout.LOOT_ADD",
     "how": "design",
     "area": "yard",
-    "v2": "new",
+    "v2": "new, put to rest",
     "tier": "top",
-    "t_nest": 71.4,
+    "was": [
+     18600,
+     -11000,
+     2880
+    ],
+    "t_nest": 71.0,
     "ev": 182.0
    },
    {
     "i": 293,
     "p": [
-     18300.0,
-     -10700.0,
-     2880.0
+     18426.0,
+     -11001.0,
+     2824.0
     ],
     "tier_loot": 2,
     "group": "level v2",
@@ -34811,9 +34889,14 @@
     "src": "level_v2_layout.LOOT_ADD",
     "how": "design",
     "area": "yard",
-    "v2": "new",
+    "v2": "new, put to rest",
     "tier": "top",
-    "t_nest": 70.5,
+    "was": [
+     18300,
+     -10700,
+     2880
+    ],
+    "t_nest": 70.9,
     "ev": 77.3
    },
    {
@@ -34951,27 +35034,32 @@
    {
     "i": 301,
     "p": [
-     -13550.0,
-     -2000.0,
-     2630.0
+     -13520.0,
+     -2530.0,
+     1672.0
     ],
     "tier_loot": 1,
     "group": "level v2",
-    "label": "на капоте машины",
+    "label": "на капоте машины, у стекла",
     "src": "level_v2_layout.LOOT_ADD",
     "how": "design",
     "area": "street",
-    "v2": "new",
-    "tier": "top",
-    "t_nest": 34.1,
+    "v2": "new, put to rest",
+    "tier": "work",
+    "was": [
+     -13550,
+     -2000,
+     2630
+    ],
+    "t_nest": 31.2,
     "ev": 27.8
    },
    {
     "i": 302,
     "p": [
-     -13550.0,
-     2800.0,
-     2630.0
+     -13552.0,
+     2816.0,
+     1612.0
     ],
     "tier_loot": 1,
     "group": "level v2",
@@ -34979,9 +35067,14 @@
     "src": "level_v2_layout.LOOT_ADD",
     "how": "design",
     "area": "street",
-    "v2": "new",
-    "tier": "top",
-    "t_nest": 30.7,
+    "v2": "new, put to rest",
+    "tier": "work",
+    "was": [
+     -13550,
+     2800,
+     2630
+    ],
+    "t_nest": 28.0,
     "ev": 27.8
    },
    {
@@ -35187,19 +35280,24 @@
    {
     "i": 314,
     "p": [
-     16750.0,
-     1200.0,
-     2110.0
+     16590.0,
+     938.0,
+     705.0
     ],
     "tier_loot": 1,
     "group": "level v2",
-    "label": "на подлокотнике дивана",
+    "label": "у подлокотника дивана, на сиденье",
     "src": "level_v2_layout.LOOT_ADD",
     "how": "design",
     "area": "living",
-    "v2": "new",
-    "tier": "top",
-    "t_nest": 60.8,
+    "v2": "new, put to rest",
+    "tier": "work",
+    "was": [
+     16750,
+     1200,
+     2110
+    ],
+    "t_nest": 56.4,
     "ev": 27.8
    },
    {
@@ -35226,18 +35324,23 @@
     "i": 316,
     "p": [
      -4600.0,
-     500.0,
-     432.0
+     330.0,
+     5.0
     ],
     "tier_loot": 0,
     "group": "level v2",
-    "label": "на крыше коробки хлопьев",
+    "label": "у коробки хлопьев",
     "src": "level_v2_layout.LOOT_ADD",
     "how": "design",
     "area": "kitchen",
-    "v2": "new",
-    "tier": "work",
-    "t_nest": 11.0,
+    "v2": "new, put to rest",
+    "tier": "floor",
+    "was": [
+     -4600,
+     500,
+     432
+    ],
+    "t_nest": 9.4,
     "ev": 8.8
    },
    {
@@ -35629,19 +35732,24 @@
    {
     "i": 338,
     "p": [
-     17600.0,
-     -7040.0,
-     330.0
+     17594.0,
+     -7039.0,
+     5.0
     ],
     "tier_loot": 1,
     "group": "level v2",
-    "label": "на краю лежанки",
+    "label": "у края лежанки, на полу",
     "src": "level_v2_layout.LOOT_ADD",
     "how": "design",
     "area": "living",
-    "v2": "new",
-    "tier": "work",
-    "t_nest": 58.8,
+    "v2": "new, put to rest",
+    "tier": "floor",
+    "was": [
+     17600,
+     -7040,
+     330
+    ],
+    "t_nest": 57.7,
     "ev": 27.8
    },
    {
@@ -40771,9 +40879,9 @@
   "spawns": 29,
   "loot_spots": 327,
   "loot_spots_by_tier": {
-   "0": 87,
+   "0": 88,
    "1": 113,
-   "2": 104,
+   "2": 103,
    "3": 23
   },
   "heavy_spots": 6,
@@ -40794,7 +40902,7 @@
   "copies": 45,
   "removed": 28,
   "moved": 34,
-  "loot_clamped": 34
+  "loot_clamped": 36
  },
  "districts": [
   {
@@ -43646,55 +43754,64 @@
    "id": "hide_table",
    "ru": "Таблица укрытий для ИИ Человека: PickTarget читает human.sees.never_targets (сейчас четыре коробки зашиты в код). Без неё новые укрытия-предметы не работают.",
    "size": "малый",
-   "must": true
+   "must": true,
+   "done": "LevelV2::CoverAt + AHumanCharacter::InCover: цель ИИ, топот (и его волна), шлепок и газета; то же для Человека под управлением игрока"
   },
   {
    "id": "target_bounds",
    "ru": "Человек берёт цель только внутри дома (human.targeting_bounds).",
    "size": "малый",
-   "must": true
+   "must": true,
+   "done": "LevelV2::InHouse в AHumanAIController::PickTarget"
   },
   {
    "id": "main_object",
    "ru": "Главный объект рейда: один на рейд, место — случайное из loot.main.spots; за ним идут и огненные.",
    "size": "средний (это сам режим вылазки)",
-   "must": true
+   "must": true,
+   "done": "AAntKitchenGameMode::SpawnMainObject: один кусок торта на смену в обычном забеге (режим рейда не делался, огненные за ним не охотятся)"
   },
   {
    "id": "ants_only",
    "ru": "Режим коллизии «только муравьи» для нитки, гирлянды, вязанки и липкой ленты (objects[].collision = ants_only): Человек проходит сквозь.",
    "size": "малый",
-   "must": true
+   "must": true,
+   "done": "тег AntsOnly на четырёх мешах + AKitchenBuilder::LetThrough (Человек, бабушка, малыш, кошка и собака проходят сквозь)"
   },
   {
    "id": "toaster_rule",
    "ru": "Тостер: тост выпадает, только если на столешнице меньше двух; после выстрела 40 с без еды.",
    "size": "малый",
-   "must": false
+   "must": false,
+   "done": "KitchenInteractables.cpp: меньше двух тостов на столешнице и 40 с тишины"
   },
   {
    "id": "latch",
    "ru": "Кошачья дверца открывается только из гостиной (флаг «засов изнутри» у AKitchenMover). Без него — просто тяжёлая дверь с обеих сторон.",
    "size": "малый",
-   "must": false
+   "must": false,
+   "done": "AKitchenMover::CanPull: со двора не тянется; закрывается сама через 15 с"
   },
   {
    "id": "extract1",
    "ru": "Второй круг сдачи у угла дома (extraction[1]). Без него груз из двора несут до щели гнезда: +3000 uu.",
    "size": "малый",
-   "must": false
+   "must": false,
+   "done": "KitchenLoot.cpp: сдача в радиусе 500 от (-8150, -5750)"
   },
   {
    "id": "sprinkler",
    "ru": "Поливалка: зона воды по таймеру (эффект струи крана).",
    "size": "малый",
-   "must": false
+   "must": false,
+   "done": "LevelV2::SprinklerLevel по серверному времени + мокрая зона в EnvironmentFor: 9 с из каждых 26"
   },
   {
    "id": "lawn_robot",
    "ru": "Робот-газонокосилка: робот-пылесос события 3, постоянно, в коробке двора.",
    "size": "малый",
-   "must": false
+   "must": false,
+   "done": "стоит неподвижным предметом (решение владельца), не ездит"
   }
  ],
  "changes": {
@@ -46063,6 +46180,17 @@
    },
    {
     "p": [
+     -6880.0,
+     -3600.0,
+     5.0
+    ],
+    "label": "под календарём, у плинтуса",
+    "from": 1,
+    "to": 0,
+    "t": 3.7
+   },
+   {
+    "p": [
      -2350.0,
      3350.0,
      1765.0
@@ -46082,6 +46210,17 @@
     "from": 2,
     "to": 1,
     "t": 19.7
+   },
+   {
+    "p": [
+     620.0,
+     -600.0,
+     1435.0
+    ],
+    "label": "на столе, под лампой",
+    "from": 2,
+    "to": 1,
+    "t": 23.2
    },
    {
     "p": [
@@ -46120,12 +46259,12 @@
     "p": [
      -8600.0,
      -6300.0,
-     170.0
+     47.0
     ],
     "label": "в миске во дворе",
     "from": 1,
     "to": 0,
-    "t": 9.3
+    "t": 9.0
    },
    {
     "p": [
@@ -46331,6 +46470,10 @@
   {
    "bug": "тостер — бесконечная еда",
    "fix": "правило: не больше двух тостов на столешнице и 40 с тишины (нужен код)"
+  },
+  {
+   "bug": "в щели гнезда и в щели под окном не было пола (плита кончалась у стены, газон начинался за стеной): боты падали под мир и гибли",
+   "fix": "в толще стены положен пол (KitchenHouse.cpp); так же в северном лазе"
   },
   {
    "bug": "ложка — «наклонный путь», но уклон 65°",

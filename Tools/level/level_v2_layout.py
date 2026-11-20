@@ -283,6 +283,37 @@ LOOT_DROP_AREAS = ['yard']                   # the old yard is gone: its spots a
 # on the floor of the tub now, under the rack (z 190 is the rinse water): that is where the food came to rest anyway.
 LOOT_FIX = {49: {'p': (300, 3600, 192), 'label': 'dishwasher: on the floor of the tub, under the lower rack'},
             50: {'p': (900, 4200, 192), 'label': 'dishwasher: on the floor of the tub, under the lower rack'}}
+# Spots whose food did not stay where it was laid (in-game check: food on all 327 spots at once, 14 s later where does it lie).
+# Thin and "ants only" things (calendar, knife handles, chili string, fly paper, garland, yarn, broom handle) do not hold food:
+# it is physical and falls. Rounded tops (car hood, sofa arm, cereal box flaps, bags in the bin) let it roll off. Each such spot
+# is put on the surface right under it, or where the piece came to rest. (final place before) -> (place now), new label.
+LOOT_REST = [
+    ((18800, 900, 800), (18800, 900, 735), None),                                   # plant pot soil: the soil is at 730
+    ((8050, 700, 320), (8050, 700, 205), None),                                     # in the shoe: the insole is at 197
+    ((-6990, -3600, 2310), (-6880, -3600, 5), 'под календарём, у плинтуса'),
+    ((-5650, 4700, 2815), (-5650, 4700, 2515), 'на подставке для ножей'),
+    ((-6960, 2700, 2520), (-6700, 3350, 2315), 'на хлебнице, под вязанкой перцев'),
+    ((-6940, 1900, 1010), (-6600, 700, 5), 'у метлы на полу'),
+    ((500, -500, 2500), (400, -420, 1435), 'на столе, под липкой лентой'),
+    ((500, -500, 3810), (620, -600, 1435), 'на столе, под лампой'),
+    ((5800, 2950, 270), (5500, 2950, 30), 'в пакете с продуктами, под яблоком'),
+    ((18150, -7900, 330), (18150, -7900, 172), None),                               # the dog bed's cushion is at 167
+    ((10250, -4450, 300), (10358, -4255, 207), 'в корзине с вязанием, на клубках'),
+    ((9900, -7450, 60), (9900, -7450, 5), None),
+    ((12500, 300, 960), (12500, 300, 862), None),                                   # between the sofa cushions: it wedges at ~865
+    ((14500, 300, 960), (14500, 300, 910), None),
+    ((13200, -4250, 3790), (13200, -4250, 16), 'на ковре под гирляндой'),
+    ((11400, -4200, 880), (11400, -4200, 16), 'на ковре под ниткой'),
+    ((-8600, -6300, 170), (-8600, -6300, 47), None),                                # the bowl's bottom is at 42
+    ((6400, -10700, 5700), (6650, -10450, 5), 'под веткой дерева'),
+    ((18600, -11000, 2880), (18576, -10998, 2828), None),                           # the bags in the bin lie lower
+    ((18300, -10700, 2880), (18426, -11001, 2824), None),
+    ((-13550, -2000, 2630), (-13520, -2530, 1672), 'на капоте машины, у стекла'),
+    ((-13550, 2800, 2630), (-13552, 2816, 1612), None),                             # the boot lid is at 1608
+    ((16750, 1200, 2110), (16590, 938, 705), 'у подлокотника дивана, на сиденье'),
+    ((-4600, 500, 432), (-4600, 330, 5), 'у коробки хлопьев'),
+    ((17600, -7040, 330), (17594, -7039, 5), 'у края лежанки, на полу'),
+]
 LOOT_ADD = [
     # x, y, z, tier, label                                                    -- Плинтус
     (-6250, -700, 10, 0, 'в совке'), (-6700, 540, 5, 0, 'у метлы'), (-4700, -430, 5, 0, 'у конца трассы'), (-5350, -300, 20, 1, 'под грузовичком'),

@@ -287,6 +287,7 @@ void AAntBotController::Think(AAntCharacter* Ant)
 					const FVector Ahead = Mate->GetVelocity().GetSafeNormal2D() * 40.f * AAntCharacter::AntShrink;
 					Goal = Mate->GetActorLocation() + Ahead;
 					bHasGoal = true;
+					CarryLeader = const_cast<AAntCharacter*>(Mate);
 					bCarryWithPlayer = true;   // no "unstick" side steps while the leader stands or creeps: they tear the load out of his jaws
 					HeavyTimer = 0.f;          // and no giving up: the player decides when to drop it
 					return;
@@ -498,7 +499,24 @@ void AAntBotController::Tick(float DeltaSeconds)
 	{
 		// Carrying with a player: it keeps under its own bite point, so it bears its share of the weight and goes wherever the
 		// player takes the load. (Walking at the player it stood on his heels and its jaws held the load back.)
-		const FVector To = FVector::VectorPlaneProject(Bite - Ant->GetHoldPoint(), Ant->GetVisualUp());
+		// It also walks the way the player walks (0.35 s ahead): following only the load it lagged and braked it.
+		const FVector Lead = CarryLeader.IsValid() ? CarryLeader->GetVelocity() * 0.35f : FVector::ZeroVector;
+		// And it leans towards him while he is further than a step away: when he has gone on (down off a shelf, round a corner)
+		// and stands waiting, the helpers bring the load to him instead of holding it where they are.
+		FVector Lean = FVector::ZeroVector;
+		if (CarryLeader.IsValid())
+		{
+			const FVector D = CarryLeader->GetActorLocation() - Ant->GetActorLocation();
+			if (D.Size() > 70.f) { Lean = D.GetClampedToMaxSize(80.f); }
+		}
+		FVector Want = Bite - Ant->GetHoldPoint() + Lead + Lean;
+		if (CarryLeader.IsValid() && CarryLeader->GetActorLocation().Z < Ant->GetActorLocation().Z - 30.f && FVector::Dist(Bite, Ant->GetHoldPoint()) < 120.f)
+		{
+			// He is below (stepped down off a shelf): down to him first, then pull. Hanging on the face under its bite point it
+			// held the load on the edge for ever.
+			Want = (CarryLeader->GetActorLocation() - Ant->GetActorLocation()).GetClampedToMaxSize(120.f);
+		}
+		const FVector To = FVector::VectorPlaneProject(Want, Ant->GetVisualUp());
 		if (To.Size() > 10.f)
 		{
 			Ant->AddMovementInput(To.GetSafeNormal(), FMath::Clamp((float)To.Size() / 50.f, 0.25f, 1.f));

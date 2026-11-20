@@ -1153,8 +1153,7 @@ void AAntCharacter::Tick(float DeltaSeconds)
 					FVector Flat = FVector::VectorPlaneProject(Dir, DevN);
 					if ((Dir | DevN) < -0.25f)
 					{
-						const float Sign = DevGoTo.Z > GetActorLocation().Z - 80.f ? 1.f : -1.f;
-						Flat += FVector::VectorPlaneProject(FVector::UpVector * Sign, DevN).GetSafeNormal() * 1.5f;
+						Flat += FVector::VectorPlaneProject(FVector::UpVector, DevN).GetSafeNormal() * 1.5f;   // a face in the way: over it
 					}
 					else if (DevN.Z < 0.5f && (Dir | DevN) > 0.6f && DevGoTo.Z < GetActorLocation().Z + 30.f && !Carrying && GetWorld()->GetTimeSeconds() > DevGoJumpAt)
 					{
@@ -1169,7 +1168,13 @@ void AAntCharacter::Tick(float DeltaSeconds)
 					}
 					Move = Flat.GetSafeNormal(UE_SMALL_NUMBER, Dir);
 				}
-				AddMovementInput(Move, 1.f);
+				// With a load it walks like a player who watches it: it waits when the load falls behind (else the jaws lose it).
+				FVector DevBite;
+				const bool bWaitForLoad = Carrying && Carrying->GrabPointOf(this, DevBite) && FVector::Dist2D(DevBite, GetHoldPoint()) > 70.f;
+				if (!bWaitForLoad)
+				{
+					AddMovementInput(Move, 1.f);
+				}
 			}
 		}
 

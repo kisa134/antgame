@@ -739,6 +739,13 @@ void AKitchenLoot::ServerCarryTick(float Dt)
 		const float Share = Mass / N;
 		FVector F = Share * (40.f * (H - P) - 7.f * V) + FVector(0.f, 0.f, Share * Gravity);   // spring + hold up its share
 		const float MaxF = bPooled ? Pool : (A->GetStrength() + Extra[i]) * ForcePerStrength;
+		if (bPooled && bLift)
+		{
+			// A carrier that stands lower than the load (it has stepped down off a shelf, the others are still up there) does
+			// not drag it down: gravity does that. (It did: the leader below pulled the front of the cake onto the edge with all
+			// its share while the three above could not hold both the weight and him.)
+			F.Z = FMath::Max((float)F.Z, 0.f);
+		}
 		if (F.SizeSquared() > MaxF * MaxF)
 		{
 			F = F.GetSafeNormal() * MaxF;

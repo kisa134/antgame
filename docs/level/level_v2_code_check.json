@@ -1,7 +1,7 @@
 {
  "what": "docs/level/level_data.json against the C++ (Tools/level/verify_level_v2_code.py)",
- "checks": 54,
- "passed": 54,
+ "checks": 56,
+ "passed": 56,
  "failed": [],
  "not_literal": [
   {
@@ -66,7 +66,7 @@
    "detail": ""
   },
   {
-   "what": "main object: value 600, weight 70, 3 places",
+   "what": "main object: value 600, weight 56, 3 places",
    "ok": true,
    "where": "LevelV2Data.inl",
    "detail": ""
@@ -106,6 +106,18 @@
    "ok": true,
    "where": "KitchenBuilder.cpp",
    "detail": "FVector(18600.f, -11000.f, 0.f)"
+  },
+  {
+   "what": "opening nest_crack [-7250, -2750, 0, -6950, -2250, 250]",
+   "ok": true,
+   "where": "KitchenHouse.cpp",
+   "detail": "FVector(-7250.f, -2750.f, 0.f), FVector(-6950.f, -2250.f, 250.f)"
+  },
+  {
+   "what": "opening window_crack [-4600, -5250, 0, -4400, -4950, 120]",
+   "ok": true,
+   "where": "KitchenHouse.cpp",
+   "detail": "FVector(-4600.f, -5250.f, 0.f), FVector(-4400.f, -4950.f, 120.f)"
   },
   {
    "what": "opening pit [4700, 1700, -300, 5300, 2300, 1]",

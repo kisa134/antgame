@@ -59,6 +59,7 @@ private:
 	FVector UnstickDir = FVector::ZeroVector;
 	float HeavyTimer = 0.f;     // carrying something that won't move
 	bool bCarryWithPlayer = false;   // holds the same load as a player of its colony: follows him (see Think)
+	TWeakObjectPtr<AAntCharacter> CarryLeader;
 	FVector LastLootPos = FVector::ZeroVector;
 	float StrafeSign = 1.f;
 	float StrafeTimer = 0.f;

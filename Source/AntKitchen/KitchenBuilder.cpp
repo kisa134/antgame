@@ -1450,6 +1450,12 @@ void AKitchenBuilder::BuildLivingRoom()
 		// (seen in the game). A bevelled threshold on each side: 13 degrees up to the sill.
 		Part(EAntShape::Cube, FVector(7277.f, -7350.f, 14.f), FVector(150.f, 470.f, 8.f), FRotator(-13.f, 0.f, 0.f), Hex(235, 232, 222), true);
 		Part(EAntShape::Cube, FVector(6923.f, -7350.f, 14.f), FVector(150.f, 470.f, 8.f), FRotator(13.f, 0.f, 0.f), Hex(235, 232, 222), true);
+		// The TV stand's left bay (one of the three places of the birthday cake): the guide rail of its sliding doors stands
+		// 12 uu proud of the bay's floor (z 100) and stopped a big load dead (seen in the game: four ants could not get the
+		// cake over it). A threshold board over the rail: a ramp up to it from inside, flat across the two door tracks to the
+		// front edge. The doors' bottom edges (z 103) sink a few uu into it.
+		Part(EAntShape::Cube, FVector(11790.f, -7834.f, 106.f), FVector(2650.f, 142.f, 6.f), FRotator(0.f, 0.f, -5.5f), Hex(96, 66, 44), true);
+		Box(FVector(10465.f, -7766.f, 107.f), FVector(13115.f, -7702.f, 113.f), Hex(96, 66, 44));
 	}
 	else
 	{

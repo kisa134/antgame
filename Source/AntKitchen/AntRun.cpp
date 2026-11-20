@@ -1634,6 +1634,68 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 		}
 		UE_LOG(LogTemp, Display, TEXT("ANTV2 lootall: food on %d spots"), DevLootPlaced.Num());
 	}
+	else if (Op == TEXT("edges"))
+	{
+		// Every outer edge of the street and the yards, a step every 100 uu: is there ground right up to the edge, and does
+		// something solid stop an ant there (a sphere of its size, at four heights)? The log names every place that fails.
+		struct FDevEdge { float X0, Y0, X1, Y1, NX, NY; const TCHAR* Name; };
+		static const FDevEdge Edges[] =
+		{
+			{ -15300.f, -5150.f, -15300.f, 5550.f, -1.f, 0.f, TEXT("street west") },
+			{ -15250.f, 5600.f, -9500.f, 5600.f, 0.f, 1.f, TEXT("street north") },
+			{ -9450.f, 5670.f, -7250.f, 5670.f, 0.f, 1.f, TEXT("front lawn north") },
+			{ -15250.f, -5200.f, -9450.f, -5200.f, 0.f, -1.f, TEXT("street south") },
+			{ -9470.f, -8800.f, -9470.f, -5250.f, -1.f, 0.f, TEXT("yard A west") },
+			{ -9400.f, -8870.f, 5100.f, -8870.f, 0.f, -1.f, TEXT("yard A south") },
+			{ 5130.f, -12200.f, 5130.f, -8950.f, -1.f, 0.f, TEXT("yard B west") },
+			{ 5200.f, -12270.f, 20400.f, -12270.f, 0.f, -1.f, TEXT("yard B south") },
+			{ 20470.f, -12200.f, 20470.f, -9250.f, 1.f, 0.f, TEXT("yard B east") },
+			{ 20210.f, -9200.f, 20460.f, -9200.f, 0.f, 1.f, TEXT("yard B north-east notch") },
+		};
+		static const float Heights[4] = { 6.f, 80.f, 700.f, 2400.f };
+		const FCollisionShape Ball = FCollisionShape::MakeSphere(5.f);
+		FCollisionQueryParams QP(SCENE_QUERY_STAT(DevEdges), false);
+		int32 Steps = 0, Open = 0, NoGround = 0;
+		for (const FDevEdge& E : Edges)
+		{
+			const FVector A0(E.X0, E.Y0, 0.f), B0(E.X1, E.Y1, 0.f), Out(E.NX, E.NY, 0.f);
+			const int32 N = FMath::Max(1, FMath::RoundToInt((float)FVector::Dist(A0, B0) / 100.f));
+			int32 EdgeOpen = 0, EdgeNoGround = 0;
+			float Far = 0.f;
+			for (int32 i = 0; i <= N; ++i)
+			{
+				const FVector P = FMath::Lerp(A0, B0, (float)i / N) - Out * 200.f;   // 200 inside the edge line
+				++Steps;
+				float Reach = 900.f;
+				for (float H : Heights)
+				{
+					FHitResult Hit;
+					const FVector From = P + FVector(0.f, 0.f, H);
+					if (!W->SweepSingleByChannel(Hit, From, From + Out * 900.f, FQuat::Identity, ECC_Pawn, Ball, QP))
+					{
+						++EdgeOpen;
+						if (EdgeOpen <= 4) { UE_LOG(LogTemp, Display, TEXT("ANTV2 edges: OPEN %s at (%.0f, %.0f) height %.0f: nothing within 900"), E.Name, P.X, P.Y, H); }
+					}
+					else if (H < 10.f) { Reach = Hit.Distance; Far = FMath::Max(Far, Hit.Distance - 200.f); }
+				}
+				for (float D = 0.f; D <= Reach; D += 40.f)
+				{
+					FHitResult G;
+					const FVector At = P + Out * D;
+					if (!W->LineTraceSingleByChannel(G, At + FVector(0.f, 0.f, 40.f), At - FVector(0.f, 0.f, 300.f), ECC_Pawn, QP))
+					{
+						++EdgeNoGround;
+						if (EdgeNoGround <= 4) { UE_LOG(LogTemp, Display, TEXT("ANTV2 edges: NO GROUND %s at (%.0f, %.0f)"), E.Name, At.X, At.Y); }
+						break;
+					}
+				}
+			}
+			Open += EdgeOpen;
+			NoGround += EdgeNoGround;
+			UE_LOG(LogTemp, Display, TEXT("ANTV2 edges: %s: %d steps, %d open sweeps, %d places without ground, the stop lies at most %.0f beyond the edge line"), E.Name, N + 1, EdgeOpen, EdgeNoGround, Far);
+		}
+		UE_LOG(LogTemp, Display, TEXT("ANTV2 edges: %d steps along %d edges: %d open sweeps, %d places without ground"), Steps, (int32)UE_ARRAY_COUNT(Edges), Open, NoGround);
+	}
 	else if (Op == TEXT("lootclear") && Me)
 	{
 		// lootclear [r]: the food lying within r (500) of the player is removed (to try a passage without a crumb plugging it)
@@ -1653,10 +1715,17 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 		{
 			const AKitchenLoot* L = DevLootPlaced[i].Get();
 			const FVector Want = DevLootWanted[i];
+			// what is straight under the designed point (the first solid thing below it)
+			FHitResult Under;
+			FCollisionQueryParams UQ(SCENE_QUERY_STAT(DevLootRest), true);
+			for (const TWeakObjectPtr<AKitchenLoot>& Other : DevLootPlaced) { if (Other.IsValid()) { UQ.AddIgnoredActor(Other.Get()); } }
+			const bool bUnder = W->LineTraceSingleByChannel(Under, Want + FVector(0.f, 0.f, 10.f), Want - FVector(0.f, 0.f, 6000.f), ECC_Pawn, UQ);
+			const UStaticMeshComponent* USM = bUnder ? Cast<UStaticMeshComponent>(Under.GetComponent()) : nullptr;
+			const FString Below = bUnder ? FString::Printf(TEXT("under the point: %s at z %.0f"), USM && USM->GetStaticMesh() ? *USM->GetStaticMesh()->GetName() : *GetNameSafe(Under.GetActor()), Under.ImpactPoint.Z) : FString(TEXT("under the point: nothing"));
 			if (!L)
 			{
 				++Gone;
-				UE_LOG(LogTemp, Display, TEXT("ANTV2 lootrest %d (%.0f, %.0f, %.0f): GONE"), i, Want.X, Want.Y, Want.Z - 35.f);
+				UE_LOG(LogTemp, Display, TEXT("ANTV2 lootrest %d (%.0f, %.0f, %.0f): GONE; %s"), i, Want.X, Want.Y, Want.Z - 35.f, *Below);
 				continue;
 			}
 			const FVector At = L->GetActorLocation();
@@ -1664,7 +1733,7 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 			if (bFell || bRolled)
 			{
 				bFell ? ++Fell : ++Rolled;
-				UE_LOG(LogTemp, Display, TEXT("ANTV2 lootrest %d (%.0f, %.0f, %.0f): %s, lies at (%.0f, %.0f, %.0f) «%s»"), i, Want.X, Want.Y, Want.Z - 35.f, bFell ? TEXT("FELL") : TEXT("ROLLED"), At.X, At.Y, At.Z, *L->LootName);
+				UE_LOG(LogTemp, Display, TEXT("ANTV2 lootrest %d (%.0f, %.0f, %.0f): %s, lies at (%.0f, %.0f, %.0f) «%s»"), i, Want.X, Want.Y, Want.Z - 35.f, bFell ? TEXT("FELL") : TEXT("ROLLED"), At.X, At.Y, At.Z, *(L->LootName + TEXT("; ") + Below));
 			}
 			else
 			{
@@ -1703,6 +1772,16 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 		const AKitchenLoot* C = MainObject.Get();
 		UE_LOG(LogTemp, Display, TEXT("ANTV2 cake: %s"), C ? *FString::Printf(TEXT("at %s, weight %d, carriers %d, strength %.0f, ratio %.2f, speed %.0f"), *C->GetActorLocation().ToCompactString(), C->Weight,
 			C->NumCarriers(), C->NetStrength(), C->CarryRatio(), C->GetVelocity().Size()) : TEXT("none (delivered, broken or not spawned)"));
+		for (int32 i = 0; C && i < C->Carriers.Num(); ++i)
+		{
+			FVector G;
+			if (C->Carriers[i] && C->GrabPointOf(C->Carriers[i], G))
+			{
+				const FVector H = C->Carriers[i]->GetHoldPoint();
+				UE_LOG(LogTemp, Display, TEXT("ANTV2 cake:   carrier %d at %s holds %s, bite %s, stretch %.0f (flat %.0f), rot %s"), i, *C->Carriers[i]->GetActorLocation().ToCompactString(), *H.ToCompactString(), *G.ToCompactString(),
+					FVector::Dist(G, H), FVector::Dist2D(G, H), *C->GetActorRotation().ToCompactString());
+			}
+		}
 	}
 	else if (Op == TEXT("give") && Me)
 	{
@@ -1726,7 +1805,7 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 	{
 		// grab [cake]: the player takes the nearest food (or the cake, wherever it is: the ant is put next to it)
 		AKitchenLoot* L = (A.Num() > 1 && MainObject.IsValid()) ? MainObject.Get() : Me->FindNearestLoot(400.f);
-		if (L && A.Num() > 1) { Me->ApplyTeleport(L->GetActorLocation() + FVector(60.f, 0.f, 20.f)); }
+		if (L && A.Num() == 2) { Me->ApplyTeleport(L->GetActorLocation() + FVector(60.f, 0.f, 20.f)); }   // "grab cake here": from where the ant stands
 		const bool bOk = L && Me->GrabLoot(L);
 		UE_LOG(LogTemp, Display, TEXT("ANTV2 grab: %s %s"), L ? *L->LootName : TEXT("nothing near"), bOk ? TEXT("in the jaws") : TEXT("FAILED"));
 	}

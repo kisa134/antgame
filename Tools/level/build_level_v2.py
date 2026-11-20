@@ -357,6 +357,17 @@ for (x, y, z, tier, label) in V.LOOT_ADD:
     p = [float(x), float(y), float(z)]
     s = {'i': ni, 'p': p, 'tier_loot': tier, 'group': 'level v2', 'label': label, 'src': 'level_v2_layout.LOOT_ADD', 'how': 'design', 'area': area_of(x, y), 'v2': 'new'}
     s.update(classify(p)); ni += 1; spots.append(s)
+# Spots put where the food really comes to rest (the in-game check "lootall / lootrest", 20.11.2026): by their final place.
+REST = {tuple(int(round(v)) for v in a): (b, lab) for (a, b, lab) in getattr(V, 'LOOT_REST', [])}
+n_rest = 0
+for s in spots:
+    k = tuple(int(round(v)) for v in s['p'])
+    if k in REST:
+        b, lab = REST[k]; s['p'] = [float(v) for v in b]; s['was'] = list(k); s.pop('probe', None); n_rest += 1
+        if lab: s['label'] = lab
+        if s.get('how') == 'design': s.update(classify(s['p']))
+        s['area'] = area_of(s['p'][0], s['p'][1]); s['v2'] = 'new, put to rest' if s.get('v2') == 'new' else 'fixed'
+assert n_rest == len(REST), (n_rest, len(REST))
 for lst in (spots, D['loot']['behind_doors']):
     for s in lst:
         if lst is not spots:

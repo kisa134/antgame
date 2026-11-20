@@ -52,7 +52,7 @@ has('fly feeder: yard bin', 'KitchenBuilder.cpp', fv([b[0], b[1], 0]))
 for o in D['openings']:
     if o.get('v2') in ('new', 'fixed'):
         bx = o['box']; needle = '%s, %s' % (fv(bx[:3]), fv(bx[3:]))
-        fn = 'KitchenHouse.cpp' if o['id'] in ('pit', 'north_hole', 'east_hole') else 'KitchenBuilder.cpp'
+        fn = 'KitchenHouse.cpp' if o['id'] in ('pit', 'north_hole', 'east_hole', 'nest_crack', 'window_crack') else 'KitchenBuilder.cpp'
         has('opening %s %s' % (o['id'], bx), fn, needle)
 pit = by(D['spaces'], 'id', 'pit')['box']
 has('pit floor at %s' % pit[2], 'KitchenHouse.cpp', 'FVector(5300.f, 2300.f, %s), DarkDirt);' % f(pit[2]))
