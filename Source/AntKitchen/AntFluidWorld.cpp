@@ -14,6 +14,8 @@
 #include "Components/StaticMeshComponent.h"
 #include "Camera/CameraActor.h"
 #include "Engine/StaticMeshActor.h"
+#include "Engine/Engine.h"
+#include "Engine/GameViewportClient.h"
 #include "PhysicalMaterials/PhysicalMaterial.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/Character.h"
@@ -1322,6 +1324,7 @@ bool UAntFluidWorld::DevCommand(const TArray<FString>& A)
 	else if (Op == TEXT("clear")) { for (TUniquePtr<FBasin>& B : Basins) { for (int32 L = 0; L < LCount; ++L) { B->Layers[L].H.Init(0.f, B->Nx * B->Ny); B->Layers[L].X1 = B->Layers[L].X0; } } Falls.Reset(); Drops.Reset(); }
 	else if (Op == TEXT("stats")) { LogStats(); }
 	else if (Op == TEXT("show") && Holder) { Holder->SetActorHiddenInGame(NumAt(A, 2, 1.f) < 0.5f); for (FAntFluidVolume& V : Volumes) { if (V.Comp) { V.Comp->SetVisibility(NumAt(A, 2, 1.f) >= 0.5f); } } }   // A/B: the liquid drawn or not (it still simulates)
+	else if (Op == TEXT("res") && PC) { PC->ConsoleCommand(FString::Printf(TEXT("r.SetRes %dx%dw"), (int32)NumAt(A, 2, 1600.f), (int32)NumAt(A, 3, 900.f)), false); }
 	else if (Op == TEXT("profile") && PC) { PC->ConsoleCommand(TEXT("ProfileGPU"), false); }   // one frame of GPU passes into the log
 	else if (Op == TEXT("map"))
 	{
@@ -1378,7 +1381,8 @@ bool UAntFluidWorld::DevCommand(const TArray<FString>& A)
 			}
 			M->SetCollisionProfileName(TEXT("PhysicsActor"));
 			M->SetSimulatePhysics(true);
-			M->SetMassOverrideInKg(NAME_None, Kind == TEXT("sponge") ? 0.004f : (Kind == TEXT("brick") ? 0.2f : 0.03f), true);
+			M->SetMassOverrideInKg(NAME_None, Kind == TEXT("sponge") ? 0.08f : (Kind == TEXT("brick") ? 0.2f : 0.03f), true);
+			if (Kind == TEXT("sponge")) { M->SetLinearDamping(0.5f); M->SetAngularDamping(2.f); }
 			Box->Tags.Add(Kind == TEXT("sponge") ? FName(TEXT("AntSponge")) : (Kind == TEXT("brick") ? FName(TEXT("AntSinks")) : FName(TEXT("AntFloat"))));
 			UE_LOG(LogTemp, Display, TEXT("ANTFLUID prop %s at %s, size %s, mass %.4f kg"), *Kind, *At.ToCompactString(), *Size.ToCompactString(), M->GetMass());
 			LastProp = Box;
@@ -1414,6 +1418,7 @@ bool UAntFluidWorld::DevCommand(const TArray<FString>& A)
 			// onto the sponge, wherever it has drifted
 			for (TActorIterator<AActor> It(W); It; ++It) { if (It->ActorHasTag(TEXT("AntSponge"))) { To = It->GetActorLocation() + FVector(0.f, 0.f, 70.f); break; } }
 		}
+		if (Me && A.IsValidIndex(2) && A[2] == TEXT("sponge")) { Me->GetCharacterMovement()->bEnablePhysicsInteraction = false; }   // a rider does not kick its raft away
 		if (Me) { Me->ApplyTeleport(To); UE_LOG(LogTemp, Display, TEXT("ANTFLUID ant put at %s"), *To.ToCompactString()); }
 	}
 	else if (Op == TEXT("track"))
@@ -1460,8 +1465,10 @@ bool UAntFluidWorld::DevCommand(const TArray<FString>& A)
 void UAntFluidWorld::LogStats()
 {
 	UWorld* W = GetWorld();
-	UE_LOG(LogTemp, Display, TEXT("ANTFLUID stats t=%.1f: frame %.2f ms, gpu %.2f ms | sim %.3f ms, couple %.3f, drops %.3f, view %.3f (game thread) | falls %d, columns %d, 3D volumes %d, drops %d, lost %.2f l, quality %d"),
-		W->GetTimeSeconds(), FrameMs, GpuMs, SimMs, CoupleMs, DropMs, ViewMs, Falls.Num(), Columns.Num(), Volumes.Num(), Drops.Num(), LostVolume / Litre, Quality);
+	FVector2D VP(0.0, 0.0);
+	if (GEngine && GEngine->GameViewport) { GEngine->GameViewport->GetViewportSize(VP); }
+	UE_LOG(LogTemp, Display, TEXT("ANTFLUID stats t=%.1f (%.0fx%.0f): frame %.2f ms, gpu %.2f ms | sim %.3f ms, couple %.3f, drops %.3f, view %.3f (game thread) | falls %d, columns %d, 3D volumes %d, drops %d, lost %.2f l, quality %d"),
+		W->GetTimeSeconds(), VP.X, VP.Y, FrameMs, GpuMs, SimMs, CoupleMs, DropMs, ViewMs, Falls.Num(), Columns.Num(), Volumes.Num(), Drops.Num(), LostVolume / Litre, Quality);
 	for (const TUniquePtr<FBasin>& B : Basins)
 	{
 		UE_LOG(LogTemp, Display, TEXT("ANTFLUID   %s: honey %.2f l (%d wet), water %.2f l (%d wet, box %dx%d), oil %.3f l (%d wet), step %u"), *B->Name,
