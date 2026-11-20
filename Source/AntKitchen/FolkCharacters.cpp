@@ -807,6 +807,7 @@ void AKidCharacter::DevAct(const FString& What, const FVector& Target)
 	else if (What == TEXT("poke")) { PlayReach(Target); }
 	else if (What == TEXT("pinch")) { StartAct(HumanAct::Grab, 0, Target); }
 	else if (What == TEXT("cup")) { DropAnt(true); }
+	else if (What == TEXT("swipe")) { GetCharacterMovement()->SetMovementMode(MOVE_Walking); StartAct(HumanAct::None, 0, FVector::ZeroVector); GoalPoint = FVector::ZeroVector; NextSwipe = 0.f; SetMode(Toddle, 3.f); }
 	else if (What.StartsWith(TEXT("want"))) { DevWant = FCString::Atoi(*What.RightChop(4)) - 0; if (What.Len() == 4) { DevWant = -1; } }
 	else { Super::DevAct(What, Target); }
 }
