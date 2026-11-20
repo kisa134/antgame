@@ -2,6 +2,7 @@
 #   SourceArt/Blender/kitchen/*.fbx -> /Game/Kitchen/<Name>/<Name>
 #   SourceArt/Blender/living/*.fbx  -> /Game/Living/<Name>/<Name>
 #   SourceArt/Blender/human/*.fbx   -> /Game/Human/<Name>/<Name>   (run through Tools/import_human.py)
+#   SourceArt/Blender/level_v2/*.fbx -> /Game/Kitchen or /Game/Living by the name's prefix (set "level_v2")
 # One mesh per FBX (combined), material SLOT NAMES are kept (the game maps slot name -> look in code),
 # no materials / textures are imported, no Nanite, no lightmap UVs.
 # Collision: furniture and everything ants crawl on or into uses its own triangles
@@ -19,6 +20,8 @@ SETS = [
     ("kitchen", os.path.join(PROJ, "SourceArt", "Blender", "kitchen"), "/Game/Kitchen", "kitchen_manifest.json"),
     ("living", os.path.join(PROJ, "SourceArt", "Blender", "living"), "/Game/Living", "living_manifest.json"),
     ("human", os.path.join(PROJ, "SourceArt", "Blender", "human"), "/Game/Human", "human_manifest.json"),   # the Human's segments (Tools/import_human.py)
+    # level v2: the folder is picked by the name, the way KitchenArt::Mesh looks a mesh up (SM_K_* -> /Game/Kitchen, the rest -> /Game/Living)
+    ("level_v2", os.path.join(PROJ, "SourceArt", "Blender", "level_v2"), None, "level_v2_new_pieces.json"),
 ]
 EAL = unreal.EditorAssetLibrary
 AT = unreal.AssetToolsHelpers.get_asset_tools()
@@ -105,7 +108,7 @@ for set_name, src, dst, manifest_name in SETS:
     bad = []
     for fbx in files:
         name = os.path.splitext(os.path.basename(fbx))[0]
-        dest = dst + "/" + name
+        dest = (dst if dst else ("/Game/Kitchen" if name.startswith("SM_K_") else "/Game/Living")) + "/" + name
         mesh = import_fbx(fbx, dest, name)
         if not mesh or not isinstance(mesh, unreal.StaticMesh):
             log("FAILED " + name)
