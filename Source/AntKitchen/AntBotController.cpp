@@ -262,6 +262,7 @@ void AAntBotController::Think(AAntCharacter* Ant)
 		FoodTarget = nullptr;
 	}
 	LastCarried = Carry;
+	bCarryWithPlayer = false;
 	if (Carry)
 	{
 		// Dragging home. Give up if it doesn't move at all for a while.
@@ -277,7 +278,21 @@ void AAntBotController::Think(AAntCharacter* Ant)
 		}
 		else
 		{
-			Goal = AKitchenBuilder::NestLocation(Ant->Team) + FVector(0.f, 0.f, 30.f);
+			// A player of its colony has hold of the same load: the player leads and the bot walks with him. (It used to pull
+			// towards the nest its own way: with the second entrance in the yard the two of them tore the load apart.)
+			for (const AAntCharacter* Mate : Carry->Carriers)
+			{
+				if (Mate && Mate != Ant && !Mate->bDead && Mate->Team == Ant->Team && Mate->IsPlayerControlled())
+				{
+					const FVector Ahead = Mate->GetVelocity().GetSafeNormal2D() * 40.f * AAntCharacter::AntShrink;
+					Goal = Mate->GetActorLocation() + Ahead;
+					bHasGoal = true;
+					bCarryWithPlayer = true;   // no "unstick" side steps while the leader stands or creeps: they tear the load out of his jaws
+					HeavyTimer = 0.f;          // and no giving up: the player decides when to drop it
+					return;
+				}
+			}
+			Goal = AKitchenBuilder::HomeFor(Ant->Team, Ant->GetActorLocation()) + FVector(0.f, 0.f, 30.f);
 			bHasGoal = true;
 			return;
 		}
@@ -323,7 +338,7 @@ void AAntBotController::Think(AAntCharacter* Ant)
 			{
 				LastLootPos = L->GetActorLocation();
 				HeavyTimer = 0.f;
-				Goal = AKitchenBuilder::NestLocation(Ant->Team);
+				Goal = AKitchenBuilder::HomeFor(Ant->Team, Ant->GetActorLocation());
 				bHasGoal = true;
 				LastCarried = L;
 				return;
@@ -435,7 +450,7 @@ void AAntBotController::Steer(AAntCharacter* Ant, const FVector& FinalTarget, fl
 	StuckCheckTimer += Dt;
 	if (StuckCheckTimer > 1.2f)
 	{
-		const bool bSlowOnPurpose = Ant->IsCarrying() && Ant->Carrying && Ant->Carrying->CarryRatio() < 1.f;
+		const bool bSlowOnPurpose = Ant->IsCarrying() && Ant->Carrying && (Ant->Carrying->CarryRatio() < 1.f || bCarryWithPlayer);
 		if (!bSlowOnPurpose && FVector::Dist(Me, LastCheckPos) < 70.f * AAntCharacter::AntShrink && UnstickTime <= 0.f)
 		{
 			UnstickTime = 1.f;
@@ -478,7 +493,18 @@ void AAntBotController::Tick(float DeltaSeconds)
 			ThinkChain(Ant);
 		}
 	}
-	if (bHasGoal)
+	FVector Bite;
+	if (bCarryWithPlayer && Ant->Carrying && Ant->Carrying->GrabPointOf(Ant, Bite))
+	{
+		// Carrying with a player: it keeps under its own bite point, so it bears its share of the weight and goes wherever the
+		// player takes the load. (Walking at the player it stood on his heels and its jaws held the load back.)
+		const FVector To = FVector::VectorPlaneProject(Bite - Ant->GetHoldPoint(), Ant->GetVisualUp());
+		if (To.Size() > 10.f)
+		{
+			Ant->AddMovementInput(To.GetSafeNormal(), FMath::Clamp((float)To.Size() / 50.f, 0.25f, 1.f));
+		}
+	}
+	else if (bHasGoal)
 	{
 		Steer(Ant, Goal, DeltaSeconds);
 	}

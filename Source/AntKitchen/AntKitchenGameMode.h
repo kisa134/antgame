@@ -4,6 +4,7 @@
 #include "GameFramework/GameModeBase.h"
 #include "AntTypes.h"
 #include "AntRun.h"
+#include "HumanNav.h"
 #include "AntKitchenGameMode.generated.h"
 
 class AAntCharacter;
@@ -86,6 +87,20 @@ public:
 	int32 ShiftNumber = 1;
 	int32 BestShift = 0;
 	void SpawnTrophy(int32 Slot);
+	/** Level v2: the main object of the shift, a slice of birthday cake (weight 70, 600 when brought home whole). One per shift,
+	 *  at one of the three designed places (LevelV2::MainSpots; the fridge crisper is the rare one). ForceSpot: dev. */
+	void SpawnMainObject(int32 ForceSpot = -1);
+	/** Level v2: the grid the Human, grandma and the kid find their way on (FHumanNav). Built on first use. Null in the box-built kitchen. */
+	const FHumanNav* HouseNav();
+	FHumanNav HouseNavGrid;
+	static int32 MainWeight();
+	TWeakObjectPtr<AKitchenLoot> MainObject;
+	// Dev: the player's ant walks a list of points by itself (-AntDo "go x y z ...").
+	TArray<FVector> DevGoPts;
+	float DevGoStart = 0.f, DevGoBest = 0.f, DevGoBestAt = 0.f, DevGoLogAt = 0.f;
+	// Dev: food on every spot of the table, and where each piece came to rest ("lootall", "lootrest").
+	TArray<TWeakObjectPtr<AKitchenLoot>> DevLootPlaced;
+	TArray<FVector> DevLootWanted;
 	FTimerHandle HeistTimer;
 	float TrophyLostAt = -100.f;
 

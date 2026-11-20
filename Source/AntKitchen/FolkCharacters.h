@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "HumanCharacter.h"
+#include "HumanNav.h"
 #include "FolkCharacters.generated.h"
 
 class AAntCharacter;
@@ -51,6 +52,7 @@ protected:
 	uint8 Mode = 0;
 	float ModeSince = 0.f, ModeUntil = 0.f;
 	bool bSettled = false;
+	FHumanNavFollower NavFollow;                 // level v2: their way round the furniture
 	FVector SeatPoint = FVector::ZeroVector;     // world
 	FVector StandPoint = FVector::ZeroVector;    // where the feet are while seated
 	float StandYaw = 0.f;
@@ -85,6 +87,8 @@ private:
 	AKitchenLoot* FindMess(float Range) const;
 	int32 TidyLeft = 0;
 	bool bHome = false;
+	TWeakObjectPtr<UPrimitiveComponent> ChairPart;   // her armchair (level v2: see Settle)
+	bool bChairThrough = false;
 	float NextSweep = 0.f, NextKnit = 0.f, NextScold = 0.f, NextTidy = 0.f;
 	bool bSwept = false;
 	TWeakObjectPtr<AKitchenInteractable> Door;

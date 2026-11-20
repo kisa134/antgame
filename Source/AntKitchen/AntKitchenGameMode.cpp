@@ -222,6 +222,7 @@ void AAntKitchenGameMode::BeginPlay()
 		for (int32 i = 0; i < 3; ++i) { SpawnTrophy(i); }
 		GetWorldTimerManager().SetTimer(HeistTimer, this, &AAntKitchenGameMode::HeistTick, 5.f, true, 10.f);
 		StartShift();
+		SpawnMainObject();
 		Broadcast(TEXT("ХАЙСТ: трофеи лежат высоко — снимите и дотащите домой ЦЕЛЫМИ (×2). Разбитый — куски за обычную цену"), Gold);
 	}
 	GetWorldTimerManager().SetTimer(MatchTimer, this, &AAntKitchenGameMode::MatchTick, 1.f, true);
@@ -300,7 +301,7 @@ void AAntKitchenGameMode::SpawnGadgets()
 	Passage(EPassageLook::Pipe, FVector(-3300.f, 4300.f, 140.f), 0.f, FVector(-3700.f, 3800.f, 1210.f), TEXT("труба → в раковину"));
 	// The pets and the rest of the family (primitives for now).
 	Spawn(ACritter::StaticClass(), FVector(600.f, -600.f, 0.f), FRotator::ZeroRotator, [](AActor* A) { CastChecked<ACritter>(A)->Kind = 0; });
-	Spawn(ACritter::StaticClass(), FVector(13500.f, 400.f, 950.f), FRotator(0.f, -90.f, 0.f), [](AActor* A) { CastChecked<ACritter>(A)->Kind = 1; });
+	Spawn(ACritter::StaticClass(), FVector(bArt ? 15500.f : 13500.f, 400.f, 950.f), FRotator(0.f, -90.f, 0.f), [](AActor* A) { CastChecked<ACritter>(A)->Kind = 1; });   // level v2: the east cushion (not inside the kid)
 	// The kid and grandma: the jointed figures with heads of their own (FolkCharacters.h), or the old seated ones (-AntOldNpc / no models).
 	if (NpcWorld::NewNpcs() && HumanBody::Enabled(HumanFig::Kid))
 	{
@@ -320,7 +321,7 @@ void AAntKitchenGameMode::SpawnGadgets()
 	}
 	// Grandma's ball of yarn on the floor with the thread running up to her lap: a climb.
 	// (geometry lives in KitchenBuilder so every client has it; the stash under the loose tile is loot.)
-	SpawnStash(FVector(5000.f, 2000.f, -350.f), 90, 16, 3);
+	SpawnStash(FVector(5000.f, 2000.f, KitchenArt::Enabled() ? -265.f : -350.f), 90, 16, 3);   // level v2: the pit is 300 deep, the cargo lies on its floor (it sat inside the floor slab)
 
 	// Fly food: dog poop on the lawn, the outdoor bin, the kitchen trash.
 	auto Feeder = [&Spawn](uint8 Kind, const FVector& Loc)
@@ -486,7 +487,7 @@ void AAntKitchenGameMode::SpawnFly()
 
 void AAntKitchenGameMode::SpawnSpider()
 {
-	if (Spider)
+	if (Spider || FParse::Param(FCommandLine::Get(), TEXT("AntNoSpider")))   // -AntNoSpider: dev runs that time a haul without her
 	{
 		return;
 	}
@@ -711,7 +712,8 @@ void AAntKitchenGameMode::RestartPlayer(AController* NewPlayer)
 	const FVector Nest = AKitchenBuilder::NestLocation(Team);
 	// Inside the safe zone of the nest; both nests open towards the middle of the kitchen.
 	const float Out = Team == 0 ? 1.f : -1.f;
-	const FVector Loc = Nest + FVector(Out * FMath::FRandRange(180.f, 380.f), FMath::FRandRange(-280.f, 280.f), 60.f);
+	// Level v2: the fire ants come out of the red anthill in the yard (a solid mound 427 high): they appear on top of it, in the crater.
+	const FVector Loc = Nest + FVector(Out * FMath::FRandRange(180.f, 380.f), FMath::FRandRange(-280.f, 280.f), (Team == 1 && KitchenArt::Enabled()) ? 520.f : 60.f);
 	RestartPlayerAtTransform(NewPlayer, FTransform(FRotator(0.f, Team == 0 ? 0.f : 180.f, 0.f), Loc));
 }
 
@@ -1042,9 +1044,19 @@ void AAntKitchenGameMode::OnFoodDelivered(uint8 Team, AKitchenLoot* Food, const 
 	{
 		Value *= 2;
 		GS->TrophiesWhole++;
-		TrophyLostAt = GetWorld()->GetTimeSeconds();
 		AntSfx::Everyone(this, AntSfx::Legendary, Food->GetActorLocation(), 1.f);
-		Broadcast(FString::Printf(TEXT("ЦЕЛЫЙ ТРОФЕЙ! «%s» доставлен без единой трещины: ×2 = %d"), *Food->LootName, Value), Gold);
+		if (Food->bMain)
+		{
+			// Level v2: the main object of the shift is home in one piece.
+			Broadcast(Team == 0 ? FString::Printf(TEXT("ИМЕНИННЫЙ ТОРТ ДОМА! Целый кусок: +%d. Королева в восторге"), Value)
+				: FString::Printf(TEXT("Огненные утащили именинный торт в свой холм: +%d им"), Value), Team == 0 ? Gold : Bad);
+			UE_LOG(LogTemp, Display, TEXT("ANTV2 cake delivered whole by team %d: %d"), (int32)Team, Value);
+		}
+		else
+		{
+			TrophyLostAt = GetWorld()->GetTimeSeconds();
+			Broadcast(FString::Printf(TEXT("ЦЕЛЫЙ ТРОФЕЙ! «%s» доставлен без единой трещины: ×2 = %d"), *Food->LootName, Value), Gold);
+		}
 	}
 	if (Team == 0)
 	{
@@ -1331,7 +1343,7 @@ void AAntKitchenGameMode::ResetMatch()
 		GS->WarPool1 = 128;
 		GS->TrophiesWhole = 0;
 		GS->TrophiesBroken = 0;
-		if (bHeist) { for (int32 i = 0; i < 3; ++i) { SpawnTrophy(i); } }
+		if (bHeist) { for (int32 i = 0; i < 3; ++i) { SpawnTrophy(i); } SpawnMainObject(); }
 		for (TActorIterator<AAntChain> It(GetWorld()); It; ++It) { It->Dissolve(); It->Destroy(); }
 		for (TActorIterator<AAntArmy> It(GetWorld()); It; ++It) { It->Destroy(); }
 		for (AAntTerritory* T : Territories) { if (T) { T->ResetZone(); } }
@@ -1701,13 +1713,13 @@ void AAntKitchenGameMode::SpawnTrophy(int32 Slot)
 		{ TEXT("Котлета из микроволновки"), 220, 44, FLinearColor(0.55f, 0.35f, 0.2f), EAntShape::Cylinder, FVector(0.5f, 0.5f, 0.25f), FVector(1760.f, 4425.f, 1950.f) },   // inside the microwave
 		{ TEXT("Полбутерброда"), 240, 52, FLinearColor(0.92f, 0.78f, 0.55f), EAntShape::Cube, FVector(0.7f, 0.5f, 0.3f), FVector(5900.f, -1500.f, 1060.f) },   // in the pedal bin
 		{ TEXT("Печенье с противня"), 150, 30, FLinearColor(0.75f, 0.5f, 0.25f), EAntShape::Cylinder, FVector(0.6f, 0.6f, 0.15f), FVector(-750.f, 3900.f, 980.f) },   // on the oven tray
-		{ TEXT("Кубик сахара с чаем"), 120, 26, FLinearColor(1.f, 1.f, 1.f), EAntShape::Cube, FVector(0.4f), FVector(-6780.f, -650.f, 2760.f) },   // the wall shelf
+		{ TEXT("Кубик сахара с чаем"), 120, 26, FLinearColor(1.f, 1.f, 1.f), EAntShape::Cube, FVector(0.4f), FVector(19700.f, -4500.f, 4740.f) },   // level v2: on top of the bookshelf, under the garland (it lay on the wall shelf over the nest, 13 s from home)
 		// Behind doors (the modelled kitchen): somebody has to get the door open first.
 		{ TEXT("Кусок сыра с полки"), 230, 40, FLinearColor(1.f, 0.82f, 0.25f), EAntShape::Cube, FVector(0.6f, 0.45f, 0.35f), FVector(3400.f, 4300.f, 1010.f) },      // fridge shelf
 		{ TEXT("Брикет пломбира"), 280, 46, FLinearColor(0.97f, 0.95f, 0.88f), EAntShape::Cube, FVector(0.7f, 0.45f, 0.3f), FVector(3900.f, 3800.f, 2640.f) },          // freezer
 		{ TEXT("Банка сгущёнки"), 240, 42, FLinearColor(0.3f, 0.5f, 0.85f), EAntShape::Cylinder, FVector(0.45f, 0.45f, 0.5f), FVector(-5125.f, 4640.f, 3100.f) },       // wall cabinet
 		{ TEXT("Пачка печенья"), 190, 34, FLinearColor(0.8f, 0.55f, 0.25f), EAntShape::Cube, FVector(0.7f, 0.4f, 0.3f), FVector(-2150.f, 4000.f, 250.f) },              // base cabinet left of the oven
-		{ TEXT("Забытая шоколадка"), 210, 36, FLinearColor(0.3f, 0.15f, 0.07f), EAntShape::Cube, FVector(0.8f, 0.4f, 0.15f), FVector(13800.f, -8400.f, 180.f) },        // TV stand, behind its door
+		{ TEXT("Забытая шоколадка"), 210, 36, FLinearColor(0.3f, 0.15f, 0.07f), EAntShape::Cube, FVector(0.8f, 0.4f, 0.15f), FVector(13200.f, -8400.f, 180.f) },        // TV stand, behind its door (level v2: the stand stands 600 further west)
 		{ TEXT("Плитка шоколада из шкафа"), 200, 36, FLinearColor(0.28f, 0.14f, 0.06f), EAntShape::Cube, FVector(0.8f, 0.4f, 0.15f), FVector(1900.f, 4000.f, 250.f) }, // base cabinet under the microwave
 	};
 	constexpr int32 NumDefs = UE_ARRAY_COUNT(Defs);
@@ -1773,7 +1785,7 @@ void AAntKitchenGameMode::HeistTick()
 	int32 Count = 0;
 	for (TActorIterator<AKitchenLoot> It(GetWorld()); It; ++It)
 	{
-		if (It->bTrophy) { ++Count; }
+		if (It->bTrophy && !It->bMain) { ++Count; }
 	}
 	// A new prize appears a while after one was delivered or smashed.
 	if (Count < 3 && GetWorld()->GetTimeSeconds() - TrophyLostAt > 40.f)

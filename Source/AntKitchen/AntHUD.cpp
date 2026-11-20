@@ -8,6 +8,9 @@
 #include "AntPlayerController.h"
 #include "KitchenLoot.h"
 #include "KitchenBuilder.h"
+#include "KitchenArt.h"
+#include "LevelV2.h"
+#include "FolkCharacters.h"
 #include "AntArmy.h"
 #include "AntChain.h"
 #include "WarMode.h"
@@ -608,10 +611,16 @@ void AAntHUD::DrawAnt(AAntCharacter* Ant)
 	if (Ant->bDead)
 	{
 		const bool bStuck = Ant->StuckTo != nullptr;
-		Txt(bStuck ? TEXT("ТЫ ПРИЛИП К ТАПКУ") : TEXT("ТЕБЯ РАЗДАВИЛИ"), W * 0.5f, H * 0.36f, Red, Big, 2.2f * S, true);
+		// Who flattened you: the Human's slipper, grandma's swatter or the kid's sneaker (they are the same jointed figure in code).
+		const bool bGran = bStuck && Ant->StuckTo->IsA<AGrandmaCharacter>();
+		const bool bKid = bStuck && Ant->StuckTo->IsA<AKidCharacter>();
+		Txt(bGran ? TEXT("БАБУШКА ПРИХЛОПНУЛА ТЕБЯ МУХОБОЙКОЙ") : bKid ? TEXT("МАЛЫШ ТЕБЯ РАСТОПТАЛ") : bStuck ? TEXT("ТЫ ПРИЛИП К ТАПКУ") : TEXT("ТЕБЯ РАЗДАВИЛИ"),
+			W * 0.5f, H * 0.36f, Red, Big, (bGran ? 1.7f : 2.2f) * S, true);
 		const AAntGameState* DeadGS = GetWorld()->GetGameState<AAntGameState>();
 		const bool bOut = DeadGS && DeadGS->bHeistMode && DeadGS->Larvae <= 0 && DeadGS->Phase == 0;
 		Txt(bOut ? TEXT("Личинок нет. Вернуть тебя могут, если свои принесут твоё тело в гнездо")
+			: bGran ? TEXT("Висишь лепёшкой на мухобойке. Возрождение через пару секунд...")
+			: bKid ? TEXT("Катаешься лепёшкой на подошве кеда. Возрождение через пару секунд...")
 			: bStuck ? TEXT("Катаешься лепёшкой на подошве. Возрождение через пару секунд...") : TEXT("Возрождение в муравейнике через пару секунд..."),
 			W * 0.5f, H * 0.36f + 80.f * S, White, Med, 1.1f * S, true);
 		return;
@@ -619,6 +628,19 @@ void AAntHUD::DrawAnt(AAntCharacter* Ant)
 
 	Crosshair();
 	DrawLinkState(Ant);
+
+	// Level v2: where you are, by the name of the district (and the nearest callout): what you say to the others.
+	if (KitchenArt::Enabled())
+	{
+		const FVector Here = Ant->GetActorLocation();
+		const TCHAR* District = LevelV2::DistrictAt(Here);
+		const TCHAR* Callout = LevelV2::CalloutNear(Here, 700.f);
+		if (District || Callout)
+		{
+			const FString Place = (District && Callout && FCString::Strcmp(District, Callout) != 0) ? FString::Printf(TEXT("%s  ·  %s"), District, Callout) : FString(District ? District : Callout);
+			Txt(Place, W * 0.5f, 14.f * S, FLinearColor(0.85f, 0.85f, 0.8f, 0.75f), Small, 1.05f * S, true);
+		}
+	}
 
 	// Health + cargo (bottom left)
 	const float X = 30.f * S, Y = H - 140.f * S;
@@ -641,6 +663,11 @@ void AAntHUD::DrawAnt(AAntCharacter* Ant)
 		Txt(FString::Printf(TEXT("ТАЩИШЬ: %s (+%d)  вес %d, держат %d  — %s"), *C->LootName, C->Value, C->Weight, C->NumCarriers(), *State), X, Y + 34.f * S, bTug || R < 0.5f ? Red : Gold, Small, 1.2f * S);
 		Bar(X, Y + 62.f * S, 340.f * S, 14.f * S, bTug ? 0.f : FMath::Min(1.f, R), R >= 1.f ? Gold : Red);
 		Marker(AKitchenBuilder::NestLocation(Ant->Team) + FVector(0.f, 0.f, 200.f), TEXT("МУРАВЕЙНИК"), Gold, true);
+		if (Ant->Team == 0 && KitchenArt::Enabled() && (AKitchenBuilder::Region(Ant->GetActorLocation()) == 2 || Ant->GetActorLocation().X > 7100.f))
+		{
+			// Level v2: from the living room and the yard the short way home is the south entrance (out through the cat flap).
+			Marker(LevelV2::SouthEntrance() + FVector(0.f, 0.f, 200.f), TEXT("ЮЖНЫЙ ВХОД"), Gold, true);
+		}
 	}
 	else
 	{
@@ -944,6 +971,12 @@ void AAntHUD::DrawWorldTags(APawn* Me)
 			continue;
 		}
 		const FVector S2 = Project(P);
+		if (Hu->IsA<AHouseFolk>())
+		{
+			// Grandma and the kid have no "nerves" to wear down: a name, no bar (it used to hang there always full).
+			Txt(Hu->GetDisplayName(), S2.X, S2.Y - 40.f * S, FLinearColor(1.f, 0.75f, 0.55f), Small, 1.1f * S, true);
+			continue;
+		}
 		Txt(Hu->GetDisplayName(), S2.X, S2.Y - 40.f * S, Red, Small, 1.2f * S, true);
 		Bar(S2.X - 120.f * S, S2.Y - 12.f * S, 240.f * S, 14.f * S, Hu->Health / FMath::Max(1.f, Hu->MaxHealth), Red);
 		if (Hu->IsKnockedOut())

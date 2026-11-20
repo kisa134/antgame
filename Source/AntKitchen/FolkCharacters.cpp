@@ -103,7 +103,17 @@ bool AHouseFolk::WalkTowards(const FVector& Goal, float Scale, float Arrive)
 	{
 		return true;
 	}
-	const FVector D = (AKitchenBuilder::Route(Me, FVector(Goal.X, Goal.Y, Me.Z)) - Me).GetSafeNormal2D();
+	// Level v2: round the furniture on the house grid (the Human's FHumanNav), not straight into it.
+	FVector Way = AKitchenBuilder::Route(Me, FVector(Goal.X, Goal.Y, Me.Z));
+	if (AAntKitchenGameMode* NavGM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
+	{
+		if (const FHumanNav* Nav = NavGM->HouseNav())
+		{
+			const FVector Next = NavFollow.Next(Nav, Me, FVector(Goal.X, Goal.Y, Me.Z), GetWorld()->GetTimeSeconds());
+			if (NavFollow.Path.Num() > 0) { Way = Next; }
+		}
+	}
+	const FVector D = (Way - Me).GetSafeNormal2D();
 	if (!D.IsNearlyZero())
 	{
 		AddMovementInput(D, Scale);
@@ -248,6 +258,9 @@ void AGrandmaCharacter::Settle()
 	SeatPoint = Seat;
 	StandYaw = 0.f;   // the armchair faces east
 	StandPoint = FloorPoint(Seat + FVector(660.f, 0.f, 0.f));
+	// Her feet are inside the armchair's footprint when she sits: near it her capsule does not collide with the chair (Think),
+	// so she walks right up to the seat and sits down. (She used to stop at its front edge and shuffle the last 500 backwards.)
+	ChairPart = AKitchenBuilder::FindArt(GetWorld(), TEXT("SM_L_Armchair"));
 	SetActorLocationAndRotation(StandPoint, FRotator(0.f, StandYaw, 0.f), false, nullptr, ETeleportType::TeleportPhysics);
 	if (Controller) { Controller->SetControlRotation(FRotator(0.f, StandYaw, 0.f)); }
 	SitDown(SeatPoint, 0);
@@ -372,6 +385,16 @@ void AGrandmaCharacter::DevAct(const FString& What, const FVector& Target)
 
 void AGrandmaCharacter::Think(float Dt, float Now)
 {
+	// By her own armchair she walks through its front edge (see Settle); anywhere else the chair is furniture like the rest.
+	if (UPrimitiveComponent* Chair = ChairPart.Get())
+	{
+		const bool bNear = FVector::Dist2D(GetActorLocation(), StandPoint) < 950.f;
+		if (bNear != bChairThrough)
+		{
+			bChairThrough = bNear;
+			GetCapsuleComponent()->IgnoreComponentWhenMoving(Chair, bNear);
+		}
+	}
 	UWorld* W = GetWorld();
 	const FVector Me = GetActorLocation();
 	AAntKitchenGameMode* GM = W->GetAuthGameMode<AAntKitchenGameMode>();
@@ -588,9 +611,9 @@ void AGrandmaCharacter::Think(float Dt, float Now)
 			SetMode(Hunting, 40.f);
 			break;
 		}
-		if (!bHome && (WalkTowards(StandPoint, 1.f, 520.f) || Now >= ModeUntil))
+		if (!bHome && (WalkTowards(StandPoint, 1.f, ChairPart.IsValid() ? 110.f : 520.f) || Now >= ModeUntil))
 		{
-			bHome = true;   // in front of her armchair (its front edge keeps her that far off)
+			bHome = true;   // in front of her armchair, a step from where her feet go
 			GetCharacterMovement()->StopMovementImmediately();
 			GetCharacterMovement()->DisableMovement();
 		}

@@ -29,6 +29,9 @@
 #include "Components/StaticMeshComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "AntMovementComponent.h"
+#include "LevelV2.h"
+#include "KitchenBuilder.h"
+#include "HumanCharacter.h"
 
 namespace
 {
@@ -155,7 +158,8 @@ namespace KitchenContainers
 		{ TEXT("в верхнем шкафу"),  FVector(-4500.f, 4336.f, 3010.f), FVector(-3250.f, 4950.f, 4380.f), -1,                                  { 16, 12 }, false },
 		{ TEXT("в верхнем шкафу"),  FVector(-3250.f, 4336.f, 3010.f), FVector(-2000.f, 4950.f, 4380.f), -1,                                  { 17, 13 }, false },
 		{ TEXT("в верхнем шкафу"),  FVector(1000.f, 4336.f, 3010.f),  FVector(2500.f, 4950.f, 4380.f),  -1,                                  { 18, 19 }, false },
-		{ TEXT("в тумбе под ТВ"),   FVector(11740.f, -8950.f, 100.f), FVector(14345.f, -7750.f, 1000.f), -1,                                 { 25, 26 }, false },
+		{ TEXT("в тумбе под ТВ"),   FVector(11140.f, -8950.f, 100.f), FVector(13745.f, -7750.f, 1000.f), -1,                                 { 25, 26 }, false },   // level v2: the stand stands 600 further west
+		{ TEXT("в хлебнице"),       FVector(-6840.f, 3040.f, 1740.f), FVector(-5700.f, 3660.f, 2280.f), -1,                                  { 30, -1 }, false },   // level v2: the bread box on the west worktop (its lid is mover 30)
 	};
 
 	const FDef& Get(int32 Index) { return Defs[FMath::Clamp(Index, 0, Count - 1)]; }
@@ -408,8 +412,106 @@ void AAntKitchenGameMode::OnDoorOpened(AKitchenInteractable* Door, AAntCharacter
 	}
 }
 
+// ---------------------------------------------------------------------------------------------
+// Level v2: the main object of the shift. One slice of birthday cake, heavier than any trophy, at one of three designed
+// places deep in the flat. Everybody is told where. It is a trophy: whole it pays double (the design's 600), smashed its
+// pieces add up to the plain 300. The raid mode the design wants later is not here: this lives inside the shift / quota loop.
+// ---------------------------------------------------------------------------------------------
+
+const FHumanNav* AAntKitchenGameMode::HouseNav()
+{
+	static const bool bOff = FParse::Param(FCommandLine::Get(), TEXT("AntNoHumanNav"));
+	if (bOff || !KitchenArt::Enabled())
+	{
+		return nullptr;
+	}
+	if (!HouseNavGrid.IsBuilt())
+	{
+		// The Human's own size (grandma and the kid are smaller: the grid is a little wider than they need).
+		float Radius = 340.f, Half = 1700.f, Step = 250.f;
+		if (Human)
+		{
+			Radius = Human->GetCapsuleComponent()->GetScaledCapsuleRadius();
+			Half = Human->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+			Step = Human->GetCharacterMovement()->MaxStepHeight;
+		}
+		const double T0 = FPlatformTime::Seconds();
+		HouseNavGrid.Build(GetWorld(), Human, Radius, Half, Step);
+		int32 BadStops = 0;
+		for (const FVector2f& S : LevelV2::PatrolStops())
+		{
+			if (!HouseNavGrid.IsFree(FVector(S.X, S.Y, 0.f)))
+			{
+				++BadStops;
+				UE_LOG(LogTemp, Warning, TEXT("ANTV2 nav: patrol stop (%.0f, %.0f) is not free for his capsule"), S.X, S.Y);
+			}
+		}
+		UE_LOG(LogTemp, Display, TEXT("ANTV2 nav: %d cells, %d free, capsule %.0f x %.0f, step %.0f, patrol stops %d (%d not free), built in %.0f ms"), HouseNavGrid.NumCells(), HouseNavGrid.NumFree(),
+			Radius, Half, Step, LevelV2::PatrolStops().Num(), BadStops, (FPlatformTime::Seconds() - T0) * 1000.0);
+	}
+	return &HouseNavGrid;
+}
+
+int32 AAntKitchenGameMode::MainWeight()
+{
+	int32 W = FMath::RoundToInt(LevelV2::MainWeightDesign());
+	FParse::Value(FCommandLine::Get(), TEXT("AntCakeWeight="), W);   // tuning
+	return FMath::Clamp(W, 6, 200);
+}
+
+void AAntKitchenGameMode::SpawnMainObject(int32 ForceSpot)
+{
+	if (!bHeist || !KitchenArt::Enabled())
+	{
+		return;
+	}
+	if (AKitchenLoot* Old = MainObject.Get())
+	{
+		Old->ReleaseAll();
+		Old->Destroy();
+	}
+	const TConstArrayView<FLevelV2Main> Spots = LevelV2::MainSpots();
+	int32 Pick = ForceSpot;
+	if (!Spots.IsValidIndex(Pick))
+	{
+		int32 Roll = Rng.RandRange(0, 99);
+		Pick = Spots.Num() - 1;
+		for (int32 i = 0; i < Spots.Num(); ++i)
+		{
+			if (Roll < Spots[i].Chance) { Pick = i; break; }
+			Roll -= Spots[i].Chance;
+		}
+	}
+	const FLevelV2Main& S = Spots[Pick];
+	FAntFoodDef D;
+	D.Name = TEXT("Кусок именинного торта");
+	D.Value = LevelV2::MainValue() / 2;   // a trophy: delivered whole it pays double
+	D.Weight = MainWeight();
+	D.Color = FLinearColor(1.f, 0.62f, 0.8f);
+	D.Shape = EAntShape::Cube;
+	D.Scale = FVector(0.8f, 0.55f, 0.45f);
+	const FVector Where(S.X, S.Y, S.Z + 40.f);
+	AKitchenLoot* L = GetWorld()->SpawnActorDeferred<AKitchenLoot>(AKitchenLoot::StaticClass(), FTransform(Where), nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+	if (!L)
+	{
+		return;
+	}
+	L->InitFood(D);
+	L->bTrophy = true;
+	L->bMain = true;
+	L->FinishSpawning(FTransform(Where));
+	MainObject = L;
+	Broadcast(FString::Printf(TEXT("ИМЕНИННЫЙ ТОРТ! Кусок лежит %s. Целым он стоит %d, но он тяжёлый: тащите всей колонной (F — армия)"), S.Where, LevelV2::MainValue()), RunGold);
+	UE_LOG(LogTemp, Display, TEXT("ANTV2 cake: spot %d of %d (%d%%) «%s» at %s, weight %d, value %d whole"), Pick + 1, Spots.Num(), S.Chance, S.Where, *Where.ToCompactString(), D.Weight, LevelV2::MainValue());
+}
+
 void AAntKitchenGameMode::OnTrophyBroken(AKitchenLoot* Trophy)
 {
+	if (Trophy && Trophy->bMain)
+	{
+		Broadcast(TEXT("Именинный торт разбился! Куски стоят вдвое меньше целого"), RunBad);
+		UE_LOG(LogTemp, Display, TEXT("ANTV2 cake broken at %s"), *Trophy->GetActorLocation().ToCompactString());
+	}
 	UE_LOG(LogTemp, Display, TEXT("ANTLOOT trophy broken: «%s» at %s"), Trophy ? *Trophy->LootName : TEXT("?"), Trophy ? *Trophy->GetActorLocation().ToCompactString() : TEXT("?"));
 	FailOrder(AntOrder::NoBreak);
 	if (AAntCharacter* By = Trophy ? Trophy->LastCarrier.Get() : nullptr)
@@ -665,7 +767,7 @@ void AAntKitchenGameMode::SpawnHighProps()
 	const FDef Defs[] =
 	{
 		{ TEXT("Крышка от кастрюли"), EAntShape::Cylinder, FVector(300.f, 3170.f, 1760.f),    FVector(230.f, 230.f, 26.f),  FLinearColor(0.72f, 0.74f, 0.78f), 4.f },
-		{ TEXT("Кружка"),             EAntShape::Cylinder, FVector(-5600.f, 3170.f, 1820.f),  FVector(150.f, 150.f, 170.f), FLinearColor(0.2f, 0.45f, 0.8f),   5.f },
+		{ TEXT("Кружка"),             EAntShape::Cylinder, FVector(-4700.f, 3170.f, 1820.f),  FVector(150.f, 150.f, 170.f), FLinearColor(0.2f, 0.45f, 0.8f),   5.f },   // level v2: the bread box stands where it was
 		{ TEXT("Банка специй"),       EAntShape::Cylinder, FVector(2250.f, 3160.f, 1800.f),   FVector(110.f, 110.f, 180.f), FLinearColor(0.75f, 0.3f, 0.15f),  4.f },
 		{ TEXT("Банка огурцов"),      EAntShape::Cylinder, FVector(3700.f, 3230.f, 3880.f),   FVector(190.f, 190.f, 270.f), FLinearColor(0.35f, 0.6f, 0.25f),  7.f },
 		{ TEXT("Банка варенья"),      EAntShape::Cylinder, FVector(-6700.f, 300.f, 2780.f),   FVector(160.f, 160.f, 220.f), FLinearColor(0.6f, 0.1f, 0.2f),    6.f },
@@ -697,16 +799,17 @@ void AAntKitchenGameMode::SpawnContainerLoot()
 	struct FSpot { FVector P; int32 Tier; };
 	static const FSpot Spots[] =
 	{
-		{ FVector(-6300.f, 3900.f, 210.f), 2 },  { FVector(-6650.f, 4350.f, 210.f), 3 },    // base cabinet by the toaster
-		{ FVector(-2150.f, 3900.f, 210.f), 3 },  { FVector(-2450.f, 4350.f, 210.f), 2 },    // base cabinet left of the oven
+		// Level v2, the gradient rule: nothing of tier 3 closer than 25 s from the nest (three spots went down a tier).
+		{ FVector(-6300.f, 3900.f, 210.f), 2 },  { FVector(-6650.f, 4350.f, 210.f), 2 },    // base cabinet by the toaster
+		{ FVector(-2150.f, 3900.f, 210.f), 2 },  { FVector(-2450.f, 4350.f, 210.f), 2 },    // base cabinet left of the oven
 		{ FVector(1900.f, 3900.f, 210.f), 2 },   { FVector(2250.f, 4350.f, 210.f), 3 },     // base cabinet under the microwave
 		{ FVector(-6375.f, 4640.f, 3060.f), 3 }, { FVector(-5125.f, 4640.f, 3060.f), 2 },   // wall cabinets
 		{ FVector(-3875.f, 4640.f, 3060.f), 3 }, { FVector(-2625.f, 4640.f, 3060.f), 2 },
 		{ FVector(1500.f, 4640.f, 3060.f), 3 },  { FVector(2150.f, 4640.f, 3060.f), 2 },
-		{ FVector(-4900.f, 3650.f, 840.f), 3 },  { FVector(-5200.f, 4050.f, 840.f), 2 },    // the second drawer
+		{ FVector(-4900.f, 3650.f, 840.f), 2 },  { FVector(-5200.f, 4050.f, 840.f), 2 },    // the second drawer
 		{ FVector(3600.f, 4250.f, 2600.f), 3 },                                             // freezer
 		{ FVector(4300.f, 3550.f, 970.f), 3 },   { FVector(3250.f, 4400.f, 1770.f), 2 },    // fridge shelves
-		{ FVector(12400.f, -8400.f, 160.f), 3 }, { FVector(13300.f, -8450.f, 160.f), 2 },   // TV stand, behind its sliding doors
+		{ FVector(11800.f, -8400.f, 160.f), 3 }, { FVector(12700.f, -8450.f, 160.f), 2 },   // TV stand, behind its sliding doors
 	};
 	int32 N = 0;
 	TArray<TWeakObjectPtr<AKitchenLoot>> Placed;
@@ -1287,6 +1390,61 @@ void AAntKitchenGameMode::DevScriptTick()
 			++i;
 		}
 	}
+	// "go x y z ...": the player's ant walks the points one after another (AAntCharacter::bDevGo steers it every frame).
+	if (DevGoPts.Num() > 0)
+	{
+		APlayerController* PC = GetWorld()->GetFirstPlayerController();
+		AAntCharacter* Me = PC ? Cast<AAntCharacter>(PC->GetPawn()) : nullptr;
+		if (!Me || Me->bDead)
+		{
+			UE_LOG(LogTemp, Display, TEXT("ANTV2 go: FAILED, the ant is dead or gone (%d points left)"), DevGoPts.Num());
+			DevGoPts.Reset();
+			if (Me) { Me->bDevGo = false; }
+			return;
+		}
+		const FVector P = Me->GetActorLocation();
+		const FVector T = DevGoPts[0];
+		const float D = (float)FVector::Dist(P, T);
+		const AKitchenLoot* C = Me->Carrying;
+		if (FVector::Dist2D(P, T) < 70.f && FMath::Abs(P.Z - T.Z) < 140.f)
+		{
+			DevGoPts.RemoveAt(0);
+			UE_LOG(LogTemp, Display, TEXT("ANTV2 go: reached (%.0f, %.0f, %.0f) at %.1f s, %d left, load %s"), T.X, T.Y, T.Z, Now - DevGoStart, DevGoPts.Num(), C ? *C->LootName : TEXT("-"));
+			DevGoBest = 1.e9f;
+			DevGoBestAt = Now;
+			if (DevGoPts.Num() == 0)
+			{
+				Me->bDevGo = false;
+				UE_LOG(LogTemp, Display, TEXT("ANTV2 go: DONE in %.1f s at %s, load %s (ratio %.2f, carriers %d)"), Now - DevGoStart, *P.ToCompactString(), C ? *C->LootName : TEXT("-"), C ? C->CarryRatio() : 0.f, C ? C->NumCarriers() : 0);
+			}
+			else
+			{
+				Me->DevGoTo = DevGoPts[0];
+			}
+			return;
+		}
+		Me->DevGoTo = T;
+		Me->bDevGo = true;
+		if (D < DevGoBest - 12.f)
+		{
+			DevGoBest = D;
+			DevGoBestAt = Now;
+		}
+		else if (Now - DevGoBestAt > 12.f)
+		{
+			UE_LOG(LogTemp, Display, TEXT("ANTV2 go: STUCK at %s, %.0f from (%.0f, %.0f, %.0f), %d points left, load %s (ratio %.2f, carriers %d), falling %d"), *P.ToCompactString(), D, T.X, T.Y, T.Z,
+				DevGoPts.Num(), C ? *C->LootName : TEXT("-"), C ? C->CarryRatio() : 0.f, C ? C->NumCarriers() : 0, Me->GetCharacterMovement()->IsFalling() ? 1 : 0);
+			DevGoPts.Reset();
+			Me->bDevGo = false;
+			return;
+		}
+		if (Now >= DevGoLogAt)
+		{
+			DevGoLogAt = Now + 2.f;
+			UE_LOG(LogTemp, Display, TEXT("ANTV2 go: at (%.0f, %.0f, %.0f) speed %.0f, %.0f to go, load %s (ratio %.2f, carriers %d)"), P.X, P.Y, P.Z, Me->GetVelocity().Size(), D,
+				C ? *C->LootName : TEXT("-"), C ? C->CarryRatio() : 0.f, C ? C->NumCarriers() : 0);
+		}
+	}
 }
 
 void AAntKitchenGameMode::DevCommand(const FString& Cmd)
@@ -1442,6 +1600,207 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 				L->FinishSpawning(TM);
 			}
 		}
+	}
+	// ---- level v2
+	else if (Op == TEXT("go") && Me)
+	{
+		// go x y z [x y z ...]: walk these points in order (logs ANTV2 go: reached / DONE / STUCK)
+		DevGoPts.Reset();
+		for (int32 i = 1; i + 2 < A.Num(); i += 3) { DevGoPts.Add(Vec(i)); }
+		DevGoStart = DevGoBestAt = W->GetTimeSeconds();
+		DevGoBest = 1.e9f;
+		DevGoLogAt = 0.f;
+	}
+	else if (Op == TEXT("gostop") && Me) { DevGoPts.Reset(); Me->bDevGo = false; }
+	else if (Op == TEXT("me") && Me)
+	{
+		const FVector P = Me->GetActorLocation();
+		const FLevelV2Box* Cov = LevelV2::CoverAt(P);
+		const TCHAR* Dist = LevelV2::DistrictAt(P);
+		UE_LOG(LogTemp, Display, TEXT("ANTV2 me: at %s health %.0f dead %d region %d district «%s» cover %s (%s) in nest %d falling %d carrying %s"), *P.ToCompactString(), Me->Health, Me->bDead ? 1 : 0,
+			AKitchenBuilder::Region(P), Dist ? Dist : TEXT("-"), AHumanCharacter::InCover(W, P) ? TEXT("YES") : TEXT("no"), Cov ? Cov->Name : TEXT("-"), Me->IsInNest() ? 1 : 0,
+			Me->GetCharacterMovement()->IsFalling() ? 1 : 0, Me->Carrying ? *Me->Carrying->LootName : TEXT("-"));
+	}
+	else if (Op == TEXT("lootall"))
+	{
+		// Food on every spot of the table at once (everything else that lay about is removed first).
+		for (TActorIterator<AKitchenLoot> It(W); It; ++It) { It->ReleaseAll(); It->Destroy(); }
+		DevLootPlaced.Reset();
+		DevLootWanted.Reset();
+		for (int32 i = 0; i < SpotLocations.Num(); ++i)
+		{
+			DevLootPlaced.Add(SpawnFood(SpotLocations[i], SpotTiers[i]));
+			DevLootWanted.Add(SpotLocations[i]);
+		}
+		UE_LOG(LogTemp, Display, TEXT("ANTV2 lootall: food on %d spots"), DevLootPlaced.Num());
+	}
+	else if (Op == TEXT("lootclear") && Me)
+	{
+		// lootclear [r]: the food lying within r (500) of the player is removed (to try a passage without a crumb plugging it)
+		int32 Gone = 0;
+		for (TActorIterator<AKitchenLoot> It(W); It; ++It)
+		{
+			if (!It->IsCarried() && *It != MainObject.Get() && FVector::Dist(It->GetActorLocation(), Me->GetActorLocation()) < Num(1, 500.f)) { It->Destroy(); ++Gone; }
+		}
+		UE_LOG(LogTemp, Display, TEXT("ANTV2 lootclear: %d pieces removed"), Gone);
+	}
+	else if (Op == TEXT("lootrest"))
+	{
+		// Where did each piece come to rest? The spot is 35 above its surface: a piece that lies lower than 70 under the spot
+		// fell through or off, one more than 150 aside rolled away, one that is gone broke or left the world.
+		int32 Ok = 0, Fell = 0, Rolled = 0, Gone = 0;
+		for (int32 i = 0; i < DevLootPlaced.Num(); ++i)
+		{
+			const AKitchenLoot* L = DevLootPlaced[i].Get();
+			const FVector Want = DevLootWanted[i];
+			if (!L)
+			{
+				++Gone;
+				UE_LOG(LogTemp, Display, TEXT("ANTV2 lootrest %d (%.0f, %.0f, %.0f): GONE"), i, Want.X, Want.Y, Want.Z - 35.f);
+				continue;
+			}
+			const FVector At = L->GetActorLocation();
+			const bool bFell = At.Z < Want.Z - 70.f, bRolled = FVector::Dist2D(At, Want) > 150.f;
+			if (bFell || bRolled)
+			{
+				bFell ? ++Fell : ++Rolled;
+				UE_LOG(LogTemp, Display, TEXT("ANTV2 lootrest %d (%.0f, %.0f, %.0f): %s, lies at (%.0f, %.0f, %.0f) «%s»"), i, Want.X, Want.Y, Want.Z - 35.f, bFell ? TEXT("FELL") : TEXT("ROLLED"), At.X, At.Y, At.Z, *L->LootName);
+			}
+			else
+			{
+				++Ok;
+			}
+		}
+		UE_LOG(LogTemp, Display, TEXT("ANTV2 lootrest: %d spots: %d lie where designed, %d fell, %d rolled away, %d gone"), DevLootPlaced.Num(), Ok, Fell, Rolled, Gone);
+	}
+	else if (Op == TEXT("around") && Me)
+	{
+		// What is round the player's ant: the first solid thing down, up and to the four sides within 400 uu (to see what blocks a way).
+		const FVector P = Me->GetActorLocation();
+		static const FVector Dirs[6] = { FVector(0, 0, -1), FVector(0, 0, 1), FVector(1, 0, 0), FVector(-1, 0, 0), FVector(0, 1, 0), FVector(0, -1, 0) };
+		static const TCHAR* Names[6] = { TEXT("down"), TEXT("up"), TEXT("+x"), TEXT("-x"), TEXT("+y"), TEXT("-y") };
+		FString Line;
+		FCollisionQueryParams QP(SCENE_QUERY_STAT(DevAround), true, Me);
+		for (int32 i = 0; i < 6; ++i)
+		{
+			FHitResult H;
+			if (W->LineTraceSingleByChannel(H, P, P + Dirs[i] * 400.f, ECC_Pawn, QP))
+			{
+				const UStaticMeshComponent* SM = Cast<UStaticMeshComponent>(H.GetComponent());
+				Line += FString::Printf(TEXT(" %s: %s %.0f |"), Names[i], SM && SM->GetStaticMesh() ? *SM->GetStaticMesh()->GetName() : *GetNameSafe(H.GetActor()), H.Distance);
+			}
+		}
+		UE_LOG(LogTemp, Display, TEXT("ANTV2 around %s:%s"), *P.ToCompactString(), *Line);
+	}
+	else if (Op == TEXT("cake")) { SpawnMainObject((int32)Num(1, 0.f) - 1); }   // cake [1|2|3]: a new one, at that place or at random
+	else if (Op == TEXT("caketo") && MainObject.IsValid())
+	{
+		MainObject->ReleaseAll();
+		MainObject->SetActorLocation(Vec(1), false, nullptr, ETeleportType::TeleportPhysics);
+	}
+	else if (Op == TEXT("cakeinfo"))
+	{
+		const AKitchenLoot* C = MainObject.Get();
+		UE_LOG(LogTemp, Display, TEXT("ANTV2 cake: %s"), C ? *FString::Printf(TEXT("at %s, weight %d, carriers %d, strength %.0f, ratio %.2f, speed %.0f"), *C->GetActorLocation().ToCompactString(), C->Weight,
+			C->NumCarriers(), C->NetStrength(), C->CarryRatio(), C->GetVelocity().Size()) : TEXT("none (delivered, broken or not spawned)"));
+	}
+	else if (Op == TEXT("give") && Me)
+	{
+		// give weight [value]: a piece of food of that weight appears in the player's jaws
+		FAntFoodDef D;
+		D.Name = TEXT("Пробный груз");
+		D.Weight = FMath::Max(1, (int32)Num(1, 10.f));
+		D.Value = FMath::Max(1, (int32)Num(2, 10.f));
+		D.Color = FLinearColor(0.9f, 0.7f, 0.2f);
+		D.Shape = EAntShape::Cube;
+		D.Scale = FVector(FMath::Clamp(0.2f + D.Weight * 0.008f, 0.2f, 0.8f));
+		const FTransform TM(Me->GetActorLocation() + Me->GetActorForwardVector() * 30.f + FVector(0.f, 0.f, 25.f));
+		if (AKitchenLoot* L = W->SpawnActorDeferred<AKitchenLoot>(AKitchenLoot::StaticClass(), TM, nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn))
+		{
+			L->InitFood(D);
+			L->FinishSpawning(TM);
+			Me->GrabLoot(L);
+		}
+	}
+	else if (Op == TEXT("grab") && Me)
+	{
+		// grab [cake]: the player takes the nearest food (or the cake, wherever it is: the ant is put next to it)
+		AKitchenLoot* L = (A.Num() > 1 && MainObject.IsValid()) ? MainObject.Get() : Me->FindNearestLoot(400.f);
+		if (L && A.Num() > 1) { Me->ApplyTeleport(L->GetActorLocation() + FVector(60.f, 0.f, 20.f)); }
+		const bool bOk = L && Me->GrabLoot(L);
+		UE_LOG(LogTemp, Display, TEXT("ANTV2 grab: %s %s"), L ? *L->LootName : TEXT("nothing near"), bOk ? TEXT("in the jaws") : TEXT("FAILED"));
+	}
+	else if (Op == TEXT("helpers") && Me && Me->Carrying)
+	{
+		// helpers N: N ally bots come and take hold of what the player carries
+		int32 N = (int32)Num(1, 1.f), Got = 0;
+		for (AAntCharacter* B : Bots(0))
+		{
+			if (N-- <= 0) { break; }
+			B->LetGo();
+			B->ApplyTeleport(Me->GetActorLocation() + FVector(FMath::FRandRange(-30.f, 30.f), FMath::FRandRange(-30.f, 30.f), 8.f));
+			Got += B->GrabLoot(Me->Carrying) ? 1 : 0;
+		}
+		UE_LOG(LogTemp, Display, TEXT("ANTV2 helpers: %d took hold of «%s», ratio %.2f"), Got, *Me->Carrying->LootName, Me->Carrying->CarryRatio());
+	}
+	else if (Op == TEXT("roof"))
+	{
+		// roof 0|1: hide / show the ceilings (for a look from above)
+		const bool bShow = Num(1, 0.f) > 0.5f;
+		for (TActorIterator<AKitchenBuilder> It(W); It; ++It)
+		{
+			TInlineComponentArray<UStaticMeshComponent*> Parts(*It);
+			for (UStaticMeshComponent* C : Parts)
+			{
+				if (C && C->Bounds.GetBox().Min.Z > 5300.f) { C->SetVisibility(bShow); }
+			}
+		}
+	}
+	else if (Op == TEXT("mover") && A.Num() >= 3)
+	{
+		// mover <part of the mesh name> 1|0 [part]: open / shut every generic moving part whose mesh name contains that (mover Drawer3 1),
+		// or only the one with that number in the movers table (mover TVStand_Door 1 25)
+		const TConstArrayView<FKitchenArtMover> All = KitchenArt::Movers();
+		for (TActorIterator<AKitchenMover> It(W); It; ++It)
+		{
+			if (All.IsValidIndex(It->PartIndex) && FString(KitchenArt::Instances()[All[It->PartIndex].Inst].Name).Contains(A[1]) && (A.Num() < 4 || It->PartIndex == (int32)Num(3)))
+			{
+				It->SetOpen(Num(2) > 0.5f);
+				UE_LOG(LogTemp, Display, TEXT("ANTV2 mover %s: %s"), KitchenArt::Instances()[All[It->PartIndex].Inst].Name, It->IsOpen() ? TEXT("open") : TEXT("shut"));
+			}
+		}
+	}
+	else if (Op == TEXT("flap"))
+	{
+		for (TActorIterator<AKitchenMover> It(W); It; ++It)
+		{
+			if (It->IsCatFlap())
+			{
+				if (A.Num() > 1) { It->SetDoorOpen(Num(1) > 0.5f); }
+				UE_LOG(LogTemp, Display, TEXT("ANTV2 catflap: open %d, need %.0f, missing %d, me on the %s side"), It->IsOpen() ? 1 : 0, It->PullNeed(), (int32)It->PullMissing,
+					Me && LevelV2::OnLatchSideOfCatFlap(Me->GetActorLocation()) ? TEXT("living-room") : TEXT("yard"));
+			}
+		}
+	}
+	else if ((Op == TEXT("hstompme") || Op == TEXT("hswatme")) && Human && Me)
+	{
+		// The Human is put so that his stomp lands on the player's ant / he swats it (low: the palm, high: the newspaper).
+		const FVector At = Me->GetActorLocation();
+		if (Op == TEXT("hstompme"))
+		{
+			const FVector Off = Human->GetActorLocation() - Human->GetStompPoint(0);
+			Human->SetActorLocation(FVector(At.X + Off.X, At.Y + Off.Y, Human->GetActorLocation().Z), false, nullptr, ETeleportType::TeleportPhysics);
+			Human->TryStomp(0);
+		}
+		else
+		{
+			const FVector Side = FVector(Num(1, 900.f), Num(2, 0.f), 0.f);
+			Human->SetActorLocation(FVector(At.X + Side.X, At.Y + Side.Y, Human->GetActorLocation().Z), false, nullptr, ETeleportType::TeleportPhysics);
+			Human->SetActorRotation(FRotator(0.f, (float)(-Side).Rotation().Yaw, 0.f));
+			Human->SwatReadyTime = 0.f;
+			Human->TrySwat(At);
+		}
+		UE_LOG(LogTemp, Display, TEXT("ANTV2 %s: at the ant %s (health %.0f, in cover %d), the Human at %s"), *Op, *At.ToCompactString(), Me->Health, AHumanCharacter::InCover(W, At) ? 1 : 0, *Human->GetActorLocation().ToCompactString());
 	}
 	else if (Op == TEXT("die") && Me) { Me->HurtBy(1000.f, TEXT("погиб на испытаниях")); }
 	else if (Op == TEXT("body") && Me)

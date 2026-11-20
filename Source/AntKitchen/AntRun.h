@@ -127,7 +127,7 @@ namespace KitchenContainers
 		int32 Movers[2];         // AKitchenMover part indices, or -1
 		bool bTrap;              // shut inside = in trouble (cold, heat): announced to the team
 	};
-	enum EId { Fridge, Freezer, Oven, Microwave, Dishwasher, TopDrawer, Drawer2, CabA, CabB, CabC, Wall0, Wall1, Wall2, Wall3, WallE, TVStand, Count };
+	enum EId { Fridge, Freezer, Oven, Microwave, Dishwasher, TopDrawer, Drawer2, CabA, CabB, CabC, Wall0, Wall1, Wall2, Wall3, WallE, TVStand, BreadBox, Count };
 	ANTKITCHEN_API const FDef& Get(int32 Index);
 	/** The container whose inside holds P, or -1. */
 	ANTKITCHEN_API int32 At(const FVector& P);

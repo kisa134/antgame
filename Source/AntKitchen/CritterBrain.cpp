@@ -299,23 +299,24 @@ void ACritter::ResolveSpots()
 	};
 	if (Kind == 1)
 	{
-		Add(ArtAt(TEXT("SM_L_Sofa_SeatCushion"), 2, FVector(11500.f, 370.f, 950.f), FVector(0.f, 0.f, 250.f)), 0, 55.f, true, -90.f);    // asleep on the sofa: the cushion the kid does not sit on
-		Add(ArtAt(TEXT("SM_L_Sofa_SeatCushion"), 0, FVector(15500.f, 370.f, 950.f), FVector(0.f, 0.f, 250.f)), 2, 25.f, true, -90.f);    // the other end of the sofa, watching the floor in front of it
+		// Level v2: she sleeps on the east cushion (over the blanket ramp), watches from the west one; the kid has the middle.
+		Add(ArtAt(TEXT("SM_L_Sofa_SeatCushion"), 0, FVector(15500.f, 370.f, 950.f), FVector(0.f, 0.f, 250.f)), 0, 55.f, true, -90.f);    // asleep on the sofa: the cushion the kid does not sit on
+		Add(ArtAt(TEXT("SM_L_Sofa_SeatCushion"), 2, FVector(11500.f, 370.f, 950.f), FVector(0.f, 0.f, 250.f)), 2, 25.f, true, -90.f);    // the other end of the sofa, watching the floor in front of it
 		Add(ArtAt(TEXT("SM_L_CoffeeTable"), 0, FVector(13750.f, -3400.f, 950.f), FVector(-700.f, 0.f, 950.f)), 2, 16.f, true);            // on the coffee table, where it must not
 		Add(FVector(0.f, -4900.f, 2200.f), 2, 25.f, true, 0.f);                                                                            // the kitchen window sill, lying along it
 		Add(ArtAt(TEXT("SM_L_TVStand"), 0, FVector(12250.f, -8350.f, 900.f), FVector(-1500.f, 0.f, 900.f)), 2, 18.f, true, 90.f);          // on the TV stand, beside the TV
-		Add(ArtAt(TEXT("SM_L_CatScratchPost"), 0, FVector(8600.f, -7800.f, 0.f), FVector(650.f, 550.f, 0.f)), 2, 10.f, false);     // by its scratching post
+		Add(ArtAt(TEXT("SM_L_CatScratchPost"), 0, FVector(8000.f, -8300.f, 0.f), FVector(0.f, 0.f, 1400.f)), 2, 20.f, true);       // level v2: on top of its scratching post (beside it stands the side table now)
 		Add(ArtAt(TEXT("SM_K_Rug"), 0, FVector(0.f, -150.f, 0.f), FVector(-520.f, 380.f, 0.f)), 2, 12.f, false);                    // the kitchen rug (not on the tennis ball)
-		Add(FVector(11000.f, -3000.f, 0.f), 0, 30.f, false);                                                                        // a nap in the sun on the living-room floor
+		Add(FVector(12600.f, -1700.f, 0.f), 0, 30.f, false);                                                                        // level v2: a nap on the living-room floor by the toy blocks
 	}
 	else
 	{
-		Add(ArtAt(TEXT("SM_K_PetMat"), 0, FVector(-3150.f, -3850.f, 0.f), FVector(0.f, 250.f, 0.f)), 0, 50.f, false);               // asleep on his mat by the bowls
+		Add(ArtAt(TEXT("SM_K_Rug"), 0, FVector(0.f, -150.f, 0.f), FVector(600.f, -450.f, 0.f)), 0, 50.f, false);                    // level v2: asleep on the rug under the dining table
 		Add(ArtAt(TEXT("SM_K_PetBowl"), 0, FVector(-3800.f, -3800.f, 0.f), FVector(330.f, 150.f, 0.f)), 1, 12.f, false);            // the bowl
 		Add(FVector(5000.f, -1500.f, 0.f), 1, 8.f, false);                                                                          // sniffing at the bin
-		Add(ArtAt(TEXT("SM_K_Shoe"), 0, FVector(6300.f, -4000.f, 0.f), FVector(-650.f, 350.f, 0.f)), 1, 6.f, false);                // the shoe by the door
-		Add(ArtAt(TEXT("SM_L_DogBed"), 0, FVector(17800.f, -8000.f, 0.f), FVector(0.f, 0.f, 0.f)), 0, 45.f, false);                 // asleep in his bed in the living room
-		Add(ArtAt(TEXT("SM_L_Sofa"), 0, FVector(13500.f, 550.f, 0.f), FVector(-1200.f, -1700.f, 0.f)), 2, 12.f, false);             // sitting by the sofa, begging from the kid
+		Add(FVector(8500.f, -500.f, 0.f), 1, 6.f, false);                                                                           // level v2: sniffing the shoes by the shoe rack in the living room
+		Add(ArtAt(TEXT("SM_L_DogBed"), 0, FVector(18150.f, -7900.f, 0.f), FVector(0.f, 0.f, 0.f)), 0, 45.f, false);                 // asleep in his bed by the radiator
+		Add(FVector(16700.f, -1500.f, 0.f), 2, 12.f, false);                                                                        // level v2: sitting by the east end of the sofa, begging
 		Add(FVector(-5500.f, 1800.f, 0.f), 1, 7.f, false);                                                                          // licking up the flour
 	}
 	if (Rests.Num() == 0)
@@ -356,7 +357,12 @@ bool ACritter::WalkTo(const FVector& Dest, float Pace, float Dt, float Arrive)
 	// It turns as it goes, and does not get up to speed until it faces where it is going.
 	const float Align = FMath::Clamp((float)FVector::DotProduct(GetActorForwardVector(), Dir) * 0.6f + 0.5f, 0.2f, 1.f);
 	const float Step = FMath::Min((float)FVector::Dist2D(Me, Way), Pace * Align * Dt);
-	SetActorLocation(Me + Dir * Step);
+	FVector Next = Me + Dir * Step;
+	// The floor under the paws. It used to keep the height of the place it had rested on: the dog walked 15 uu in the air
+	// off his mat, the cat at carpet height across the bare boards.
+	const float Floor = NpcWorld::SurfaceZ(GetWorld(), Next, 150.f, 400.f);
+	Next.Z = FMath::FInterpConstantTo((float)Me.Z, Floor, Dt, 900.f);
+	SetActorLocation(Next);
 	SetActorRotation(FMath::RInterpTo(GetActorRotation(), FRotator(0.f, (float)Dir.Rotation().Yaw, 0.f), Dt, Pace > 900.f ? 10.f : 6.f));
 	return false;
 }

@@ -7,6 +7,8 @@
 #include "HumanCharacter.h"
 #include "KitchenBuilder.h"
 #include "KitchenLoot.h"
+#include "KitchenArt.h"
+#include "LevelV2.h"
 #include "Engine/Canvas.h"
 #include "Engine/Engine.h"
 #include "Engine/Font.h"
@@ -62,7 +64,11 @@ void AAntHUD::DrawRun(AAntGameState* GS, APawn* Me)
 			continue;
 		}
 		const FLinearColor C = P.Kind == AntPing::Human ? RRed : P.Kind == AntPing::Trophy ? RGold : P.Kind == AntPing::Door ? FLinearColor(0.6f, 1.f, 0.9f) : RWhite;
-		Marker(P.Loc + FVector(0.f, 0.f, 30.f), FString::Printf(TEXT("%s  ·  %s"), AntPing::Name(P.Kind), *P.Who), FLinearColor(C.R, C.G, C.B, FMath::Clamp((6.f - Age) / 1.5f, 0.f, 1.f)), true);
+		// Level v2: a ping says where it is by the place's callout ("Подстолье", "Кошачья дверца") or at least its district.
+		const TCHAR* Place = KitchenArt::Enabled() ? LevelV2::CalloutNear(P.Loc, 1100.f) : nullptr;
+		if (!Place && KitchenArt::Enabled()) { Place = LevelV2::DistrictAt(P.Loc); }
+		const FString PingText = Place ? FString::Printf(TEXT("%s  ·  %s  ·  %s"), AntPing::Name(P.Kind), Place, *P.Who) : FString::Printf(TEXT("%s  ·  %s"), AntPing::Name(P.Kind), *P.Who);
+		Marker(P.Loc + FVector(0.f, 0.f, 30.f), PingText, FLinearColor(C.R, C.G, C.B, FMath::Clamp((6.f - Age) / 1.5f, 0.f, 1.f)), true);
 	}
 
 	if (!GS->bHeistMode)
