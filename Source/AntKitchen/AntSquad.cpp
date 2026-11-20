@@ -70,6 +70,15 @@ int32 SpawnAll(AAntRaid* Raid)
 	FAntNestState& N = Raid->Nest;
 	const int32 Cap = AntNest::SquadCap(N);
 	int32 Out = 0;
+	// The workers are shared out evenly: with 12 in the nest and four players the first must not take ten and leave the others two.
+	int32 Eligible = 0;
+	for (FConstPlayerControllerIterator It = W->GetPlayerControllerIterator(); It; ++It)
+	{
+		const AAntCharacter* Ant = It->IsValid() ? Cast<AAntCharacter>((*It)->GetPawn()) : nullptr;
+		Eligible += (Ant && !Ant->bDead && Ant->Team == 0 && Ant->Creature == 0) ? 1 : 0;
+	}
+	const int32 Pool = N.Workers;
+	int32 Seat = 0;
 	for (FConstPlayerControllerIterator It = W->GetPlayerControllerIterator(); It; ++It)
 	{
 		APlayerController* PC = It->Get();
@@ -79,8 +88,10 @@ int32 SpawnAll(AAntRaid* Raid)
 		{
 			continue;
 		}
+		const int32 Share = Eligible > 1 ? Pool / Eligible + (Seat < Pool % Eligible ? 1 : 0) : Pool;
+		++Seat;
 		const int32 Want = PS->SquadWant == 255 ? Cap : FMath::Min<int32>(PS->SquadWant, Cap);
-		const int32 Take = FMath::Clamp(Want, 0, N.Workers);
+		const int32 Take = FMath::Clamp(FMath::Min(Want, Share), 0, N.Workers);
 		if (Take <= 0)
 		{
 			continue;

@@ -362,7 +362,9 @@ void AAntClan::SetPlan(uint8 NewPlan, const TCHAR* Why)
 void AAntClan::SpawnRoster()
 {
 	const AntTier::FDef& T = Raid->TierDef();
-	const int32 Want[ClanRole::Count] = { T.Scouts, T.Haulers, T.Escorts, T.Ambushers };
+	// More of us, more of them: an escort for every player after the first, an ambusher for every second one.
+	const int32 Players = FMath::Max(1, GM ? GM->GetNumPlayers() : 1);
+	const int32 Want[ClanRole::Count] = { T.Scouts, T.Haulers, T.Escorts + (Players - 1), T.Ambushers + Players / 2 };
 	static const TCHAR* RoleNames[ClanRole::Count] = { TEXT("Разведчик"), TEXT("Носильщик"), TEXT("Охранник"), TEXT("Засадник") };
 	int32 Have[ClanRole::Count] = { 0, 0, 0, 0 };
 	// Those of the raid before stay; a smaller tier sends the extra ones home for good.
@@ -412,8 +414,8 @@ void AAntClan::SpawnRoster()
 			}
 		}
 	}
-	UE_LOG(LogTemp, Display, TEXT("ANTCLAN roster for tier %d: scouts %d, haulers %d, escorts %d, ambushers %d (bots %d), first out at %.0f s, respawn %.0f s, health x%.2f"),
-		(int32)Raid->Tier, T.Scouts, T.Haulers, T.Escorts, T.Ambushers, Bots.Num(), T.ClanFirst, T.ClanRespawn, T.ClanHealth);
+	UE_LOG(LogTemp, Display, TEXT("ANTCLAN roster for tier %d, %d players: scouts %d, haulers %d, escorts %d, ambushers %d (bots %d), first out at %.0f s, respawn %.0f s, health x%.2f"),
+		(int32)Raid->Tier, Players, Want[0], Want[1], Want[2], Want[3], Bots.Num(), T.ClanFirst, T.ClanRespawn, T.ClanHealth);
 }
 
 void AAntClan::Begin(AAntKitchenGameMode* InGM, AAntRaid* InRaid)

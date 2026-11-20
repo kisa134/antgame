@@ -497,7 +497,8 @@ void AAntKitchenGameMode::SpawnMainObject(int32 ForceSpot)
 	{
 		// A raid: the threat tier decides how big the slice is.
 		D.Value = Raid->TierDef().CakeValue / 2;
-		int32 W = Raid->TierDef().CakeWeight;
+		// Heavier for a bigger team (+20% a player after the first): four players alone must not walk off with it.
+		int32 W = FMath::RoundToInt(Raid->TierDef().CakeWeight * (1.f + 0.2f * (FMath::Max(1, GetNumPlayers()) - 1)));
 		FParse::Value(FCommandLine::Get(), TEXT("AntCakeWeight="), W);
 		D.Weight = FMath::Clamp(W, 6, 200);
 	}

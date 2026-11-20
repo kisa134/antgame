@@ -1620,7 +1620,10 @@ void ACritter::DogThink(float Dt, float Now)
 	UWorld* W = GetWorld();
 	const FVector Me = GetActorLocation();
 	AAntKitchenGameMode* GM = W->GetAuthGameMode<AAntKitchenGameMode>();
-	const int32 Level = FMath::Clamp(NpcWorld::Level(W, NpcWho::Dog), 1, 2);
+	const int32 RawLevel = NpcWorld::Level(W, NpcWho::Dog);
+	const int32 Level = FMath::Clamp(RawLevel, 1, 2);
+	// Level 0 (a weekday raid while the Human is on his phone): he dozes. Dropped food and his ball still get him up, ant trails do not.
+	const bool bNoNose = RawLevel <= 0;
 	const FVector Nose = GetNose();
 	NpcWorld::ScentTick(W, Dt);
 	if (!Ball.IsValid() && !bBallMade)
@@ -1714,7 +1717,7 @@ void ACritter::DogThink(float Dt, float Now)
 			SetBrain(EBrain::Ball, 12.f);
 			UE_LOG(LogTemp, Display, TEXT("ANTDOG after the ball"));
 		}
-		else if (Brain != EBrain::Track)
+		else if (Brain != EBrain::Track && !bNoNose)
 		{
 			FVector P;
 			float S = 0.f;
@@ -1849,9 +1852,9 @@ void ACritter::DogThink(float Dt, float Now)
 				NoScentSince = Now;
 			}
 		}
-		if (Now - NoScentSince > 3.5f || Now >= BrainUntil)
+		if (Now - NoScentSince > 3.5f || Now >= BrainUntil || bNoNose)
 		{
-			// Lost it.
+			// Lost it (or dozing off again: the house is quiet).
 			Mood = QuadMood::Calm;
 			State = QuadMode::Sit;
 			PreyAnt = nullptr;
