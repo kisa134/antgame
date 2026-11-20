@@ -38,6 +38,7 @@
 #include "Misc/Parse.h"
 #include "HAL/IConsoleManager.h"
 #include "AntRun.h"
+#include "AntBody.h"
 
 AAntCharacter::AAntCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<UAntMovementComponent>(ACharacter::CharacterMovementComponentName))
@@ -116,6 +117,7 @@ void AAntCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	DOREPLIFETIME(AAntCharacter, StuckTo);
 	DOREPLIFETIME(AAntCharacter, StuckLeg);
 	DOREPLIFETIME(AAntCharacter, bCorpseGone);
+	DOREPLIFETIME(AAntCharacter, BodyAct);
 }
 
 float AAntCharacter::GetStrength() const
@@ -135,8 +137,50 @@ float AAntCharacter::DashCooldown() const
 	return (Team == 0 && AntCard::Has(this, AntCard::Spring)) ? 1.f : 1.6f;
 }
 
+void AAntCharacter::OnRep_BodyAct()
+{
+	if (Rig)
+	{
+		Rig->OnAct(BodyAct);
+	}
+}
+
+void AAntCharacter::NoteBodyAct(uint8 Kind, const FVector& Dir, float Power)
+{
+	if (bDead || !GetWorld())
+	{
+		return;
+	}
+	FAntBodyAct A;
+	A.Kind = Kind;
+	A.Power = (uint8)FMath::Clamp(FMath::RoundToInt(Power * 255.f), 0, 255);
+	A.Dir = Dir.GetSafeNormal(UE_SMALL_NUMBER, GetActorForwardVector());
+	if (HasAuthority())
+	{
+		// (a flinch never replaces the knock it came with, and damage over time is not a stream of flinches)
+		const float Now = GetWorld()->GetTimeSeconds();
+		if (Kind == AntAct::Flinch && Now - BodyAct.Start < (BodyAct.Kind == AntAct::Knock ? 0.3f : 0.15f))
+		{
+			return;
+		}
+		A.Start = Now;
+		BodyAct = A;
+		OnRep_BodyAct();
+	}
+	else if (Rig && IsLocallyControlled())
+	{
+		A.Start = NpcRig::ServerNow(this);
+		Rig->OnAct(A);
+	}
+}
+
 void AAntCharacter::OnRep_Corpse()
 {
+	if (Rig && bCorpseGone && bDead)
+	{
+		Rig->CorpseToLoot();   // the jointed body: the corpse itself is what gets carried home
+		return;
+	}
 	if (bCorpseGone && bDead && VisualRoot)
 	{
 		VisualRoot->SetVisibility(false, true);
@@ -306,6 +350,19 @@ void AAntCharacter::BuildBody()
 	{
 		return;
 	}
+
+	// >>> The jointed ant (AntBody.cpp). Everything below is the old one: -AntOldAnt, and the fallback when /Game/Ant is missing.
+	if (Creature == 0)
+	{
+		Rig = UAntBodyComponent::Build(this, VisualRoot);
+		if (Rig)
+		{
+			BuildStatusFx();
+			OnRep_BodyColor();
+			return;
+		}
+	}
+	// <<<
 
 	const FLinearColor Body = BodyColor;
 	const FLinearColor Leg = Body * 0.6f;
@@ -509,6 +566,21 @@ void AAntCharacter::OnRep_Carry()
 
 void AAntCharacter::OnRep_Dead()
 {
+	if (bDead && Rig)
+	{
+		// The jointed body: its pose becomes a ragdoll corpse (AntRagdoll.cpp).
+		bWantsFire = false;
+		Rig->Die();
+		for (UStaticMeshComponent* Shell : { FrostShell, FlameShell, WebShell })
+		{
+			if (Shell) { Shell->SetVisibility(false); }
+		}
+		if (FlameLight) { FlameLight->SetVisibility(false); }
+		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		GetCharacterMovement()->StopMovementImmediately();
+		GetCharacterMovement()->DisableMovement();
+		return;
+	}
 	if (bDead)
 	{
 		bWantsFire = false;
@@ -932,6 +1004,10 @@ void AAntCharacter::ApplyLaunch(const FVector& V)
 	{
 		M->BlockSticking(0.35f);
 	}
+	if (HasAuthority() && !bSelfLaunch)
+	{
+		NoteBodyAct(AntAct::Knock, V, (float)V.Size() / (1300.f * SpeedK));   // knocked about: the body tumbles (AntBody.cpp)
+	}
 	LaunchCharacter(V, true, true);
 	if (!IsLocallyControlled())
 	{
@@ -973,7 +1049,10 @@ void AAntCharacter::Dash()
 	}
 	const FVector Up = IsCrawling() ? GetVisualUp() : FVector::UpVector;
 	Dir = FVector::VectorPlaneProject(Dir, Up).GetSafeNormal();
+	bSelfLaunch = true;
 	ApplyLaunch(Dir * 1500.f * SpeedK + Up * 180.f * SpeedK);
+	bSelfLaunch = false;
+	NoteBodyAct(AntAct::Dash, Dir, 1.f);
 	AddTrauma(0.12f);
 	AntSfx::Play(this, AntSfx::Jump, GetActorLocation(), 0.5f, 1.4f);
 	if (!HasAuthority())
@@ -987,6 +1066,7 @@ void AAntCharacter::ServerDash_Implementation()
 	// The client already moved itself (owner-authoritative); the server just marks the cooldown for bots' sake.
 	NextDash = GetWorld()->GetTimeSeconds() + DashCooldown();
 	RamUntil = GetWorld()->GetTimeSeconds() + 0.5f;
+	NoteBodyAct(AntAct::Dash, GetVelocity().GetSafeNormal(UE_SMALL_NUMBER, GetActorForwardVector()), 1.f);
 }
 
 void AAntCharacter::ClientLaunch_Implementation(FVector_NetQuantize10 V)
@@ -1229,7 +1309,7 @@ void AAntCharacter::Tick(float DeltaSeconds)
 			}
 		}
 		ApplyAttachedPose();
-		if (GetNetMode() != NM_DedicatedServer)
+		if (GetNetMode() != NM_DedicatedServer && !Rig)   // (the jointed body shows the grip and the lost legs itself)
 		{
 			// Mandibles locked on us: the body stretches like rubber (and tears if a second one pulls the other way).
 			if (GrippedBy && IsValid(GrippedBy) && !GrippedBy->bDead)
@@ -1579,6 +1659,7 @@ void AAntCharacter::ServerBite_Implementation()
 		return;
 	}
 	ServerNextBiteTime = Now + 0.55f;
+	NoteBodyAct(AntAct::Bite, GetActorForwardVector(), 1.f);
 	AntSfx::Everyone(this, AntSfx::Bite, GetActorLocation(), FMath::FRandRange(0.9f, 1.2f));
 	const FVector Me = GetActorLocation();
 	FVector Fwd = Controller ? Controller->GetControlRotation().Vector() : GetActorForwardVector();
@@ -1930,6 +2011,12 @@ float AAntCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEv
 	}
 	Health = FMath::Max(0.f, Health - Actual);
 	LastDamageTime = GetWorld()->GetTimeSeconds();
+	if (Actual >= 4.f && Health > 0.f)
+	{
+		// a blow the body shows: it is pushed away from whatever hit it (AntBody.cpp)
+		const FVector From = DamageCauser ? DamageCauser->GetActorLocation() : GetActorLocation() + FVector(VisNormal);
+		NoteBodyAct(AntAct::Flinch, GetActorLocation() - From, Actual / 40.f);
+	}
 	if (Health <= 0.f)
 	{
 		Die(EventInstigator, DamageCauser);
@@ -1978,6 +2065,7 @@ void AAntCharacter::Die(AController* Killer, AActor* Causer)
 		const FVector Away = Causer ? GetActorLocation() - Causer->GetActorLocation() : FVector(VisNormal);
 		DeathDir = Away.GetSafeNormal(UE_SMALL_NUMBER, FVector(VisNormal));
 	}
+	AntBodyRules::ClassifyDeath(this, Killer, Causer);   // which ragdoll: flung, curled up, eaten... (AntBody.cpp)
 	GrippedBy = nullptr;
 	bDead = true;
 	BurnTime = 0.f;
@@ -2138,7 +2226,7 @@ FVector AAntCharacter::EstimateSurfaceNormal() const
 
 void AAntCharacter::UpdateVisuals(float DeltaSeconds)
 {
-	if (GetNetMode() == NM_DedicatedServer || bDead || Legs.Num() == 0)
+	if (GetNetMode() == NM_DedicatedServer || bDead || (Legs.Num() == 0 && !Rig))
 	{
 		return;
 	}
@@ -2178,6 +2266,11 @@ void AAntCharacter::UpdateVisuals(float DeltaSeconds)
 	if (VelP.SizeSquared() > FMath::Square(60.f) && !bWantsFire)
 	{
 		Desired = VelP.GetSafeNormal();
+		// The jointed body walks backwards: backing away from where it looks, it does not turn its back (a sprint still turns round).
+		if (Rig && !bSprinting && FVector::DotProduct(Desired, FVector::VectorPlaneProject(AimDir, VisNormal).GetSafeNormal()) < -0.5f)
+		{
+			Desired = -Desired;
+		}
 	}
 	else
 	{
@@ -2327,7 +2420,14 @@ void AAntCharacter::UpdateVisuals(float DeltaSeconds)
 			const float D = (float)FVector::Dist(LPC->PlayerCameraManager->GetCameraLocation(), GetActorLocation());
 			FootstepVolume = IsLocallyControlled() ? 0.3f : FMath::Clamp(1.f - D / 600.f, 0.f, 1.f) * 0.15f;
 		}
-		UpdateLegs(DeltaSeconds, VisNormal);
+		if (!Rig)
+		{
+			UpdateLegs(DeltaSeconds, VisNormal);
+		}
+	}
+	if (Rig)
+	{
+		Rig->Update(DeltaSeconds, bNear);   // the jointed body: gait, body dynamics, reactions (far ants update less often)
 	}
 }
 

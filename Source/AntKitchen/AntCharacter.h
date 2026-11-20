@@ -4,6 +4,7 @@
 #include "GameFramework/Character.h"
 #include "Engine/NetSerialization.h"
 #include "AntTypes.h"
+#include "AntBody.h"
 #include "AntCharacter.generated.h"
 
 class USpringArmComponent;
@@ -158,6 +159,17 @@ public:
 	UPROPERTY(ReplicatedUsing = OnRep_Corpse) bool bCorpseGone = false;
 	UFUNCTION() void OnRep_Corpse();
 	float DashCooldown() const;
+
+	// ---- The jointed body (AntBody.h). Null for the fly and the spider, with -AntOldAnt, and on a dedicated server ----
+	UPROPERTY() class UAntBodyComponent* Rig = nullptr;
+	/** What just happened to the body (a blow from there, a knock, a dash, a bite): every machine plays the reaction from it. */
+	UPROPERTY(ReplicatedUsing = OnRep_BodyAct) FAntBodyAct BodyAct;
+	UFUNCTION() void OnRep_BodyAct();
+	/** Server: replicates it. The owning client: shows it at once (its own dash). Power 0..1. */
+	void NoteBodyAct(uint8 Kind, const FVector& Dir, float Power);
+	/** The ant launches itself (a dash): not a blow. */
+	bool bSelfLaunch = false;
+	friend class UAntBodyComponent;
 
 	// ---- Creatures (fly, spider) reuse the ant: same health, teams, legs, crawling, AI ----
 	/** 0 ant, 1 fly, 2 spider. Set by the subclass. */
