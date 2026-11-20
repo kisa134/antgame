@@ -93,8 +93,11 @@ void AKitchenBuilder::BuildShell()
 	const FBox D2b(FVector(3500.f, 200.f, 5420.f), FVector(3900.f, 5180.f, 5580.f));
 	const FBox N2(FVector(3500.f, 5020.f, 3700.f), FVector(3900.f, 5180.f, 5580.f));
 	const FBox G4(FVector(3500.f, 4990.f, 3700.f), FVector(3900.f, 5020.f, 3860.f));
-	// A loose tile by the trash: a little pit under the floor.
-	const FBox Pit(FVector(4700.f, 1700.f, -100.f), FVector(5300.f, 2300.f, 1.f));
+	// A loose tile by the trash: a pit under the floor. Level v2: 300 deep (it was 100: the cargo dropped into it sat inside the floor slab).
+	const FBox Pit(FVector(4700.f, 1700.f, -300.f), FVector(5300.f, 2300.f, 1.f));
+	// Level v2: two more ways through the kitchen walls.
+	const FBox NorthHole(FVector(-7250.f, 4770.f, 0.f), FVector(-6950.f, 4980.f, 150.f));   // west wall: the front lawn <-> the corridor behind the cabinets
+	const FBox EastHole(FVector(6950.f, 880.f, 0.f), FVector(7250.f, 1080.f, 160.f));       // east wall, behind the cardboard box: kitchen <-> living room
 
 	DuctWind.Reset();
 	// (box, direction the draft blows). The fan pulls air from the floor grilles up and out above the cabinets.
@@ -136,10 +139,15 @@ void AKitchenBuilder::BuildShell()
 	Box(FVector(-1500.f, -5200.f, 0.f), FVector(1500.f, -5000.f, 2200.f), WallC);
 	Box(FVector(-1500.f, -5200.f, 4200.f), FVector(1500.f, -5000.f, 5400.f), WallC);
 	// West wall with the ants' crack at floor level.
-	Solid(FBox(FVector(-7200.f, -5000.f, 0.f), FVector(-7000.f, 5000.f, 5400.f)), { NestCrack }, WallC);
+	Solid(FBox(FVector(-7200.f, -5000.f, 0.f), FVector(-7000.f, 5000.f, 5400.f)), { NestCrack, NorthHole }, WallC);
+	Box(FVector(-7200.f, 4770.f, -100.f), FVector(-7000.f, 4980.f, 0.f), Hex(120, 95, 70));   // the floor of the north hole (the floor slab stops at the wall's inner face)
+	// ... and of the nest crack: between the lawn (up to x -7200) and the floor slab (from x -7000) there was a slot 200 wide and
+	// bottomless. Ants crossed it by luck; the bots that walk out of the nest fell into it and died below the world.
+	Box(FVector(-7200.f, -2750.f, -100.f), FVector(-7000.f, -2250.f, 0.f), Hex(120, 95, 70));
+	Box(FVector(-4600.f, -5200.f, -100.f), FVector(-4400.f, -5000.f, 0.f), Hex(120, 95, 70));   // the same slot under the window crack (lawn up to y -5200, slab from y -5000)
 	// East wall with a doorway into the living room (y -4800..-3200, 3800 high) and the second vent shaft.
 	Box(FVector(7000.f, -5000.f, 0.f), FVector(7200.f, -4800.f, 5400.f), WallC);
-	Solid(FBox(FVector(7000.f, -3200.f, 0.f), FVector(7200.f, 5000.f, 5400.f)), { S2, G3 }, WallC);
+	Solid(FBox(FVector(7000.f, -3200.f, 0.f), FVector(7200.f, 5000.f, 5400.f)), { S2, G3, EastHole }, WallC);
 	Box(FVector(7000.f, -4800.f, 3800.f), FVector(7200.f, -3200.f, 5400.f), WallC);
 	if (!bArt)   // modelled: SM_L_DoorFrame with a real door leaf (AKitchenMover; it starts open)
 	{
@@ -151,7 +159,7 @@ void AKitchenBuilder::BuildShell()
 	Solid(FBox(FVector(-7200.f, -5200.f, 5400.f), FVector(7200.f, 5600.f, 5600.f)), { S1, D1, N1, S2, D2a, D2b, N2 }, Ceiling);
 	// Floor: one collision slab with the pit under the loose tile.
 	Solid(FBox(FVector(-7000.f, -5000.f, -100.f), FVector(7000.f, 5000.f, 0.f)), { Pit }, Hex(225, 215, 195));
-	Box(FVector(4700.f, 1700.f, -400.f), FVector(5300.f, 2300.f, -100.f), DarkDirt);          // pit floor
+	Box(FVector(4700.f, 1700.f, -400.f), FVector(5300.f, 2300.f, -300.f), DarkDirt);          // pit floor (v2: at -300)
 	Box(FVector(4600.f, 1600.f, -400.f), FVector(4700.f, 2400.f, 0.f), DarkDirt);             // pit walls
 	Box(FVector(5300.f, 1600.f, -400.f), FVector(5400.f, 2400.f, 0.f), DarkDirt);
 	Box(FVector(4700.f, 1600.f, -400.f), FVector(5300.f, 1700.f, 0.f), DarkDirt);
@@ -174,6 +182,56 @@ void AKitchenBuilder::BuildShell()
 	}
 
 	BuildDucts();
+}
+
+void AKitchenBuilder::SolidBox(const FBox& B, std::initializer_list<FBox> Cavities, const FLinearColor& Color)
+{
+	TArray<FBox> P;
+	P.Add(B);
+	for (const FBox& Cav : Cavities)
+	{
+		Carve(P, Cav);
+	}
+	for (const FBox& Q : P)
+	{
+		Box(Q.Min, Q.Max, Color);
+	}
+}
+
+// ---------------------------------------------------------------------------------------------
+// Level v2: the edges of the world. v1 had none on four sides: an ant walked off the lawn or the road and fell for ever.
+// The yards are fenced by SM_Y_FencePanel runs (placement table); just outside every fence, and round the street, stands an
+// invisible wall. It blocks pawns and food but is not a "surface" (not WorldStatic): an ant that climbed a fence cannot cling
+// to it and cannot get past it. Whatever still gets out is put back by AAntCharacter (the safety net there).
+// ---------------------------------------------------------------------------------------------
+
+void AKitchenBuilder::BuildEdges()
+{
+	static const float Edges[][4] =
+	{
+		{ -15420.f, -5320.f, -15300.f, 5720.f },   // the street: behind the car
+		{ -15420.f, 5600.f, -9460.f, 5720.f },     // the street: north end of the pavement and the road
+		{ -9460.f, 5670.f, -7140.f, 5790.f },      // behind the front lawn's north fence, round the house corner
+		{ -15420.f, -5320.f, -9400.f, -5200.f },   // the street: south end
+		{ -9590.f, -8990.f, -9470.f, -5200.f },    // behind yard A's west fence
+		{ -9590.f, -8990.f, 5140.f, -8870.f },     // behind yard A's south fence
+		{ 5010.f, -12390.f, 5130.f, -8860.f },     // behind yard B's west fence
+		{ 5010.f, -12390.f, 20590.f, -12270.f },   // behind yard B's south fence
+		{ 20470.f, -12390.f, 20590.f, -8990.f },   // behind yard B's east fence
+	};
+	// Ground under the front lawn's north fence and a little beyond it: an ant that squeezes between the pickets stands on
+	// grass until it meets the invisible wall (the lawn box ended exactly on the fence line).
+	Box(FVector(-9460.f, 5600.f, -200.f), FVector(-7140.f, 5800.f, 0.f), Grass);
+	for (const auto& E : Edges)
+	{
+		if (UStaticMeshComponent* C = Box(FVector(E[0], E[1], -400.f), FVector(E[2], E[3], 14000.f), White, true))
+		{
+			C->SetVisibility(false);
+			C->SetHiddenInGame(true);
+			C->SetCastShadow(false);
+			C->SetCollisionObjectType(ECC_WorldDynamic);   // solid, but nothing to crawl on (UAntMovementComponent::IsStickable)
+		}
+	}
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -304,16 +362,20 @@ void AKitchenBuilder::BuildWestStreet()
 		Box(FVector(-9440.f, 4500.f, 1900.f), FVector(-9360.f, 5600.f, 2060.f), FenceC);
 		Part(EAntShape::Cube, FVector(-9800.f, 3600.f, 1300.f), FVector(80.f, 1150.f, 2500.f), FRotator(0.f, -50.f, 0.f), FenceC, true);   // the gate, swung open
 	}
-	// The yard's north fence (y -5200) closes the back yard off from the sidewalk, with a second gap.
-	for (float X = -12000.f; X <= -9400.f; X += 1100.f)
+	if (!bArt)
 	{
-		if (X > -10800.f && X < -10000.f) { continue; }
-		Box(FVector(X - 60.f, -5260.f, 0.f), FVector(X + 60.f, -5140.f, 2600.f), FenceC);
+		// The old big yard's north fence (y -5200) closed it off from the sidewalk. Level v2: that yard is cut to a strip by the
+		// house and fenced by SM_Y_FencePanel runs from the placement table; the street ends at invisible walls (BuildEdges).
+		for (float X = -12000.f; X <= -9400.f; X += 1100.f)
+		{
+			if (X > -10800.f && X < -10000.f) { continue; }
+			Box(FVector(X - 60.f, -5260.f, 0.f), FVector(X + 60.f, -5140.f, 2600.f), FenceC);
+		}
+		Box(FVector(-12000.f, -5240.f, 600.f), FVector(-10800.f, -5160.f, 760.f), FenceC);
+		Box(FVector(-10000.f, -5240.f, 600.f), FVector(-9400.f, -5160.f, 760.f), FenceC);
+		Box(FVector(-12000.f, -5240.f, 1900.f), FVector(-10800.f, -5160.f, 2060.f), FenceC);
+		Box(FVector(-10000.f, -5240.f, 1900.f), FVector(-9400.f, -5160.f, 2060.f), FenceC);
 	}
-	Box(FVector(-12000.f, -5240.f, 600.f), FVector(-10800.f, -5160.f, 760.f), FenceC);
-	Box(FVector(-10000.f, -5240.f, 600.f), FVector(-9400.f, -5160.f, 760.f), FenceC);
-	Box(FVector(-12000.f, -5240.f, 1900.f), FVector(-10800.f, -5160.f, 2060.f), FenceC);
-	Box(FVector(-10000.f, -5240.f, 1900.f), FVector(-9400.f, -5160.f, 2060.f), FenceC);
 
 	if (!bArt)   // modelled: pavement, kerb, road, manhole, storm drain, the car on its wheels, hydrant, street lamp
 	{

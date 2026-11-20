@@ -1,0 +1,3636 @@
+{
+ "problems": [
+  {
+   "kind": "sweep",
+   "text": "art2 (SM_K_Base1400_DoorR) hits copy43 SM_K_Skirting when it opens"
+  }
+ ],
+ "notes": [],
+ "human": {
+  "points": [
+   {
+    "point": "spawn",
+    "p": [
+     3800.0,
+     -3200.0
+    ],
+    "can_stand": true
+   },
+   {
+    "point": "flee",
+    "p": [
+     5600.0,
+     -4200.0
+    ],
+    "can_stand": true
+   },
+   {
+    "point": "door0",
+    "p": [
+     6500.0,
+     -4000.0
+    ],
+    "can_stand": true
+   },
+   {
+    "point": "door1",
+    "p": [
+     7700.0,
+     -4000.0
+    ],
+    "can_stand": true
+   },
+   {
+    "point": "patrol0",
+    "p": [
+     3800,
+     -3200
+    ],
+    "can_stand": true
+   },
+   {
+    "point": "patrol1",
+    "p": [
+     -3600,
+     -2400
+    ],
+    "can_stand": true
+   },
+   {
+    "point": "patrol2",
+    "p": [
+     -4700,
+     1900
+    ],
+    "can_stand": true
+   },
+   {
+    "point": "patrol3",
+    "p": [
+     -2200,
+     1900
+    ],
+    "can_stand": true
+   },
+   {
+    "point": "patrol4",
+    "p": [
+     3300,
+     2300
+    ],
+    "can_stand": true
+   },
+   {
+    "point": "patrol5",
+    "p": [
+     4200,
+     -2000
+    ],
+    "can_stand": true
+   },
+   {
+    "point": "patrol6",
+    "p": [
+     6400,
+     -3900
+    ],
+    "can_stand": true
+   },
+   {
+    "point": "patrol7",
+    "p": [
+     7800,
+     -4000
+    ],
+    "can_stand": true
+   },
+   {
+    "point": "patrol8",
+    "p": [
+     9600,
+     -2600
+    ],
+    "can_stand": true
+   },
+   {
+    "point": "patrol9",
+    "p": [
+     11200,
+     -5800
+    ],
+    "can_stand": true
+   },
+   {
+    "point": "patrol10",
+    "p": [
+     13000,
+     -2100
+    ],
+    "can_stand": true
+   },
+   {
+    "point": "patrol11",
+    "p": [
+     17800,
+     -5200
+    ],
+    "can_stand": true
+   },
+   {
+    "point": "patrol12",
+    "p": [
+     13400,
+     -6900
+    ],
+    "can_stand": true
+   }
+  ],
+  "stand_cells": {
+   "kitchen": null
+  },
+  "wander_box_standable_pct": {
+   "kitchen": 61,
+   "living": 66
+  },
+  "note": "the audit keeps only the places connected to his spawn point at capsule radius 340 (+50 for the grid), so \"can stand\" also means \"can walk there\"",
+  "stand_m2": {
+   "v1": {
+    "kitchen": 18.9,
+    "living": 20.3
+   },
+   "v2": {
+    "kitchen": 15.9,
+    "living": 16.9
+   }
+  }
+ },
+ "pets": {
+  "closest_pair": [
+   "kid",
+   "cat0"
+  ],
+  "distance_uu": 2002
+ },
+ "floats": [],
+ "door_sweeps": [
+  {
+   "door": "art2",
+   "door_ru": "Дверца нижнего шкафа",
+   "blocked_by": "copy43",
+   "mesh": "SM_K_Skirting"
+  }
+ ],
+ "loot_in_boxes": {
+  "v1": [
+   {
+    "loot": "L64",
+    "p": [
+     1740.0,
+     -360.0,
+     1906.0
+    ],
+    "inside": "art157",
+    "mesh": "SM_K_Cake",
+    "ru": "Торт"
+   },
+   {
+    "loot": "L74",
+    "p": [
+     5800.0,
+     -1700.0,
+     60.0
+    ],
+    "inside": "box10",
+    "mesh": null,
+    "ru": "Мешок в педальном ведре"
+   },
+   {
+    "loot": "L81",
+    "p": [
+     -3600.0,
+     -3650.0,
+     232.0
+    ],
+    "inside": "art113",
+    "mesh": "SM_K_Kibble",
+    "ru": "Горка корма"
+   },
+   {
+    "loot": "L142",
+    "p": [
+     18800.0,
+     900.0,
+     800.0
+    ],
+    "inside": "art290",
+    "mesh": "SM_L_PottedPlant",
+    "ru": "Растение в горшке"
+   },
+   {
+    "loot": "L150",
+    "p": [
+     4200.0,
+     -13000.0,
+     2790.0
+    ],
+    "inside": "art345",
+    "mesh": "SM_Y_Bin_Trash",
+    "ru": "Мешки в баке"
+   },
+   {
+    "loot": "L158",
+    "p": [
+     -10100.0,
+     -1300.0,
+     120.0
+    ],
+    "inside": "art395",
+    "mesh": "SM_S_IceCream",
+    "ru": "Упавшее мороженое (липко)"
+   },
+   {
+    "loot": "L175",
+    "p": [
+     9250.0,
+     -4800.0,
+     1245.0
+    ],
+    "inside": "art183",
+    "mesh": "SM_L_BiscuitPlate",
+    "ru": "Тарелка с печеньем"
+   },
+   {
+    "loot": "D14",
+    "p": [
+     3600.0,
+     4250.0,
+     2600.0
+    ],
+    "inside": "art50",
+    "mesh": "SM_K_IceCreamTub",
+    "ru": "Ведёрко мороженого"
+   },
+   {
+    "loot": "T8",
+    "p": [
+     3900.0,
+     3800.0,
+     2640.0
+    ],
+    "inside": "art50",
+    "mesh": "SM_K_IceCreamTub",
+    "ru": "Ведёрко мороженого"
+   }
+  ],
+  "v2": [
+   {
+    "loot": "L64",
+    "p": [
+     1740.0,
+     -360.0,
+     1906.0
+    ],
+    "inside": "art157",
+    "mesh": "SM_K_Cake",
+    "ru": "Торт"
+   },
+   {
+    "loot": "L74",
+    "p": [
+     5800.0,
+     -1700.0,
+     60.0
+    ],
+    "inside": "box10",
+    "mesh": null,
+    "ru": "Мешок в педальном ведре"
+   },
+   {
+    "loot": "L81",
+    "p": [
+     -3600.0,
+     -3650.0,
+     232.0
+    ],
+    "inside": "art113",
+    "mesh": "SM_K_Kibble",
+    "ru": "Горка корма"
+   },
+   {
+    "loot": "L142",
+    "p": [
+     18800.0,
+     900.0,
+     800.0
+    ],
+    "inside": "art290",
+    "mesh": "SM_L_PottedPlant",
+    "ru": "Растение в горшке"
+   },
+   {
+    "loot": "L158",
+    "p": [
+     -10100.0,
+     -1300.0,
+     120.0
+    ],
+    "inside": "art395",
+    "mesh": "SM_S_IceCream",
+    "ru": "Упавшее мороженое (липко)"
+   },
+   {
+    "loot": "L175",
+    "p": [
+     9250.0,
+     -4800.0,
+     1245.0
+    ],
+    "inside": "art183",
+    "mesh": "SM_L_BiscuitPlate",
+    "ru": "Тарелка с печеньем"
+   },
+   {
+    "loot": "D14",
+    "p": [
+     3600.0,
+     4250.0,
+     2600.0
+    ],
+    "inside": "art50",
+    "mesh": "SM_K_IceCreamTub",
+    "ru": "Ведёрко мороженого"
+   },
+   {
+    "loot": "T8",
+    "p": [
+     3900.0,
+     3800.0,
+     2640.0
+    ],
+    "inside": "art50",
+    "mesh": "SM_K_IceCreamTub",
+    "ru": "Ведёрко мороженого"
+   }
+  ],
+  "note": "boxes are bounding boxes: a hit means \"look at it\", not \"broken\" (v1 shows what the method catches)"
+ },
+ "graph": {
+  "routes": [
+   {
+    "id": "R1",
+    "ru": "Плато: обеденный стол",
+    "fast": {
+     "nodes": [
+      "nest",
+      "crack",
+      "podstol"
+     ],
+     "len_m": 4.6,
+     "t_sprint": 19.0,
+     "t_walk": 30.1,
+     "t_loaded": [
+      33.4,
+      60.2
+     ],
+     "exposed_s": 11.9,
+     "exposed_pct": 63
+    },
+    "covered": {
+     "nodes": [
+      "nest",
+      "nhole",
+      "corr_w",
+      "corr_m",
+      "corr_e",
+      "holgap",
+      "podstol"
+     ],
+     "len_m": 12.3,
+     "t_sprint": 51.3,
+     "t_walk": 81.3,
+     "t_loaded": [
+      90.3,
+      162.6
+     ],
+     "exposed_s": 6.9,
+     "exposed_pct": 13
+    }
+   },
+   {
+    "id": "R2",
+    "ru": "Кладовые",
+    "fast": {
+     "nodes": [
+      "nest",
+      "crack",
+      "klad"
+     ],
+     "len_m": 3.4,
+     "t_sprint": 14.3,
+     "t_walk": 22.6,
+     "t_loaded": [
+      25.1,
+      45.1
+     ],
+     "exposed_s": 9.9,
+     "exposed_pct": 69
+    },
+    "covered": {
+     "nodes": [
+      "nest",
+      "nhole",
+      "corr_w",
+      "corr_m",
+      "moika",
+      "klad"
+     ],
+     "len_m": 8.3,
+     "t_sprint": 34.5,
+     "t_walk": 54.7,
+     "t_loaded": [
+      60.7,
+      109.3
+     ],
+     "exposed_s": 5.3,
+     "exposed_pct": 15
+    }
+   },
+   {
+    "id": "R3",
+    "ru": "Мойка",
+    "fast": {
+     "nodes": [
+      "nest",
+      "crack",
+      "moika"
+     ],
+     "len_m": 4.0,
+     "t_sprint": 16.7,
+     "t_walk": 26.4,
+     "t_loaded": [
+      29.3,
+      52.8
+     ],
+     "exposed_s": 12.1,
+     "exposed_pct": 73
+    },
+    "covered": {
+     "nodes": [
+      "nest",
+      "nhole",
+      "corr_w",
+      "corr_m",
+      "moika"
+     ],
+     "len_m": 7.1,
+     "t_sprint": 29.5,
+     "t_walk": 46.7,
+     "t_loaded": [
+      51.8,
+      93.3
+     ],
+     "exposed_s": 0.3,
+     "exposed_pct": 1
+    }
+   },
+   {
+    "id": "R4",
+    "ru": "Плита",
+    "fast": {
+     "nodes": [
+      "nest",
+      "crack",
+      "plita"
+     ],
+     "len_m": 4.8,
+     "t_sprint": 19.8,
+     "t_walk": 31.4,
+     "t_loaded": [
+      34.9,
+      62.8
+     ],
+     "exposed_s": 16.6,
+     "exposed_pct": 84
+    },
+    "covered": {
+     "nodes": [
+      "nest",
+      "nhole",
+      "corr_w",
+      "corr_m",
+      "moika",
+      "plita"
+     ],
+     "len_m": 8.3,
+     "t_sprint": 34.4,
+     "t_walk": 54.5,
+     "t_loaded": [
+      60.5,
+      109.0
+     ],
+     "exposed_s": 4.1,
+     "exposed_pct": 12
+    }
+   },
+   {
+    "id": "R5",
+    "ru": "Ледник: холодильник",
+    "fast": {
+     "nodes": [
+      "nest",
+      "crack",
+      "podstol",
+      "holgap"
+     ],
+     "len_m": 6.7,
+     "t_sprint": 27.9,
+     "t_walk": 44.1,
+     "t_loaded": [
+      49.0,
+      88.3
+     ],
+     "exposed_s": 17.6,
+     "exposed_pct": 63
+    },
+    "covered": {
+     "nodes": [
+      "nest",
+      "nhole",
+      "corr_w",
+      "corr_m",
+      "corr_e",
+      "holgap"
+     ],
+     "len_m": 10.2,
+     "t_sprint": 42.5,
+     "t_walk": 67.3,
+     "t_loaded": [
+      74.7,
+      134.5
+     ],
+     "exposed_s": 1.2,
+     "exposed_pct": 3
+    }
+   },
+   {
+    "id": "R6",
+    "ru": "Свалка",
+    "fast": {
+     "nodes": [
+      "nest",
+      "crack",
+      "podstol",
+      "svalka"
+     ],
+     "len_m": 7.3,
+     "t_sprint": 30.3,
+     "t_walk": 48.0,
+     "t_loaded": [
+      53.3,
+      96.0
+     ],
+     "exposed_s": 17.8,
+     "exposed_pct": 59
+    },
+    "covered": {
+     "nodes": [
+      "nest",
+      "nhole",
+      "corr_w",
+      "corr_m",
+      "corr_e",
+      "holgap",
+      "svalka"
+     ],
+     "len_m": 13.3,
+     "t_sprint": 55.3,
+     "t_walk": 87.5,
+     "t_loaded": [
+      97.3,
+      175.1
+     ],
+     "exposed_s": 7.8,
+     "exposed_pct": 14
+    }
+   },
+   {
+    "id": "R7",
+    "ru": "Порог: в гостиную",
+    "fast": {
+     "nodes": [
+      "nest",
+      "crack",
+      "podstol",
+      "porog"
+     ],
+     "len_m": 8.5,
+     "t_sprint": 35.6,
+     "t_walk": 56.3,
+     "t_loaded": [
+      62.6,
+      112.6
+     ],
+     "exposed_s": 25.5,
+     "exposed_pct": 72
+    },
+    "covered": {
+     "nodes": [
+      "nest",
+      "nhole",
+      "corr_w",
+      "corr_m",
+      "corr_e",
+      "holgap",
+      "svalka",
+      "vent2",
+      "ehole",
+      "obuv"
+     ],
+     "len_m": 15.8,
+     "t_sprint": 65.9,
+     "t_walk": 104.3,
+     "t_loaded": [
+      115.9,
+      208.6
+     ],
+     "exposed_s": 13.9,
+     "exposed_pct": 21
+    }
+   },
+   {
+    "id": "R8",
+    "ru": "Игровая: журнальный стол",
+    "fast": {
+     "nodes": [
+      "nest",
+      "crack",
+      "podstol",
+      "porog",
+      "kover"
+     ],
+     "len_m": 12.1,
+     "t_sprint": 50.3,
+     "t_walk": 79.6,
+     "t_loaded": [
+      88.4,
+      159.2
+     ],
+     "exposed_s": 38.7,
+     "exposed_pct": 77
+    },
+    "covered": {
+     "nodes": [
+      "nest",
+      "nhole",
+      "corr_w",
+      "corr_m",
+      "corr_e",
+      "holgap",
+      "svalka",
+      "vent2",
+      "ehole",
+      "obuv",
+      "divan",
+      "kover"
+     ],
+     "len_m": 22.3,
+     "t_sprint": 93.0,
+     "t_walk": 147.2,
+     "t_loaded": [
+      163.6,
+      294.5
+     ],
+     "exposed_s": 30.9,
+     "exposed_pct": 33
+    }
+   },
+   {
+    "id": "R9",
+    "ru": "Стенка: тумба ТВ",
+    "fast": {
+     "nodes": [
+      "nest",
+      "crack",
+      "podstol",
+      "porog",
+      "kover",
+      "tv"
+     ],
+     "len_m": 13.7,
+     "t_sprint": 57.2,
+     "t_walk": 90.6,
+     "t_loaded": [
+      100.7,
+      181.3
+     ],
+     "exposed_s": 45.7,
+     "exposed_pct": 80
+    },
+    "covered": {
+     "nodes": [
+      "nest",
+      "nhole",
+      "corr_w",
+      "corr_m",
+      "corr_e",
+      "holgap",
+      "svalka",
+      "vent2",
+      "ehole",
+      "obuv",
+      "porog",
+      "babu",
+      "flap",
+      "tv"
+     ],
+     "len_m": 24.9,
+     "t_sprint": 103.7,
+     "t_walk": 164.1,
+     "t_loaded": [
+      182.4,
+      328.3
+     ],
+     "exposed_s": 29.1,
+     "exposed_pct": 28
+    }
+   },
+   {
+    "id": "R10",
+    "ru": "Стенка: библиотека",
+    "fast": {
+     "nodes": [
+      "nest",
+      "crack",
+      "podstol",
+      "porog",
+      "kover",
+      "knigi"
+     ],
+     "len_m": 14.9,
+     "t_sprint": 62.1,
+     "t_walk": 98.3,
+     "t_loaded": [
+      109.2,
+      196.5
+     ],
+     "exposed_s": 49.2,
+     "exposed_pct": 79
+    },
+    "covered": {
+     "nodes": [
+      "nest",
+      "nhole",
+      "corr_w",
+      "corr_m",
+      "corr_e",
+      "holgap",
+      "svalka",
+      "vent2",
+      "ehole",
+      "obuv",
+      "divan",
+      "knigi"
+     ],
+     "len_m": 24.7,
+     "t_sprint": 103.1,
+     "t_walk": 163.2,
+     "t_loaded": [
+      181.3,
+      326.4
+     ],
+     "exposed_s": 33.1,
+     "exposed_pct": 32
+    }
+   },
+   {
+    "id": "R11",
+    "ru": "Вынос из гостиной (от тумбы ТВ домой)",
+    "fast": {
+     "nodes": [
+      "tv",
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     "len_m": 13.7,
+     "t_sprint": 57.2,
+     "t_walk": 90.6,
+     "t_loaded": [
+      100.7,
+      181.3
+     ],
+     "exposed_s": 45.7,
+     "exposed_pct": 80
+    },
+    "covered": {
+     "nodes": [
+      "tv",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ],
+     "len_m": 13.5,
+     "t_sprint": 56.1,
+     "t_walk": 88.8,
+     "t_loaded": [
+      98.7,
+      177.6
+     ],
+     "exposed_s": 5.7,
+     "exposed_pct": 10
+    }
+   },
+   {
+    "id": "R12",
+    "ru": "Красный холм (набег на огненных)",
+    "fast": {
+     "nodes": [
+      "nest",
+      "corner",
+      "wcrack",
+      "gryadka",
+      "dvor_e",
+      "prohod",
+      "holm"
+     ],
+     "len_m": 14.5,
+     "t_sprint": 60.6,
+     "t_walk": 95.9,
+     "t_loaded": [
+      106.6,
+      191.9
+     ],
+     "exposed_s": 0.0,
+     "exposed_pct": 0
+    },
+    "covered": {
+     "nodes": [
+      "nest",
+      "crack",
+      "podstol",
+      "porog",
+      "kover",
+      "knigi",
+      "okno",
+      "rcrack",
+      "holm"
+     ],
+     "len_m": 21.7,
+     "t_sprint": 90.5,
+     "t_walk": 143.2,
+     "t_loaded": [
+      159.1,
+      286.5
+     ],
+     "exposed_s": 59.0,
+     "exposed_pct": 65
+    }
+   }
+  ],
+  "edges": [
+   {
+    "a": "nest",
+    "b": "crack",
+    "kind": "cover",
+    "pts": [
+     [
+      -7900,
+      -2500
+     ],
+     [
+      -6950,
+      -2500
+     ]
+    ],
+    "len_uu": 950,
+    "len_m": 0.5,
+    "t_sprint": 2.1,
+    "t_walk": 3.3,
+    "t_loaded": [
+     3.7,
+     6.6
+    ],
+    "note": "в радиусе гнезда",
+    "exposed_s": 0.1,
+    "slap_only_s": 0.0,
+    "exposed_pct": 5
+   },
+   {
+    "a": "nest",
+    "b": "nhole",
+    "kind": "out",
+    "pts": [
+     [
+      -7900,
+      -2500
+     ],
+     [
+      -7500,
+      1000
+     ],
+     [
+      -7450,
+      4875
+     ],
+     [
+      -7250,
+      4875
+     ]
+    ],
+    "len_uu": 7598,
+    "len_m": 4.0,
+    "t_sprint": 16.7,
+    "t_walk": 26.4,
+    "t_loaded": [
+     29.3,
+     52.8
+    ],
+    "note": "вдоль фасада, снаружи",
+    "exposed_s": 0.0,
+    "slap_only_s": 0.0,
+    "exposed_pct": 0
+   },
+   {
+    "a": "nest",
+    "b": "corner",
+    "kind": "out",
+    "pts": [
+     [
+      -7900,
+      -2500
+     ],
+     [
+      -8300,
+      -5300
+     ]
+    ],
+    "len_uu": 2828,
+    "len_m": 1.49,
+    "t_sprint": 6.2,
+    "t_walk": 9.8,
+    "t_loaded": [
+     10.9,
+     19.6
+    ],
+    "note": "",
+    "exposed_s": 0.0,
+    "slap_only_s": 0.0,
+    "exposed_pct": 0
+   },
+   {
+    "a": "nhole",
+    "b": "corr_w",
+    "kind": "wall",
+    "pts": [
+     [
+      -7250,
+      4875
+     ],
+     [
+      -6800,
+      4875
+     ]
+    ],
+    "len_uu": 450,
+    "len_m": 0.24,
+    "t_sprint": 1.0,
+    "t_walk": 1.6,
+    "t_loaded": [
+     1.7,
+     3.1
+    ],
+    "note": "",
+    "exposed_s": 0.0,
+    "slap_only_s": 0.0,
+    "exposed_pct": 0
+   },
+   {
+    "a": "corr_w",
+    "b": "corr_m",
+    "kind": "wall",
+    "pts": [
+     [
+      -6800,
+      4875
+     ],
+     [
+      -3500,
+      4875
+     ]
+    ],
+    "len_uu": 3300,
+    "len_m": 1.74,
+    "t_sprint": 7.2,
+    "t_walk": 11.5,
+    "t_loaded": [
+     12.7,
+     22.9
+    ],
+    "note": "",
+    "exposed_s": 0.0,
+    "slap_only_s": 0.0,
+    "exposed_pct": 0
+   },
+   {
+    "a": "corr_m",
+    "b": "corr_e",
+    "kind": "wall",
+    "pts": [
+     [
+      -3500,
+      4875
+     ],
+     [
+      2600,
+      4875
+     ]
+    ],
+    "len_uu": 6100,
+    "len_m": 3.21,
+    "t_sprint": 13.4,
+    "t_walk": 21.2,
+    "t_loaded": [
+     23.5,
+     42.4
+    ],
+    "note": "",
+    "exposed_s": 0.0,
+    "slap_only_s": 0.0,
+    "exposed_pct": 0
+   },
+   {
+    "a": "corr_m",
+    "b": "moika",
+    "kind": "cover",
+    "pts": [
+     [
+      -3500,
+      4875
+     ],
+     [
+      -3500,
+      4700
+     ],
+     [
+      -3200,
+      3600
+     ],
+     [
+      -3000,
+      2850
+     ]
+    ],
+    "len_uu": 2091,
+    "len_m": 1.1,
+    "t_sprint": 4.6,
+    "t_walk": 7.3,
+    "t_loaded": [
+     8.1,
+     14.5
+    ],
+    "note": "через дыру в задней стенке и открытую дверцу",
+    "exposed_s": 0.3,
+    "slap_only_s": 0.0,
+    "exposed_pct": 7
+   },
+   {
+    "a": "corr_e",
+    "b": "holgap",
+    "kind": "cover",
+    "pts": [
+     [
+      2600,
+      4875
+     ],
+     [
+      2600,
+      2950
+     ]
+    ],
+    "len_uu": 1925,
+    "len_m": 1.01,
+    "t_sprint": 4.2,
+    "t_walk": 6.7,
+    "t_loaded": [
+     7.4,
+     13.4
+    ],
+    "note": "щель 200 uu между шкафом и холодильником",
+    "exposed_s": 1.2,
+    "slap_only_s": 0.7,
+    "exposed_pct": 29
+   },
+   {
+    "a": "crack",
+    "b": "podstol",
+    "kind": "open",
+    "pts": [
+     [
+      -6950,
+      -2500
+     ],
+     [
+      -1900,
+      -1300
+     ],
+     [
+      500,
+      -500
+     ]
+    ],
+    "len_uu": 7720,
+    "len_m": 4.06,
+    "t_sprint": 16.9,
+    "t_walk": 26.8,
+    "t_loaded": [
+     29.8,
+     53.6
+    ],
+    "note": "под трассой",
+    "exposed_s": 11.8,
+    "slap_only_s": 0.9,
+    "exposed_pct": 70
+   },
+   {
+    "a": "crack",
+    "b": "metla",
+    "kind": "open",
+    "pts": [
+     [
+      -6950,
+      -2500
+     ],
+     [
+      -6600,
+      -900
+     ],
+     [
+      -6700,
+      650
+     ]
+    ],
+    "len_uu": 3191,
+    "len_m": 1.68,
+    "t_sprint": 7.0,
+    "t_walk": 11.1,
+    "t_loaded": [
+     12.3,
+     22.2
+    ],
+    "note": "вдоль западной стены мимо совка",
+    "exposed_s": 7.0,
+    "slap_only_s": 0.0,
+    "exposed_pct": 100
+   },
+   {
+    "a": "crack",
+    "b": "klad",
+    "kind": "open",
+    "pts": [
+     [
+      -6950,
+      -2500
+     ],
+     [
+      -5300,
+      2800
+     ]
+    ],
+    "len_uu": 5551,
+    "len_m": 2.92,
+    "t_sprint": 12.2,
+    "t_walk": 19.3,
+    "t_loaded": [
+     21.4,
+     38.5
+    ],
+    "note": "",
+    "exposed_s": 9.8,
+    "slap_only_s": 0.0,
+    "exposed_pct": 80
+   },
+   {
+    "a": "crack",
+    "b": "moika",
+    "kind": "open",
+    "pts": [
+     [
+      -6950,
+      -2500
+     ],
+     [
+      -3000,
+      2850
+     ]
+    ],
+    "len_uu": 6650,
+    "len_m": 3.5,
+    "t_sprint": 14.6,
+    "t_walk": 23.1,
+    "t_loaded": [
+     25.7,
+     46.2
+    ],
+    "note": "",
+    "exposed_s": 12.0,
+    "slap_only_s": 0.0,
+    "exposed_pct": 82
+   },
+   {
+    "a": "crack",
+    "b": "plita",
+    "kind": "open",
+    "pts": [
+     [
+      -6950,
+      -2500
+     ],
+     [
+      -750,
+      2700
+     ]
+    ],
+    "len_uu": 8092,
+    "len_m": 4.26,
+    "t_sprint": 17.7,
+    "t_walk": 28.1,
+    "t_loaded": [
+     31.2,
+     56.2
+    ],
+    "note": "",
+    "exposed_s": 16.5,
+    "slap_only_s": 0.0,
+    "exposed_pct": 93
+   },
+   {
+    "a": "crack",
+    "b": "wcrack",
+    "kind": "open",
+    "pts": [
+     [
+      -6950,
+      -2500
+     ],
+     [
+      -4500,
+      -5100
+     ]
+    ],
+    "len_uu": 3572,
+    "len_m": 1.88,
+    "t_sprint": 7.8,
+    "t_walk": 12.4,
+    "t_loaded": [
+     13.8,
+     24.8
+    ],
+    "note": "",
+    "exposed_s": 7.5,
+    "slap_only_s": 0.0,
+    "exposed_pct": 96
+   },
+   {
+    "a": "metla",
+    "b": "klad",
+    "kind": "open",
+    "pts": [
+     [
+      -6700,
+      650
+     ],
+     [
+      -5300,
+      2800
+     ]
+    ],
+    "len_uu": 2566,
+    "len_m": 1.35,
+    "t_sprint": 5.6,
+    "t_walk": 8.9,
+    "t_loaded": [
+     9.9,
+     17.8
+    ],
+    "note": "",
+    "exposed_s": 5.6,
+    "slap_only_s": 0.0,
+    "exposed_pct": 100
+   },
+   {
+    "a": "klad",
+    "b": "moika",
+    "kind": "open",
+    "pts": [
+     [
+      -5300,
+      2800
+     ],
+     [
+      -3000,
+      2850
+     ]
+    ],
+    "len_uu": 2301,
+    "len_m": 1.21,
+    "t_sprint": 5.0,
+    "t_walk": 8.0,
+    "t_loaded": [
+     8.9,
+     16.0
+    ],
+    "note": "",
+    "exposed_s": 5.0,
+    "slap_only_s": 0.0,
+    "exposed_pct": 100
+   },
+   {
+    "a": "moika",
+    "b": "plita",
+    "kind": "open",
+    "pts": [
+     [
+      -3000,
+      2850
+     ],
+     [
+      -750,
+      2700
+     ]
+    ],
+    "len_uu": 2255,
+    "len_m": 1.19,
+    "t_sprint": 4.9,
+    "t_walk": 7.8,
+    "t_loaded": [
+     8.7,
+     15.7
+    ],
+    "note": "",
+    "exposed_s": 3.8,
+    "slap_only_s": 0.0,
+    "exposed_pct": 78
+   },
+   {
+    "a": "plita",
+    "b": "holgap",
+    "kind": "open",
+    "pts": [
+     [
+      -750,
+      2700
+     ],
+     [
+      2600,
+      2950
+     ]
+    ],
+    "len_uu": 3359,
+    "len_m": 1.77,
+    "t_sprint": 7.4,
+    "t_walk": 11.7,
+    "t_loaded": [
+     13.0,
+     23.3
+    ],
+    "note": "",
+    "exposed_s": 7.4,
+    "slap_only_s": 0.0,
+    "exposed_pct": 100
+   },
+   {
+    "a": "plita",
+    "b": "podstol",
+    "kind": "open",
+    "pts": [
+     [
+      -750,
+      2700
+     ],
+     [
+      500,
+      -500
+     ]
+    ],
+    "len_uu": 3435,
+    "len_m": 1.81,
+    "t_sprint": 7.5,
+    "t_walk": 11.9,
+    "t_loaded": [
+     13.3,
+     23.9
+    ],
+    "note": "",
+    "exposed_s": 5.9,
+    "slap_only_s": 0.8,
+    "exposed_pct": 78
+   },
+   {
+    "a": "klad",
+    "b": "podstol",
+    "kind": "open",
+    "pts": [
+     [
+      -5300,
+      2800
+     ],
+     [
+      -2000,
+      900
+     ],
+     [
+      500,
+      -500
+     ]
+    ],
+    "len_uu": 6673,
+    "len_m": 3.51,
+    "t_sprint": 14.6,
+    "t_walk": 23.2,
+    "t_loaded": [
+     25.7,
+     46.3
+    ],
+    "note": "",
+    "exposed_s": 11.5,
+    "slap_only_s": 1.3,
+    "exposed_pct": 79
+   },
+   {
+    "a": "holgap",
+    "b": "podstol",
+    "kind": "open",
+    "pts": [
+     [
+      2600,
+      2950
+     ],
+     [
+      2200,
+      2400
+     ],
+     [
+      500,
+      -500
+     ]
+    ],
+    "len_uu": 4042,
+    "len_m": 2.13,
+    "t_sprint": 8.9,
+    "t_walk": 14.0,
+    "t_loaded": [
+     15.6,
+     28.1
+    ],
+    "note": "",
+    "exposed_s": 5.7,
+    "slap_only_s": 1.4,
+    "exposed_pct": 64
+   },
+   {
+    "a": "wcrack",
+    "b": "vent1",
+    "kind": "open",
+    "pts": [
+     [
+      -4500,
+      -5100
+     ],
+     [
+      -3100,
+      -4950
+     ]
+    ],
+    "len_uu": 1408,
+    "len_m": 0.74,
+    "t_sprint": 3.1,
+    "t_walk": 4.9,
+    "t_loaded": [
+     5.4,
+     9.8
+    ],
+    "note": "",
+    "exposed_s": 1.0,
+    "slap_only_s": 0.0,
+    "exposed_pct": 32
+   },
+   {
+    "a": "wcrack",
+    "b": "podstol",
+    "kind": "open",
+    "pts": [
+     [
+      -4500,
+      -5100
+     ],
+     [
+      -1500,
+      -2600
+     ],
+     [
+      500,
+      -500
+     ]
+    ],
+    "len_uu": 6805,
+    "len_m": 3.58,
+    "t_sprint": 14.9,
+    "t_walk": 23.6,
+    "t_loaded": [
+     26.3,
+     47.3
+    ],
+    "note": "",
+    "exposed_s": 11.9,
+    "slap_only_s": 0.9,
+    "exposed_pct": 79
+   },
+   {
+    "a": "wcrack",
+    "b": "corner",
+    "kind": "out",
+    "pts": [
+     [
+      -4500,
+      -5100
+     ],
+     [
+      -4500,
+      -5300
+     ],
+     [
+      -8300,
+      -5300
+     ]
+    ],
+    "len_uu": 4000,
+    "len_m": 2.11,
+    "t_sprint": 8.8,
+    "t_walk": 13.9,
+    "t_loaded": [
+     15.4,
+     27.8
+    ],
+    "note": "вдоль стены дома",
+    "exposed_s": 0.0,
+    "slap_only_s": 0.0,
+    "exposed_pct": 0
+   },
+   {
+    "a": "podstol",
+    "b": "porog",
+    "kind": "open",
+    "pts": [
+     [
+      500,
+      -500
+     ],
+     [
+      4300,
+      -2800
+     ],
+     [
+      6500,
+      -4000
+     ],
+     [
+      7100,
+      -4000
+     ]
+    ],
+    "len_uu": 7548,
+    "len_m": 3.97,
+    "t_sprint": 16.6,
+    "t_walk": 26.2,
+    "t_loaded": [
+     29.1,
+     52.4
+    ],
+    "note": "",
+    "exposed_s": 13.6,
+    "slap_only_s": 1.3,
+    "exposed_pct": 82
+   },
+   {
+    "a": "podstol",
+    "b": "svalka",
+    "kind": "open",
+    "pts": [
+     [
+      500,
+      -500
+     ],
+     [
+      4200,
+      -500
+     ],
+     [
+      5450,
+      250
+     ]
+    ],
+    "len_uu": 5158,
+    "len_m": 2.71,
+    "t_sprint": 11.3,
+    "t_walk": 17.9,
+    "t_loaded": [
+     19.9,
+     35.8
+    ],
+    "note": "",
+    "exposed_s": 5.9,
+    "slap_only_s": 1.5,
+    "exposed_pct": 52
+   },
+   {
+    "a": "holgap",
+    "b": "svalka",
+    "kind": "cover",
+    "pts": [
+     [
+      2600,
+      2950
+     ],
+     [
+      3700,
+      3600
+     ],
+     [
+      4750,
+      3200
+     ],
+     [
+      5450,
+      2900
+     ],
+     [
+      5600,
+      2250
+     ],
+     [
+      5450,
+      250
+     ]
+    ],
+    "len_uu": 5836,
+    "len_m": 3.07,
+    "t_sprint": 12.8,
+    "t_walk": 20.3,
+    "t_loaded": [
+     22.5,
+     40.5
+    ],
+    "note": "под холодильником, мимо пакета",
+    "exposed_s": 6.6,
+    "slap_only_s": 0.0,
+    "exposed_pct": 52
+   },
+   {
+    "a": "svalka",
+    "b": "vent2",
+    "kind": "cover",
+    "pts": [
+     [
+      5450,
+      250
+     ],
+     [
+      5600,
+      200
+     ],
+     [
+      6930,
+      250
+     ],
+     [
+      6930,
+      400
+     ]
+    ],
+    "len_uu": 1639,
+    "len_m": 0.86,
+    "t_sprint": 3.6,
+    "t_walk": 5.7,
+    "t_loaded": [
+     6.3,
+     11.4
+    ],
+    "note": "за коробкой",
+    "exposed_s": 0.8,
+    "slap_only_s": 0.0,
+    "exposed_pct": 22
+   },
+   {
+    "a": "vent2",
+    "b": "ehole",
+    "kind": "cover",
+    "pts": [
+     [
+      6930,
+      400
+     ],
+     [
+      7100,
+      980
+     ]
+    ],
+    "len_uu": 604,
+    "len_m": 0.32,
+    "t_sprint": 1.3,
+    "t_walk": 2.1,
+    "t_loaded": [
+     2.3,
+     4.2
+    ],
+    "note": "за коробкой, вдоль стены",
+    "exposed_s": 0.6,
+    "slap_only_s": 0.0,
+    "exposed_pct": 42
+   },
+   {
+    "a": "ehole",
+    "b": "obuv",
+    "kind": "cover",
+    "pts": [
+     [
+      7100,
+      980
+     ],
+     [
+      7400,
+      980
+     ],
+     [
+      7950,
+      300
+     ],
+     [
+      8100,
+      -1100
+     ]
+    ],
+    "len_uu": 2583,
+    "len_m": 1.36,
+    "t_sprint": 5.7,
+    "t_walk": 9.0,
+    "t_loaded": [
+     10.0,
+     17.9
+    ],
+    "note": "вдоль стены к обувнице",
+    "exposed_s": 4.7,
+    "slap_only_s": 0.0,
+    "exposed_pct": 82
+   },
+   {
+    "a": "porog",
+    "b": "obuv",
+    "kind": "cover",
+    "pts": [
+     [
+      7100,
+      -4000
+     ],
+     [
+      7400,
+      -3300
+     ],
+     [
+      7600,
+      -1700
+     ],
+     [
+      8100,
+      -1100
+     ]
+    ],
+    "len_uu": 3155,
+    "len_m": 1.66,
+    "t_sprint": 6.9,
+    "t_walk": 11.0,
+    "t_loaded": [
+     12.2,
+     21.9
+    ],
+    "note": "под открытой дверью, вдоль стены",
+    "exposed_s": 3.3,
+    "slap_only_s": 0.0,
+    "exposed_pct": 47
+   },
+   {
+    "a": "porog",
+    "b": "babu",
+    "kind": "open",
+    "pts": [
+     [
+      7100,
+      -4000
+     ],
+     [
+      7700,
+      -4000
+     ],
+     [
+      10200,
+      -4450
+     ]
+    ],
+    "len_uu": 3140,
+    "len_m": 1.65,
+    "t_sprint": 6.9,
+    "t_walk": 10.9,
+    "t_loaded": [
+     12.1,
+     21.8
+    ],
+    "note": "",
+    "exposed_s": 6.2,
+    "slap_only_s": 0.0,
+    "exposed_pct": 90
+   },
+   {
+    "a": "porog",
+    "b": "kover",
+    "kind": "open",
+    "pts": [
+     [
+      7100,
+      -4000
+     ],
+     [
+      7700,
+      -4000
+     ],
+     [
+      10400,
+      -4550
+     ],
+     [
+      13750,
+      -4600
+     ]
+    ],
+    "len_uu": 6706,
+    "len_m": 3.53,
+    "t_sprint": 14.7,
+    "t_walk": 23.3,
+    "t_loaded": [
+     25.9,
+     46.6
+    ],
+    "note": "",
+    "exposed_s": 13.2,
+    "slap_only_s": 0.0,
+    "exposed_pct": 90
+   },
+   {
+    "a": "obuv",
+    "b": "divan",
+    "kind": "cover",
+    "pts": [
+     [
+      8100,
+      -1100
+     ],
+     [
+      9000,
+      -400
+     ],
+     [
+      9750,
+      300
+     ],
+     [
+      13500,
+      900
+     ]
+    ],
+    "len_uu": 5964,
+    "len_m": 3.14,
+    "t_sprint": 13.1,
+    "t_walk": 20.7,
+    "t_loaded": [
+     23.0,
+     41.4
+    ],
+    "note": "",
+    "exposed_s": 6.2,
+    "slap_only_s": 2.7,
+    "exposed_pct": 47
+   },
+   {
+    "a": "divan",
+    "b": "knigi",
+    "kind": "cover",
+    "pts": [
+     [
+      13500,
+      900
+     ],
+     [
+      17100,
+      900
+     ],
+     [
+      18900,
+      1000
+     ],
+     [
+      19500,
+      -1800
+     ],
+     [
+      19100,
+      -4500
+     ]
+    ],
+    "len_uu": 10996,
+    "len_m": 5.79,
+    "t_sprint": 24.1,
+    "t_walk": 38.2,
+    "t_loaded": [
+     42.4,
+     76.4
+    ],
+    "note": "под диваном, за растением, вдоль шкафа",
+    "exposed_s": 13.0,
+    "slap_only_s": 0.7,
+    "exposed_pct": 54
+   },
+   {
+    "a": "divan",
+    "b": "kover",
+    "kind": "open",
+    "pts": [
+     [
+      13500,
+      900
+     ],
+     [
+      12300,
+      -400
+     ],
+     [
+      12300,
+      -2400
+     ],
+     [
+      13750,
+      -4600
+     ]
+    ],
+    "len_uu": 6404,
+    "len_m": 3.37,
+    "t_sprint": 14.0,
+    "t_walk": 22.2,
+    "t_loaded": [
+     24.7,
+     44.5
+    ],
+    "note": "в обход ног малыша",
+    "exposed_s": 10.8,
+    "slap_only_s": 0.9,
+    "exposed_pct": 77
+   },
+   {
+    "a": "babu",
+    "b": "kover",
+    "kind": "open",
+    "pts": [
+     [
+      10200,
+      -4450
+     ],
+     [
+      13750,
+      -4600
+     ]
+    ],
+    "len_uu": 3553,
+    "len_m": 1.87,
+    "t_sprint": 7.8,
+    "t_walk": 12.3,
+    "t_loaded": [
+     13.7,
+     24.7
+    ],
+    "note": "",
+    "exposed_s": 6.9,
+    "slap_only_s": 0.0,
+    "exposed_pct": 89
+   },
+   {
+    "a": "kover",
+    "b": "tv",
+    "kind": "open",
+    "pts": [
+     [
+      13750,
+      -4600
+     ],
+     [
+      13300,
+      -6000
+     ],
+     [
+      12700,
+      -7600
+     ]
+    ],
+    "len_uu": 3179,
+    "len_m": 1.67,
+    "t_sprint": 7.0,
+    "t_walk": 11.0,
+    "t_loaded": [
+     12.3,
+     22.1
+    ],
+    "note": "",
+    "exposed_s": 7.0,
+    "slap_only_s": 0.0,
+    "exposed_pct": 100
+   },
+   {
+    "a": "kover",
+    "b": "knigi",
+    "kind": "open",
+    "pts": [
+     [
+      13750,
+      -4600
+     ],
+     [
+      16500,
+      -4300
+     ],
+     [
+      19100,
+      -4500
+     ]
+    ],
+    "len_uu": 5374,
+    "len_m": 2.83,
+    "t_sprint": 11.8,
+    "t_walk": 18.7,
+    "t_loaded": [
+     20.7,
+     37.3
+    ],
+    "note": "",
+    "exposed_s": 10.5,
+    "slap_only_s": 0.0,
+    "exposed_pct": 89
+   },
+   {
+    "a": "babu",
+    "b": "flap",
+    "kind": "cover",
+    "pts": [
+     [
+      10200,
+      -4450
+     ],
+     [
+      9900,
+      -4750
+     ],
+     [
+      9200,
+      -5800
+     ],
+     [
+      8900,
+      -7000
+     ],
+     [
+      8000,
+      -7450
+     ],
+     [
+      7250,
+      -7350
+     ]
+    ],
+    "len_uu": 4686,
+    "len_m": 2.47,
+    "t_sprint": 10.3,
+    "t_walk": 16.3,
+    "t_loaded": [
+     18.1,
+     32.5
+    ],
+    "note": "под креслом",
+    "exposed_s": 0.0,
+    "slap_only_s": 3.9,
+    "exposed_pct": 0
+   },
+   {
+    "a": "tv",
+    "b": "flap",
+    "kind": "cover",
+    "pts": [
+     [
+      12700,
+      -7600
+     ],
+     [
+      10300,
+      -7650
+     ],
+     [
+      9900,
+      -8100
+     ],
+     [
+      8900,
+      -8600
+     ],
+     [
+      8000,
+      -7600
+     ],
+     [
+      7250,
+      -7350
+     ]
+    ],
+    "len_uu": 6257,
+    "len_m": 3.29,
+    "t_sprint": 13.7,
+    "t_walk": 21.7,
+    "t_loaded": [
+     24.1,
+     43.4
+    ],
+    "note": "вдоль южной стены",
+    "exposed_s": 5.7,
+    "slap_only_s": 1.9,
+    "exposed_pct": 42
+   },
+   {
+    "a": "tv",
+    "b": "okno",
+    "kind": "cover",
+    "pts": [
+     [
+      12700,
+      -7600
+     ],
+     [
+      15900,
+      -7650
+     ],
+     [
+      16700,
+      -8850
+     ],
+     [
+      18300,
+      -8600
+     ]
+    ],
+    "len_uu": 6262,
+    "len_m": 3.3,
+    "t_sprint": 13.7,
+    "t_walk": 21.7,
+    "t_loaded": [
+     24.2,
+     43.5
+    ],
+    "note": "вдоль тумбы, за штору",
+    "exposed_s": 12.7,
+    "slap_only_s": 0.0,
+    "exposed_pct": 93
+   },
+   {
+    "a": "okno",
+    "b": "knigi",
+    "kind": "open",
+    "pts": [
+     [
+      18300,
+      -8600
+     ],
+     [
+      19300,
+      -7300
+     ],
+     [
+      19100,
+      -4500
+     ]
+    ],
+    "len_uu": 4447,
+    "len_m": 2.34,
+    "t_sprint": 9.8,
+    "t_walk": 15.4,
+    "t_loaded": [
+     17.2,
+     30.9
+    ],
+    "note": "",
+    "exposed_s": 7.1,
+    "slap_only_s": 0.0,
+    "exposed_pct": 73
+   },
+   {
+    "a": "okno",
+    "b": "rcrack",
+    "kind": "cover",
+    "pts": [
+     [
+      18300,
+      -8600
+     ],
+     [
+      19500,
+      -8900
+     ],
+     [
+      19500,
+      -9100
+     ]
+    ],
+    "len_uu": 1437,
+    "len_m": 0.76,
+    "t_sprint": 3.2,
+    "t_walk": 5.0,
+    "t_loaded": [
+     5.5,
+     10.0
+    ],
+    "note": "за батареей",
+    "exposed_s": 2.7,
+    "slap_only_s": 0.0,
+    "exposed_pct": 86
+   },
+   {
+    "a": "rcrack",
+    "b": "holm",
+    "kind": "out",
+    "pts": [
+     [
+      19500,
+      -9100
+     ],
+     [
+      19500,
+      -9300
+     ],
+     [
+      17000,
+      -10100
+     ],
+     [
+      12800,
+      -10700
+     ]
+    ],
+    "len_uu": 7068,
+    "len_m": 3.72,
+    "t_sprint": 15.5,
+    "t_walk": 24.5,
+    "t_loaded": [
+     27.3,
+     49.1
+    ],
+    "note": "",
+    "exposed_s": 0.0,
+    "slap_only_s": 0.0,
+    "exposed_pct": 0
+   },
+   {
+    "a": "holm",
+    "b": "prohod",
+    "kind": "out",
+    "pts": [
+     [
+      12800,
+      -10700
+     ],
+     [
+      8000,
+      -9900
+     ],
+     [
+      6100,
+      -9000
+     ]
+    ],
+    "len_uu": 6969,
+    "len_m": 3.67,
+    "t_sprint": 15.3,
+    "t_walk": 24.2,
+    "t_loaded": [
+     26.9,
+     48.4
+    ],
+    "note": "",
+    "exposed_s": 0.0,
+    "slap_only_s": 0.0,
+    "exposed_pct": 0
+   },
+   {
+    "a": "prohod",
+    "b": "dvor_e",
+    "kind": "out",
+    "pts": [
+     [
+      6100,
+      -9000
+     ],
+     [
+      6800,
+      -7350
+     ]
+    ],
+    "len_uu": 1792,
+    "len_m": 0.94,
+    "t_sprint": 3.9,
+    "t_walk": 6.2,
+    "t_loaded": [
+     6.9,
+     12.4
+    ],
+    "note": "",
+    "exposed_s": 0.0,
+    "slap_only_s": 0.0,
+    "exposed_pct": 0
+   },
+   {
+    "a": "flap",
+    "b": "dvor_e",
+    "kind": "out",
+    "pts": [
+     [
+      7250,
+      -7350
+     ],
+     [
+      6800,
+      -7350
+     ]
+    ],
+    "len_uu": 450,
+    "len_m": 0.24,
+    "t_sprint": 1.0,
+    "t_walk": 1.6,
+    "t_loaded": [
+     1.7,
+     3.1
+    ],
+    "note": "дверца: засов изнутри",
+    "exposed_s": 0.0,
+    "slap_only_s": 0.1,
+    "exposed_pct": 0
+   },
+   {
+    "a": "dvor_e",
+    "b": "gryadka",
+    "kind": "out",
+    "pts": [
+     [
+      6800,
+      -7350
+     ],
+     [
+      3500,
+      -5700
+     ],
+     [
+      0,
+      -5600
+     ]
+    ],
+    "len_uu": 7191,
+    "len_m": 3.78,
+    "t_sprint": 15.8,
+    "t_walk": 25.0,
+    "t_loaded": [
+     27.7,
+     49.9
+    ],
+    "note": "вдоль стены, сухая сторона шланга",
+    "exposed_s": 0.0,
+    "slap_only_s": 0.0,
+    "exposed_pct": 0
+   },
+   {
+    "a": "gryadka",
+    "b": "wcrack",
+    "kind": "out",
+    "pts": [
+     [
+      0,
+      -5600
+     ],
+     [
+      -4500,
+      -5450
+     ],
+     [
+      -4500,
+      -5100
+     ]
+    ],
+    "len_uu": 4852,
+    "len_m": 2.55,
+    "t_sprint": 10.6,
+    "t_walk": 16.8,
+    "t_loaded": [
+     18.7,
+     33.7
+    ],
+    "note": "",
+    "exposed_s": 0.0,
+    "slap_only_s": 0.0,
+    "exposed_pct": 0
+   },
+   {
+    "a": "corner",
+    "b": "gryadka",
+    "kind": "out",
+    "pts": [
+     [
+      -8300,
+      -5300
+     ],
+     [
+      -5000,
+      -7600
+     ],
+     [
+      -1500,
+      -8300
+     ],
+     [
+      0,
+      -5600
+     ]
+    ],
+    "len_uu": 10680,
+    "len_m": 5.62,
+    "t_sprint": 23.4,
+    "t_walk": 37.1,
+    "t_loaded": [
+     41.2,
+     74.2
+    ],
+    "note": "напрямик через газон, по краю круга поливалки",
+    "exposed_s": 0.0,
+    "slap_only_s": 0.0,
+    "exposed_pct": 0
+   }
+  ],
+  "degree": {
+   "nest": 3,
+   "crack": 7,
+   "nhole": 2,
+   "corner": 3,
+   "corr_w": 2,
+   "corr_m": 3,
+   "corr_e": 2,
+   "moika": 4,
+   "holgap": 4,
+   "podstol": 7,
+   "metla": 2,
+   "klad": 4,
+   "plita": 4,
+   "wcrack": 5,
+   "vent1": 1,
+   "porog": 4,
+   "svalka": 3,
+   "vent2": 2,
+   "ehole": 2,
+   "obuv": 3,
+   "babu": 3,
+   "kover": 5,
+   "divan": 3,
+   "knigi": 3,
+   "tv": 3,
+   "flap": 3,
+   "okno": 3,
+   "rcrack": 2,
+   "holm": 2,
+   "prohod": 2,
+   "dvor_e": 3,
+   "gryadka": 3
+  },
+  "junctions": [
+   {
+    "node": "podstol",
+    "id": "J1",
+    "edges": 7
+   },
+   {
+    "node": "holgap",
+    "id": "J2",
+    "edges": 4
+   },
+   {
+    "node": "porog",
+    "id": "J3",
+    "edges": 4
+   },
+   {
+    "node": "corner",
+    "id": "J4",
+    "edges": 3
+   }
+  ],
+  "goal_nodes_with_under_2_edges": []
+ },
+ "cover": {
+  "v1": {
+   "kitchen": {
+    "cover_pct": 9,
+    "cover_pct_x10": 9.0,
+    "open_pct": 88,
+    "slap_only_pct": 3,
+    "over3s_pct": 64.5,
+    "over4s_pct": 49.8,
+    "over4s_cells": 5859,
+    "mean_s": 4.63,
+    "worst_s": 12.5,
+    "worst_at": [
+     6950,
+     -3050
+    ]
+   },
+   "living": {
+    "cover_pct": 6,
+    "cover_pct_x10": 6.4,
+    "open_pct": 89,
+    "slap_only_pct": 5,
+    "over3s_pct": 75.6,
+    "over4s_pct": 66.3,
+    "over4s_cells": 8219,
+    "mean_s": 5.93,
+    "worst_s": 12.2,
+    "worst_at": [
+     19150,
+     -4450
+    ]
+   }
+  },
+  "v2": {
+   "kitchen": {
+    "cover_pct": 18,
+    "cover_pct_x10": 17.8,
+    "open_pct": 78,
+    "slap_only_pct": 4,
+    "over3s_pct": 2.7,
+    "over4s_pct": 0.0,
+    "over4s_cells": 0,
+    "mean_s": 1.42,
+    "worst_s": 4.0,
+    "worst_at": [
+     -850,
+     -2850
+    ]
+   },
+   "living": {
+    "cover_pct": 19,
+    "cover_pct_x10": 18.9,
+    "open_pct": 77,
+    "slap_only_pct": 4,
+    "over3s_pct": 2.5,
+    "over4s_pct": 0.0,
+    "over4s_cells": 0,
+    "mean_s": 1.36,
+    "worst_s": 3.9,
+    "worst_at": [
+     18150,
+     -350
+    ]
+   }
+  },
+  "v2_without_hide_table": {
+   "kitchen": {
+    "cover_pct": 12,
+    "cover_pct_x10": 11.7,
+    "open_pct": 84,
+    "slap_only_pct": 4,
+    "over3s_pct": 56.6,
+    "over4s_pct": 39.1,
+    "over4s_cells": 4391,
+    "mean_s": 3.89,
+    "worst_s": 10.1,
+    "worst_at": [
+     4050,
+     -4950
+    ]
+   },
+   "living": {
+    "cover_pct": 9,
+    "cover_pct_x10": 9.3,
+    "open_pct": 85,
+    "slap_only_pct": 6,
+    "over3s_pct": 67.6,
+    "over4s_pct": 57.1,
+    "over4s_cells": 6599,
+    "mean_s": 5.22,
+    "worst_s": 11.8,
+    "worst_at": [
+     19150,
+     -3950
+    ]
+   }
+  },
+  "v2_cells_over_4s": 0,
+  "v2_cells_over_4s_sample": []
+ },
+ "totals": {
+  "v1": {
+   "kitchen/floor": {
+    "m2": 32.5,
+    "dead_pct": 0,
+    "transit_pct": 65,
+    "contested_pct": 34,
+    "safe_pct": 1,
+    "ev": 1865
+   },
+   "kitchen/work": {
+    "m2": 8.8,
+    "dead_pct": 4,
+    "transit_pct": 26,
+    "contested_pct": 70,
+    "safe_pct": 0,
+    "ev": 1243
+   },
+   "kitchen/top": {
+    "m2": 2.7,
+    "dead_pct": 0,
+    "transit_pct": 6,
+    "contested_pct": 88,
+    "safe_pct": 6,
+    "ev": 1681
+   },
+   "living/floor": {
+    "m2": 34.3,
+    "dead_pct": 23,
+    "transit_pct": 60,
+    "contested_pct": 12,
+    "safe_pct": 6,
+    "ev": 740
+   },
+   "living/work": {
+    "m2": 8.4,
+    "dead_pct": 34,
+    "transit_pct": 13,
+    "contested_pct": 54,
+    "safe_pct": 0,
+    "ev": 777
+   },
+   "living/top": {
+    "m2": 2.2,
+    "dead_pct": 51,
+    "transit_pct": 0,
+    "contested_pct": 49,
+    "safe_pct": 0,
+    "ev": 441
+   },
+   "yard/floor": {
+    "m2": 81.8,
+    "dead_pct": 77,
+    "transit_pct": 0,
+    "contested_pct": 0,
+    "safe_pct": 23,
+    "ev": 304
+   },
+   "yard/top": {
+    "m2": 1.3,
+    "dead_pct": 16,
+    "transit_pct": 0,
+    "contested_pct": 0,
+    "safe_pct": 84,
+    "ev": 259
+   },
+   "street/floor": {
+    "m2": 27.1,
+    "dead_pct": 13,
+    "transit_pct": 4,
+    "contested_pct": 11,
+    "safe_pct": 72,
+    "ev": 534
+   },
+   "street/top": {
+    "m2": 8.7,
+    "dead_pct": 96,
+    "transit_pct": 0,
+    "contested_pct": 0,
+    "safe_pct": 4,
+    "ev": 364
+   }
+  },
+  "v2": {
+   "kitchen/floor": {
+    "m2": 31.1,
+    "dead_pct": 0,
+    "transit_pct": 69,
+    "contested_pct": 29,
+    "safe_pct": 2,
+    "ev": 1697
+   },
+   "kitchen/work": {
+    "m2": 8.8,
+    "dead_pct": 0,
+    "transit_pct": 26,
+    "contested_pct": 74,
+    "safe_pct": 0,
+    "ev": 1285
+   },
+   "kitchen/top": {
+    "m2": 3.1,
+    "dead_pct": 0,
+    "transit_pct": 9,
+    "contested_pct": 77,
+    "safe_pct": 14,
+    "ev": 1845
+   },
+   "living/floor": {
+    "m2": 32.0,
+    "dead_pct": 0,
+    "transit_pct": 65,
+    "contested_pct": 27,
+    "safe_pct": 8,
+    "ev": 2194
+   },
+   "living/work": {
+    "m2": 8.7,
+    "dead_pct": 0,
+    "transit_pct": 28,
+    "contested_pct": 72,
+    "safe_pct": 0,
+    "ev": 2372
+   },
+   "living/top": {
+    "m2": 2.3,
+    "dead_pct": 0,
+    "transit_pct": 4,
+    "contested_pct": 96,
+    "safe_pct": 0,
+    "ev": 1189
+   },
+   "yard/floor": {
+    "m2": 23.9,
+    "dead_pct": 12,
+    "transit_pct": 37,
+    "contested_pct": 3,
+    "safe_pct": 49,
+    "ev": 592
+   },
+   "yard/top": {
+    "m2": 1.3,
+    "dead_pct": 30,
+    "transit_pct": 0,
+    "contested_pct": 0,
+    "safe_pct": 70,
+    "ev": 364
+   },
+   "street/floor": {
+    "m2": 23.0,
+    "dead_pct": 15,
+    "transit_pct": 15,
+    "contested_pct": 0,
+    "safe_pct": 70,
+    "ev": 471
+   },
+   "street/top": {
+    "m2": 8.8,
+    "dead_pct": 64,
+    "transit_pct": 0,
+    "contested_pct": 0,
+    "safe_pct": 36,
+    "ev": 497
+   }
+  }
+ },
+ "dead_cells_v2_indoor": [],
+ "ways": {
+  "v1": {
+   "surfaces": 34,
+   "no_way": 14,
+   "one_way": 13,
+   "two_or_more": 7,
+   "empty": 7,
+   "list_under_2": [
+    [
+     "worktop_west",
+     0
+    ],
+    [
+     "worktop_mid",
+     0
+    ],
+    [
+     "toaster_top",
+     0
+    ],
+    [
+     "microwave_top",
+     0
+    ],
+    [
+     "chair_s",
+     0
+    ],
+    [
+     "chair_n",
+     0
+    ],
+    [
+     "sill_out",
+     1
+    ],
+    [
+     "wall_shelf",
+     1
+    ],
+    [
+     "fridge_top",
+     1
+    ],
+    [
+     "cereal_top",
+     0
+    ],
+    [
+     "bin_lid",
+     0
+    ],
+    [
+     "coffee_table",
+     0
+    ],
+    [
+     "tv_stand",
+     0
+    ],
+    [
+     "radiator",
+     0
+    ],
+    [
+     "yard_bin_top",
+     1
+    ],
+    [
+     "gutter",
+     1
+    ],
+    [
+     "car_top",
+     0
+    ],
+    [
+     "wallcab_e",
+     0
+    ],
+    [
+     "counter_cereal",
+     0
+    ],
+    [
+     "sofa_seat",
+     1
+    ],
+    [
+     "sofa_back",
+     1
+    ],
+    [
+     "armchair",
+     1
+    ],
+    [
+     "bookshelf_960",
+     1
+    ],
+    [
+     "bookshelf_1860",
+     1
+    ],
+    [
+     "bookshelf_2760",
+     1
+    ],
+    [
+     "bookshelf_3660",
+     1
+    ],
+    [
+     "bookshelf_4660",
+     1
+    ]
+   ]
+  },
+  "v2": {
+   "surfaces": 42,
+   "no_way": 4,
+   "one_way": 19,
+   "two_or_more": 19,
+   "empty": 1,
+   "list_under_2": [
+    [
+     "worktop_mid",
+     1
+    ],
+    [
+     "microwave_top",
+     0
+    ],
+    [
+     "chair_s",
+     1
+    ],
+    [
+     "chair_n",
+     1
+    ],
+    [
+     "sill_out",
+     1
+    ],
+    [
+     "cereal_top",
+     1
+    ],
+    [
+     "bin_lid",
+     0
+    ],
+    [
+     "radiator",
+     1
+    ],
+    [
+     "yard_bin_top",
+     1
+    ],
+    [
+     "gutter",
+     1
+    ],
+    [
+     "car_top",
+     0
+    ],
+    [
+     "wallcab_e",
+     1
+    ],
+    [
+     "counter_cereal",
+     0
+    ],
+    [
+     "sofa_back",
+     1
+    ],
+    [
+     "bookshelf_960",
+     1
+    ],
+    [
+     "bookshelf_1860",
+     1
+    ],
+    [
+     "bookshelf_2760",
+     1
+    ],
+    [
+     "bookshelf_3660",
+     1
+    ],
+    [
+     "highchair_seat",
+     1
+    ],
+    [
+     "breadbox_top",
+     1
+    ],
+    [
+     "side_table",
+     1
+    ],
+    [
+     "shoe_rack_top",
+     1
+    ],
+    [
+     "sill_l_out",
+     1
+    ]
+   ]
+  }
+ },
+ "hauling": {
+  "v1": {
+   "ramps": [
+    "spoon (65 deg: too steep to drag)"
+   ],
+   "door_shelves": [
+    "oven_door",
+    "dishwasher_door"
+   ]
+  },
+  "v2": {
+   "ramps": [
+    "broom",
+    "car_track",
+    "book_ramp",
+    "blanket"
+   ],
+   "stairs": [
+    "oven_door",
+    "dishwasher_door",
+    "drawer_stairs",
+    "tray_gap",
+    "block_stairs_ct",
+    "block_stairs_tv"
+   ],
+   "flat_holes": [
+    "north_hole",
+    "east_hole",
+    "cat_flap",
+    "red_crack",
+    "grocery_bag",
+    "box_hole"
+   ]
+  }
+ },
+ "gradient": {
+  "v1": [
+   {
+    "band_s": [
+     0,
+     15
+    ],
+    "points": 24,
+    "ev_sum": 876,
+    "ev_mean": 36.5,
+    "tier2plus": 4,
+    "tier3": 3
+   },
+   {
+    "band_s": [
+     15,
+     25
+    ],
+    "points": 53,
+    "ev_sum": 3743,
+    "ev_mean": 70.6,
+    "tier2plus": 28,
+    "tier3": 12
+   },
+   {
+    "band_s": [
+     25,
+     40
+    ],
+    "points": 78,
+    "ev_sum": 7245,
+    "ev_mean": 92.9,
+    "tier2plus": 56,
+    "tier3": 29
+   },
+   {
+    "band_s": [
+     40,
+     null
+    ],
+    "points": 44,
+    "ev_sum": 2792,
+    "ev_mean": 63.4,
+    "tier2plus": 22,
+    "tier3": 8
+   }
+  ],
+  "v2": [
+   {
+    "band_s": [
+     0,
+     15
+    ],
+    "points": 34,
+    "ev_sum": 356,
+    "ev_mean": 10.5,
+    "tier2plus": 0,
+    "tier3": 0
+   },
+   {
+    "band_s": [
+     15,
+     25
+    ],
+    "points": 72,
+    "ev_sum": 2928,
+    "ev_mean": 40.7,
+    "tier2plus": 25,
+    "tier3": 3
+   },
+   {
+    "band_s": [
+     25,
+     40
+    ],
+    "points": 112,
+    "ev_sum": 8979,
+    "ev_mean": 80.2,
+    "tier2plus": 71,
+    "tier3": 28
+   },
+   {
+    "band_s": [
+     40,
+     null
+    ],
+    "points": 110,
+    "ev_sum": 7245,
+    "ev_mean": 65.9,
+    "tier2plus": 63,
+    "tier3": 17
+   }
+  ]
+ },
+ "easy_loot": {
+  "v1": 12,
+  "v2": 12,
+  "v2_list": [
+   [
+    "S1",
+    133,
+    18.0,
+    [
+     -4900.0,
+     2900.0,
+     1385.0
+    ]
+   ],
+   [
+    "L194",
+    77.3,
+    15.2,
+    [
+     -6250.0,
+     3450.0,
+     215.0
+    ]
+   ],
+   [
+    "L84",
+    77.3,
+    15.9,
+    [
+     -6780.0,
+     800.0,
+     2680.0
+    ]
+   ],
+   [
+    "T10",
+    95.0,
+    20.0,
+    [
+     -2150.0,
+     4000.0,
+     250.0
+    ]
+   ],
+   [
+    "D0",
+    77.3,
+    16.3,
+    [
+     -6300.0,
+     3900.0,
+     210.0
+    ]
+   ],
+   [
+    "D1",
+    77.3,
+    17.0,
+    [
+     -6650.0,
+     4350.0,
+     210.0
+    ]
+   ],
+   [
+    "L91",
+    77.3,
+    17.4,
+    [
+     -3150.0,
+     3450.0,
+     160.0
+    ]
+   ],
+   [
+    "D12",
+    77.3,
+    18.1,
+    [
+     -4900.0,
+     3650.0,
+     840.0
+    ]
+   ],
+   [
+    "L281",
+    77.3,
+    18.3,
+    [
+     -1500.0,
+     -7300.0,
+     265.0
+    ]
+   ],
+   [
+    "L187",
+    77.3,
+    18.8,
+    [
+     -6500.0,
+     3250.0,
+     1750.0
+    ]
+   ],
+   [
+    "D13",
+    77.3,
+    18.8,
+    [
+     -5200.0,
+     4050.0,
+     840.0
+    ]
+   ],
+   [
+    "L188",
+    77.3,
+    19.5,
+    [
+     -6000.0,
+     3450.0,
+     1750.0
+    ]
+   ]
+  ]
+ },
+ "audit_routes": {
+  "v1": [
+   [
+    "r1",
+    2.7,
+    12.6,
+    11.3
+   ],
+   [
+    "r2",
+    5.1,
+    22.1,
+    17.4
+   ],
+   [
+    "r3",
+    4.4,
+    19.3,
+    18.0
+   ],
+   [
+    "r4",
+    5.7,
+    24.8,
+    18.8
+   ],
+   [
+    "r5",
+    6.7,
+    27.8,
+    26.4
+   ],
+   [
+    "r6",
+    7.2,
+    30.1,
+    28.8
+   ],
+   [
+    "r7",
+    11.9,
+    49.8,
+    46.0
+   ],
+   [
+    "r8",
+    11.7,
+    48.7,
+    45.9
+   ],
+   [
+    "r9",
+    9.6,
+    41.4,
+    7.5
+   ]
+  ],
+  "v2": [
+   [
+    "r1",
+    2.7,
+    12.6,
+    11.3
+   ],
+   [
+    "r2",
+    5.1,
+    22.1,
+    17.4
+   ],
+   [
+    "r3",
+    4.4,
+    19.3,
+    13.9
+   ],
+   [
+    "r4",
+    5.7,
+    24.8,
+    18.4
+   ],
+   [
+    "r5",
+    6.7,
+    27.8,
+    25.4
+   ],
+   [
+    "r6",
+    7.2,
+    30.1,
+    26.2
+   ],
+   [
+    "r7",
+    11.7,
+    48.6,
+    26.4
+   ],
+   [
+    "r8",
+    11.4,
+    47.5,
+    37.6
+   ],
+   [
+    "r9",
+    16.6,
+    70.7,
+    7.2
+   ]
+  ]
+ },
+ "areas_m2": {
+  "v1": {
+   "kitchen": 38.8,
+   "living": 37.8,
+   "yard": 83.2,
+   "street": 27.8
+  },
+  "v2": {
+   "kitchen": 38.8,
+   "living": 37.8,
+   "yard": 29.2,
+   "street": 24.2
+  }
+ },
+ "landmarks": {
+  "v1": {
+   "kitchen": {
+    "landmarks": [
+     "красный холодильник",
+     "вытяжка",
+     "окно кухни",
+     "лампа над столом",
+     "дверь в гостиную",
+     "верхние шкафы"
+    ],
+    "cells": 48,
+    "min_seen": 0,
+    "mean_seen": 2.3,
+    "cells_seeing_2_plus_pct": 73
+   },
+   "living": {
+    "landmarks": [
+     "книжный шкаф",
+     "телевизор",
+     "диван",
+     "торшер",
+     "дверь в кухню"
+    ],
+    "cells": 42,
+    "min_seen": 0,
+    "mean_seen": 2.7,
+    "cells_seeing_2_plus_pct": 79
+   }
+  },
+  "v2": {
+   "kitchen": {
+    "landmarks": [
+     "красный холодильник",
+     "вытяжка",
+     "окно кухни",
+     "лампа над столом",
+     "дверь в гостиную",
+     "верхние шкафы"
+    ],
+    "cells": 48,
+    "min_seen": 0,
+    "mean_seen": 1.8,
+    "cells_seeing_2_plus_pct": 56
+   },
+   "living": {
+    "landmarks": [
+     "книжный шкаф",
+     "телевизор",
+     "диван",
+     "торшер",
+     "окно гостиной",
+     "дверь в кухню",
+     "гирлянда"
+    ],
+    "cells": 42,
+    "min_seen": 0,
+    "mean_seen": 3.2,
+    "cells_seeing_2_plus_pct": 67
+   }
+  },
+  "note": "geometry only: bounding boxes as occluders, the eye 30 uu above the middle of every 1 m floor cell"
+ },
+ "summary": {
+  "v1": {
+   "floor_dead_pct": {
+    "kitchen": 0,
+    "living": 23,
+    "yard": 77,
+    "street": 13
+   },
+   "floor_transit_pct": {
+    "kitchen": 65,
+    "living": 60,
+    "yard": 0,
+    "street": 4
+   },
+   "floor_contested_pct": {
+    "kitchen": 34,
+    "living": 12,
+    "yard": 0,
+    "street": 11
+   },
+   "cover_pct": {
+    "kitchen": 9,
+    "living": 6
+   },
+   "worst_run_s": {
+    "kitchen": 12.5,
+    "living": 12.2
+   },
+   "loot_points": 221,
+   "nogo_points": 35,
+   "empty_surfaces": 7,
+   "surfaces": 35,
+   "outdoor_area_pct": 59,
+   "outdoor_loot_pct": 10,
+   "observations": [
+    "Кухня: мёртвого пола 0 %, но 65 % — транзит: по нему только бегут. Спорных клеток 34 %.",
+    "Гостиная: мёртвого пола 23 %, спорного 12 %. Туда 50 с бегом в одну сторону, а еды на полу и столах меньше, чем на кухне.",
+    "Двор и улица — 111 м² из 188 (59 % карты), еды там 10 % от всей. Человека там нет: ни риска, ни награды. Двор мёртв на 77 %.",
+    "Самая лёгкая дорогая еда: Тяжёлый приз: Золотой мармеладный мишка (260, вес 48), на полу, 0,9 м от: Миска — 9 с бегом от гнезда.",
+    "Спрятаться негде: укрытие — 9 % пола кухни и 6 % гостиной. До ближайшего укрытия бывает 12,5 с бегом, с грузом до 40 с.",
+    "В дом один вход — щель в западной стене; за ней все маршруты расходятся, общих узлов внутри почти нет. Кратчайший путь во двор — тоже через кухню.",
+    "Северная стена кухни (севернее y=4750) — слепая зона ИИ на любой высоте; блуждая, Человек не подходит к столешницам ближе 400 uu.",
+    "Пустых поверхностей 7 из 35; наклонный путь наверх один (ложка); тостер даёт еду бесконечно; яма под плиткой сломана."
+   ]
+  },
+  "v2": {
+   "floor_dead_pct": {
+    "kitchen": 0,
+    "living": 0,
+    "yard": 12,
+    "street": 15
+   },
+   "floor_transit_pct": {
+    "kitchen": 69,
+    "living": 65,
+    "yard": 37,
+    "street": 15
+   },
+   "floor_contested_pct": {
+    "kitchen": 29,
+    "living": 27,
+    "yard": 3,
+    "street": 0
+   },
+   "cover_pct": {
+    "kitchen": 18,
+    "living": 19
+   },
+   "worst_run_s": {
+    "kitchen": 4.0,
+    "living": 3.9
+   },
+   "loot_points": 373,
+   "nogo_points": 49,
+   "empty_surfaces": 1,
+   "surfaces": 43,
+   "outdoor_area_pct": 41,
+   "outdoor_loot_pct": 10,
+   "observations": [
+    "Кухня: мёртвого пола 0 %, но 69 % — транзит: по нему только бегут. Спорных клеток 29 %.",
+    "Гостиная: мёртвого пола 0 %, спорного 27 %. Туда 49 с бегом в одну сторону, а еды на полу и столах меньше, чем на кухне.",
+    "Двор и улица — 53 м² из 130 (41 % карты), еды там 10 % от всей. Человека там нет: ни риска, ни награды. Двор мёртв на 12 %.",
+    "Самая лёгкая дорогая еда: Заначка в верхнем ящике: 3 сладости (tier 2, 3, 2) и оружие, при первом открытии, тумба с тремя ящиками — 18 с бегом от гнезда.",
+    "Спрятаться негде: укрытие — 18 % пола кухни и 19 % гостиной. До ближайшего укрытия бывает 4,0 с бегом, с грузом до 13 с.",
+    "В дом один вход — щель в западной стене; за ней все маршруты расходятся, общих узлов внутри почти нет. Кратчайший путь во двор — тоже через кухню.",
+    "Северная стена кухни (севернее y=4750) — слепая зона ИИ на любой высоте; блуждая, Человек не подходит к столешницам ближе 400 uu.",
+    "Пустых поверхностей 1 из 43; наклонный путь наверх один (ложка); тостер даёт еду бесконечно; яма под плиткой сломана."
+   ]
+  }
+ },
+ "counts": {
+  "v1": {
+   "art_instances": 402,
+   "code_boxes": 15,
+   "movers": 30,
+   "containers": 16,
+   "connectors": 49,
+   "surfaces": 35,
+   "spawns": 27,
+   "loot_spots": 178,
+   "loot_spots_by_tier": {
+    "floor": 76,
+    "int": 26,
+    "under": 11,
+    "work": 34,
+    "top": 21,
+    "vent": 10
+   },
+   "heavy_spots": 6,
+   "trophy_spots": 13,
+   "behind_door_spots": 19,
+   "interactables": 62,
+   "hazards": 33,
+   "events": 6,
+   "secrets": 19,
+   "unresolved": 11,
+   "suspicious": 24,
+   "stale_needles": 0
+  },
+  "v2": {
+   "art_instances": 529,
+   "code_boxes": 12,
+   "movers": 32,
+   "containers": 17,
+   "connectors": 88,
+   "surfaces": 43,
+   "spawns": 29,
+   "loot_spots": 327,
+   "loot_spots_by_tier": {
+    "0": 87,
+    "1": 113,
+    "2": 104,
+    "3": 23
+   },
+   "heavy_spots": 6,
+   "trophy_spots": 13,
+   "behind_door_spots": 19,
+   "main_spots": 3,
+   "interactables": 64,
+   "hazards": 41,
+   "events": 6,
+   "secrets": 23,
+   "districts": 14,
+   "graph_nodes": 32,
+   "graph_edges": 51,
+   "hide_boxes": 53,
+   "new_meshes": 52,
+   "new_instances": 107,
+   "new_triangles": 25566,
+   "copies": 45,
+   "removed": 28,
+   "moved": 34,
+   "loot_clamped": 34
+  }
+ }
+}

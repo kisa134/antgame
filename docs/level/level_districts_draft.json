@@ -1,0 +1,381 @@
+{
+ "note": "ЧЕРНОВИК: районы нарезаны по тому, что физически стоит; границы и названия обсуждаются",
+ "districts": [
+  {
+   "n": 1,
+   "name": "Нора и запад",
+   "area": "kitchen",
+   "rects": [
+    [
+     -7000,
+     -3200,
+     -3000,
+     2500
+    ]
+   ],
+   "what": "щель в гнездо, полка с мёдом над ней, выключатель, коробка хлопьев-тоннель, мука, скалка",
+   "m2": 6.3,
+   "loot_points": 14,
+   "loot_value": 954,
+   "connectors": 2,
+   "interactables": 2,
+   "hazards": 4,
+   "floor_classes_pct": {
+    "dead": 0,
+    "transit": 82,
+    "contested": 18,
+    "safe": 0
+   }
+  },
+  {
+   "n": 2,
+   "name": "Западная столешница",
+   "area": "kitchen",
+   "rects": [
+    [
+     -7000,
+     2500,
+     -4200,
+     5000
+    ]
+   ],
+   "what": "тостер-катапульта, доска с ножом, три ящика, нижний шкаф, верхние шкафы, выход вентиляции 1",
+   "m2": 1.9,
+   "loot_points": 15,
+   "loot_value": 1945,
+   "connectors": 2,
+   "interactables": 12,
+   "hazards": 1,
+   "floor_classes_pct": {
+    "dead": 0,
+    "transit": 0,
+    "contested": 66,
+    "safe": 34
+   }
+  },
+  {
+   "n": 3,
+   "name": "Мойка",
+   "area": "kitchen",
+   "rects": [
+    [
+     -4200,
+     2500,
+     -2800,
+     5000
+    ]
+   ],
+   "what": "раковина с краном, под мойкой открытая дверца, труба, мышеловка, слив-телепорт",
+   "m2": 1.0,
+   "loot_points": 5,
+   "loot_value": 442,
+   "connectors": 2,
+   "interactables": 7,
+   "hazards": 3,
+   "floor_classes_pct": {
+    "dead": 0,
+    "transit": 0,
+    "contested": 66,
+    "safe": 34
+   }
+  },
+  {
+   "n": 4,
+   "name": "Плита и техника",
+   "area": "kitchen",
+   "rects": [
+    [
+     -2800,
+     2500,
+     2600,
+     5000
+    ]
+   ],
+   "what": "плита с духовкой, вытяжка, рейлинг, полочки специй, полотенце, спичечный коробок, посудомойка, микроволновка, вентилятор, чайник",
+   "m2": 3.7,
+   "loot_points": 32,
+   "loot_value": 2705,
+   "connectors": 8,
+   "interactables": 20,
+   "hazards": 4,
+   "floor_classes_pct": {
+    "dead": 0,
+    "transit": 64,
+    "contested": 29,
+    "safe": 7
+   }
+  },
+  {
+   "n": 5,
+   "name": "Холодильник",
+   "area": "kitchen",
+   "rects": [
+    [
+     2600,
+     2500,
+     5200,
+     5000
+    ]
+   ],
+   "what": "холодильник с морозилкой, щель под ним, лужа и провод сзади, мышиная нора, выход вентиляции 2",
+   "m2": 1.8,
+   "loot_points": 17,
+   "loot_value": 2075,
+   "connectors": 3,
+   "interactables": 5,
+   "hazards": 5,
+   "floor_classes_pct": {
+    "dead": 0,
+    "transit": 0,
+    "contested": 100,
+    "safe": 0
+   }
+  },
+  {
+   "n": 6,
+   "name": "Стол",
+   "area": "kitchen",
+   "rects": [
+    [
+     -3000,
+     -3200,
+     4000,
+     2500
+    ]
+   ],
+   "what": "обеденный стол с тортом, два стула, ковёр, ложка-трап, лампа, Бадрик спит под столом",
+   "m2": 11.1,
+   "loot_points": 28,
+   "loot_value": 1245,
+   "connectors": 7,
+   "interactables": 7,
+   "hazards": 2,
+   "floor_classes_pct": {
+    "dead": 0,
+    "transit": 75,
+    "contested": 25,
+    "safe": 0
+   }
+  },
+  {
+   "n": 7,
+   "name": "Мусорный угол и дверь",
+   "area": "kitchen",
+   "rects": [
+    [
+     4000,
+     -5000,
+     7000,
+     2500
+    ],
+    [
+     5200,
+     2500,
+     7000,
+     5000
+    ]
+   ],
+   "what": "педальное ведро, гнездо огненных, плитка с ямой, ведро со шваброй, паутина, вентиляция 2, дверь в гостиную, ботинок",
+   "m2": 7.5,
+   "loot_points": 25,
+   "loot_value": 1607,
+   "connectors": 4,
+   "interactables": 2,
+   "hazards": 6,
+   "floor_classes_pct": {
+    "dead": 2,
+    "transit": 42,
+    "contested": 56,
+    "safe": 0
+   }
+  },
+  {
+   "n": 8,
+   "name": "Миски и окно",
+   "area": "kitchen",
+   "rects": [
+    [
+     -7000,
+     -5000,
+     4000,
+     -3200
+    ]
+   ],
+   "what": "миски Бадрика, решётка вентиляции 1 и розетка, щель во двор, окно с подоконником и шторами, газета, стул",
+   "m2": 5.5,
+   "loot_points": 16,
+   "loot_value": 605,
+   "connectors": 7,
+   "interactables": 0,
+   "hazards": 2,
+   "floor_classes_pct": {
+    "dead": 0,
+    "transit": 71,
+    "contested": 29,
+    "safe": 0
+   }
+  },
+  {
+   "n": 9,
+   "name": "Диван",
+   "area": "living",
+   "rects": [
+    [
+     7200,
+     -1300,
+     20200,
+     1500
+    ]
+   ],
+   "what": "диван с малышом и кошкой, тайник под ним, батарея, торшер, растение, зарядка",
+   "m2": 10.1,
+   "loot_points": 11,
+   "loot_value": 740,
+   "connectors": 2,
+   "interactables": 0,
+   "hazards": 2,
+   "floor_classes_pct": {
+    "dead": 19,
+    "transit": 51,
+    "contested": 10,
+    "safe": 20
+   }
+  },
+  {
+   "n": 10,
+   "name": "Ковёр и телевизор",
+   "area": "living",
+   "rects": [
+    [
+     10300,
+     -9000,
+     18900,
+     -1300
+    ]
+   ],
+   "what": "ковёр, журнальный стол со снеками, тумба ТВ с приставкой, лежанка собаки",
+   "m2": 18.3,
+   "loot_points": 24,
+   "loot_value": 1160,
+   "connectors": 1,
+   "interactables": 4,
+   "hazards": 2,
+   "floor_classes_pct": {
+    "dead": 40,
+    "transit": 47,
+    "contested": 13,
+    "safe": 0
+   }
+  },
+  {
+   "n": 11,
+   "name": "Кресло бабушки",
+   "area": "living",
+   "rects": [
+    [
+     7200,
+     -9000,
+     10300,
+     -1300
+    ]
+   ],
+   "what": "кресло с бабушкой, клубок с ниткой, корзина, носок, когтеточка",
+   "m2": 6.6,
+   "loot_points": 4,
+   "loot_value": 241,
+   "connectors": 1,
+   "interactables": 1,
+   "hazards": 0,
+   "floor_classes_pct": {
+    "dead": 0,
+    "transit": 87,
+    "contested": 13,
+    "safe": 0
+   }
+  },
+  {
+   "n": 12,
+   "name": "Книжный шкаф",
+   "area": "living",
+   "rects": [
+    [
+     18900,
+     -9000,
+     20200,
+     -1300
+    ]
+   ],
+   "what": "шкаф до потолка: пять полок с книгами, ваза наверху",
+   "m2": 2.8,
+   "loot_points": 5,
+   "loot_value": 546,
+   "connectors": 1,
+   "interactables": 0,
+   "hazards": 0,
+   "floor_classes_pct": {
+    "dead": 0,
+    "transit": 100,
+    "contested": 0,
+    "safe": 0
+   }
+  },
+  {
+   "n": 13,
+   "name": "Двор",
+   "area": "yard",
+   "rects": [
+    [
+     -12000,
+     -16000,
+     7000,
+     -5200
+    ],
+    [
+     7000,
+     -16000,
+     21000,
+     -9200
+    ]
+   ],
+   "what": "газон, дерево, уличный бак, дорожка из камней, собачьи игрушки и кучка, внешний подоконник",
+   "m2": 83.2,
+   "loot_points": 11,
+   "loot_value": 744,
+   "connectors": 4,
+   "interactables": 1,
+   "hazards": 0,
+   "floor_classes_pct": {
+    "dead": 77,
+    "transit": 0,
+    "contested": 0,
+    "safe": 23
+   }
+  },
+  {
+   "n": 14,
+   "name": "Улица",
+   "area": "street",
+   "rects": [
+    [
+     -16500,
+     -5200,
+     -7200,
+     5600
+    ]
+   ],
+   "what": "гнездо колонии на газоне, забор с калиткой, тротуар с мороженым и жвачкой, дорога, машина, водосток до желоба",
+   "m2": 27.8,
+   "loot_points": 11,
+   "loot_value": 898,
+   "connectors": 5,
+   "interactables": 1,
+   "hazards": 2,
+   "floor_classes_pct": {
+    "dead": 13,
+    "transit": 4,
+    "contested": 11,
+    "safe": 72
+   }
+  }
+ ]
+}

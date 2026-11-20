@@ -1,0 +1,460 @@
+{
+ "what": "docs/level/level_data.json against the C++ (Tools/level/verify_level_v2_code.py)",
+ "checks": 54,
+ "passed": 54,
+ "failed": [],
+ "not_literal": [
+  {
+   "what": "pet spot dog: спит на ковре под столом [600.0, -600.0, 0.0]",
+   "ok": false,
+   "where": "CritterBrain.cpp",
+   "detail": "taken from where the furniture stands (ArtAt + offset), not written as this literal",
+   "soft": true
+  },
+  {
+   "what": "pet spot dog: миска [-3000.0, -3800.0, 0.0]",
+   "ok": false,
+   "where": "CritterBrain.cpp",
+   "detail": "taken from where the furniture stands (ArtAt + offset), not written as this literal",
+   "soft": true
+  },
+  {
+   "what": "pet spot cat: спит на восточной подушке дивана [15500.0, 400.0, 950.0]",
+   "ok": false,
+   "where": "CritterBrain.cpp",
+   "detail": "taken from where the furniture stands (ArtAt + offset), not written as this literal",
+   "soft": true
+  },
+  {
+   "what": "pet spot cat: ковёр кухни [2000.0, -3000.0, 0.0]",
+   "ok": false,
+   "where": "CritterBrain.cpp",
+   "detail": "taken from where the furniture stands (ArtAt + offset), not written as this literal",
+   "soft": true
+  },
+  {
+   "what": "pet spot cat: полка книжного шкафа [19700.0, -3000.0, 960.0]",
+   "ok": false,
+   "where": "CritterBrain.cpp",
+   "detail": "taken from where the furniture stands (ArtAt + offset), not written as this literal",
+   "soft": true
+  }
+ ],
+ "all": [
+  {
+   "what": "loot spots: 327 in the data, 327 in LevelV2Data.inl, every one equal",
+   "ok": true,
+   "where": "LevelV2Data.inl",
+   "detail": ""
+  },
+  {
+   "what": "cover boxes: 48 in the data",
+   "ok": true,
+   "where": "LevelV2Data.inl",
+   "detail": ""
+  },
+  {
+   "what": "patrol stops: 13",
+   "ok": true,
+   "where": "LevelV2Data.inl",
+   "detail": ""
+  },
+  {
+   "what": "heavy prize spots: 6",
+   "ok": true,
+   "where": "LevelV2Data.inl",
+   "detail": ""
+  },
+  {
+   "what": "main object: value 600, weight 70, 3 places",
+   "ok": true,
+   "where": "LevelV2Data.inl",
+   "detail": ""
+  },
+  {
+   "what": "art placements: 529 objects of the data are placed meshes, 529 rows in KitchenArtData.inl",
+   "ok": true,
+   "where": "KitchenArtData.inl",
+   "detail": ""
+  },
+  {
+   "what": "art placements: 529 instances in level_v2_manifest.json",
+   "ok": true,
+   "where": "KitchenArtData.inl",
+   "detail": ""
+  },
+  {
+   "what": "movers: 32",
+   "ok": true,
+   "where": "KitchenArtData.inl",
+   "detail": ""
+  },
+  {
+   "what": "fire ants: nest [12800, -10700, 0]",
+   "ok": true,
+   "where": "KitchenBuilder.cpp",
+   "detail": "FVector(12800.f, -10700.f, 0.f)"
+  },
+  {
+   "what": "fly feeder: dog poop",
+   "ok": true,
+   "where": "KitchenBuilder.cpp",
+   "detail": "FVector(1300.f, -8300.f, 0.f)"
+  },
+  {
+   "what": "fly feeder: yard bin",
+   "ok": true,
+   "where": "KitchenBuilder.cpp",
+   "detail": "FVector(18600.f, -11000.f, 0.f)"
+  },
+  {
+   "what": "opening pit [4700, 1700, -300, 5300, 2300, 1]",
+   "ok": true,
+   "where": "KitchenHouse.cpp",
+   "detail": "FVector(4700.f, 1700.f, -300.f), FVector(5300.f, 2300.f, 1.f)"
+  },
+  {
+   "what": "opening north_hole [-7250, 4770, 0, -6950, 4980, 150]",
+   "ok": true,
+   "where": "KitchenHouse.cpp",
+   "detail": "FVector(-7250.f, 4770.f, 0.f), FVector(-6950.f, 4980.f, 150.f)"
+  },
+  {
+   "what": "opening east_hole [6950, 880, 0, 7250, 1080, 160]",
+   "ok": true,
+   "where": "KitchenHouse.cpp",
+   "detail": "FVector(6950.f, 880.f, 0.f), FVector(7250.f, 1080.f, 160.f)"
+  },
+  {
+   "what": "opening cat_flap [6950, -7600, 30, 7250, -7100, 590]",
+   "ok": true,
+   "where": "KitchenBuilder.cpp",
+   "detail": "FVector(6950.f, -7600.f, 30.f), FVector(7250.f, -7100.f, 590.f)"
+  },
+  {
+   "what": "opening red_crack [19400, -9250, 0, 19600, -8950, 120]",
+   "ok": true,
+   "where": "KitchenBuilder.cpp",
+   "detail": "FVector(19400.f, -9250.f, 0.f), FVector(19600.f, -8950.f, 120.f)"
+  },
+  {
+   "what": "opening living_window [16785, -9200, 2200, 19785, -9000, 4200]",
+   "ok": true,
+   "where": "KitchenBuilder.cpp",
+   "detail": "FVector(16785.f, -9200.f, 2200.f), FVector(19785.f, -9000.f, 4200.f)"
+  },
+  {
+   "what": "pit floor at -300",
+   "ok": true,
+   "where": "KitchenHouse.cpp",
+   "detail": "FVector(5300.f, 2300.f, -300.f), DarkDirt);"
+  },
+  {
+   "what": "edge blocker [-15420, 5600, -9460, 5720]",
+   "ok": true,
+   "where": "KitchenHouse.cpp",
+   "detail": "BuildEdges: the wall on this edge (the code makes it at least as long)"
+  },
+  {
+   "what": "edge blocker [-15420, -5320, -9400, -5200]",
+   "ok": true,
+   "where": "KitchenHouse.cpp",
+   "detail": "BuildEdges: the wall on this edge (the code makes it at least as long)"
+  },
+  {
+   "what": "edge blocker [-15420, -5320, -15300, 5720]",
+   "ok": true,
+   "where": "KitchenHouse.cpp",
+   "detail": "BuildEdges: the wall on this edge (the code makes it at least as long)"
+  },
+  {
+   "what": "edge blocker [-9460, 5670, -7140, 5790]",
+   "ok": true,
+   "where": "KitchenHouse.cpp",
+   "detail": "BuildEdges: the wall on this edge (the code makes it at least as long)"
+  },
+  {
+   "what": "edge blocker [-9590, -8990, -9470, -5200]",
+   "ok": true,
+   "where": "KitchenHouse.cpp",
+   "detail": "BuildEdges: the wall on this edge (the code makes it at least as long)"
+  },
+  {
+   "what": "edge blocker [-9590, -8990, 5140, -8870]",
+   "ok": true,
+   "where": "KitchenHouse.cpp",
+   "detail": "BuildEdges: the wall on this edge (the code makes it at least as long)"
+  },
+  {
+   "what": "edge blocker [5010, -12390, 5130, -8860]",
+   "ok": true,
+   "where": "KitchenHouse.cpp",
+   "detail": "BuildEdges: the wall on this edge (the code makes it at least as long)"
+  },
+  {
+   "what": "edge blocker [5010, -12390, 20590, -12270]",
+   "ok": true,
+   "where": "KitchenHouse.cpp",
+   "detail": "BuildEdges: the wall on this edge (the code makes it at least as long)"
+  },
+  {
+   "what": "edge blocker [20470, -12390, 20590, -8990]",
+   "ok": true,
+   "where": "KitchenHouse.cpp",
+   "detail": "BuildEdges: the wall on this edge (the code makes it at least as long)"
+  },
+  {
+   "what": "second delivery point [-8150, -5750, 0] r 500",
+   "ok": true,
+   "where": "LevelV2.h",
+   "detail": "SouthEntrance() { return FVector(-8150.f, -5750.f, 0.f); }"
+  },
+  {
+   "what": "second delivery radius",
+   "ok": true,
+   "where": "LevelV2.h",
+   "detail": "SouthEntranceRadius() { return 500.f; }"
+  },
+  {
+   "what": "sprinkler [-1500, -7300, 1400]",
+   "ok": true,
+   "where": "LevelV2.h",
+   "detail": "Sprinkler() { return FVector(-1500.f, -7300.f, 0.f); }"
+  },
+  {
+   "what": "sprinkler radius",
+   "ok": true,
+   "where": "LevelV2.h",
+   "detail": "SprinklerRadius() { return 1400.f; }"
+  },
+  {
+   "what": "radiator zone",
+   "ok": true,
+   "where": "KitchenBuilder.cpp",
+   "detail": "FBox(FVector(17345.f, -9000.f, 250.f), FVector(19245.f, -8650.f, 1500.f))"
+  },
+  {
+   "what": "container TVStand",
+   "ok": true,
+   "where": "AntRun.cpp",
+   "detail": "FVector(11140.f, -8950.f, 100.f), FVector(13745.f, -7750.f, 1000.f)"
+  },
+  {
+   "what": "container BreadBox",
+   "ok": true,
+   "where": "AntRun.cpp",
+   "detail": "FVector(-6840.f, 3040.f, 1740.f), FVector(-5700.f, 3660.f, 2280.f)"
+  },
+  {
+   "what": "trophy 0 «Кусок торта»",
+   "ok": true,
+   "where": "AntKitchenGameMode.cpp",
+   "detail": "FVector(200.f, -600.f, 1480.f)"
+  },
+  {
+   "what": "trophy 1 «Золотой мармеладный мишка»",
+   "ok": true,
+   "where": "AntKitchenGameMode.cpp",
+   "detail": "FVector(3600.f, 3700.f, 3780.f)"
+  },
+  {
+   "what": "trophy 2 «Шоколадный батончик»",
+   "ok": true,
+   "where": "AntKitchenGameMode.cpp",
+   "detail": "FVector(1850.f, 4450.f, 2420.f)"
+  },
+  {
+   "what": "trophy 3 «Котлета из микроволновки»",
+   "ok": true,
+   "where": "AntKitchenGameMode.cpp",
+   "detail": "FVector(1760.f, 4425.f, 1950.f)"
+  },
+  {
+   "what": "trophy 4 «Полбутерброда»",
+   "ok": true,
+   "where": "AntKitchenGameMode.cpp",
+   "detail": "FVector(5900.f, -1500.f, 1060.f)"
+  },
+  {
+   "what": "trophy 5 «Печенье с противня»",
+   "ok": true,
+   "where": "AntKitchenGameMode.cpp",
+   "detail": "FVector(-750.f, 3900.f, 980.f)"
+  },
+  {
+   "what": "trophy 6 «Кубик сахара с чаем»",
+   "ok": true,
+   "where": "AntKitchenGameMode.cpp",
+   "detail": "FVector(19700.f, -4500.f, 4740.f)"
+  },
+  {
+   "what": "trophy 7 «Кусок сыра с полки»",
+   "ok": true,
+   "where": "AntKitchenGameMode.cpp",
+   "detail": "FVector(3400.f, 4300.f, 1010.f)"
+  },
+  {
+   "what": "trophy 8 «Брикет пломбира»",
+   "ok": true,
+   "where": "AntKitchenGameMode.cpp",
+   "detail": "FVector(3900.f, 3800.f, 2640.f)"
+  },
+  {
+   "what": "trophy 9 «Банка сгущёнки»",
+   "ok": true,
+   "where": "AntKitchenGameMode.cpp",
+   "detail": "FVector(-5125.f, 4640.f, 3100.f)"
+  },
+  {
+   "what": "trophy 10 «Пачка печенья»",
+   "ok": true,
+   "where": "AntKitchenGameMode.cpp",
+   "detail": "FVector(-2150.f, 4000.f, 250.f)"
+  },
+  {
+   "what": "trophy 11 «Забытая шоколадка»",
+   "ok": true,
+   "where": "AntKitchenGameMode.cpp",
+   "detail": "FVector(13200.f, -8400.f, 180.f)"
+  },
+  {
+   "what": "trophy 12 «Плитка шоколада из шкафа»",
+   "ok": true,
+   "where": "AntKitchenGameMode.cpp",
+   "detail": "FVector(1900.f, 4000.f, 250.f)"
+  },
+  {
+   "what": "food behind doors: 19 spots with their tiers",
+   "ok": true,
+   "where": "AntRun.cpp",
+   "detail": ""
+  },
+  {
+   "what": "pushable mug",
+   "ok": true,
+   "where": "AntRun.cpp",
+   "detail": "FVector(-4700.f, 3170.f, 1820.f)"
+  },
+  {
+   "what": "cargo in the pit at z -290.0 (the code spawns it 25 above the floor)",
+   "ok": true,
+   "where": "AntKitchenGameMode.cpp",
+   "detail": ""
+  },
+  {
+   "what": "pet spot dog: спит на ковре под столом [600.0, -600.0, 0.0]",
+   "ok": false,
+   "where": "CritterBrain.cpp",
+   "detail": "taken from where the furniture stands (ArtAt + offset), not written as this literal",
+   "soft": true
+  },
+  {
+   "what": "pet spot dog: миска [-3000.0, -3800.0, 0.0]",
+   "ok": false,
+   "where": "CritterBrain.cpp",
+   "detail": "taken from where the furniture stands (ArtAt + offset), not written as this literal",
+   "soft": true
+  },
+  {
+   "what": "pet spot dog: нюхает свалку [5000.0, -1500.0, 0.0]",
+   "ok": true,
+   "where": "CritterBrain.cpp",
+   "detail": "",
+   "soft": true
+  },
+  {
+   "what": "pet spot dog: нюхает обувь у обувницы [8500.0, -500.0, 0.0]",
+   "ok": true,
+   "where": "CritterBrain.cpp",
+   "detail": "",
+   "soft": true
+  },
+  {
+   "what": "pet spot dog: спит на своей лежанке у батареи [18150.0, -7900.0, 0.0]",
+   "ok": true,
+   "where": "CritterBrain.cpp",
+   "detail": "",
+   "soft": true
+  },
+  {
+   "what": "pet spot dog: сидит у дивана, клянчит [16700.0, -1500.0, 0.0]",
+   "ok": true,
+   "where": "CritterBrain.cpp",
+   "detail": "",
+   "soft": true
+  },
+  {
+   "what": "pet spot dog: лижет муку [-5500.0, 1800.0, 0.0]",
+   "ok": true,
+   "where": "CritterBrain.cpp",
+   "detail": "",
+   "soft": true
+  },
+  {
+   "what": "pet spot cat: спит на восточной подушке дивана [15500.0, 400.0, 950.0]",
+   "ok": false,
+   "where": "CritterBrain.cpp",
+   "detail": "taken from where the furniture stands (ArtAt + offset), not written as this literal",
+   "soft": true
+  },
+  {
+   "what": "pet spot cat: на когтеточке [8000.0, -8300.0, 1311.0]",
+   "ok": true,
+   "where": "CritterBrain.cpp",
+   "detail": "",
+   "soft": true
+  },
+  {
+   "what": "pet spot cat: подоконник кухни [0.0, -4900.0, 2200.0]",
+   "ok": true,
+   "where": "CritterBrain.cpp",
+   "detail": "",
+   "soft": true
+  },
+  {
+   "what": "pet spot cat: на полу гостиной у кубиков [12600.0, -1700.0, 0.0]",
+   "ok": true,
+   "where": "CritterBrain.cpp",
+   "detail": "",
+   "soft": true
+  },
+  {
+   "what": "pet spot cat: ковёр кухни [2000.0, -3000.0, 0.0]",
+   "ok": false,
+   "where": "CritterBrain.cpp",
+   "detail": "taken from where the furniture stands (ArtAt + offset), not written as this literal",
+   "soft": true
+  },
+  {
+   "what": "pet spot cat: полка книжного шкафа [19700.0, -3000.0, 960.0]",
+   "ok": false,
+   "where": "CritterBrain.cpp",
+   "detail": "taken from where the furniture stands (ArtAt + offset), not written as this literal",
+   "soft": true
+  },
+  {
+   "what": "Human wander boxes",
+   "ok": true,
+   "where": "LevelV2Data.inl",
+   "detail": ""
+  },
+  {
+   "what": "toaster rule (fewer than two on the worktop, 40 s)",
+   "ok": true,
+   "where": "KitchenInteractables.cpp",
+   "detail": ""
+  },
+  {
+   "what": "cat flap: heavy, latched, shuts by itself",
+   "ok": true,
+   "where": "KitchenMover.cpp",
+   "detail": ""
+  },
+  {
+   "what": "ants-only pieces",
+   "ok": true,
+   "where": "KitchenBuilder.cpp",
+   "detail": ""
+  }
+ ]
+}

@@ -3,6 +3,10 @@
 #include "AntCharacter.h"
 #include "KitchenInteractables.h"
 #include "KitchenArt.h"
+#include "LevelV2.h"
+#include "GameFramework/Character.h"
+#include "Components/CapsuleComponent.h"
+#include "Engine/StaticMesh.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/PointLightComponent.h"
 #include "Components/DirectionalLightComponent.h"
@@ -66,11 +70,27 @@ void AKitchenBuilder::BeginPlay()
 // Layout data shared with the GameMode (server) so loot sits on real surfaces.
 // ---------------------------------------------------------------------------------------------
 
-FVector AKitchenBuilder::NestLocation(uint8 Team) { return Team == 0 ? FVector(-7900.f, -2500.f, 0.f) : FVector(6300.f, 1250.f, 0.f); }
+// Level v2: the fire ants' nest is the red anthill in yard B (SM_Y_AntHill), not a mound in the kitchen. The box-built kitchen keeps the old place.
+FVector AKitchenBuilder::NestLocation(uint8 Team)
+{
+	if (Team == 0)
+	{
+		return FVector(-7900.f, -2500.f, 0.f);
+	}
+	return KitchenArt::Enabled() ? FVector(12800.f, -10700.f, 0.f) : FVector(6300.f, 1250.f, 0.f);
+}
 
 void AKitchenBuilder::HeavySpots(TArray<FVector>& Out)
 {
 	Out.Reset();
+	if (KitchenArt::Enabled())
+	{
+		for (const FVector3f& P : LevelV2::HeavySpots())   // level v2: none closer than 25 s from the nest
+		{
+			Out.Add(FVector(P));
+		}
+		return;
+	}
 	Out.Add(FVector(0.f, -2600.f, 0.f));        // middle of the floor, between the nests
 	Out.Add(FVector(1800.f, -3900.f, 0.f));     // under the window
 	Out.Add(FVector(-1600.f, 1900.f, 0.f));     // by the stove
@@ -78,10 +98,26 @@ void AKitchenBuilder::HeavySpots(TArray<FVector>& Out)
 	Out.Add(FVector(1000.f, -900.f, 1430.f));   // on the table: drop it down!
 	Out.Add(FVector(-4000.f, -1600.f, 0.f));    // near our nest
 }
+FVector AKitchenBuilder::HomeFor(uint8 Team, const FVector& From)
+{
+	if (Team == 0 && KitchenArt::Enabled() && Region(From) == 2)
+	{
+		return LevelV2::SouthEntrance();
+	}
+	return NestLocation(Team);
+}
+
+// Level v2: the poop lies in yard A by a stepping stone, the bin stands at the east end of yard B.
+FVector AKitchenBuilder::YardPoop() { return KitchenArt::Enabled() ? FVector(1300.f, -8300.f, 0.f) : FVector(-3000.f, -9500.f, 0.f); }
+FVector AKitchenBuilder::YardBin() { return KitchenArt::Enabled() ? FVector(18600.f, -11000.f, 0.f) : FVector(4200.f, -13000.f, 0.f); }
 FVector AKitchenBuilder::HumanSpawn() { return FVector(3800.f, -3200.f, 1720.f); }
 FVector AKitchenBuilder::HumanFleePoint() { return FVector(5600.f, -4200.f, 1720.f); }
 FBox AKitchenBuilder::HotBurner() { return FBox(FVector(-610.f, 3240.f, 1735.f), FVector(-90.f, 3760.f, 1900.f)); }
-FBox AKitchenBuilder::PlayArea() { return FBox(FVector(-6000.f, -4300.f, 0.f), FVector(6200.f, 2550.f, 0.f)); }
+FBox AKitchenBuilder::PlayArea()
+{
+	const FBox2D B = LevelV2::WanderBox(0);   // level v2: the east end belongs to the rubbish corner now (x up to 5000, it was 6200)
+	return FBox(FVector(B.Min.X, B.Min.Y, 0.f), FVector(KitchenArt::Enabled() ? B.Max.X : 6200.f, B.Max.Y, 0.f));
+}
 
 FVector AKitchenBuilder::RandomFloorPoint(FRandomStream* Rng)
 {
@@ -92,14 +128,19 @@ FVector AKitchenBuilder::RandomFloorPoint(FRandomStream* Rng)
 		const FBox A = PlayArea();
 		return FVector(R(A.Min.X, A.Max.X), R(A.Min.Y, A.Max.Y), 0.f);
 	}
-	return FVector(R(8000.f, 19000.f), R(-8300.f, -500.f), 0.f);
+	if (!KitchenArt::Enabled())
+	{
+		return FVector(R(8000.f, 19000.f), R(-8300.f, -500.f), 0.f);
+	}
+	const FBox2D L = LevelV2::WanderBox(1);   // level v2: clear of the TV stand and the things along the south wall
+	return FVector(R(L.Min.X, L.Max.X), R(L.Min.Y, L.Max.Y), 0.f);
 }
 
 int32 AKitchenBuilder::Region(const FVector& P)
 {
-	if (P.Y < -5150.f && (P.X < 7000.f || P.Y < -9150.f))
+	if (P.Y < -5150.f && (P.X < 7100.f || P.Y < -9150.f))
 	{
-		return 2;   // the back yard
+		return 2;   // the yard: A under the kitchen window, B behind the living room (level v2)
 	}
 	if (P.X < -7050.f)
 	{
@@ -111,7 +152,16 @@ int32 AKitchenBuilder::Region(const FVector& P)
 FVector AKitchenBuilder::RandomYardPoint(FRandomStream* Rng)
 {
 	auto R = [Rng](float A, float B) { return Rng ? Rng->FRandRange(A, B) : FMath::FRandRange(A, B); };
-	return FVector(R(-10500.f, 5500.f), R(-14500.f, -6000.f), 0.f);
+	if (!KitchenArt::Enabled())
+	{
+		return FVector(R(-10500.f, 5500.f), R(-14500.f, -6000.f), 0.f);
+	}
+	// Level v2: the yard is two strips by the house. A (under the kitchen window) is a little bigger than B (behind the living room).
+	if (R(0.f, 1.f) < 0.56f)
+	{
+		return FVector(R(-9200.f, 6800.f), R(-8600.f, -5500.f), 0.f);
+	}
+	return FVector(R(5400.f, 20200.f), R(-12000.f, -9400.f), 0.f);
 }
 
 namespace
@@ -168,14 +218,58 @@ namespace
 		static const FVector Out[] = { FVector(-8300.f, -4700.f, 0.f), FVector(-8300.f, -5700.f, 0.f) };
 		return Along(From, Out, UE_ARRAY_COUNT(Out), !bToYard);
 	}
+	// ---- level v2
+	/** Which strip of the yard: 0 = A (under the kitchen window), 1 = B (behind the living room, the red anthill). */
+	int32 YardPart(const FVector& P) { return (P.Y < -9000.f && P.X > 5200.f) ? 1 : 0; }
+	/** Yard A -> yard B through the gap at the corner of the living room. */
+	FVector YardPassPath(const FVector& From, bool bToB)
+	{
+		static const FVector Out[] = { FVector(6100.f, -8400.f, 0.f), FVector(6100.f, -9000.f, 0.f), FVector(6100.f, -9600.f, 0.f) };
+		return Along(From, Out, UE_ARRAY_COUNT(Out), !bToB);
+	}
+	/** Living room -> yard B through the red crack under the living-room window (the fire ants' way in). */
+	FVector RedCrackPath(const FVector& From, bool bToYard)
+	{
+		static const FVector Out[] = { FVector(19500.f, -8700.f, 0.f), FVector(19500.f, -9100.f, 0.f), FVector(19500.f, -9600.f, 0.f) };
+		return Along(From, Out, UE_ARRAY_COUNT(Out), !bToYard);
+	}
 }
 
 FVector AKitchenBuilder::Route(const FVector& From, const FVector& To, bool bFlying)
 {
 	const int32 RF = Region(From), RT = Region(To);
+	const bool bV2 = KitchenArt::Enabled();
 	if (RF == RT)
 	{
+		// Level v2: the two strips of the yard meet only at the corner of the living room.
+		if (bV2 && RF == 2 && YardPart(From) != YardPart(To))
+		{
+			if (bFlying)
+			{
+				const FVector Over(6100.f, -9000.f, 3200.f);
+				return FVector::Dist2D(From, Over) < 500.f ? To : Over;
+			}
+			return YardPassPath(From, YardPart(To) == 1);
+		}
 		return To;
+	}
+	if (bV2 && !bFlying && ((RF == 1 && RT == 2 && YardPart(To) == 1) || (RF == 2 && RT == 1 && YardPart(From) == 1)))
+	{
+		return RedCrackPath(From, RT == 2);   // living room <-> yard B: the red crack
+	}
+	if (bV2 && bFlying && ((RF == 1 && RT == 2 && YardPart(To) == 1) || (RF == 2 && RT == 1 && YardPart(From) == 1)))
+	{
+		// Flyers: the living-room window (an opening without glass, like the kitchen one).
+		const FVector W(18285.f, -9100.f, 3200.f);
+		if (FVector::Dist(From, W) < 350.f)
+		{
+			return FVector(18285.f, RT == 2 ? -9800.f : -8300.f, 3200.f);
+		}
+		return W;
+	}
+	if (bV2 && RF == 2 && YardPart(From) == 1 && RT != 2)
+	{
+		return Route(From, FVector(6100.f, -8300.f, bFlying ? 3200.f : 0.f), bFlying);   // out of yard B first: everything else is reached from yard A
 	}
 	if (bFlying && (RF == 2 || RT == 2 || RF == 3 || RT == 3))
 	{
@@ -237,6 +331,17 @@ void AKitchenBuilder::LootSpots(TArray<FVector>& L, TArray<int32>& T)
 	L.Reset();
 	T.Reset();
 	const bool bModelled = KitchenArt::Enabled();
+	if (bModelled)
+	{
+		// Level v2: the whole table is data (docs/level/level_v2.json -> LevelV2Data.inl): 327 spots, tiers by the gradient rule
+		// (nothing dear close to the nest). The code below is the v1 table and only serves the box-built kitchen.
+		for (const FLevelV2Spot& S : LevelV2::LootSpots())
+		{
+			L.Add(FVector(S.X, S.Y, S.Z + 35.f));
+			T.Add(S.Tier);
+		}
+		return;
+	}
 	auto Add = [&L, &T, bModelled](float X, float Y, float SurfaceZ, int32 Tier)
 	{
 		if (bModelled)
@@ -757,8 +862,27 @@ void AKitchenBuilder::Build()
 		Ball(P + FVector(0.f, FMath::Sin(T * 9.f) * 120.f, 0.f), FVector(22.f, 14.f, 3.f), Hex(40, 25, 20));
 	}
 
-	// ---- Rival fire-ant nest: red mound by the trash ----
+	// ---- Rival fire-ant nest ----
+	if (bArt)
 	{
+		// Level v2: the red anthill in yard B (SM_Y_AntHill from the placement table), their trail to the red crack under the
+		// living-room window, a few red crumbs of earth round the mound that grow with their stores.
+		const FVector R = NestLocation(1);
+		const FLinearColor Red = Hex(150, 45, 25), DarkRed = Hex(90, 25, 15);
+		AddMound(1, Ball(FVector(R.X + 560.f, R.Y + 330.f, -30.f), FVector(200.f, 180.f, 120.f), DarkRed));
+		AddMound(1, Ball(FVector(R.X - 520.f, R.Y - 380.f, -30.f), FVector(180.f, 210.f, 110.f), Red));
+		Cyl(FVector(R.X, R.Y, 0.f), NestRadius(1), 3.f, Hex(70, 25, 15), false);
+		for (int32 i = 0; i < 22; ++i)
+		{
+			const float T = i / 21.f;
+			const FVector P = FMath::Lerp(FVector(R.X + 600.f, R.Y + 200.f, 3.f), FVector(19500.f, -9300.f, 3.f), T);
+			Ball(P + FVector(0.f, FMath::Sin(T * 11.f) * 140.f, 0.f), FVector(22.f, 14.f, 3.f), Hex(140, 30, 15));
+		}
+		Lamp(FVector(R.X - 300.f, R.Y, 700.f), 3.f, FLinearColor(1.f, 0.3f, 0.15f), 1500.f, false);
+	}
+	else
+	{
+		// The box-built kitchen: a red mound by the trash.
 		const FVector R = NestLocation(1);
 		const FLinearColor Red = Hex(150, 45, 25), DarkRed = Hex(90, 25, 15);
 		AddMound(1, Ball(FVector(R.X + 420.f, R.Y, -60.f), FVector(520.f, 600.f, 420.f), Red));
@@ -928,6 +1052,7 @@ void AKitchenBuilder::Build()
 
 	bMainOn = AKitchenSwitch::AreLightsOn(GetWorld());
 	UpdateTimeOfDay(0.f);
+	bBuilt = true;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -975,6 +1100,47 @@ bool AKitchenBuilder::ScatterTufts(const TArray<FTransform>& Blades, int32 Seed)
 	return true;
 }
 
+bool AKitchenBuilder::LetThrough(ACharacter* Big)
+{
+	UCapsuleComponent* Cap = Big ? Big->GetCapsuleComponent() : nullptr;
+	if (!Cap || !Big->GetWorld())
+	{
+		return false;
+	}
+	for (TActorIterator<AKitchenBuilder> It(Big->GetWorld()); It; ++It)
+	{
+		if (!It->bBuilt)
+		{
+			return false;   // not built yet (a client joining): ask again
+		}
+		for (UPrimitiveComponent* C : It->AntsOnlyParts)
+		{
+			if (C)
+			{
+				Cap->IgnoreComponentWhenMoving(C, true);
+			}
+		}
+		return true;
+	}
+	return false;
+}
+
+UPrimitiveComponent* AKitchenBuilder::FindArt(const UWorld* World, const TCHAR* MeshName)
+{
+	for (TActorIterator<AKitchenBuilder> It(World); It; ++It)
+	{
+		TInlineComponentArray<UStaticMeshComponent*> Parts(*It);
+		for (UStaticMeshComponent* C : Parts)
+		{
+			if (C && C->GetStaticMesh() && C->GetStaticMesh()->GetName() == MeshName)
+			{
+				return C;
+			}
+		}
+	}
+	return nullptr;
+}
+
 void AKitchenBuilder::BuildArt()
 {
 	for (const FKitchenArtInst& I : KitchenArt::Instances())
@@ -987,6 +1153,18 @@ void AKitchenBuilder::BuildArt()
 		if (C && FString(I.Name).EndsWith(TEXT("_CeilingLamp")))
 		{
 			LampShades.Add(C);   // its shade (material 0) glows with the light switch like the old cylinders did
+		}
+		// Level v2, "ants only": threads and strings an ant walks along but the Human, grandma and the kid walk straight through.
+		static const TCHAR* const AntsOnly[] = { TEXT("SM_L_YarnBridge"), TEXT("SM_L_Garland"), TEXT("SM_K_ChiliString"), TEXT("SM_K_FlyPaper") };
+		for (const TCHAR* N : AntsOnly)
+		{
+			if (C && FCString::Strcmp(I.Name, N) == 0)
+			{
+				C->ComponentTags.AddUnique(TEXT("AntsOnly"));
+				C->SetCollisionResponseToChannel(ECC_PhysicsBody, ECR_Ignore);   // food does not hang on a thread
+				C->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
+				AntsOnlyParts.Add(C);
+			}
 		}
 	}
 	// The pavement slabs have open joints: a bed under them, so nobody drops through a joint into the void.
@@ -1260,9 +1438,24 @@ void AKitchenBuilder::BuildLivingRoom()
 	Box(FVector(7000.f, -9200.f, -100.f), FVector(20400.f, 1700.f, 0.f), Hex(196, 152, 104));   // parquet
 	Box(FVector(7000.f, -9200.f, 5400.f), FVector(20400.f, 1700.f, 5600.f), Ceiling);
 	Box(FVector(7200.f, 1500.f, 0.f), FVector(20400.f, 1700.f, 5400.f), WallC);       // north
-	Box(FVector(7000.f, -9200.f, 0.f), FVector(20400.f, -9000.f, 5400.f), WallC);     // south
 	Box(FVector(20200.f, -9000.f, 0.f), FVector(20400.f, 1500.f, 5400.f), WallC);     // east
-	Box(FVector(7000.f, -9000.f, 0.f), FVector(7200.f, -5000.f, 5400.f), WallC);      // west (below the kitchen)
+	if (bArt)
+	{
+		// Level v2: the south wall has a window (an opening, like the kitchen one) and the red crack under it: the fire ants' way in
+		// from yard B. The west wall has the cat flap into yard A (SM_L_CatFlap lines the hole, its leaf is an AKitchenMover).
+		SolidBox(FBox(FVector(7000.f, -9200.f, 0.f), FVector(20400.f, -9000.f, 5400.f)),
+			{ FBox(FVector(16785.f, -9200.f, 2200.f), FVector(19785.f, -9000.f, 4200.f)), FBox(FVector(19400.f, -9250.f, 0.f), FVector(19600.f, -8950.f, 120.f)) }, WallC);
+		SolidBox(FBox(FVector(7000.f, -9000.f, 0.f), FVector(7200.f, -5000.f, 5400.f)), { FBox(FVector(6950.f, -7600.f, 30.f), FVector(7250.f, -7100.f, 590.f)) }, WallC);
+		// The flap's sill is 30 above the floor and its liner overhangs the wall by 10: an ant on the floor wedged under that lip
+		// (seen in the game). A bevelled threshold on each side: 13 degrees up to the sill.
+		Part(EAntShape::Cube, FVector(7277.f, -7350.f, 14.f), FVector(150.f, 470.f, 8.f), FRotator(-13.f, 0.f, 0.f), Hex(235, 232, 222), true);
+		Part(EAntShape::Cube, FVector(6923.f, -7350.f, 14.f), FVector(150.f, 470.f, 8.f), FRotator(13.f, 0.f, 0.f), Hex(235, 232, 222), true);
+	}
+	else
+	{
+		Box(FVector(7000.f, -9200.f, 0.f), FVector(20400.f, -9000.f, 5400.f), WallC);     // south
+		Box(FVector(7000.f, -9000.f, 0.f), FVector(7200.f, -5000.f, 5400.f), WallC);      // west (below the kitchen)
+	}
 	if (!bArt)   // modelled: SM_L_Skirting
 	{
 		Box(FVector(7200.f, 1470.f, 0.f), FVector(20200.f, 1500.f, 220.f), Baseboard);
@@ -1393,9 +1586,28 @@ void AKitchenBuilder::BuildLivingRoom()
 void AKitchenBuilder::EnvironmentFor(const AAntCharacter* Ant, FAntEnv& Env)
 {
 	const FVector P = Ant->GetActorLocation();
-	if (FBox(FVector(7700.f, 1150.f, 250.f), FVector(9600.f, 1500.f, 1500.f)).IsInside(P))
+	const bool bV2 = KitchenArt::Enabled();
+	// The radiator. Level v2: it hangs under the new living-room window in the south wall.
+	if ((bV2 ? FBox(FVector(17345.f, -9000.f, 250.f), FVector(19245.f, -8650.f, 1500.f)) : FBox(FVector(7700.f, 1150.f, 250.f), FVector(9600.f, 1500.f, 1500.f))).IsInside(P))
 	{
-		Env.Temp(70.f, 12.f);   // the radiator
+		Env.Temp(70.f, 12.f);
+	}
+	if (bV2)
+	{
+		// The new spills (jam by the high chair, the fly ribbon, the coffee on the pavement; the puddles under the trap and by the sink).
+		const int32 Zone = LevelV2::ZoneAt(P);
+		if (Zone == 0) { Env.Flags |= AntStatus::Sticky; }
+		else if (Zone == 1) { Env.Flags |= AntStatus::Wet; }
+		// The yard sprinkler: every 26 s it waters a circle of the lawn for 9 s. Wet and cold: slow going, like the tap's stream.
+		if (P.Z < 400.f && P.Y < -5200.f && FVector::DistSquared2D(P, LevelV2::Sprinkler()) < FMath::Square(LevelV2::SprinklerRadius()))
+		{
+			const AGameStateBase* GS = Ant->GetWorld()->GetGameState();
+			if (LevelV2::SprinklerLevel(GS ? GS->GetServerWorldTimeSeconds() : Ant->GetWorld()->GetTimeSeconds()) > 0.2f)
+			{
+				Env.Flags |= AntStatus::Wet;
+				Env.Temp(14.f, 6.f);
+			}
+		}
 	}
 
 	// (the front burner's heat comes from the stove knob gadget: only when it is switched on)
@@ -1737,6 +1949,44 @@ void AKitchenBuilder::Tick(float DeltaSeconds)
 				AntFx::Splash(this, DripAt + FVector(0.f, 0.f, 1.f), 3.f);
 			}
 		}
+		// Level v2: the yard sprinkler. A jet sweeps round the head; where it lands the lawn is wet (EnvironmentFor).
+		if (bArt)
+		{
+			const AGameStateBase* GS = GetWorld()->GetGameState();
+			const double ServerNow = GS ? GS->GetServerWorldTimeSeconds() : GetWorld()->GetTimeSeconds();
+			const float Level = LevelV2::SprinklerLevel(ServerNow);
+			SprinkleTimer -= DeltaSeconds;
+			if (Level > 0.f && SprinkleTimer <= 0.f)
+			{
+				SprinkleTimer = 0.07f;
+				const FVector Head = LevelV2::Sprinkler() + FVector(0.f, 0.f, 190.f);
+				const float Arm = (float)FMath::Fmod(ServerNow * 2.2, 2.0 * PI);
+				AAntFxManager* Fx = AAntFxManager::Get(this);
+				for (int32 i = 0; i < 4; ++i)
+				{
+					const float A = Arm + FMath::FRandRange(-0.25f, 0.25f) + (i % 2) * PI;
+					const float R = FMath::Sqrt(FMath::FRand()) * LevelV2::SprinklerRadius() * Level;
+					const FVector Land = LevelV2::Sprinkler() + FVector(FMath::Cos(A) * R, FMath::Sin(A) * R, 2.f);
+					AntFx::Splash(this, Land, 3.f + 2.f * FMath::FRand());
+					if (Fx)
+					{
+						// a drop on its way from the head to where it lands
+						FAntFxBit D;
+						D.Pos = Head;
+						D.Vel = (Land - Head) / 0.55f + FVector(0.f, 0.f, 0.5f * 1500.f * 0.55f);
+						D.Gravity = 1500.f;
+						D.Scale0 = FVector(0.09f);
+						D.Scale1 = FVector(0.07f, 0.07f, 0.14f);
+						D.Color = FLinearColor(0.78f, 0.9f, 1.f, 0.8f);
+						D.Life = 0.55f;
+						D.FadeIn = 0.f;
+						D.FadePow = 0.1f;
+						D.FloorZ = 0.f;
+						Fx->Emit(D);
+					}
+				}
+			}
+		}
 	}
 	// Drafts in the air ducts carry whoever crawls inside (movement is owner-authoritative: push locally).
 	for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
@@ -1802,9 +2052,33 @@ void AKitchenBuilder::BuildYard()
 	const FLinearColor FenceC = Hex(160, 120, 78), Bark = Hex(95, 68, 45), Leaves = Hex(60, 120, 50);
 	const FLinearColor BinC = Hex(40, 92, 55), Stone = Hex(150, 148, 140);
 
-	// Lawn at floor level (walkable), around the kitchen and under the living room's south side.
-	Box(FVector(-12000.f, -16000.f, -200.f), FVector(7000.f, -5200.f, 0.f), Grass);
-	Box(FVector(7000.f, -16000.f, -200.f), FVector(21000.f, -9200.f, 0.f), Grass);
+	// Lawn at floor level (walkable).
+	if (bArt)
+	{
+		// Level v2: two strips by the house instead of the 83 m2 field. A: under the kitchen window. B: behind the living room
+		// (the red anthill, the tree, the bin). They meet at the corner of the living room. A little grass runs on under the fences.
+		Box(FVector(-9600.f, -9000.f, -200.f), FVector(7000.f, -5200.f, 0.f), Grass);
+		Box(FVector(5000.f, -12400.f, -200.f), FVector(20600.f, -9200.f, 0.f), Grass);
+		Box(FVector(5000.f, -9200.f, -200.f), FVector(7000.f, -9000.f, 0.f), Grass);
+		BuildEdges();
+		// The south entrance of our nest at the house corner: the second place to bring food to (KitchenLoot.cpp). A hole in
+		// trodden earth, crumbs of soil round it, a warm light like the one over the main entrance.
+		const FVector South = LevelV2::SouthEntrance();
+		Cyl(South, LevelV2::SouthEntranceRadius(), 2.f, DarkDirt, false);
+		Cyl(South, 210.f, 3.f, Black, false);
+		for (int32 i = 0; i < 9; ++i)
+		{
+			const float A = i * (2.f * PI / 9.f) + 0.4f;
+			if (i == 1 || i == 2) { continue; }   // open towards the yard
+			Ball(South + FVector(FMath::Cos(A) * 330.f, FMath::Sin(A) * 330.f, -20.f), FVector(150.f, 130.f, 70.f + 12.f * (i % 3)), i % 2 ? Dirt : DarkDirt);
+		}
+		Lamp(South + FVector(0.f, 0.f, 320.f), 1.6f, FLinearColor(1.f, 0.75f, 0.45f), 1500.f, false);
+	}
+	else
+	{
+		Box(FVector(-12000.f, -16000.f, -200.f), FVector(7000.f, -5200.f, 0.f), Grass);
+		Box(FVector(7000.f, -16000.f, -200.f), FVector(21000.f, -9200.f, 0.f), Grass);
+	}
 	// Outer window sill: step out of the window onto it, then down the wall.
 	if (!bArt)   // modelled: the second SM_K_WindowSill
 	{
@@ -1851,7 +2125,7 @@ void AKitchenBuilder::BuildYard()
 	}
 
 	// A tree (climbable trunk) with a canopy.
-	const FVector Tree(-8000.f, -12500.f, 0.f);
+	const FVector Tree = bArt ? FVector(6400.f, -10700.f, 0.f) : FVector(-8000.f, -12500.f, 0.f);   // level v2: in yard B by the passage
 	if (!bArt)   // modelled: SM_Y_Tree (same trunk and branch)
 	{
 		Cyl(Tree, 520.f, 9000.f, Bark);
@@ -1884,6 +2158,10 @@ void AKitchenBuilder::BuildYard()
 		if (FVector::Dist2D(P, Bin) < 1100.f || FVector::Dist2D(P, Tree) < 700.f || FVector::Dist2D(P, YardPoop()) < 700.f || P.Y > -5500.f)
 		{
 			continue;
+		}
+		if (bArt && (FVector::Dist2D(P, NestLocation(1)) < 1000.f || FVector::Dist2D(P, LevelV2::Sprinkler()) < 260.f))
+		{
+			continue;   // the red anthill's bare earth, the sprinkler head
 		}
 		const float H = R.FRandRange(180.f, 520.f);
 		const FRotator Rot(R.FRandRange(-18.f, 18.f), R.FRandRange(0.f, 360.f), R.FRandRange(-18.f, 18.f));

@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "AntTypes.h"
+#include <initializer_list>
 #include "KitchenBuilder.generated.h"
 
 class UStaticMeshComponent;
@@ -37,6 +38,9 @@ public:
 	/** Team 0: our colony (west baseboard). Team 1: rival fire ants (east, by the trash). */
 	static FVector NestLocation(uint8 Team = 0);
 	static float NestRadius(uint8 Team = 0) { return Team == 0 ? 950.f : 560.f; }
+	/** Where a carrier of this colony standing at From takes its load. Level v2: from the yard our ants use the south entrance
+	 *  of the nest at the house corner (LevelV2::SouthEntrance), from everywhere else the nest itself. */
+	static FVector HomeFor(uint8 Team, const FVector& From);
 	/** Where the big prizes lie: they need several ants. */
 	static void HeavySpots(TArray<FVector>& Out);
 	static FVector HumanSpawn();
@@ -56,8 +60,8 @@ public:
 	/** A random point on the lawn outside the window. */
 	static FVector RandomYardPoint(FRandomStream* Rng = nullptr);
 	/** Dog poop on the lawn / the outdoor trash bin (fly food). */
-	static FVector YardPoop() { return FVector(-3000.f, -9500.f, 0.f); }
-	static FVector YardBin() { return FVector(4200.f, -13000.f, 0.f); }
+	static FVector YardPoop();
+	static FVector YardBin();
 	static void LootSpots(TArray<FVector>& OutLocations, TArray<int32>& OutTiers);
 
 	/** Static kitchen zones (burner, honey, jam, water bowls...) acting on an ant. */
@@ -65,6 +69,12 @@ public:
 
 	/** Gives a shape the real textured surface for its palette color (wood, tiles, steel...). */
 	static void Surface(UStaticMeshComponent* C, const FLinearColor& Color);
+
+	/** Level v2: makes a big walker's capsule pass through the "ants only" pieces (the yarn bridge, the garland, the chili
+	 *  string, the fly ribbon). False while the kitchen is not built yet on this machine: call again. */
+	static bool LetThrough(class ACharacter* Big);
+	/** The first placed piece of the modelled flat with this mesh (its component), or null. */
+	static UPrimitiveComponent* FindArt(const UWorld* World, const TCHAR* MeshName);
 
 	/** Ceiling lamps on/off (light switch). */
 	void SetMainLights(bool bOn);
@@ -87,6 +97,10 @@ private:
 	void BuildLivingRoom();
 	void BuildYard();
 	void BuildShell();
+	/** A solid box with holes cut out of it (walls with cracks, windows, cat flaps). */
+	void SolidBox(const FBox& B, std::initializer_list<FBox> Cavities, const FLinearColor& Color);
+	/** Level v2: invisible walls round the yards and the street. */
+	void BuildEdges();
 	void BuildDucts();
 	void BuildWestStreet();
 	void BuildClutter();
@@ -97,6 +111,8 @@ private:
 	/** Modelled grass: tufts instead of the given single blades (every third one). False if the models are missing. */
 	bool ScatterTufts(const TArray<FTransform>& Blades, int32 Seed);
 	bool bArt = false;
+	bool bBuilt = false;
+	UPROPERTY() TArray<UPrimitiveComponent*> AntsOnlyParts;
 
 	/** Air moving through a duct: ants inside are carried along. */
 	struct FDuctWind { FBox Box; FVector Dir; };
@@ -155,6 +171,7 @@ private:
 	bool bMainOn = true;
 	float DripTimer = 1.f;       // cosmetic: the drip into the puddle behind the fridge
 	float DripRipple = -1.f;
+	float SprinkleTimer = 0.f;   // cosmetic: the yard sprinkler's jet (level v2)
 
 	float HazardTimer = 0.f;
 	/** Nest mounds grow as each colony fills its stores (index = team). */
