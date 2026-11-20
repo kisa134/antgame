@@ -1,5 +1,7 @@
 # Аудит уровня Ant Kitchen — как есть сейчас
 
+> **Это аудит уровня v1 (раскладка до 20.11.2026), оставлен как история.** В игре стоит уровень v2: данные — `level_v2.json` и `level_data.json`, аудит v2 — `level_audit.json` (то же, что `level_audit_v2.json`), карта — `level_map_v2.html`, проект и перенос — `LEVEL_V2.md`, `LEVEL_V2_INTEGRATION.md`. `level_map.html` — карта v1. Замороженные входы v1 лежат в `v1/`.
+
 Собрано 2026-11-20 12:32 скриптом `Tools/level/audit_level.py` из `docs/level/level_data.json`. Карта: `docs/level/level_map.html`. Игра не запускалась: всё посчитано по коду и таблицам, в игре не проверено.
 
 ## Как считалось

@@ -1170,7 +1170,7 @@ void AAntCharacter::Tick(float DeltaSeconds)
 				}
 				// With a load it walks like a player who watches it: it waits when the load falls behind (else the jaws lose it).
 				FVector DevBite;
-				const bool bWaitForLoad = Carrying && Carrying->GrabPointOf(this, DevBite) && FVector::Dist2D(DevBite, GetHoldPoint()) > 70.f;
+				const bool bWaitForLoad = Carrying && Carrying->GrabPointOf(this, DevBite) && FVector::Dist2D(DevBite, GetHoldPoint()) > 90.f;
 				if (!bWaitForLoad)
 				{
 					AddMovementInput(Move, 1.f);

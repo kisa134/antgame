@@ -1,7 +1,7 @@
 {
  "meta": {
   "title": "Ant Kitchen: level v2 (in the game since 2026-11-20)",
-  "generated": "2026-11-20 16:19",
+  "generated": "2026-11-20 17:07",
   "units": "Unreal units (uu); 1 m = 1900 uu; X west(-) -> east(+), Y south(-) -> north(+), floor Z = 0",
   "tool": "Tools/level/build_level_v2.py",
   "mode": "the level as it is in the game: the placement table (KitchenArtData.inl, gen_level_v2_art.py --install) and the gameplay tables (LevelV2Data.inl, gen_level_v2_code.py) are generated from this file; the constants that live in the C++ are checked against it by verify_level_v2_code.py",
@@ -708,6 +708,22 @@
     -12390,
     20590,
     -8990
+   ],
+   "z": [
+    -400,
+    14000
+   ],
+   "kind": "blocker",
+   "src": "level_v2_layout.EDGES",
+   "v2": "new"
+  },
+  {
+   "ru": "край карты: щель между углом дома и восточной стеной двора B",
+   "rect": [
+    20190,
+    -9200,
+    20590,
+    -9080
    ],
    "z": [
     -400,
@@ -32438,8 +32454,8 @@
     "i": 172,
     "p": [
      8050.0,
-     700.0,
-     205.0
+     760.0,
+     100.0
     ],
     "tier_loot": 2,
     "group": "Inside the house: new hiding places",
@@ -32458,7 +32474,7 @@
      700,
      320
     ],
-    "t_nest": 37.1
+    "t_nest": 36.8
    },
    {
     "i": 173,
@@ -32847,13 +32863,13 @@
    {
     "i": 189,
     "p": [
-     -5650.0,
-     4700.0,
-     2515.0
+     -5646.0,
+     4942.0,
+     2288.0
     ],
     "tier_loot": 1,
     "group": "level v2",
-    "label": "на подставке для ножей",
+    "label": "за подставкой для ножей",
     "src": "level_v2_layout.LOOT_ADD",
     "how": "design",
     "area": "kitchen",
@@ -32864,7 +32880,7 @@
      4700,
      2815
     ],
-    "t_nest": 24.6,
+    "t_nest": 24.4,
     "ev": 27.8
    },
    {
@@ -33008,27 +33024,26 @@
    {
     "i": 197,
     "p": [
-     -6700.0,
-     3350.0,
-     2315.0
+     -5450.0,
+     3500.0,
+     1715.0
     ],
-    "tier_loot": 2,
+    "tier_loot": 1,
     "group": "level v2",
-    "label": "на хлебнице, под вязанкой перцев",
+    "label": "на столешнице у хлебницы",
     "src": "level_v2_layout.LOOT_ADD",
     "how": "design",
     "area": "kitchen",
     "v2": "new, put to rest",
-    "tier": "int",
+    "tier": "work",
     "was": [
      -6960,
      2700,
      2520
     ],
-    "space": "breadbox_0",
-    "where_ru": "в хлебнице",
-    "t_nest": 20.2,
-    "ev": 77.3
+    "t_nest": 20.0,
+    "tier_v1": 2,
+    "ev": 27.8
    },
    {
     "i": 198,
@@ -33267,7 +33282,7 @@
     "p": [
      -1050.0,
      -1150.0,
-     1700.0
+     1470.0
     ],
     "tier_loot": 1,
     "group": "level v2",
@@ -33275,10 +33290,15 @@
     "src": "level_v2_layout.LOOT_ADD",
     "how": "design",
     "area": "kitchen",
-    "v2": "new",
+    "v2": "new, put to rest",
     "tier": "work",
-    "t_nest": 19.7,
-    "tier_wanted": 2,
+    "was": [
+     -1050,
+     -1150,
+     1700
+    ],
+    "t_nest": 19.1,
+    "tier_v1": 2,
     "ev": 27.8
    },
    {
@@ -33629,39 +33649,49 @@
    {
     "i": 228,
     "p": [
-     -7100.0,
-     4875.0,
+     -6500.0,
+     4960.0,
      5.0
     ],
     "tier_loot": 0,
     "group": "level v2",
-    "label": "в северном лазе",
+    "label": "у северного лаза, в коридоре у стены",
     "src": "level_v2_layout.LOOT_ADD",
     "how": "design",
     "area": "kitchen",
-    "v2": "new",
+    "v2": "new, put to rest",
     "tier": "vent",
-    "space": "north_hole",
-    "t_nest": 16.3,
+    "space": "corridor",
+    "was": [
+     -7100,
+     4875,
+     5
+    ],
+    "t_nest": 17.6,
     "ev": 8.8
    },
    {
     "i": 229,
     "p": [
-     7100.0,
-     980.0,
+     7330.0,
+     1140.0,
      5.0
     ],
     "tier_loot": 1,
     "group": "level v2",
-    "label": "в мусорном лазе",
+    "label": "у мусорного лаза, сбоку",
     "src": "level_v2_layout.LOOT_ADD",
     "how": "design",
-    "area": "kitchen",
-    "v2": "new",
-    "tier": "vent",
+    "area": "living",
+    "v2": "new, put to rest",
+    "tier": "floor",
     "space": "east_hole",
-    "t_nest": 34.5,
+    "was": [
+     7100,
+     980,
+     5
+    ],
+    "t_nest": 35.1,
     "ev": 27.8
    },
    {
@@ -33826,19 +33856,24 @@
    {
     "i": 238,
     "p": [
-     7300.0,
-     980.0,
+     7330.0,
+     800.0,
      5.0
     ],
     "tier_loot": 0,
     "group": "level v2",
-    "label": "у мусорного лаза",
+    "label": "у мусорного лаза, сбоку",
     "src": "level_v2_layout.LOOT_ADD",
     "how": "design",
     "area": "living",
-    "v2": "new",
+    "v2": "new, put to rest",
     "tier": "floor",
-    "t_nest": 34.9,
+    "was": [
+     7300,
+     980,
+     5
+    ],
+    "t_nest": 35.0,
     "ev": 8.8
    },
    {
@@ -33944,19 +33979,24 @@
    {
     "i": 244,
     "p": [
-     7300.0,
-     -7350.0,
-     35.0
+     7330.0,
+     -6950.0,
+     5.0
     ],
     "tier_loot": 1,
     "group": "level v2",
-    "label": "у кошачьей дверцы",
+    "label": "у кошачьей дверцы, сбоку",
     "src": "level_v2_layout.LOOT_ADD",
     "how": "design",
     "area": "living",
-    "v2": "new",
+    "v2": "new, put to rest",
     "tier": "floor",
-    "t_nest": 39.4,
+    "was": [
+     7300,
+     -7350,
+     35
+    ],
+    "t_nest": 38.5,
     "ev": 27.8
    },
    {
@@ -34530,19 +34570,24 @@
    {
     "i": 275,
     "p": [
-     19500.0,
-     -8900.0,
+     19300.0,
+     -8850.0,
      5.0
     ],
     "tier_loot": 1,
     "group": "level v2",
-    "label": "у красной щели",
+    "label": "у красной щели, сбоку",
     "src": "level_v2_layout.LOOT_ADD",
     "how": "design",
     "area": "living",
-    "v2": "new",
+    "v2": "new, put to rest",
     "tier": "floor",
-    "t_nest": 63.5,
+    "was": [
+     19500,
+     -8900,
+     5
+    ],
+    "t_nest": 63.1,
     "ev": 27.8
    },
    {
@@ -34705,20 +34750,25 @@
    {
     "i": 284,
     "p": [
-     -8300.0,
-     -7900.0,
-     165.0
+     -8332.0,
+     -7821.0,
+     5.0
     ],
     "tier_loot": 0,
     "group": "level v2",
-    "label": "на кости",
+    "label": "у собачьей кости",
     "src": "level_v2_layout.LOOT_ADD",
     "how": "design",
     "area": "yard",
-    "v2": "new",
+    "v2": "new, put to rest",
     "tier": "floor",
-    "t_nest": 12.5,
-    "tier_wanted": 1,
+    "was": [
+     -8300,
+     -7900,
+     165
+    ],
+    "t_nest": 12.1,
+    "tier_v1": 1,
     "ev": 8.8
    },
    {
@@ -34763,7 +34813,7 @@
     "p": [
      3500.0,
      -8100.0,
-     195.0
+     122.0
     ],
     "tier_loot": 1,
     "group": "level v2",
@@ -34771,9 +34821,14 @@
     "src": "level_v2_layout.LOOT_ADD",
     "how": "design",
     "area": "yard",
-    "v2": "new",
+    "v2": "new, put to rest",
     "tier": "floor",
-    "t_nest": 29.5,
+    "was": [
+     3500,
+     -8100,
+     195
+    ],
+    "t_nest": 29.3,
     "ev": 27.8
    },
    {
@@ -34879,9 +34934,9 @@
    {
     "i": 293,
     "p": [
-     18426.0,
-     -11001.0,
-     2824.0
+     18421.0,
+     -11000.0,
+     2768.0
     ],
     "tier_loot": 2,
     "group": "level v2",
@@ -34896,7 +34951,7 @@
      -10700,
      2880
     ],
-    "t_nest": 70.9,
+    "t_nest": 70.7,
     "ev": 77.3
    },
    {
@@ -35588,19 +35643,24 @@
    {
     "i": 330,
     "p": [
-     11900.0,
-     1200.0,
-     2110.0
+     11505.0,
+     772.0,
+     955.0
     ],
     "tier_loot": 2,
     "group": "level v2",
-    "label": "на спинке дивана",
+    "label": "у подлокотника дивана, на сиденье",
     "src": "level_v2_layout.LOOT_ADD",
     "how": "design",
     "area": "living",
-    "v2": "new",
-    "tier": "top",
-    "t_nest": 50.6,
+    "v2": "new, put to rest",
+    "tier": "work",
+    "was": [
+     11900,
+     1200,
+     2110
+    ],
+    "t_nest": 46.6,
     "ev": 77.3
    },
    {
@@ -37218,6 +37278,7 @@
    "ru": "Кусок именинного торта",
    "value": 600,
    "weight": 56,
+   "carry": "в игре (KitchenLoot.cpp): несущие делят вес поровну (общая сила стороны), при отношении >= 1 держат кусок крепко (как одиночка крошку) и на 28 uu над землёй, вниз его не тянут; бот, взявшийся вместе с игроком, идёт за игроком. В левой секции тумбы ТВ поверх рейки дверец (12 uu) положен порожек: рейка останавливала кусок. Еда у кошачьей дверцы и в устьях лазов сдвинута вбок: она запирала проход",
    "note": "вес 56 (в проекте было 70): несут четверо фуражиров, либо игрок + бот-союзник + армия (до 30 силы, как на тяжёлой двери); волоком — двое, но волоком груз не идёт через пороги и по пандусам; ронять с высоты больше 800 uu нельзя (трофей теряет x2)",
    "spots": [
     {
@@ -40880,8 +40941,8 @@
   "loot_spots": 327,
   "loot_spots_by_tier": {
    "0": 88,
-   "1": 113,
-   "2": 103,
+   "1": 114,
+   "2": 102,
    "3": 23
   },
   "heavy_spots": 6,
@@ -40902,7 +40963,7 @@
   "copies": 45,
   "removed": 28,
   "moved": 34,
-  "loot_clamped": 36
+  "loot_clamped": 37
  },
  "districts": [
   {
@@ -46191,6 +46252,17 @@
    },
    {
     "p": [
+     -5450.0,
+     3500.0,
+     1715.0
+    ],
+    "label": "на столешнице у хлебницы",
+    "from": 2,
+    "to": 1,
+    "t": 20.0
+   },
+   {
+    "p": [
      -2350.0,
      3350.0,
      1765.0
@@ -46204,12 +46276,12 @@
     "p": [
      -1050.0,
      -1150.0,
-     1700.0
+     1470.0
     ],
     "label": "в вазе с фруктами",
     "from": 2,
     "to": 1,
-    "t": 19.7
+    "t": 19.1
    },
    {
     "p": [
@@ -46268,14 +46340,14 @@
    },
    {
     "p": [
-     -8300.0,
-     -7900.0,
-     165.0
+     -8332.0,
+     -7821.0,
+     5.0
     ],
-    "label": "на кости",
+    "label": "у собачьей кости",
     "from": 1,
     "to": 0,
-    "t": 12.5
+    "t": 12.1
    },
    {
     "p": [

@@ -1,7 +1,7 @@
 {
  "what": "docs/level/level_data.json against the C++ (Tools/level/verify_level_v2_code.py)",
- "checks": 56,
- "passed": 56,
+ "checks": 57,
+ "passed": 57,
  "failed": [],
  "not_literal": [
   {
@@ -211,6 +211,12 @@
   },
   {
    "what": "edge blocker [20470, -12390, 20590, -8990]",
+   "ok": true,
+   "where": "KitchenHouse.cpp",
+   "detail": "BuildEdges: the wall on this edge (the code makes it at least as long)"
+  },
+  {
+   "what": "edge blocker [20190, -9200, 20590, -9080]",
    "ok": true,
    "where": "KitchenHouse.cpp",
    "detail": "BuildEdges: the wall on this edge (the code makes it at least as long)"

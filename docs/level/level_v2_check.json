@@ -321,7 +321,7 @@
     "p": [
      18800.0,
      900.0,
-     800.0
+     735.0
     ],
     "inside": "art290",
     "mesh": "SM_L_PottedPlant",
@@ -348,6 +348,61 @@
     "inside": "art183",
     "mesh": "SM_L_BiscuitPlate",
     "ru": "Тарелка с печеньем"
+   },
+   {
+    "loot": "L189",
+    "p": [
+     -5646.0,
+     4942.0,
+     2288.0
+    ],
+    "inside": "new22",
+    "mesh": "SM_K_KnifeBlock",
+    "ru": "Подставка с ножами"
+   },
+   {
+    "loot": "L237",
+    "p": [
+     18150.0,
+     -7900.0,
+     172.0
+    ],
+    "inside": "art311",
+    "mesh": "SM_L_DogBed",
+    "ru": "Лежанка собаки"
+   },
+   {
+    "loot": "L287",
+    "p": [
+     3500.0,
+     -8100.0,
+     122.0
+    ],
+    "inside": "art357",
+    "mesh": "SM_Y_DogRope",
+    "ru": "Канат собаки"
+   },
+   {
+    "loot": "L292",
+    "p": [
+     18576.0,
+     -10998.0,
+     2828.0
+    ],
+    "inside": "art345",
+    "mesh": "SM_Y_Bin_Trash",
+    "ru": "Мешки в баке"
+   },
+   {
+    "loot": "L293",
+    "p": [
+     18421.0,
+     -11000.0,
+     2768.0
+    ],
+    "inside": "art345",
+    "mesh": "SM_Y_Bin_Trash",
+    "ru": "Мешки в баке"
    },
    {
     "loot": "D14",
@@ -1318,9 +1373,9 @@
      17.8
     ],
     "note": "",
-    "exposed_s": 5.6,
-    "slap_only_s": 0.0,
-    "exposed_pct": 100
+    "exposed_s": 5.3,
+    "slap_only_s": 0.3,
+    "exposed_pct": 94
    },
    {
     "a": "klad",
@@ -2617,8 +2672,8 @@
     "open_pct": 84,
     "slap_only_pct": 4,
     "over3s_pct": 56.6,
-    "over4s_pct": 39.1,
-    "over4s_cells": 4391,
+    "over4s_pct": 39.0,
+    "over4s_cells": 4373,
     "mean_s": 3.89,
     "worst_s": 10.1,
     "worst_at": [
@@ -2730,52 +2785,52 @@
   },
   "v2": {
    "kitchen/floor": {
-    "m2": 31.1,
+    "m2": 31.0,
     "dead_pct": 0,
     "transit_pct": 69,
     "contested_pct": 29,
     "safe_pct": 2,
-    "ev": 1697
+    "ev": 1723
    },
    "kitchen/work": {
     "m2": 8.8,
-    "dead_pct": 0,
-    "transit_pct": 26,
+    "dead_pct": 1,
+    "transit_pct": 25,
     "contested_pct": 74,
     "safe_pct": 0,
-    "ev": 1285
+    "ev": 1350
    },
    "kitchen/top": {
     "m2": 3.1,
     "dead_pct": 0,
-    "transit_pct": 9,
-    "contested_pct": 77,
+    "transit_pct": 14,
+    "contested_pct": 72,
     "safe_pct": 14,
-    "ev": 1845
+    "ev": 1662
    },
    "living/floor": {
     "m2": 32.0,
     "dead_pct": 0,
-    "transit_pct": 65,
-    "contested_pct": 27,
+    "transit_pct": 54,
+    "contested_pct": 39,
     "safe_pct": 8,
-    "ev": 2194
+    "ev": 2509
    },
    "living/work": {
     "m2": 8.7,
     "dead_pct": 0,
-    "transit_pct": 28,
-    "contested_pct": 72,
+    "transit_pct": 33,
+    "contested_pct": 66,
     "safe_pct": 0,
-    "ev": 2372
+    "ev": 2267
    },
    "living/top": {
     "m2": 2.3,
-    "dead_pct": 0,
+    "dead_pct": 9,
     "transit_pct": 4,
-    "contested_pct": 96,
+    "contested_pct": 87,
     "safe_pct": 0,
-    "ev": 1189
+    "ev": 1084
    },
    "yard/floor": {
     "m2": 23.9,
@@ -2783,7 +2838,7 @@
     "transit_pct": 37,
     "contested_pct": 3,
     "safe_pct": 49,
-    "ev": 592
+    "ev": 669
    },
    "yard/top": {
     "m2": 1.3,
@@ -2803,15 +2858,72 @@
    },
    "street/top": {
     "m2": 8.8,
-    "dead_pct": 64,
+    "dead_pct": 85,
     "transit_pct": 0,
     "contested_pct": 0,
-    "safe_pct": 36,
-    "ev": 497
+    "safe_pct": 15,
+    "ev": 441
    }
   }
  },
- "dead_cells_v2_indoor": [],
+ "dead_cells_v2_indoor": [
+  {
+   "area": "kitchen",
+   "tier": "work",
+   "rect": [
+    -5100,
+    -1200,
+    -3200,
+    700
+   ],
+   "m2": 0.06,
+   "surfaces": [
+    "Крыша коробки хлопьев"
+   ]
+  },
+  {
+   "area": "living",
+   "tier": "work",
+   "rect": [
+    16700,
+    -7100,
+    18600,
+    -5200
+   ],
+   "m2": 0.04,
+   "surfaces": [
+    "Лежанка собаки"
+   ]
+  },
+  {
+   "area": "living",
+   "tier": "top",
+   "rect": [
+    11000,
+    500,
+    12900,
+    1500
+   ],
+   "m2": 0.21,
+   "surfaces": [
+    "Диван: верх спинки и подлокотники"
+   ]
+  },
+  {
+   "area": "living",
+   "tier": "top",
+   "rect": [
+    16700,
+    500,
+    18600,
+    1500
+   ],
+   "m2": 0.01,
+   "surfaces": [
+    "Диван: верх спинки и подлокотники"
+   ]
+  }
+ ],
  "ways": {
   "v1": {
    "surfaces": 34,
@@ -2935,7 +3047,7 @@
    "no_way": 4,
    "one_way": 19,
    "two_or_more": 19,
-   "empty": 1,
+   "empty": 3,
    "list_under_2": [
     [
      "worktop_mid",
@@ -3121,8 +3233,8 @@
      15
     ],
     "points": 34,
-    "ev_sum": 356,
-    "ev_mean": 10.5,
+    "ev_sum": 337,
+    "ev_mean": 9.9,
     "tier2plus": 0,
     "tier3": 0
    },
@@ -3131,10 +3243,10 @@
      15,
      25
     ],
-    "points": 72,
-    "ev_sum": 2928,
-    "ev_mean": 40.7,
-    "tier2plus": 25,
+    "points": 75,
+    "ev_sum": 2961,
+    "ev_mean": 39.5,
+    "tier2plus": 24,
     "tier3": 3
    },
    {
@@ -3142,10 +3254,10 @@
      25,
      40
     ],
-    "points": 112,
-    "ev_sum": 8979,
-    "ev_mean": 80.2,
-    "tier2plus": 71,
+    "points": 109,
+    "ev_sum": 8846,
+    "ev_mean": 81.2,
+    "tier2plus": 70,
     "tier3": 28
    },
    {
@@ -3532,13 +3644,13 @@
    },
    "floor_transit_pct": {
     "kitchen": 69,
-    "living": 65,
+    "living": 54,
     "yard": 37,
     "street": 15
    },
    "floor_contested_pct": {
     "kitchen": 29,
-    "living": 27,
+    "living": 39,
     "yard": 3,
     "street": 0
    },
@@ -3551,20 +3663,20 @@
     "living": 3.9
    },
    "loot_points": 373,
-   "nogo_points": 49,
-   "empty_surfaces": 1,
+   "nogo_points": 48,
+   "empty_surfaces": 3,
    "surfaces": 43,
    "outdoor_area_pct": 41,
    "outdoor_loot_pct": 10,
    "observations": [
     "Кухня: мёртвого пола 0 %, но 69 % — транзит: по нему только бегут. Спорных клеток 29 %.",
-    "Гостиная: мёртвого пола 0 %, спорного 27 %. Туда 49 с бегом в одну сторону, а еды на полу и столах меньше, чем на кухне.",
+    "Гостиная: мёртвого пола 0 %, спорного 39 %. Туда 49 с бегом в одну сторону, а еды на полу и столах меньше, чем на кухне.",
     "Двор и улица — 53 м² из 130 (41 % карты), еды там 10 % от всей. Человека там нет: ни риска, ни награды. Двор мёртв на 12 %.",
     "Самая лёгкая дорогая еда: Заначка в верхнем ящике: 3 сладости (tier 2, 3, 2) и оружие, при первом открытии, тумба с тремя ящиками — 18 с бегом от гнезда.",
     "Спрятаться негде: укрытие — 18 % пола кухни и 19 % гостиной. До ближайшего укрытия бывает 4,0 с бегом, с грузом до 13 с.",
     "В дом один вход — щель в западной стене; за ней все маршруты расходятся, общих узлов внутри почти нет. Кратчайший путь во двор — тоже через кухню.",
     "Северная стена кухни (севернее y=4750) — слепая зона ИИ на любой высоте; блуждая, Человек не подходит к столешницам ближе 400 uu.",
-    "Пустых поверхностей 1 из 43; наклонный путь наверх один (ложка); тостер даёт еду бесконечно; яма под плиткой сломана."
+    "Пустых поверхностей 3 из 43; наклонный путь наверх один (ложка); тостер даёт еду бесконечно; яма под плиткой сломана."
    ]
   }
  },
@@ -3607,9 +3719,9 @@
    "spawns": 29,
    "loot_spots": 327,
    "loot_spots_by_tier": {
-    "0": 87,
-    "1": 113,
-    "2": 104,
+    "0": 88,
+    "1": 114,
+    "2": 102,
     "3": 23
    },
    "heavy_spots": 6,
@@ -3626,11 +3738,11 @@
    "hide_boxes": 53,
    "new_meshes": 52,
    "new_instances": 107,
-   "new_triangles": 25566,
+   "new_triangles": 25610,
    "copies": 45,
    "removed": 28,
    "moved": 34,
-   "loot_clamped": 34
+   "loot_clamped": 37
   }
  }
 }

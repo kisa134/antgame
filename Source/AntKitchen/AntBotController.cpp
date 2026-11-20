@@ -507,7 +507,7 @@ void AAntBotController::Tick(float DeltaSeconds)
 		if (CarryLeader.IsValid())
 		{
 			const FVector D = CarryLeader->GetActorLocation() - Ant->GetActorLocation();
-			if (D.Size() > 70.f) { Lean = D.GetClampedToMaxSize(80.f); }
+			if (D.Size() > 25.f) { Lean = D.GetClampedToMaxSize(80.f); }   // (25: closer than the 90 at which a careful leader stops to wait)
 		}
 		FVector Want = Bite - Ant->GetHoldPoint() + Lead + Lean;
 		if (CarryLeader.IsValid() && CarryLeader->GetActorLocation().Z < Ant->GetActorLocation().Z - 30.f && FVector::Dist(Bite, Ant->GetHoldPoint()) < 120.f)
@@ -516,7 +516,13 @@ void AAntBotController::Tick(float DeltaSeconds)
 			// held the load on the edge for ever.
 			Want = (CarryLeader->GetActorLocation() - Ant->GetActorLocation()).GetClampedToMaxSize(120.f);
 		}
-		const FVector To = FVector::VectorPlaneProject(Want, Ant->GetVisualUp());
+		FVector To = FVector::VectorPlaneProject(Want, Ant->GetVisualUp());
+		if (Ant->GetVisualUp().Z < 0.6f && (Want | Ant->GetVisualUp()) < -8.f)
+		{
+			// a lip in the way (the carpet's edge, a threshold): over it, as Steer does
+			const FVector UpOnWall = FVector::UpVector - Ant->GetVisualUp() * Ant->GetVisualUp().Z;
+			To += UpOnWall.GetSafeNormal() * (float)Want.Size();
+		}
 		if (To.Size() > 10.f)
 		{
 			Ant->AddMovementInput(To.GetSafeNormal(), FMath::Clamp((float)To.Size() / 50.f, 0.25f, 1.f));

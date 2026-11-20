@@ -202,7 +202,7 @@ void AKitchenBuilder::SolidBox(const FBox& B, std::initializer_list<FBox> Caviti
 // Level v2: the edges of the world. v1 had none on four sides: an ant walked off the lawn or the road and fell for ever.
 // The yards are fenced by SM_Y_FencePanel runs (placement table); just outside every fence, and round the street, stands an
 // invisible wall. It blocks pawns and food but is not a "surface" (not WorldStatic): an ant that climbed a fence cannot cling
-// to it and cannot get past it. Whatever still gets out is put back by AAntCharacter (the safety net there).
+// to it and cannot get past it. (An ant that falls below z -800 all the same dies, as before: AAntCharacter::Tick.)
 // ---------------------------------------------------------------------------------------------
 
 void AKitchenBuilder::BuildEdges()
@@ -218,6 +218,8 @@ void AKitchenBuilder::BuildEdges()
 		{ 5010.f, -12390.f, 5130.f, -8860.f },     // behind yard B's west fence
 		{ 5010.f, -12390.f, 20590.f, -12270.f },   // behind yard B's south fence
 		{ 20470.f, -12390.f, 20590.f, -8990.f },   // behind yard B's east fence
+		{ 20190.f, -9200.f, 20590.f, -9080.f },    // the notch between the house corner and that wall: the lawn ends at y -9200 and
+		                                           // an ant that went north along the wall walked off it (found by the "edges" sweep)
 	};
 	// Ground under the front lawn's north fence and a little beyond it: an ant that squeezes between the pickets stands on
 	// grass until it meets the invisible wall (the lawn box ended exactly on the fence line).
