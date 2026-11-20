@@ -318,6 +318,13 @@ void AAntRaid::StartRaid()
 		Nest.Larvae = 1;
 		Say(TEXT("Личинок не было: Королева отложила последнюю. Берегите её"), RaidInfo);
 	}
+	if (Nest.Workers < 6)
+	{
+		// Never a dead end either: a raid cut short (the game closed or crashed after the squads left) loses the workers taken out,
+		// and with none at all a tier-1 cake (48) cannot be lifted. The nest always has six to send.
+		UE_LOG(LogTemp, Display, TEXT("ANTNEST only %d workers left: the nest makes it six for this raid"), Nest.Workers);
+		Nest.Workers = 6;
+	}
 	Tier = (uint8)FMath::Clamp(Nest.Tier, 1, Nest.MaxTier);
 	RaidNo = Nest.Raids + 1;
 	StartEnds = 0.f;
