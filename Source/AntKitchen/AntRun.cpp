@@ -1,5 +1,6 @@
 ﻿#include "AntRun.h"
 #include "AntKitchenGameMode.h"
+#include "AntFluidWorld.h"
 #include "AntGameState.h"
 #include "AntPlayerState.h"
 #include "AntPlayerController.h"
@@ -1499,6 +1500,10 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 	if (Raid && Raid->DevCommand(A))
 	{
 		return;   // raid ..., nest ... (AntRaid.cpp)
+	}
+	if (UAntFluidWorld* Fluid = UAntFluidWorld::Get(this))
+	{
+		if (Fluid->DevCommand(A)) { return; }   // fluid ... (the liquid prototype, AntFluidWorld.cpp)
 	}
 	const FString Op = A[0].ToLower();
 	auto Num = [&A](int32 i, float Def = 0.f) { return A.IsValidIndex(i) ? FCString::Atof(*A[i]) : Def; };
