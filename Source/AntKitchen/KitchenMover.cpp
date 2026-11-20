@@ -1,5 +1,6 @@
 ﻿#include "KitchenMover.h"
 #include "KitchenArt.h"
+#include "LevelV2.h"
 #include "AntCharacter.h"
 #include "HumanCharacter.h"
 #include "Critters.h"
@@ -234,9 +235,9 @@ int32 AKitchenMover::DoorClass() const
 		return 0;   // behind another door: a plain [E] says which one to open first
 	}
 	const FString Name = KitchenArt::Instances()[M.Inst].Name;
-	if (Name.Contains(TEXT("DoorFreezer")))
+	if (Name.Contains(TEXT("DoorFreezer")) || Name.Contains(TEXT("CatFlap")))
 	{
-		return AntDoor::Heavy;
+		return AntDoor::Heavy;   // (the cat flap: about three foragers, and only from the living room: CanPull)
 	}
 	if (M.Type == 1 || Name.Contains(TEXT("Lid")) || Name.Contains(TEXT("Gate")) || Name.Contains(TEXT("Door_Leaf")))
 	{
@@ -267,8 +268,40 @@ bool AKitchenMover::HumanShuts() const
 		return false;
 	}
 	const FKitchenArtMover& M = All[PartIndex];
-	// Not what stands open by design (the sink door, the gate, the yard bin), not the door between the rooms.
-	return !(M.Flags & (KitchenArt::StartsOpen | KitchenArt::BigOpens)) && !FString(KitchenArt::Instances()[M.Inst].Name).StartsWith(TEXT("SM_Y_"));
+	// Not what stands open by design (the sink door, the gate, the yard bin), not the door between the rooms, not the cat flap
+	// (it falls shut by itself).
+	return !(M.Flags & (KitchenArt::StartsOpen | KitchenArt::BigOpens)) && !FString(KitchenArt::Instances()[M.Inst].Name).StartsWith(TEXT("SM_Y_")) && !IsCatFlap();
+}
+
+bool AKitchenMover::IsCatFlap() const
+{
+	const TConstArrayView<FKitchenArtMover> All = KitchenArt::Movers();
+	return All.IsValidIndex(PartIndex) && FCString::Strcmp(KitchenArt::Instances()[All[PartIndex].Inst].Name, TEXT("SM_L_CatFlap_Leaf")) == 0;
+}
+
+bool AKitchenMover::CanPull(AAntCharacter* Ant, bool bTell) const
+{
+	if (!Ant || !IsCatFlap() || LevelV2::OnLatchSideOfCatFlap(Ant->GetActorLocation()))
+	{
+		return true;
+	}
+	if (bTell)
+	{
+		Ant->Toast(TEXT("Засов изнутри: кошачью дверцу открывают только из гостиной"));
+		UE_LOG(LogTemp, Display, TEXT("ANTV2 catflap: %s pulls from the yard side, latched"), *Ant->GetDisplayName());
+	}
+	return false;
+}
+
+void AKitchenMover::SetDoorOpen(bool bInOpen)
+{
+	// Parts with a spring (the freezer door, the cat flap) fall shut again however they were opened.
+	const TConstArrayView<FKitchenArtMover> All = KitchenArt::Movers();
+	SetOpen(bInOpen, (bInOpen && All.IsValidIndex(PartIndex)) ? All[PartIndex].AutoClose : -1.f);
+	if (IsCatFlap())
+	{
+		UE_LOG(LogTemp, Display, TEXT("ANTV2 catflap: %s"), bInOpen ? TEXT("open, falls shut in 15 s") : TEXT("shut"));
+	}
 }
 
 void AKitchenMover::SetOpen(bool bInOpen, float AutoClose)
@@ -288,6 +321,10 @@ FString AKitchenMover::GetPrompt(const AAntCharacter* Ant) const
 	if (!All.IsValidIndex(PartIndex))
 	{
 		return FString();
+	}
+	if (!bOpen && Ant && IsCatFlap() && !LevelV2::OnLatchSideOfCatFlap(Ant->GetActorLocation()))
+	{
+		return TEXT("Кошачья дверца (заперта изнутри: открывают из гостиной)");
 	}
 	return bOpen ? All[PartIndex].CloseText : All[PartIndex].OpenText;
 }

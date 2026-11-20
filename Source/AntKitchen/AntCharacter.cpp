@@ -3,6 +3,7 @@
 #include "AcidProjectile.h"
 #include "KitchenLoot.h"
 #include "KitchenBuilder.h"
+#include "KitchenArt.h"
 #include "KitchenInteractables.h"
 #include "AntSwarm.h"
 #include "AntKitchenGameMode.h"
@@ -1135,6 +1136,41 @@ void AAntCharacter::Tick(float DeltaSeconds)
 		if (IsLocallyControlled())
 		{
 			TickFire();
+			if (bDevGo && Controller)
+			{
+				// Straight at the point, in world space (the crawl movement lays it onto whatever surface the ant is on: down a
+				// wall as well as up it).
+				const FVector Dir = (DevGoTo - GetActorLocation()).GetSafeNormal();
+				const FRotator To = Dir.Rotation();
+				Controller->SetControlRotation(FRotator(FMath::Clamp((float)To.Pitch, -70.f, 70.f), To.Yaw, 0.f));
+				// On a face that stands between the ant and the point (a lip, a rail, a threshold) it does what a player holding
+				// "forward" does: goes over it, up when the point is not below, down otherwise.
+				FVector Move = Dir;
+				const UAntMovementComponent* DevM = GetAntMovement();
+				const FVector DevN = (DevM && DevM->IsCrawling()) ? DevM->GetSurfaceNormal() : FVector::UpVector;
+				if (DevN.Z < 0.9f)
+				{
+					FVector Flat = FVector::VectorPlaneProject(Dir, DevN);
+					if ((Dir | DevN) < -0.25f)
+					{
+						const float Sign = DevGoTo.Z > GetActorLocation().Z - 80.f ? 1.f : -1.f;
+						Flat += FVector::VectorPlaneProject(FVector::UpVector * Sign, DevN).GetSafeNormal() * 1.5f;
+					}
+					else if (DevN.Z < 0.5f && (Dir | DevN) > 0.6f && DevGoTo.Z < GetActorLocation().Z + 30.f && !Carrying && GetWorld()->GetTimeSeconds() > DevGoJumpAt)
+					{
+						// the point is straight off this wall, level with the ant or lower: push off it (Space), as a player would
+						DevGoJumpAt = GetWorld()->GetTimeSeconds() + 0.8f;
+						Jump();
+					}
+					else if (Flat.Size() < 0.5f)
+					{
+						// on a face that looks towards the point (stepping off a rail, a kerb): down it, or up it when the point is higher
+						Flat = FVector::VectorPlaneProject(FVector::UpVector * (DevGoTo.Z > GetActorLocation().Z + 30.f ? 1.f : -1.f), DevN);
+					}
+					Move = Flat.GetSafeNormal(UE_SMALL_NUMBER, Dir);
+				}
+				AddMovementInput(Move, 1.f);
+			}
 		}
 
 		if (HasAuthority())
@@ -1896,6 +1932,8 @@ void AAntCharacter::Die(AController* Killer, AActor* Causer)
 	{
 		return;
 	}
+	UE_LOG(LogTemp, Display, TEXT("ANTDEATH %s (team %d, creature %d) died at %s, by %s / %s, kind %d"), *GetDisplayName(), (int32)Team, (int32)Creature,
+		*GetActorLocation().ToCompactString(), Causer ? *Causer->GetName() : TEXT("-"), Killer ? *Killer->GetName() : TEXT("-"), (int32)DeathKind);
 	DropEverything();
 	Pulling = nullptr;
 	if (HoldingAnt) { ReleaseAnt(false); }
@@ -1956,7 +1994,8 @@ bool AAntCharacter::IsInNest() const
 		return false;   // monsters have no safe place
 	}
 	const FVector L = GetActorLocation();
-	return FVector::Dist2D(L, AKitchenBuilder::NestLocation(Team)) < AKitchenBuilder::NestRadius(Team) && L.Z < 400.f;
+	// (level v2: the fire ants' nest is a mound 427 high in the yard: standing on it is being home)
+	return FVector::Dist2D(L, AKitchenBuilder::NestLocation(Team)) < AKitchenBuilder::NestRadius(Team) && L.Z < ((Team == 1 && KitchenArt::Enabled()) ? 700.f : 400.f);
 }
 
 FVector AAntCharacter::GetMuzzleLocation() const

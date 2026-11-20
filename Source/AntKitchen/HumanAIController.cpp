@@ -10,6 +10,11 @@
 #include "NpcBody.h"
 #include "AntTypes.h"
 #include "Components/CapsuleComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "KitchenArt.h"
+#include "LevelV2.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 #include "EngineUtils.h"
 
 AHumanAIController::AHumanAIController()
@@ -52,21 +57,21 @@ AAntCharacter* AHumanAIController::PickTarget(const AHumanCharacter* H) const
 		const FVector AL = Ant->GetActorLocation();
 		// He cannot follow an ant out through a crack in the wall: what is out in the yard or the street is none of his business
 		// (he used to pick such an ant and walk into the wall at the crack).
-		if (AKitchenBuilder::Region(AL) >= 2)
+		if (AKitchenBuilder::Region(AL) >= 2 || (KitchenArt::Enabled() && !LevelV2::InHouse(AL)))
 		{
 			continue;
 		}
-		// Can't see ants hiding inside the fridge, the oven, the walls or behind the cabinets. Past the line of the cabinet fronts he sees
-		// only what is in plain sight from where he stands (the back of the worktop, the tap, the spice shelves, the rail, the cabinet tops).
-		if ((AL.Y > 4750.f && !NpcWorld::CanSee(GetWorld(), Eyes, AL + FVector(0.f, 0.f, 10.f))) || FBox(FVector(2700.f, 3000.f, 0.f), FVector(4700.f, 4750.f, 3700.f)).IsInside(AL)
-			|| FBox(FVector(-1500.f, 3000.f, 120.f), FVector(0.f, 4750.f, 1650.f)).IsInside(AL)
-			|| FBox(FVector(-4200.f, 3000.f, 0.f), FVector(-2800.f, 4750.f, 1100.f)).IsInside(AL))
+		// Past the line of the cabinet fronts he sees only what is in plain sight from where he stands (the back of the worktop,
+		// the tap, the spice shelves, the rail, the cabinet tops).
+		if (AL.Y > 4750.f && !NpcWorld::CanSee(GetWorld(), Eyes, AL + FVector(0.f, 0.f, 10.f)))
 		{
 			continue;
 		}
-		if (KitchenContainers::SealedAt(GetWorld(), AL) >= 0)
+		// The cover rule: the fridge, the oven, under the sink, behind a shut door, and (level v2) every designed hiding place -
+		// a slipper, a bottle, under a toy arch, behind a curtain. The same list stops his stomp, slap and newspaper.
+		if (AHumanCharacter::InCover(GetWorld(), AL))
 		{
-			continue;   // behind a shut door
+			continue;
 		}
 		float Score = FVector::Dist2D(Me, AL);
 		if (bDark && Score > (Ant->IsCarrying() ? 3200.f : 2200.f) * Notice)
@@ -110,7 +115,26 @@ FVector AHumanAIController::PickWander(const AHumanCharacter* H) const
 
 void AHumanAIController::MoveTowards(AHumanCharacter* H, const FVector& Goal, float Scale)
 {
-	const FVector D = (AKitchenBuilder::Route(H->GetActorLocation(), Goal) - H->GetActorLocation()).GetSafeNormal2D();
+	const FVector Me = H->GetActorLocation();
+	FVector Next = AKitchenBuilder::Route(Me, Goal);
+	if (Nav && Nav->IsBuilt())
+	{
+		// Level v2: round the furniture, not into it (FHumanNav). The path is found again when the goal moves and now and then.
+		PathGoal = Goal;
+		Next = Follow.Next(Nav, Me, Goal, GetWorld()->GetTimeSeconds());
+		if (Follow.Path.Num() == 0)
+		{
+			Next = AKitchenBuilder::Route(Me, Goal);   // no way on the grid: the old straight line
+		}
+		else if (FVector::Dist2D(Me, Follow.Path.Last()) < 230.f && FVector::Dist2D(Follow.Path.Last(), Goal) > 120.f)
+		{
+			// As near as he can get (the goal is inside or behind furniture, or up a wall): he stands and faces it instead of
+			// pushing at the furniture.
+			DesiredRotation.Yaw = (float)(Goal - Me).Rotation().Yaw;
+			return;
+		}
+	}
+	const FVector D = (Next - Me).GetSafeNormal2D();
 	if (!D.IsNearlyZero())
 	{
 		H->AddMovementInput(D, Scale);
@@ -134,6 +158,19 @@ void AHumanAIController::Tick(float DeltaSeconds)
 	}
 	bMovedThisTick = false;
 	const FVector MyLoc = H->GetActorLocation();
+	if (!Nav)
+	{
+		AAntKitchenGameMode* NavGM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>();
+		Nav = NavGM ? NavGM->HouseNav() : nullptr;   // level v2: the grid of both rooms (null: the box-built kitchen, or -AntNoHumanNav)
+	}
+	static const bool bHumanLog = FParse::Param(FCommandLine::Get(), TEXT("AntHumanLog"));
+	if (bHumanLog && GetWorld()->GetTimeSeconds() >= NextNavLog)
+	{
+		NextNavLog = GetWorld()->GetTimeSeconds() + 2.f;
+		UE_LOG(LogTemp, Display, TEXT("ANTV2 human at (%.0f, %.0f) feet %.0f speed %.0f stop %d goal (%.0f, %.0f) path %d target %s"), MyLoc.X, MyLoc.Y,
+			MyLoc.Z - H->GetCapsuleComponent()->GetScaledCapsuleHalfHeight(), H->GetVelocity().Size2D(), PatrolIndex, WanderPoint.X, WanderPoint.Y, Follow.Path.Num(),
+			Target.IsValid() ? *Target->GetDisplayName() : TEXT("-"));
+	}
 	const float FloorZ = MyLoc.Z - H->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
 	const FBox Area = AKitchenBuilder::PlayArea();
 
@@ -447,13 +484,64 @@ void AHumanAIController::Tick(float DeltaSeconds)
 	{
 		H->SetSpraying(false);
 		WanderTimer -= DeltaSeconds;
-		if (WanderTimer <= 0.f || FVector::Dist2D(MyLoc, WanderPoint) < 400.f)
+		const TConstArrayView<FVector2f> Stops = LevelV2::PatrolStops();
+		if (Nav && Nav->IsBuilt() && Stops.Num() > 0)
 		{
-			WanderTimer = 6.f;
-			WanderPoint = PickWander(H) + FVector(0.f, 0.f, MyLoc.Z);
+			// Level v2: he has a round. Thirteen stops through both rooms, in order; at each he stands and looks about for a few
+			// seconds. Now and then he strays to a random spot instead, so the round cannot be timed to the second.
+			auto NextStop = [&]()
+			{
+				if (FMath::FRand() < 0.8f)
+				{
+					PatrolIndex = (PatrolIndex + 1) % Stops.Num();
+					WanderPoint = FVector(Stops[PatrolIndex].X, Stops[PatrolIndex].Y, MyLoc.Z);
+					WanderTimer = 45.f;
+				}
+				else
+				{
+					FVector P = PickWander(H), Free;
+					if (Nav->NearestFree(P, Free)) { P = Free; }
+					WanderPoint = FVector(P.X, P.Y, MyLoc.Z);
+					WanderTimer = 20.f;
+				}
+				Follow.Reset();
+			};
+			if (PatrolPause > 0.f)
+			{
+				PatrolPause -= DeltaSeconds;
+				DesiredRotation.Yaw = FRotator::NormalizeAxis((float)DesiredRotation.Yaw + 38.f * DeltaSeconds);
+				DesiredRotation.Pitch = -28.f;
+				if (PatrolPause <= 0.f) { NextStop(); }
+			}
+			else if (PatrolIndex < 0 && WanderPoint.IsZero())
+			{
+				NextStop();
+			}
+			else if (FVector::Dist2D(MyLoc, WanderPoint) < 420.f)
+			{
+				PatrolPause = FMath::FRandRange(2.f, 4.5f);
+			}
+			else if (WanderTimer <= 0.f)
+			{
+				UE_LOG(LogTemp, Display, TEXT("ANTV2 human gave up on (%.0f, %.0f) from (%.0f, %.0f)"), WanderPoint.X, WanderPoint.Y, MyLoc.X, MyLoc.Y);
+				NextStop();
+			}
+			else
+			{
+				DesiredRotation.Pitch = -15.f;
+				MoveTowards(H, WanderPoint, 0.5f);
+			}
 		}
-		DesiredRotation.Pitch = -15.f;
-		MoveTowards(H, WanderPoint, 0.5f);
+		else
+		{
+			if (WanderTimer <= 0.f || FVector::Dist2D(MyLoc, WanderPoint) < 400.f)
+			{
+				WanderTimer = 6.f;
+				WanderPoint = PickWander(H) + FVector(0.f, 0.f, MyLoc.Z);
+			}
+			DesiredRotation.Pitch = -15.f;
+			MoveTowards(H, WanderPoint, 0.5f);
+		}
 	}
 
 	// Steal food the ants are dragging home and throw it across the kitchen.
@@ -499,8 +587,14 @@ void AHumanAIController::Tick(float DeltaSeconds)
 			const FVector Dir = FRotator(0.f, FMath::FRandRange(0.f, 360.f), 0.f).Vector();
 			FVector P = MyLoc + Dir * 2500.f;
 			const bool bLiving = MyLoc.X > 7100.f;
+			const FBox2D LB = LevelV2::WanderBox(1);
+			const bool bV2 = KitchenArt::Enabled();
 			P.X = bLiving ? FMath::Clamp((float)P.X, 8000.f, 19000.f) : FMath::Clamp((float)P.X, (float)Area.Min.X, (float)Area.Max.X);
-			P.Y = bLiving ? FMath::Clamp((float)P.Y, -8300.f, -500.f) : FMath::Clamp((float)P.Y, (float)Area.Min.Y, (float)Area.Max.Y);
+			P.Y = bLiving ? FMath::Clamp((float)P.Y, bV2 ? (float)LB.Min.Y : -8300.f, bV2 ? (float)LB.Max.Y : -500.f) : FMath::Clamp((float)P.Y, (float)Area.Min.Y, (float)Area.Max.Y);
+			FVector Free;
+			if (Nav && Nav->IsBuilt() && Nav->NearestFree(P, Free)) { P = FVector(Free.X, Free.Y, MyLoc.Z); }
+			UE_LOG(LogTemp, Display, TEXT("ANTV2 human stalled at (%.0f, %.0f) going to (%.0f, %.0f): steps aside to (%.0f, %.0f)"), MyLoc.X, MyLoc.Y, PathGoal.X, PathGoal.Y, P.X, P.Y);
+			Follow.Reset();
 			WanderPoint = P;
 		}
 	}

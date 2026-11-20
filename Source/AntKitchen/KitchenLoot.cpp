@@ -10,6 +10,8 @@
 #include "AntMovementComponent.h"
 #include "AntKitchenGameMode.h"
 #include "KitchenBuilder.h"
+#include "KitchenArt.h"
+#include "LevelV2.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "AntGameState.h"
@@ -17,6 +19,7 @@
 #include "TimerManager.h"
 #include "KitchenShards.h"
 #include "AntRun.h"
+#include "AntArmy.h"
 #include "HumanCharacter.h"
 #include "ProceduralMeshComponent.h"
 
@@ -450,6 +453,17 @@ FVector AKitchenLoot::HoldPoint(const AAntCharacter* Ant) const
 	return Ant->GetHoldPoint();
 }
 
+bool AKitchenLoot::GrabPointOf(const AAntCharacter* Ant, FVector& Out) const
+{
+	const int32 i = Carriers.IndexOfByKey(Ant);
+	if (!GrabLocal.IsValidIndex(i))
+	{
+		return false;
+	}
+	Out = GetActorTransform().TransformPosition(GrabLocal[i]);
+	return true;
+}
+
 void AKitchenLoot::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
@@ -674,9 +688,21 @@ void AKitchenLoot::ServerCarryTick(float Dt)
 
 	// Who is winning (for HUD / movement speed): the team strengths cancel out.
 	float Str[2] = { 0.f, 0.f };
-	for (AAntCharacter* A : Carriers)
+	TArray<float, TInlineAllocator<16>> Extra;   // what the army of each carrier adds (the main object only)
+	Extra.Init(0.f, Carriers.Num());
+	for (int32 i = 0; i < Carriers.Num(); ++i)
 	{
+		AAntCharacter* A = Carriers[i];
 		Str[FMath::Clamp<int32>(A->Team, 0, 1)] += A->GetStrength();   // flies (team 2) count as the second side
+		if (bMain)
+		{
+			const AAntArmy* Army = AAntArmy::FindFor(A);
+			if (Army && FVector::Dist(Army->GetActorLocation(), A->GetActorLocation()) < 900.f)
+			{
+				Extra[i] = FMath::Min(30.f, Army->Count * 1.5f);
+				Str[FMath::Clamp<int32>(A->Team, 0, 1)] += Extra[i];
+			}
+		}
 	}
 	const int32 Win = Str[1] > Str[0] ? 1 : 0;
 	CarrierTeam = (uint8)Win;
@@ -693,15 +719,26 @@ void AKitchenLoot::ServerCarryTick(float Dt)
 	const float Gravity = FMath::Abs(GetWorld()->GetGravityZ());
 	const float ForcePerStrength = KgPerWeight * Gravity;
 	const int32 N = Carriers.Num();
+	// The main object (the birthday cake) is carried by a crowd that is only just strong enough (ratio 1.0 - 1.1). With every
+	// ant pulling for itself at the edge of its strength the weak side sagged, the piece ploughed the floor and a door rail
+	// 12 uu high stopped it. So: its carriers share the weight evenly (the pooled strength of the side that is winning); once
+	// they can carry it at all (ratio >= 1) they grip it as firmly as a lone ant grips a crumb (the springs get the force of
+	// ratio 1.75, the walking speed stays that of the real ratio) and hold it 28 uu clear of the ground: over rails, the
+	// carpet edge, the garden stones. Dragged (ratio < 1) it behaves like any other load.
+	int32 OnWin = 0;
+	for (const AAntCharacter* A : Carriers) { OnWin += FMath::Clamp<int32>(A->Team, 0, 1) == Win ? 1 : 0; }
+	const bool bLift = bMain && CarryStrength >= (float)Weight;
+	const float Pool = (bMain && OnWin > 0) ? (bLift ? FMath::Max(Str[Win], 1.75f * Weight) : Str[Win]) / OnWin * ForcePerStrength : 0.f;
 	for (int32 i = 0; i < N; ++i)
 	{
 		AAntCharacter* A = Carriers[i];
+		const bool bPooled = Pool > 0.f && FMath::Clamp<int32>(A->Team, 0, 1) == Win;
 		const FVector P = TM.TransformPosition(GrabLocal[i]);
-		const FVector H = HoldPoint(A);
+		const FVector H = HoldPoint(A) + FVector(0.f, 0.f, (bLift && bPooled) ? 28.f : 0.f);
 		const FVector V = Body->GetPhysicsLinearVelocityAtPoint(P) - A->GetVelocity();
 		const float Share = Mass / N;
 		FVector F = Share * (40.f * (H - P) - 7.f * V) + FVector(0.f, 0.f, Share * Gravity);   // spring + hold up its share
-		const float MaxF = A->GetStrength() * ForcePerStrength;
+		const float MaxF = bPooled ? Pool : (A->GetStrength() + Extra[i]) * ForcePerStrength;
 		if (F.SizeSquared() > MaxF * MaxF)
 		{
 			F = F.GetSafeNormal() * MaxF;
@@ -711,8 +748,15 @@ void AKitchenLoot::ServerCarryTick(float Dt)
 
 	// Home?
 	const FVector L = GetActorLocation();
-	if (!bVault && CarrierTeam < 2 && FVector::Dist2D(L, AKitchenBuilder::NestLocation(CarrierTeam)) < AKitchenBuilder::NestRadius(CarrierTeam) && L.Z < 500.f)
+	// Level v2: our colony has a second way in, the south entrance of the nest at the house corner (through the cat flap and the yard).
+	const bool bSouth = CarrierTeam == 0 && KitchenArt::Enabled() && FVector::Dist2D(L, LevelV2::SouthEntrance()) < LevelV2::SouthEntranceRadius() && L.Z < 500.f;
+	if (!bVault && CarrierTeam < 2 && (bSouth || (FVector::Dist2D(L, AKitchenBuilder::NestLocation(CarrierTeam)) < AKitchenBuilder::NestRadius(CarrierTeam)
+		&& L.Z < ((CarrierTeam == 1 && KitchenArt::Enabled()) ? 800.f : 500.f))))
 	{
+		if (bSouth)
+		{
+			UE_LOG(LogTemp, Display, TEXT("ANTV2 delivered at the south entrance: «%s» (%d)"), *LootName, Value);
+		}
 		if (AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
 		{
 			TArray<AAntCharacter*> Team;

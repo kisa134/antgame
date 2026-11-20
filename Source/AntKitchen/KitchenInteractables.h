@@ -46,6 +46,8 @@ public:
 	virtual bool HumanShuts() const { return false; }
 	/** What it is, as in "идёт закрыть <что>": "холодильник", "дверцу шкафа". */
 	virtual FString DoorNoun() const { return TEXT("дверь"); }
+	/** May this ant pull it from where it stands? (The cat flap is latched: it only opens from the living-room side.) Server: says why not. */
+	virtual bool CanPull(AAntCharacter* Ant, bool bTell) const { return true; }
 	/** Server: Ant starts pulling ([E] pressed). True = it opened right away; otherwise it pulls until [E] is let go. */
 	bool Pull(AAntCharacter* Ant);
 	/** Strength of everyone pulling right now: ants holding [E], idle bots of theirs at the door, their armies. */
@@ -264,6 +266,8 @@ private:
 	UPROPERTY() TArray<UStaticMeshComponent*> Toasts;
 	float PopAt = 0.f;
 	float ReadyAt = 0.f;
+	/** Level v2: after it has dropped toast it bakes none for 40 s. */
+	float NextFoodAt = 0.f;
 	float ToastAnim = 0.f;
 	bool bToastArt = false;   // the slices are the modelled ones (origin at the bottom)
 };

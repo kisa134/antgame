@@ -106,6 +106,12 @@ public:
 	float DevFreezeAt = -1.f;
 	/** Dev: a puppet for screenshots. The AI leaves him alone; DevWalk is where he walks to (zero: stands). */
 	bool bDevPuppet = false;
+
+	/** The cover rule (level v2). True where an ant is out of his reach whoever plays him: inside the fridge, the oven, under
+	 *  the sink, in the corridor behind the cabinets, behind a shut door, and in every designed hiding place of the level
+	 *  (LevelV2::CoverAt). His AI does not pick such an ant; his stomp, floor slap and newspaper do not hurt it. */
+	static bool InCover(const UWorld* World, const FVector& P);
+	bool bLetThrough = false;
 	FVector DevWalk = FVector::ZeroVector;
 	float DevWalkScale = 1.f;
 	virtual void DevAct(const FString& What, const FVector& Target);

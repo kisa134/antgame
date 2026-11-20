@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "AIController.h"
 #include "AntRun.h"
+#include "HumanNav.h"
 #include "HumanAIController.generated.h"
 
 class AAntCharacter;
@@ -41,6 +42,14 @@ private:
 	float StuckTimer = 0.f;
 	float UnstickTimer = 0.f;
 	bool bMovedThisTick = false;
+
+	// Level v2: his way round the furniture and his round through both rooms.
+	const FHumanNav* Nav = nullptr;   // the game mode's grid of the house
+	FHumanNavFollower Follow;
+	FVector PathGoal = FVector::ZeroVector;
+	int32 PatrolIndex = -1;
+	float PatrolPause = 0.f;
+	float NextNavLog = 0.f;
 
 	// Noise: he walks to the loudest recent one, looks around for a few seconds, switches the thing off.
 	FAntNoise Noise;

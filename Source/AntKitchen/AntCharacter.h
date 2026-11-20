@@ -189,6 +189,10 @@ public:
 	bool GrabLoot(AKitchenLoot* Loot);
 	void LetGo();
 	void DevInteract();
+	/** Dev (-AntDo "go ..."): the local player's ant walks towards this point by itself. */
+	FVector DevGoTo = FVector::ZeroVector;
+	bool bDevGo = false;
+	float DevGoJumpAt = 0.f;
 	/** Dev (scripted test runs): a commander order without the keyboard. */
 	void DevCommand(uint8 Cmd, const FVector& Point);
 	/** Local camera shake (0..1, adds up, decays). */

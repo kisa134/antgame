@@ -22,6 +22,10 @@
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
 #include "Engine/DamageEvents.h"
+#include "KitchenBuilder.h"
+#include "KitchenArt.h"
+#include "LevelV2.h"
+#include "AntRun.h"
 #include "EngineUtils.h"
 
 namespace HumanLook
@@ -539,6 +543,12 @@ void AHumanCharacter::TrySwat(const FVector& InPoint)
 			AAntCharacter* Ant = *It;
 			if (Ant && !Ant->bDead && !Ant->IsInNest() && FVector::Dist(Ant->GetActorLocation(), Point) < SwatR + AAntCharacter::BodyRadius)
 			{
+				if (InCover(GetWorld(), Ant->GetActorLocation()))
+				{
+					// Cover is honest: what his eyes cannot pick, his newspaper and his palm cannot hit either.
+					UE_LOG(LogTemp, Display, TEXT("ANTV2 cover: %s is under cover, the swat at %s did nothing"), *Ant->GetDisplayName(), *Point.ToCompactString());
+					continue;
+				}
 				UGameplayStatics::ApplyDamage(Ant, 150.f, GetController(), this, UDamageType::StaticClass());
 			}
 		}
@@ -775,6 +785,28 @@ FVector AHumanCharacter::GetStompPoint(int32 Leg) const
 	return GetActorLocation() + (GetActorForwardVector() * 480.f + GetActorRightVector() * (Leg == 0 ? -180.f : 180.f)) * FigScale - FVector(0.f, 0.f, GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
 }
 
+bool AHumanCharacter::InCover(const UWorld* World, const FVector& P)
+{
+	// Inside the fridge (and the gap under it), the oven, the cabinet under the sink.
+	if (FBox(FVector(2700.f, 3000.f, 0.f), FVector(4700.f, 4750.f, 3700.f)).IsInside(P)
+		|| FBox(FVector(-1500.f, 3000.f, 120.f), FVector(0.f, 4750.f, 1650.f)).IsInside(P)
+		|| FBox(FVector(-4200.f, 3000.f, 0.f), FVector(-2800.f, 4750.f, 1100.f)).IsInside(P))
+	{
+		return true;
+	}
+	// The corridor behind the base cabinets, under the worktop.
+	if (P.Y > 4750.f && P.Z < 1650.f && P.X < 2500.f && P.X > -7200.f)
+	{
+		return true;
+	}
+	if (World && KitchenContainers::SealedAt(World, P) >= 0)
+	{
+		return true;   // behind a shut door
+	}
+	// Level v2: the designed hiding places (docs/level/level_v2.json, human.sees.never_targets).
+	return KitchenArt::Enabled() && LevelV2::CoverAt(P) != nullptr;
+}
+
 void AHumanCharacter::DoStompImpact()
 {
 	const FVector P = GetStompPoint(PendingLeg);
@@ -806,6 +838,15 @@ void AHumanCharacter::DoStompImpact()
 			continue;   // can't stomp what's crawling up your own leg
 		}
 		const float D2 = (float)FVector::Dist2D(A, P);
+		if (InCover(GetWorld(), A))
+		{
+			// Cover is honest: an ant inside a slipper, a bottle, the cereal box... is out of the slipper's reach, shockwave included.
+			if (D2 < SR * 2.6f)
+			{
+				UE_LOG(LogTemp, Display, TEXT("ANTV2 cover: %s is under cover, the stomp %.0f away did nothing"), *Ant->GetDisplayName(), D2);
+			}
+			continue;
+		}
 		if (D2 < SR && A.Z - P.Z < 220.f)
 		{
 			UGameplayStatics::ApplyDamage(Ant, 200.f, GetController(), this, UDamageType::StaticClass());
@@ -975,6 +1016,10 @@ void AHumanCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	const float Now = GetWorld()->GetTimeSeconds();
+	if (!bLetThrough)
+	{
+		bLetThrough = AKitchenBuilder::LetThrough(this);   // level v2: he walks through the yarn, the garland and the other "ants only" pieces
+	}
 
 	if (HasAuthority())
 	{

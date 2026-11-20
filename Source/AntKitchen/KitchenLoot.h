@@ -90,6 +90,9 @@ public:
 	UPROPERTY(Replicated) bool bVault = false;
 	/** Heist: a big prize placed up high. Delivered whole it is worth double; its pieces are worth the plain value. */
 	UPROPERTY(ReplicatedUsing = OnRep_Visual) bool bTrophy = false;
+	/** Server. Level v2: the main object of the shift (the slice of birthday cake). A trophy that is hauled by the whole column:
+	 *  the army of a carrier leans on it the way it leans on a heavy door (up to 30 strength). */
+	bool bMain = false;
 
 	/** Server: the Human picks it up (attached to his hand) / throws it. */
 	void PickUpBy(USceneComponent* Hand, const FVector& RelativeLocation);
@@ -143,6 +146,10 @@ private:
 	void ServerCarryTick(float Dt);
 	void SetupPhysics(const FVector& HalfExtent);
 	FVector HoldPoint(const AAntCharacter* Ant) const;
+public:
+	/** Where this carrier holds the food, in the world (server). False if it is not one of the carriers. */
+	bool GrabPointOf(const AAntCharacter* Ant, FVector& Out) const;
+private:
 
 	/** Where each carrier bit into the food (local space of the body), same order as Carriers. Server. */
 	TArray<FVector> GrabLocal;

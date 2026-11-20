@@ -6,6 +6,7 @@
 #include "AntKitchenGameMode.h"
 #include "KitchenBuilder.h"
 #include "KitchenArt.h"
+#include "KitchenLoot.h"
 #include "AntRun.h"
 #include "AntGameState.h"
 #include "AntArmy.h"
@@ -150,7 +151,7 @@ float AKitchenInteractable::PullStrength(int32* OutHands, AAntCharacter** OutFir
 		{
 			AAntCharacter* A = *It;
 			if (A && !A->bDead && A->Pulling != this && A->Creature == 0 && A->Team == First->Team && !A->Carrying && !A->IsPlayerControlled()
-				&& DistanceTo(A->GetActorLocation()) < Reach)
+				&& DistanceTo(A->GetActorLocation()) < Reach && CanPull(A, false))
 			{
 				Have += A->GetStrength();
 			}
@@ -199,6 +200,10 @@ bool AKitchenInteractable::TryOpenByPull()
 bool AKitchenInteractable::Pull(AAntCharacter* Ant)
 {
 	if (!HasAuthority() || !Ant || Ant->bDead || IsDoorOpen())
+	{
+		return false;
+	}
+	if (!CanPull(Ant, true))
 	{
 		return false;
 	}
@@ -511,9 +516,11 @@ void AKitchenDoor::SetOpen(bool bInOpen, float AutoClose)
 		if (AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
 		{
 			const FVector Base = GetActorLocation() + FVector(0.f, -1100.f, 55.f);
-			GM->SpawnFood(Base + FVector(-320.f, 500.f, 0.f), 2);
-			GM->SpawnFood(Base + FVector(250.f, 900.f, 0.f), 3);
-			GM->SpawnFood(Base + FVector(-60.f, 1350.f, 0.f), 2);
+			// Level v2, the gradient rule: the drawer is 18 s from the nest, so the stash is tiers 1, 2, 1 (it was 2, 3, 2).
+			const int32 Down = KitchenArt::Enabled() ? 1 : 0;
+			GM->SpawnFood(Base + FVector(-320.f, 500.f, 0.f), 2 - Down);
+			GM->SpawnFood(Base + FVector(250.f, 900.f, 0.f), 3 - Down);
+			GM->SpawnFood(Base + FVector(-60.f, 1350.f, 0.f), 2 - Down);
 			FRandomStream R(FMath::Rand());
 			GM->SpawnGear(Base + FVector(380.f, 1250.f, 0.f), AntKit::RollWeapon(R.RandRange(1, 3), R));
 		}
@@ -1135,8 +1142,26 @@ void AKitchenToaster::Pop()
 	}
 	if (AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
 	{
-		GM->SpawnFood(FVector(-5700.f, 3820.f, 1745.f), 0);
-		GM->SpawnFood(FVector(-5740.f, 4560.f, 1745.f), 1);
+		// Level v2: the toaster is not an endless bakery. Toast drops only while fewer than two pieces of food lie on the worktop
+		// round it, and after it has dropped some it bakes nothing for 40 s (it still launches ants and still makes its noise).
+		bool bBake = true;
+		if (KitchenArt::Enabled())
+		{
+			int32 OnTop = 0;
+			const FBox Worktop(FVector(-7000.f, 2950.f, 1690.f), FVector(-4150.f, 5000.f, 2100.f));
+			for (TActorIterator<AKitchenLoot> It(GetWorld()); It; ++It)
+			{
+				if (!It->bIsGear && !It->IsCarried() && Worktop.IsInside(It->GetActorLocation())) { ++OnTop; }
+			}
+			bBake = OnTop < 2 && Now() >= NextFoodAt;
+			UE_LOG(LogTemp, Display, TEXT("ANTV2 toaster: %d on the worktop, %s"), OnTop, bBake ? TEXT("two pieces of toast pop out") : (Now() < NextFoodAt ? TEXT("no toast: still cooling (40 s)") : TEXT("no toast: two lie there already")));
+		}
+		if (bBake)
+		{
+			NextFoodAt = Now() + 40.f;
+			GM->SpawnFood(FVector(-5700.f, 3820.f, 1745.f), 0);
+			GM->SpawnFood(FVector(-5740.f, 4560.f, 1745.f), 1);
+		}
 	}
 }
 
