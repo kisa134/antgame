@@ -26,6 +26,7 @@
 #include "GameFramework/HUD.h"
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
+#include "AntBody.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "AntMovementComponent.h"
@@ -1458,6 +1459,10 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 	if (NpcWorld::DevCommand(this, A))
 	{
 		return;   // the pets and the family: cat ..., dog ..., gran ..., kid ..., npclevel N (CritterBrain.cpp)
+	}
+	if (AntBodyRules::DevCommand(this, A))
+	{
+		return;   // the ant's own body: ant info | hp N | leg N | hit .. | knock .. | die kind | cam .. | slomo X (AntBody.cpp)
 	}
 	const FString Op = A[0].ToLower();
 	auto Num = [&A](int32 i, float Def = 0.f) { return A.IsValidIndex(i) ? FCString::Atof(*A[i]) : Def; };

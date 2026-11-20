@@ -1,4 +1,5 @@
 ﻿#include "AntSwarm.h"
+#include "AntRagdoll.h"
 #include "AntArmy.h"
 #include "AntCharacter.h"
 #include "AntKitchenGameMode.h"
@@ -255,6 +256,7 @@ void AAntSwarm::Rebuild()
 
 void AAntSwarm::MulticastSplat_Implementation(FVector_NetQuantize Location, int32 Killed)
 {
+	AAntDeadPile::Scatter(this, FVector(Location), Killed);   // the ones it killed lie about on their backs for a while (AntRagdoll.cpp)
 	if (Splats.Num() == 0)
 	{
 		return;
