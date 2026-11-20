@@ -1439,7 +1439,8 @@ void AAntKitchenGameMode::DevScriptTick()
 		if (FVector::Dist2D(P, T) < 70.f && FMath::Abs(P.Z - T.Z) < 140.f)
 		{
 			DevGoPts.RemoveAt(0);
-			UE_LOG(LogTemp, Display, TEXT("ANTV2 go: reached (%.0f, %.0f, %.0f) at %.1f s, %d left, load %s"), T.X, T.Y, T.Z, Now - DevGoStart, DevGoPts.Num(), C ? *C->LootName : TEXT("-"));
+			if (DevGoDetourPts > 0) { DevGoDetourPts = 0; }
+			else { DevGoDetours = 0; UE_LOG(LogTemp, Display, TEXT("ANTV2 go: reached (%.0f, %.0f, %.0f) at %.1f s, %d left, load %s"), T.X, T.Y, T.Z, Now - DevGoStart, DevGoPts.Num(), C ? *C->LootName : TEXT("-")); }
 			DevGoBest = 1.e9f;
 			DevGoBestAt = Now;
 			if (DevGoPts.Num() == 0)
@@ -1459,6 +1460,24 @@ void AAntKitchenGameMode::DevScriptTick()
 		{
 			DevGoBest = D;
 			DevGoBestAt = Now;
+		}
+		else if (Now - DevGoBestAt > 3.5f && DevGoDetours < 12)
+		{
+			// Something in the way (a table leg, a slipper, the rug's lip): a step aside - left, then right, wider each time -
+			// and on. A crude way round for a walker that only knows straight lines.
+			if (DevGoDetourPts > 0) { DevGoPts.RemoveAt(0); DevGoDetourPts = 0; }
+			const FVector Real = DevGoPts[0];
+			const FVector Dir = (Real - P).GetSafeNormal2D();
+			const FVector Side = FVector::CrossProduct(FVector::UpVector, Dir) * ((DevGoDetours % 2) ? -1.f : 1.f);
+			const float Step = 240.f + 110.f * (DevGoDetours / 2);
+			const FVector Aside(P.X + Side.X * Step - Dir.X * 80.f, P.Y + Side.Y * Step - Dir.Y * 80.f, P.Z);
+			DevGoPts.Insert(Aside, 0);
+			DevGoDetourPts = 1;
+			++DevGoDetours;
+			DevGoBest = 1.e9f;
+			DevGoBestAt = Now;
+			UE_LOG(LogTemp, Display, TEXT("ANTV2 go: no way on at %s, detour %d to (%.0f, %.0f)"), *P.ToCompactString(), DevGoDetours, Aside.X, Aside.Y);
+			return;
 		}
 		else if (Now - DevGoBestAt > 12.f)
 		{
@@ -1651,6 +1670,7 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 		DevGoStart = DevGoBestAt = W->GetTimeSeconds();
 		DevGoBest = 1.e9f;
 		DevGoLogAt = 0.f;
+		DevGoDetours = DevGoDetourPts = 0;
 	}
 	else if (Op == TEXT("gostop") && Me) { DevGoPts.Reset(); Me->bDevGo = false; }
 	else if (Op == TEXT("me") && Me)

@@ -1,5 +1,6 @@
 ﻿#include "AntSquad.h"
 #include "AntArmy.h"
+#include "AntChain.h"
 #include "AntRaid.h"
 #include "AntRoutes.h"
 #include "AntRun.h"
@@ -169,6 +170,16 @@ int32 CountBack(AAntRaid* Raid, bool bWiped, bool bOnlyHome)
 			continue;
 		}
 		Back += A->Count;
+	}
+	// Workers standing in a bridge come home with their commander too (the bridge is taken apart when the raid ends).
+	for (TActorIterator<AAntChain> It(Raid->GetWorld()); It; ++It)
+	{
+		const AAntCharacter* B = It->Builder;
+		if (It->WorkersIn <= 0 || bWiped || !IsValid(B) || B->bDead || B->Team != 0 || (bOnlyHome && !AAntRaid::IsHome(B)))
+		{
+			continue;
+		}
+		Back += It->LinksAtStart > 0 ? FMath::RoundToInt((float)It->WorkersIn * It->ArmyLinks / It->LinksAtStart) : It->WorkersIn;
 	}
 	return Back;
 }

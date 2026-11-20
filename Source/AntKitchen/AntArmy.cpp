@@ -169,10 +169,12 @@ int32 AAntArmy::KillInSphere(UWorld* World, const FVector& Center, float R, int3
 		int32 Under = A->CountNear(Center, R, FMath::Max(R, 250.f));
 		if (A->bSquad)
 		{
-			// A raid squad is small and walks in a knot: one blow (a slipper, a paw, a lick) takes a third of it at most
-			// (two at least), or it would be gone whole the first time anything touched it.
-			Under = FMath::Min(Under, FMath::Max(2, (A->Count + 2) / 3));
+			// A raid squad is small and walks in a knot: one blow (a slipper, a paw, a lick) takes a quarter of it at most,
+			// and the rest scatter for two seconds - or a dog walking over it would eat the whole stake in a blink.
+			if (World->GetTimeSeconds() < A->BlowSafeUntil) { continue; }
+			Under = FMath::Min(Under, FMath::Max(1, (A->Count + 3) / 4));
 			if (A->bArmor) { Under = (Under + 1) / 2; }   // «Панцири»: half of those live
+			if (Under > 0) { A->BlowSafeUntil = World->GetTimeSeconds() + 2.f; }
 		}
 		if (Under > 0)
 		{

@@ -7,6 +7,7 @@
 #include "AntCharacter.h"
 #include "AntBotController.h"
 #include "AntArmy.h"
+#include "AntChain.h"
 #include "HumanCharacter.h"
 #include "KitchenLoot.h"
 #include "KitchenBuilder.h"
@@ -284,6 +285,7 @@ void AAntRaid::EnterNest(bool bFirst)
 	if (!bFirst && GM)
 	{
 		for (TActorIterator<AAntArmy> It(GetWorld()); It; ++It) { It->Destroy(); }
+		for (TActorIterator<AAntChain> It(GetWorld()); It; ++It) { It->Destroy(); }   // (bridges: their workers have been counted home)
 		for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
 		{
 			APlayerController* PC = It->Get();

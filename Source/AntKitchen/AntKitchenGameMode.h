@@ -156,6 +156,7 @@ private:
 	/** Dev: "q <command>" - commands that run one after another, each once the walker ("go") has finished. */
 	TArray<FString> DevQueue;
 	float DevQueueAt = 0.f;
+	int32 DevGoDetours = 0, DevGoDetourPts = 0;
 
 public:
 

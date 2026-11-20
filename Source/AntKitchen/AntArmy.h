@@ -85,6 +85,8 @@ public:
 	float OrphanUntil = 0.f;
 	/** Nest guards (Soldiers II): nobody's squad, they stand at an entrance and go for any red ant that comes near. */
 	bool bGuard = false;
+	/** Server: no blow kills squad workers before this time (they have just scattered from one). */
+	float BlowSafeUntil = 0.f;
 	FVector GuardPost = FVector::ZeroVector;
 	TWeakObjectPtr<AAntCharacter> AttackWho;
 	TWeakObjectPtr<AKitchenInteractable> HeldDoor;

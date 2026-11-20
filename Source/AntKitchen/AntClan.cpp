@@ -205,6 +205,14 @@ void AAntClanBot::ClanThink(AAntCharacter* Me)
 		{
 			// still on the way to it
 		}
+		else if (FVector::Dist2D(Here, C->GetActorLocation()) > 900.f)
+		{
+			// far from it and with no way laid (hatched again at the hill): along the house's routes, like anybody
+			const uint8 Keep = Stance;
+			GoTo(Here, FVector(C->GetActorLocation().X, C->GetActorLocation().Y, 0.f), Keep);
+			NearCakeSince = 0.f;
+			if (!FollowWay(Me)) { Goal = C->GetActorLocation(); bHasGoal = true; }
+		}
 		else
 		{
 			Goal = C->GetActorLocation();
@@ -863,8 +871,9 @@ void AAntClan::CakeThink(AKitchenLoot* C, float Now)
 		}
 		// The leader has crawled up something with it (steering at a point, an ant takes a wall for a way): back to the floor.
 		if (CP.Z < 135.f) { LastFloorAt = CP; }
-		else if (CP.Z > 480.f && !LastFloorAt.IsZero())
+		else if (CP.Z > 480.f && !LastFloorAt.IsZero() && bCarried && FVector::Dist2D(CP, LastFloorAt) < 900.f)
 		{
+			// (only while they hold it and near where it left the floor: a cake thrown by a stomp is no business of this)
 			PlaceCake(C, LastFloorAt + FVector(0.f, 0.f, 6.f));
 			UE_LOG(LogTemp, Display, TEXT("ANTCLAN the cake went up a wall to %s: put back on the floor at %s"), *CP.ToCompactString(), *LastFloorAt.ToCompactString());
 			++Nudges;
