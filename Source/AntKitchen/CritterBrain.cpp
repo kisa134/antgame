@@ -8,6 +8,7 @@
 #include "AntKitchenGameMode.h"
 #include "AntMovementComponent.h"
 #include "HumanCharacter.h"
+#include "FolkCharacters.h"
 #include "KitchenArt.h"
 #include "KitchenBuilder.h"
 #include "KitchenEvents.h"
@@ -2189,6 +2190,10 @@ bool AntBites(AAntCharacter* Ant, float Reach)
 	{
 		return false;
 	}
+	if (FolkWorld::BiteHolder(Ant))
+	{
+		return true;   // in the kid's fingers: the finger is right there
+	}
 	bool bHit = false;
 	const FVector Me = Ant->GetActorLocation();
 	const UAntMovementComponent* MM = Ant->GetAntMovement();
@@ -2225,6 +2230,10 @@ bool AntBites(AAntCharacter* Ant, float Reach)
 
 void Struggle(AAntCharacter* Ant)
 {
+	if (FolkWorld::Struggle(Ant))
+	{
+		return;
+	}
 	AActor* Holder = (Ant && Ant->NpcHold) ? Ant->NpcHold->GetOwner() : nullptr;
 	if (ACritter* C = Cast<ACritter>(Holder))
 	{
@@ -2247,6 +2256,10 @@ bool DevCommand(AAntKitchenGameMode* GM, const TArray<FString>& A)
 	if (Op == TEXT("npclevel"))
 	{
 		ForceLevel((int32)Num(1, -1.f));
+		return true;
+	}
+	if (FolkWorld::DevCommand(GM, A))
+	{
 		return true;
 	}
 	if (Op == TEXT("cat") || Op == TEXT("dog"))

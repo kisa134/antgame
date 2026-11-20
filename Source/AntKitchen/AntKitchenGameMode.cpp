@@ -15,6 +15,8 @@
 #include "AntChain.h"
 #include "WarMode.h"
 #include "Critters.h"
+#include "FolkCharacters.h"
+#include "NpcBody.h"
 #include "KitchenGadgets.h"
 #include "KitchenArt.h"
 #include "KitchenMover.h"
@@ -299,8 +301,23 @@ void AAntKitchenGameMode::SpawnGadgets()
 	// The pets and the rest of the family (primitives for now).
 	Spawn(ACritter::StaticClass(), FVector(600.f, -600.f, 0.f), FRotator::ZeroRotator, [](AActor* A) { CastChecked<ACritter>(A)->Kind = 0; });
 	Spawn(ACritter::StaticClass(), FVector(13500.f, 400.f, 950.f), FRotator(0.f, -90.f, 0.f), [](AActor* A) { CastChecked<ACritter>(A)->Kind = 1; });
-	Spawn(AHouseholdNpc::StaticClass(), FVector(13500.f, 300.f, 950.f), FRotator::ZeroRotator, [](AActor* A) { CastChecked<AHouseholdNpc>(A)->Kind = 0; });
-	Spawn(AHouseholdNpc::StaticClass(), FVector(9250.f, -5800.f, 800.f), FRotator::ZeroRotator, [](AActor* A) { CastChecked<AHouseholdNpc>(A)->Kind = 1; });
+	// The kid and grandma: the jointed figures with heads of their own (FolkCharacters.h), or the old seated ones (-AntOldNpc / no models).
+	if (NpcWorld::NewNpcs() && HumanBody::Enabled(HumanFig::Kid))
+	{
+		Spawn(AKidCharacter::StaticClass(), FVector(13800.f, -1200.f, 800.f), FRotator(0.f, -90.f, 0.f), [](AActor*) {});
+	}
+	else
+	{
+		Spawn(AHouseholdNpc::StaticClass(), FVector(13500.f, 300.f, 950.f), FRotator::ZeroRotator, [](AActor* A) { CastChecked<AHouseholdNpc>(A)->Kind = 0; });
+	}
+	if (NpcWorld::NewNpcs() && HumanBody::Enabled(HumanFig::Grandma))
+	{
+		Spawn(AGrandmaCharacter::StaticClass(), FVector(9910.f, -5800.f, 1480.f), FRotator::ZeroRotator, [](AActor*) {});
+	}
+	else
+	{
+		Spawn(AHouseholdNpc::StaticClass(), FVector(9250.f, -5800.f, 800.f), FRotator::ZeroRotator, [](AActor* A) { CastChecked<AHouseholdNpc>(A)->Kind = 1; });
+	}
 	// Grandma's ball of yarn on the floor with the thread running up to her lap: a climb.
 	// (geometry lives in KitchenBuilder so every client has it; the stash under the loose tile is loot.)
 	SpawnStash(FVector(5000.f, 2000.f, -350.f), 90, 16, 3);
@@ -1082,7 +1099,7 @@ void AAntKitchenGameMode::OnAntKilled(AAntCharacter* Ant, AController* Killer, A
 	}
 	if (const AHumanCharacter* H = Cast<AHumanCharacter>(Causer))
 	{
-		How = H->bSpraying ? TEXT("задохнулся дихлофосом") : TEXT("раздавлен тапком");
+		How = H->Fig == HumanFig::Grandma ? TEXT("прихлопнут бабушкиной мухобойкой") : H->Fig == HumanFig::Kid ? TEXT("растоптан малышом") : H->bSpraying ? TEXT("задохнулся дихлофосом") : TEXT("раздавлен тапком");
 	}
 	if (Killer)
 	{

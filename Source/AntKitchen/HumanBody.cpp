@@ -25,6 +25,8 @@
 #include "EngineUtils.h"
 
 #include "HumanBodyData.inl"
+#include "HumanGranData.inl"
+#include "HumanKidData.inl"
 
 // ---------------------------------------------------------------------------------------------
 // Assets and looks
@@ -51,7 +53,45 @@ namespace
 		{ TEXT("Pupil"),        nullptr, 0.f, 0.03f, 0.03f, 0.04f, 0.2f,  nullptr },
 		{ TEXT("Mouth"),        nullptr, 0.f, 0.42f, 0.10f, 0.10f, 0.5f,  nullptr },
 	};
-
+	const FHumanLook GGranLooks[] =
+	{
+		{ TEXT("Skin"),        TEXT("T_Enamel_White"), 600.f, 0.90f, 0.60f, 0.48f, 0.55f, nullptr },
+		{ TEXT("Cardigan"),    TEXT("T_Fabric_Grey"),  200.f, 1.80f, 0.85f, 1.65f, 0.9f,  ClothStep },
+		{ TEXT("Blouse"),      TEXT("T_Fabric_Grey"),  260.f, 3.00f, 2.85f, 2.45f, 0.9f,  ClothStep },
+		{ TEXT("Skirt"),       TEXT("T_Fabric_Grey"),  260.f, 0.70f, 0.90f, 1.35f, 0.9f,  ClothStep },
+		{ TEXT("SkirtDot"),    TEXT("T_Fabric_Grey"),  260.f, 2.60f, 2.70f, 3.00f, 0.9f,  ClothStep },
+		{ TEXT("Stocking"),    nullptr, 0.f, 0.78f, 0.62f, 0.50f, 0.8f,  ClothStep },
+		{ TEXT("Slipper"),     TEXT("T_Fabric_Grey"),  120.f, 1.30f, 2.00f, 1.20f, 0.95f, ClothStep },
+		{ TEXT("Fluff"),       nullptr, 0.f, 0.98f, 0.96f, 0.92f, 0.95f, ClothStep },
+		{ TEXT("SlipperSole"), nullptr, 0.f, 0.74f, 0.62f, 0.46f, 0.8f,  nullptr },
+		{ TEXT("HairGrey"),    nullptr, 0.f, 0.86f, 0.86f, 0.88f, 0.7f,  nullptr },
+		{ TEXT("Glasses"),     nullptr, 0.f, 0.16f, 0.12f, 0.10f, 0.3f,  nullptr },
+		{ TEXT("EyeWhite"),    nullptr, 0.f, 0.97f, 0.97f, 0.95f, 0.25f, nullptr },
+		{ TEXT("Pupil"),       nullptr, 0.f, 0.03f, 0.03f, 0.04f, 0.2f,  nullptr },
+		{ TEXT("Mouth"),       nullptr, 0.f, 0.50f, 0.14f, 0.14f, 0.5f,  nullptr },
+	};
+	const FHumanLook GKidLooks[] =
+	{
+		{ TEXT("Skin"),        TEXT("T_Enamel_White"), 600.f, 0.95f, 0.66f, 0.52f, 0.55f, nullptr },
+		{ TEXT("KidShirt"),    TEXT("T_Fabric_Grey"),  260.f, 3.20f, 2.40f, 0.45f, 0.9f,  ClothStep },
+		{ TEXT("KidTrim"),     TEXT("T_Fabric_Grey"),  260.f, 2.90f, 0.90f, 0.60f, 0.9f,  ClothStep },
+		{ TEXT("KidShorts"),   TEXT("T_Fabric_Grey"),  260.f, 0.60f, 1.30f, 2.40f, 0.9f,  ClothStep },
+		{ TEXT("Sock"),        nullptr, 0.f, 0.96f, 0.96f, 0.94f, 0.9f,  ClothStep },
+		{ TEXT("Sneaker"),     nullptr, 0.f, 0.88f, 0.20f, 0.20f, 0.7f,  nullptr },
+		{ TEXT("SneakerSole"), nullptr, 0.f, 0.96f, 0.96f, 0.94f, 0.6f,  nullptr },
+		{ TEXT("HairBrown"),   nullptr, 0.f, 0.45f, 0.26f, 0.10f, 0.7f,  nullptr },
+		{ TEXT("Cheek"),       nullptr, 0.f, 0.96f, 0.52f, 0.48f, 0.6f,  nullptr },
+		{ TEXT("EyeWhite"),    nullptr, 0.f, 0.97f, 0.97f, 0.95f, 0.25f, nullptr },
+		{ TEXT("Pupil"),       nullptr, 0.f, 0.03f, 0.03f, 0.04f, 0.2f,  nullptr },
+		{ TEXT("Mouth"),       nullptr, 0.f, 0.50f, 0.14f, 0.14f, 0.5f,  nullptr },
+	};
+	// Scale, capsule radius / half height, walk speed, tempo, hunch, arms out, swat: wind-up / radius / cooldown, sitting slowness.
+	const FHumanStyle GHumanStyles[HumanFig::Count] =
+	{
+		{ 1.00f, 340.f, 1700.f, 720.f, 1.00f,  0.f,  0.f, HumanAct::SwatHit, 300.f, 2.6f, 1.0f },   // the Dad: exactly as he was
+		{ 0.88f, 300.f, 1470.f, 380.f, 0.72f, 13.f,  0.f, 0.95f,             400.f, 4.0f, 1.7f },   // grandma: slow, stooped, a wide flat swatter
+		{ 0.50f, 190.f,  790.f, 900.f, 1.55f,  0.f, 20.f, HumanAct::SwatHit, 200.f, 2.0f, 0.5f },   // the kid: quick, arms out for balance
+	};
 }
 
 // The materials, the easing helpers, the bone rotation and the two-bone IK live in NpcBody.h now: every jointed creature uses them.
@@ -60,59 +100,62 @@ using namespace NpcRig;
 namespace HumanBody
 {
 
-TConstArrayView<FHumanSegDef> Segs() { return TConstArrayView<FHumanSegDef>(GHumanSegs, UE_ARRAY_COUNT(GHumanSegs)); }
+TConstArrayView<FHumanSegDef> Segs(uint8 Fig)
+{
+	switch (Fig)
+	{
+	case HumanFig::Grandma: return TConstArrayView<FHumanSegDef>(GGranSegs, UE_ARRAY_COUNT(GGranSegs));
+	case HumanFig::Kid:     return TConstArrayView<FHumanSegDef>(GKidSegs, UE_ARRAY_COUNT(GKidSegs));
+	default:                return TConstArrayView<FHumanSegDef>(GHumanSegs, UE_ARRAY_COUNT(GHumanSegs));
+	}
+}
 
 const TCHAR* SegName(int32 Seg)
 {
 	return (Seg >= 0 && Seg < (int32)UE_ARRAY_COUNT(GHumanSegs)) ? GHumanSegs[Seg].Name + 5 : TEXT("None");   // without "SM_H_"
 }
 
-UStaticMesh* Mesh(int32 Seg)
+const FHumanStyle& Style(uint8 Fig)
 {
-	static UStaticMesh* Cache[HumanSeg::Count];   // rooted below: static, survives map travel
-	static bool bLoaded[HumanSeg::Count];
-	if (Seg < 0 || Seg >= HumanSeg::Count || Seg >= (int32)UE_ARRAY_COUNT(GHumanSegs))
+	return GHumanStyles[Fig < HumanFig::Count ? Fig : 0];
+}
+
+UStaticMesh* Mesh(int32 Seg, uint8 Fig)
+{
+	const TConstArrayView<FHumanSegDef> Defs = Segs(Fig);
+	if (Seg < 0 || Seg >= HumanSeg::Count || Seg >= Defs.Num())
 	{
 		return nullptr;
 	}
-	if (!bLoaded[Seg])
-	{
-		bLoaded[Seg] = true;
-		const TCHAR* N = GHumanSegs[Seg].Name;
-		Cache[Seg] = LoadObject<UStaticMesh>(nullptr, *FString::Printf(TEXT("/Game/Human/%s/%s.%s"), N, N, N), nullptr, LOAD_NoWarn | LOAD_Quiet);
-		if (Cache[Seg])
-		{
-			Cache[Seg]->AddToRoot();
-		}
-		else
-		{
-			UE_LOG(LogTemp, Warning, TEXT("HumanBody: mesh %s is missing"), N);
-		}
-	}
-	return Cache[Seg];
+	return NpcRig::LoadMesh(Fig == HumanFig::Dad ? TEXT("/Game/Human") : TEXT("/Game/Npc"), Defs[Seg].Name);
 }
 
-bool Enabled()
+bool Enabled(uint8 Fig)
 {
-	static int32 State = -1;
+	static int32 States[HumanFig::Count] = { -1, -1, -1 };
+	Fig = Fig < HumanFig::Count ? Fig : 0;
+	int32& State = States[Fig];
 	if (State < 0)
 	{
 		State = 1;
-		if (FParse::Param(FCommandLine::Get(), TEXT("AntOldHuman")) || UE_ARRAY_COUNT(GHumanSegs) != HumanSeg::Count)
+		if (Segs(Fig).Num() != HumanSeg::Count || (Fig == HumanFig::Dad ? FParse::Param(FCommandLine::Get(), TEXT("AntOldHuman")) : !NpcWorld::NewNpcs()))
 		{
 			State = 0;
 		}
 		for (int32 i = 0; i < HumanSeg::Count && State == 1; ++i)
 		{
-			if (!Mesh(i)) { State = 0; }
+			if (!Mesh(i, Fig)) { State = 0; }
 		}
-		UE_LOG(LogTemp, Display, TEXT("ANTHUMAN body: %s"), State ? TEXT("jointed (19 segments, /Game/Human)") : TEXT("the old statue"));
+		static const TCHAR* Who[HumanFig::Count] = { TEXT("the Human"), TEXT("grandma"), TEXT("the kid") };
+		UE_LOG(LogTemp, Display, TEXT("ANTHUMAN body of %s: %s"), Who[Fig], State ? TEXT("jointed (19 segments)") : TEXT("the old one"));
 	}
 	return State == 1;
 }
 
-void ApplyLook(UStaticMeshComponent* C)
+void ApplyLook(UStaticMeshComponent* C, uint8 Fig)
 {
+	const TConstArrayView<FHumanLook> Looks = Fig == HumanFig::Grandma ? TConstArrayView<FHumanLook>(GGranLooks, UE_ARRAY_COUNT(GGranLooks))
+		: (Fig == HumanFig::Kid ? TConstArrayView<FHumanLook>(GKidLooks, UE_ARRAY_COUNT(GKidLooks)) : TConstArrayView<FHumanLook>(GHumanLooks, UE_ARRAY_COUNT(GHumanLooks)));
 	UStaticMesh* M = C ? C->GetStaticMesh() : nullptr;
 	if (!M)
 	{
@@ -123,7 +166,7 @@ void ApplyLook(UStaticMeshComponent* C)
 	{
 		const FString Slot = Slots[i].MaterialSlotName.ToString();
 		const FHumanLook* Look = nullptr;
-		for (const FHumanLook& L : GHumanLooks)
+		for (const FHumanLook& L : Looks)
 		{
 			if (Slot.Equals(L.Slot, ESearchCase::IgnoreCase)) { Look = &L; break; }
 		}
@@ -151,16 +194,16 @@ void ApplyLook(UStaticMeshComponent* C)
 
 void AHumanCharacter::SetupJointedBody()
 {
-	if (Segs.Num() != HumanSeg::Count || !HumanBody::Enabled())
+	if (Segs.Num() != HumanSeg::Count || !HumanBody::Enabled(Fig))
 	{
 		return;
 	}
-	const TConstArrayView<FHumanSegDef> Defs = HumanBody::Segs();
+	const TConstArrayView<FHumanSegDef> Defs = HumanBody::Segs(Fig);
 	for (int32 i = 0; i < HumanSeg::Count; ++i)
 	{
 		UStaticMeshComponent* C = Segs[i];
-		C->SetStaticMesh(HumanBody::Mesh(i));
-		HumanBody::ApplyLook(C);
+		C->SetStaticMesh(HumanBody::Mesh(i, Fig));
+		HumanBody::ApplyLook(C, Fig);
 		C->SetRelativeTransform(FTransform(FQuat::Identity, Defs[i].Joint, FVector(HumanBody::Scale)));
 		// Every segment is a moving surface: ants, the spider and the army climb it and ride it.
 		UAntMovementComponent::MakeClimbable(C);
@@ -187,6 +230,35 @@ void AHumanCharacter::BuildHeldThings()
 	}
 	const float K = 1.f / HumanBody::Scale;   // the hand is scaled 19: lengths in its space are mesh centimetres
 	const FVector Grip(10.f, -35.f, -150.f);  // the middle of the right fist, uu
+	if (Fig == HumanFig::Kid)
+	{
+		return;   // empty hands
+	}
+	if (Fig == HumanFig::Grandma)
+	{
+		// Grandma's things, out of plain shapes: the fly swatter she carries, the broom she sweeps with, her knitting needles.
+		auto Add = [&](USceneComponent* Parent, EAntShape Shape, const FVector& At, const FVector& Size, const FLinearColor& Color, const FRotator& Rot)
+		{
+			UStaticMeshComponent* C = AntKit::AddPart(this, Parent, Shape, At * K, Size * (K / 100.f), Color, Rot, false, false);
+			C->SetCastShadow(true);
+			return C;
+		};
+		const FLinearColor Wood(0.55f, 0.36f, 0.18f), Straw(0.85f, 0.70f, 0.30f), Steel(0.75f, 0.76f, 0.80f), Plastic(0.90f, 0.25f, 0.30f);
+		SwatterPivot = AntKit::AddPivot(this, Segs[HumanSeg::HandR], Grip * K);
+		Add(SwatterPivot, EAntShape::Cylinder, FVector(480.f, 0.f, 0.f), FVector(34.f, 34.f, 1000.f), Steel, FRotator(90.f, 0.f, 0.f));   // the wire handle, along the hand's X like the Dad's newspaper
+		Add(SwatterPivot, EAntShape::Cube, FVector(1120.f, 0.f, 0.f), FVector(420.f, 30.f, 420.f), Plastic, FRotator::ZeroRotator);        // the flat head
+		BroomPivot = AntKit::AddPivot(this, Segs[HumanSeg::HandR], Grip * K);
+		Add(BroomPivot, EAntShape::Cylinder, FVector(820.f, 0.f, 0.f), FVector(60.f, 60.f, 2150.f), Wood, FRotator(90.f, 0.f, 0.f));
+		Add(BroomPivot, EAntShape::Cube, FVector(1900.f, 0.f, 0.f), FVector(230.f, 170.f, 760.f), Straw, FRotator::ZeroRotator);            // the bristles
+		BroomPivot->SetVisibility(false, true);
+		for (int32 s = 0; s < 2; ++s)
+		{
+			UStaticMeshComponent* N = Add(Segs[s == 0 ? HumanSeg::HandL : HumanSeg::HandR], EAntShape::Cylinder, FVector(140.f, s == 0 ? 35.f : -35.f, -210.f), FVector(16.f, 16.f, 620.f), Steel, FRotator(55.f, s == 0 ? 40.f : -40.f, 0.f));
+			N->SetVisibility(false);
+			NeedleArt.Add(N);
+		}
+		return;
+	}
 	const AntArt::FPart& Paper = AntArt::Get(TEXT("SM_RolledNewspaper"));
 	if (Paper.IsValid())
 	{
@@ -207,7 +279,7 @@ void AHumanCharacter::BuildHeldThings()
 FTransform AHumanCharacter::BodyFrame() const
 {
 	const FVector Floor = GetActorLocation() - FVector(0.f, 0.f, GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
-	return FTransform(FRotator(0.f, GetActorRotation().Yaw, 0.f), Floor);
+	return FTransform(FRotator(0.f, GetActorRotation().Yaw, 0.f), Floor, FVector(FigScale));   // the family are the same figure, smaller
 }
 
 float AHumanCharacter::ActTime() const
@@ -286,6 +358,7 @@ namespace
 		FQuat RotB = FQuat::Identity;   // hand rotation at Abs
 		float RotW = 1.f;
 		bool bPaper = false;      // Abs is found from PaperP: the tip of the rolled newspaper lands there
+		float PaperLen = 0.f;     // > 0: something longer than the newspaper (grandma's broom)
 		FVector PaperP = FVector::ZeroVector;
 		FVector PaperFlat = FVector::ForwardVector;
 		bool bPole = false;
@@ -307,7 +380,7 @@ namespace
 
 FVector AHumanCharacter::SprayNozzleBody() const
 {
-	const TConstArrayView<FHumanSegDef> Defs = HumanBody::Segs();
+	const TConstArrayView<FHumanSegDef> Defs = HumanBody::Segs(Fig);
 	const FVector DirB = BodyFrame().InverseTransformVectorNoScale(GetSprayDirection());
 	return FVector(0.f, Defs[HumanSeg::UpperArmR].Joint.Y, Defs[HumanSeg::UpperArmR].Joint.Z - 35.f) + DirB.ToOrientationQuat().RotateVector(FVector(1150.f, 0.f, -60.f));
 }
@@ -320,7 +393,7 @@ void AHumanCharacter::PoseBody(float Dt)
 		return;
 	}
 	FHumanRig& R = Rig;
-	const TConstArrayView<FHumanSegDef> Defs = HumanBody::Segs();
+	const TConstArrayView<FHumanSegDef> Defs = HumanBody::Segs(Fig);
 	Dt = FMath::Clamp(Dt, 0.f, 0.1f);
 	const float Now = GetWorld()->GetTimeSeconds();
 	const FTransform Body = BodyFrame();
@@ -329,6 +402,9 @@ void AHumanCharacter::PoseBody(float Dt)
 	const FVector Right = Body.GetUnitAxis(EAxis::Y);
 	const float Yaw = (float)Body.Rotator().Yaw;
 	const float FloorZ = (float)Origin.Z;
+	// The family: the same figure, smaller (FK: uu of the world per uu of the body) and carrying itself its own way.
+	const FHumanStyle& St = HumanBody::Style(Fig);
+	const float FK = FigScale;
 
 	// Proportions, straight from the model's joints (uu).
 	const float HipY = (float)Defs[ThighR].Joint.Y, HipZ = (float)Defs[ThighR].Joint.Z;
@@ -345,8 +421,8 @@ void AHumanCharacter::PoseBody(float Dt)
 
 	// ---- what is going on
 	const FVector Vel = GetVelocity() * FVector(1.f, 1.f, 0.f);
-	const float Speed = (float)Vel.Size();
-	const FVector VelDir = Speed > 1.f ? Vel / Speed : Fwd;
+	const float Speed = (float)Vel.Size() / FK;   // in the body's own units
+	const FVector VelDir = Speed > 1.f ? Vel.GetSafeNormal() : Fwd;
 	const float Ahead = (float)FVector::DotProduct(VelDir, Fwd);   // -1 when he backs away
 	const bool bMoving = Speed > 50.f;
 	const bool bKO = bKnockedOut;
@@ -361,7 +437,10 @@ void AHumanCharacter::PoseBody(float Dt)
 	switch (A)
 	{
 	case HumanAct::Stomp: ActDur = 1.15f; break;
-	case HumanAct::Swat: ActDur = HumanAct::SwatHit + 0.85f; break;
+	case HumanAct::Swat: ActDur = St.SwatHit + 0.85f; break;
+	case HumanAct::Sit: ActDur = 1.e9f; break;
+	case HumanAct::Rise: ActDur = HumanAct::SitTime * St.SitSlow + 0.05f; break;
+	case HumanAct::Sweep: ActDur = 2.3f; break;
 	case HumanAct::Slap: ActDur = HumanAct::SlapHit + 1.0f; break;
 	case HumanAct::Grab: ActDur = 0.95f; break;
 	case HumanAct::Throw: ActDur = 0.95f; break;
@@ -379,9 +458,9 @@ void AHumanCharacter::PoseBody(float Dt)
 	Approach(R.PanicW, bKO ? 1.f : 0.f, 5.f, Dt);
 	Approach(R.StunW, bStun ? 1.f : 0.f, 8.f, Dt);
 	Approach(R.SprayW, (bSpraying && !bKO && !bStun) ? 1.f : 0.f, 9.f, Dt);
-	const bool bHolding = Held != nullptr && !(A == HumanAct::Grab && T < 0.5f) && A != HumanAct::Throw;
+	const bool bHolding = (Held != nullptr || bCarryPose) && !(A == HumanAct::Grab && T < 0.5f) && A != HumanAct::Throw;
 	Approach(R.HoldW, bHolding ? 1.f : 0.f, 7.f, Dt);
-	const float Tempo = 1.f + 0.35f * R.RageW;
+	const float Tempo = (1.f + 0.35f * R.RageW) * St.Tempo;
 	R.Clock += Dt;
 	R.Breath += Dt * 2.f * PI * (0.22f + 0.2f * R.RageW + 0.5f * R.PanicW);
 	const float C = R.Clock;
@@ -391,11 +470,11 @@ void AHumanCharacter::PoseBody(float Dt)
 	const bool bFootStun = bStun && StunKind == 1;
 	const bool bHop = A == HumanAct::Shake || bFootStun;
 	const float Wide = 1.f + 0.16f * R.RageW + 0.35f * FMath::Min(1.f, R.Crouch / 900.f);
-	auto Home = [&](int32 i) { return Origin + Right * ((i == 0 ? -HipY : HipY) * Wide); };
+	auto Home = [&](int32 i) { return Origin + Right * ((i == 0 ? -HipY : HipY) * Wide * FK); };
 	for (int32 i = 0; i < 2; ++i)
 	{
 		FHumanFoot& F = R.Feet[i];
-		if (!F.bInit || FVector::DistSquared2D(F.Pos, Home(i)) > FMath::Square(1700.f))
+		if (!F.bInit || FVector::DistSquared2D(F.Pos, Home(i)) > FMath::Square(1700.f * FK))
 		{
 			F = FHumanFoot();   // spawned or teleported: under the hips
 			F.Pos = Home(i);
@@ -416,7 +495,7 @@ void AHumanCharacter::PoseBody(float Dt)
 			F.From = F.Pos;
 			F.FromYaw = F.Yaw;
 		}
-		const FVector Cock = Origin + Fwd * 130.f + Right * (Sgn * HipY * 1.2f);
+		const FVector Cock = Origin + (Fwd * 130.f + Right * (Sgn * HipY * 1.2f)) * FK;
 		const FVector Hit = GetStompPoint(StompLeg);
 		const float Top = 900.f;
 		if (T < 0.40f)
@@ -496,7 +575,7 @@ void AHumanCharacter::PoseBody(float Dt)
 	}
 
 	// The walk: a slow heavy cadence. Each foot stays where it landed and swings to its next place when its turn comes.
-	float Freq = 0.45f + 0.8f * FMath::Min(Speed / 980.f, 1.2f);   // steps per second
+	float Freq = (0.45f + 0.8f * FMath::Min(Speed / 980.f, 1.2f)) * St.Tempo;   // steps per second
 	if (bKO)
 	{
 		Freq = 1.8f;   // panic: pattering away
@@ -526,7 +605,7 @@ void AHumanCharacter::PoseBody(float Dt)
 			{
 				const float Off = i == 0 ? 0.f : 0.5f;
 				const bool bTurn = FMath::FloorToInt(Old + Off) != FMath::FloorToInt(R.GaitPhase + Off);
-				const bool bLeftBehind = FVector::DistSquared2D(R.Feet[i].Pos, Home(i)) > FMath::Square(950.f);
+				const bool bLeftBehind = FVector::DistSquared2D(R.Feet[i].Pos, Home(i)) > FMath::Square(950.f * FK);
 				if ((bTurn || bLeftBehind) && R.Feet[i].T >= 1.f && R.Feet[1 - i].T >= 0.7f)
 				{
 					StartSwing(i, SwingDur);
@@ -540,7 +619,7 @@ void AHumanCharacter::PoseBody(float Dt)
 			float Err[2];
 			for (int32 i = 0; i < 2; ++i)
 			{
-				Err[i] = (float)FVector::Dist2D(R.Feet[i].Pos, Home(i)) + FMath::Abs(FMath::FindDeltaAngleDegrees(R.Feet[i].Yaw, Yaw)) * 5.f;
+				Err[i] = (float)FVector::Dist2D(R.Feet[i].Pos, Home(i)) / FK + FMath::Abs(FMath::FindDeltaAngleDegrees(R.Feet[i].Yaw, Yaw)) * 5.f;
 			}
 			const int32 Worse = Err[1] > Err[0] ? 1 : 0;
 			if (Err[Worse] > 170.f)
@@ -561,7 +640,7 @@ void AHumanCharacter::PoseBody(float Dt)
 		F.T = FMath::Min(1.f, F.T + Dt / FMath::Max(0.05f, F.Dur));
 		// Lands ahead of the hip by half of what the body will travel while the foot stands.
 		const float Lead = bMoving ? FMath::Min(520.f, Speed * FMath::Max(0.f, 2.f / Freq - SwingDur) * 0.5f) : 0.f;
-		FVector To = Home(i) + Vel * ((1.f - F.T) * F.Dur) + VelDir * Lead;
+		FVector To = Home(i) + Vel * ((1.f - F.T) * F.Dur) + VelDir * (Lead * FK);
 		To.Z = FloorZ;
 		const float E = Ease(F.T);
 		F.Pos = FMath::Lerp(F.From, To, E);
@@ -638,7 +717,7 @@ void AHumanCharacter::PoseBody(float Dt)
 	// ---------------------------------------------------------------------------------- posture and actions
 	float CrouchT = 30.f + 30.f * R.RageW;                                     // rage: lower, hunched, wound up
 	float LeanT = 1.5f + FMath::Min(Speed * 0.005f, 5.f) * Ahead + 4.f * R.RageW;
-	float BendT = 10.f * R.RageW;
+	float BendT = 10.f * R.RageW + St.Hunch;
 	float TwistT = 0.f, SideT = 0.f;
 	FVector PelvisOff = FVector::ZeroVector;
 	FArmCtl Arm[2];
@@ -711,7 +790,7 @@ void AHumanCharacter::PoseBody(float Dt)
 		const bool bSlap = A == HumanAct::Slap;
 		const int32 s = bSlap ? 0 : 1;
 		const float Sgn = s == 0 ? -1.f : 1.f;
-		const float Ti = bSlap ? HumanAct::SlapHit : HumanAct::SwatHit;
+		const float Ti = bSlap ? HumanAct::SlapHit : St.SwatHit;
 		const float Tw = TwistTo(TargetB, s);
 		const FVector WristHit = TargetB - FlatDir * 150.f + FVector(0.f, 0.f, 50.f);
 		const float K = bSlap ? NeedReach(s, WristHit, ArmReach * 0.97f, Tw) : NeedReach(s, TargetB, ArmReach * 0.9f + PaperReach, Tw);
@@ -834,6 +913,100 @@ void AHumanCharacter::PoseBody(float Dt)
 		}
 		bLook = true;
 		LookB = TargetB;
+	}
+	else if (A == HumanAct::Sit || A == HumanAct::Rise)
+	{
+		// Onto a seat (grandma's armchair behind her, the floor under the kid): the pelvis goes back and down to it, the feet stay where they stand.
+		const float Dur = HumanAct::SitTime * St.SitSlow;
+		const float W = A == HumanAct::Sit ? Ease(Ramp(T, 0.f, Dur)) : 1.f - Ease(Ramp(T, 0.f, Dur));
+		const float Moving = FMath::Sin(PI * W);   // on the way down / up: leaning forward over the knees
+		const float SeatZ = FMath::Max(0.f, (float)TargetB.Z);
+		R.SitW = W;
+		CrouchT += FMath::Max(0.f, HipZ - (SeatZ + 190.f)) * W;
+		PelvisOff = FVector(TargetB.X, TargetB.Y, 0.f) * W;
+		BendT += 30.f * Moving - St.Hunch * 0.5f * W;
+		LeanT += -9.f * W * (1.f - Moving);
+		const float Settled = Ramp(W, 0.85f, 1.f);
+		const uint8 How = Act.Arg;
+		const FVector Lap(TargetB.X + 330.f, 0.f, SeatZ + 330.f);
+		for (int32 s = 0; s < 2 && Settled > 0.f; ++s)
+		{
+			const float SS = s == 0 ? -1.f : 1.f;
+			FArmCtl& H = Arm[s];
+			H.W = Settled;
+			H.AbsW = 1.f;
+			H.RotW = 0.f;
+			H.bPole = true;
+			H.Pole = FVector(-0.2f, SS * 0.9f, -0.2f);
+			if (How == 0)
+			{
+				// Knitting: the hands close together over the lap, the needles going.
+				H.Abs = Lap + FVector(60.f + 26.f * FMath::Sin(C * 7.f + s * PI), SS * (95.f + 18.f * FMath::Cos(C * 7.f + s * PI)), 150.f + 22.f * FMath::Sin(C * 3.5f + s));
+				H.Curl = 0.8f;
+			}
+			else if (How == 1)
+			{
+				H.Abs = Lap + FVector(40.f, SS * 150.f, 20.f);   // dozing: hands in the lap
+				H.Curl = 0.35f;
+			}
+			else
+			{
+				// Playing on the floor: patting it in front of him, one hand after the other.
+				H.Abs = FVector(TargetB.X + 620.f, SS * 210.f, 70.f + 230.f * FMath::Max(0.f, FMath::Sin(C * 5.f + s * PI)));
+				H.Curl = 0.1f;
+				H.Pole = FVector(-0.2f, SS * 0.9f, 0.4f);
+			}
+		}
+		if (How == 1 && Settled > 0.f)
+		{
+			HeadUpT = (-34.f + 5.f * FMath::Sin(C * 0.7f)) * Settled;   // nodding off
+		}
+		else if (How == 0 && Settled > 0.f && !bLook && FVector(FolkLook).IsZero())
+		{
+			bLook = true;
+			LookB = Lap + FVector(120.f, 0.f, 100.f);   // eyes on the knitting
+		}
+	}
+	else if (A == HumanAct::Sweep)
+	{
+		// The broom: drawn back to her right (the warning), then one long stroke across the floor in front of her, right to left.
+		const float Back = Ease(Ramp(T, 0.f, HumanAct::SweepHit * 0.6f));
+		const float Go = Ease(Ramp(T, HumanAct::SweepHit - 0.1f, HumanAct::SweepHit + 0.4f));
+		const float Out = 1.f - Ease(Ramp(T, 1.75f, ActDur));
+		const float Base = Deg(FMath::Atan2((float)TargetB.Y, (float)TargetB.X));
+		const float Ang = FMath::DegreesToRadians(Base + FMath::Lerp(0.f, FMath::Lerp(62.f, -62.f, Go), Back));
+		const float Dist = FMath::Clamp((float)TargetB.Size2D(), 1100.f, 1900.f);
+		const FVector HeadP(FMath::Cos(Ang) * Dist, FMath::Sin(Ang) * Dist, 30.f + 260.f * Back * (1.f - Ramp(T, HumanAct::SweepHit * 0.6f, HumanAct::SweepHit)));
+		BendT += 20.f * Out; CrouchT += 150.f * Out;
+		TwistT += FMath::Clamp(Deg(Ang) * 0.5f, -45.f, 45.f) * Out;
+		FArmCtl& Rh = Arm[1];
+		Rh.W = Ease(Ramp(T, 0.f, 0.3f)) * Out;
+		Rh.AbsW = 1.f;
+		Rh.bPaper = true;
+		Rh.PaperLen = 1950.f;
+		Rh.PaperP = HeadP;
+		Rh.PaperFlat = FVector(FMath::Cos(Ang), FMath::Sin(Ang), 0.f);
+		Rh.RotA = FRotationMatrix::MakeFromXZ(FVector(1.f, 0.f, -0.6f), FVector(0.f, 0.f, 1.f)).ToQuat();
+		Rh.bPole = true;
+		Rh.Pole = FVector(-0.3f, 0.8f, -0.3f);
+		Rh.Curl = 1.f;
+		// The left hand lower down the handle.
+		const FVector Comfy = R.Shoulder[1] + Rh.PaperFlat * 430.f + FVector(0.f, 0.f, 120.f);
+		const FVector UpB = (Comfy - HeadP).GetSafeNormal(UE_SMALL_NUMBER, FVector::UpVector);
+		FArmCtl& Lh = Arm[0];
+		Lh.W = Rh.W;
+		Lh.Abs = HeadP + UpB * 1250.f;
+		Lh.AbsW = 1.f;
+		Lh.RotW = 0.f;
+		Lh.Curl = 0.9f;
+		Lh.bPole = true;
+		Lh.Pole = FVector(-0.2f, -0.9f, 0.1f);
+		bLook = true;
+		LookB = HeadP;
+	}
+	if (A != HumanAct::Sit && A != HumanAct::Rise)
+	{
+		R.SitW = 0.f;
 	}
 	if (R.SprayW > 0.01f)
 	{
@@ -998,6 +1171,12 @@ void AHumanCharacter::PoseBody(float Dt)
 	const FVector Across = S.QChest.RotateVector(FVector::YAxisVector);
 	const float ChestYaw = Deg(FMath::Atan2(-(float)Across.X, (float)Across.Y));
 	float HeadYawT = 0.f, HeadPitchT = -8.f;
+	if (!bLook && Fig != HumanFig::Dad && !FVector(FolkLook).IsZero())
+	{
+		// The family look at what has caught their attention: the head turns before the body does.
+		bLook = true;
+		LookB = Body.InverseTransformPosition(FVector(FolkLook));
+	}
 	if (bLook)
 	{
 		const FVector D = LookB - (S.Neck + FVector(0.f, 0.f, HeadUp + 150.f));
@@ -1009,7 +1188,7 @@ void AHumanCharacter::PoseBody(float Dt)
 	{
 		const AAntGameState* GS = GetWorld()->GetGameState<AAntGameState>();
 		const bool bPlayer = IsPlayerControlled();
-		if (!bPlayer && GS && GS->HumanGoal != AntHumanGoal::Idle && GS->HumanGoal != AntHumanGoal::Stunned && !FVector(GS->HumanGoalLoc).IsNearlyZero())
+		if (Fig == HumanFig::Dad && !bPlayer && GS && GS->HumanGoal != AntHumanGoal::Idle && GS->HumanGoal != AntHumanGoal::Stunned && !FVector(GS->HumanGoalLoc).IsNearlyZero())
 		{
 			// The AI's plan is replicated for the HUD: his eyes are on what he is after.
 			const FVector D = Body.InverseTransformPosition(FVector(GS->HumanGoalLoc)) - (S.Neck + FVector(0.f, 0.f, HeadUp + 150.f));
@@ -1041,7 +1220,7 @@ void AHumanCharacter::PoseBody(float Dt)
 			}
 		}
 	}
-	HeadPitchT += HeadUpT - 6.f * R.RageW;
+	HeadPitchT += HeadUpT - 6.f * R.RageW + St.Hunch * 0.7f;
 	HeadPitchT = FMath::Clamp(HeadPitchT, -70.f, FMath::Min(30.f, 55.f - (R.Lean + R.Bend)));   // the neck only goes so far back
 	Approach(R.HeadYaw, HeadYawT, 4.5f * Tempo, Dt);
 	Approach(R.HeadPitch, HeadPitchT, 4.5f * Tempo, Dt);
@@ -1061,7 +1240,7 @@ void AHumanCharacter::PoseBody(float Dt)
 		// At rest the arm hangs a little out from the body and swings against the leg of its side.
 		const float Sw = FMath::Clamp((float)(FootB[1 - s].X - FootB[s].X) / 900.f, -1.f, 1.f) * Driven;
 		const float SwingDeg = Sw * (10.f + 14.f * FMath::Min(1.f, Speed / 700.f));
-		const float Abd = 9.f + 9.f * R.RageW;
+		const float Abd = 9.f + 9.f * R.RageW + St.ArmsOut;
 		const float Elbow = 14.f + FMath::Max(0.f, Sw) * 18.f + 30.f * R.RageW;
 		const FVector UDir = G.RotateVector((RX(Sgn * Abd) * RY(-SwingDeg)).RotateVector(FVector(0.f, 0.f, -1.f)));
 		const FVector FDir = G.RotateVector((RX(Sgn * Abd * 0.5f) * RY(-(SwingDeg + Elbow))).RotateVector(FVector(0.f, 0.f, -1.f)));
@@ -1085,7 +1264,7 @@ void AHumanCharacter::PoseBody(float Dt)
 				// The fist stops a newspaper's length short of the target, on the side of a comfortable spot in front of the shoulder.
 				const FVector Comfy = Sh + Ctl.PaperFlat * 430.f + FVector(0.f, 0.f, 120.f);
 				const FVector Back = (Comfy - Ctl.PaperP).GetSafeNormal(UE_SMALL_NUMBER, FVector::UpVector);
-				AbsPos = Ctl.PaperP + Back * PaperReach;
+				AbsPos = Ctl.PaperP + Back * (Ctl.PaperLen > 0.f ? Ctl.PaperLen : PaperReach);
 				RotB = FromXZ(-Back, Sh - AbsPos, FVector(0.f, 0.f, 1.f));
 			}
 			const FVector ActPos = FMath::Lerp(Sh + G.RotateVector(Ctl.Rel), AbsPos, Ctl.AbsW);
@@ -1105,7 +1284,7 @@ void AHumanCharacter::PoseBody(float Dt)
 		const FQuat HandQ = FQuat::Slerp(RestRot, ActRot, FMath::Clamp(Ctl.W * Ctl.RotW, 0.f, 1.f)).GetNormalized();
 		Set(s == 0 ? HandL : HandR, Wrist, HandQ);
 		// The right fist is always closed on the newspaper or the can; the left one closes with rage.
-		const float Curl = s == 1 ? 1.f : FMath::Clamp(FMath::Lerp(0.12f + 0.75f * R.RageW, Ctl.Curl, Ctl.W), 0.f, 1.f);
+		const float Curl = (s == 1 && Fig != HumanFig::Kid) ? 1.f : FMath::Clamp(FMath::Lerp(0.12f + 0.75f * R.RageW, Ctl.Curl, Ctl.W), 0.f, 1.f);
 		Set(s == 0 ? FingersL : FingersR, Wrist + HandQ.RotateVector(FVector(0.f, 0.f, -LKnuckle)), HandQ * RX(-Sgn * 82.f * Curl));
 		R.Shoulder[s] = Sh;
 	}
@@ -1124,14 +1303,14 @@ void AHumanCharacter::OnFootfall(int32 Leg, float Strength)
 	}
 	// The foot is down NOW: the thud, a puff from under the slipper, the floor jumping under any ant close by.
 	const FVector At = Rig.Feet[Leg & 1].Pos;
-	AntSfx::Play(this, AntSfx::HumanStep, At, 0.5f + 0.45f * Strength, FMath::FRandRange(0.9f, 1.05f));
-	AntFx::LandDust(this, At + FVector(0.f, 0.f, 6.f), FVector::UpVector, 150.f + 130.f * Strength);
+	AntSfx::Play(this, AntSfx::HumanStep, At, (0.5f + 0.45f * Strength) * FMath::Min(1.f, FigScale + 0.15f), FMath::FRandRange(0.9f, 1.05f) / FMath::Sqrt(FigScale));
+	AntFx::LandDust(this, At + FVector(0.f, 0.f, 6.f), FVector::UpVector, (150.f + 130.f * Strength) * FigScale);
 	if (const APlayerController* PC = GetWorld()->GetFirstPlayerController())
 	{
 		if (AAntCharacter* Me = Cast<AAntCharacter>(PC->GetPawn()))
 		{
 			const float D = (float)FVector::Dist(Me->GetActorLocation(), At);
-			Me->AddTrauma(FMath::Clamp(1.f - D / 1500.f, 0.f, 1.f) * 0.22f * Strength);
+			Me->AddTrauma(FMath::Clamp(1.f - D / (1500.f * FigScale), 0.f, 1.f) * 0.22f * Strength * FigScale);
 		}
 	}
 }
@@ -1140,6 +1319,20 @@ void AHumanCharacter::BodyEffects(float DeltaSeconds)
 {
 	if (GetNetMode() == NM_DedicatedServer || !bNewBody)
 	{
+		return;
+	}
+	if (Fig != HumanFig::Dad)
+	{
+		// Grandma: the swatter while she is up and about, the broom while she sweeps, the needles while she knits.
+		const bool bSweep = Act.Kind == HumanAct::Sweep && ActTime() < 2.3f;
+		const bool bSat = Rig.SitW > 0.5f;
+		const bool bKnit = bSat && Act.Kind == HumanAct::Sit && Act.Arg == 0;
+		if (SwatterPivot && SwatterPivot->IsVisible() != (!bSweep && !bSat)) { SwatterPivot->SetVisibility(!bSweep && !bSat, true); }
+		if (BroomPivot && BroomPivot->IsVisible() != bSweep) { BroomPivot->SetVisibility(bSweep, true); }
+		for (UStaticMeshComponent* N : NeedleArt)
+		{
+			if (N && N->IsVisible() != bKnit) { N->SetVisibility(bKnit); }
+		}
 		return;
 	}
 	const bool bCan = Rig.SprayW >= 0.35f;

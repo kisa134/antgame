@@ -96,6 +96,39 @@ AHumanCharacter::AHumanCharacter()
 	}
 }
 
+void AHumanCharacter::InitFigure(uint8 InFig)
+{
+	Fig = InFig;
+	const FHumanStyle& St = HumanBody::Style(Fig);
+	FigScale = St.Scale;
+	GetCapsuleComponent()->InitCapsuleSize(St.CapsuleR, St.CapsuleH);
+	BodyPivot->SetRelativeLocation(FVector(0.f, 0.f, -St.CapsuleH));   // feet
+	BodyPivot->SetRelativeScale3D(FVector(FigScale));
+	UCharacterMovementComponent* CM = GetCharacterMovement();
+	CM->MaxWalkSpeed = St.WalkSpeed;
+	CM->MaxStepHeight = 250.f * FigScale;
+	SpringArm->SetRelativeLocation(FVector(0.f, 0.f, 1400.f * FigScale));
+	SpringArm->TargetArmLength = 2400.f * FigScale;
+}
+
+float AHumanCharacter::FeetZ() const
+{
+	return (float)GetActorLocation().Z - GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+}
+
+void AHumanCharacter::Panic(float Seconds)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+	bKnockedOut = true;
+	bSpraying = false;
+	bStompPending = false;
+	KnockoutEnd = GetWorld()->GetTimeSeconds() + Seconds;
+	OnRep_KnockedOut();
+}
+
 void AHumanCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -111,6 +144,8 @@ void AHumanCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME(AHumanCharacter, bStunned);
 	DOREPLIFETIME(AHumanCharacter, Act);
 	DOREPLIFETIME(AHumanCharacter, StunKind);
+	DOREPLIFETIME(AHumanCharacter, FolkLook);
+	DOREPLIFETIME(AHumanCharacter, bCarryPose);
 }
 
 FVector AHumanCharacter::GetSoleLocation(int32 Leg) const
@@ -150,7 +185,7 @@ bool AHumanCharacter::Stun(float Seconds, AAntCharacter* By, const FString& What
 	OnRep_KnockedOut();
 	AntSfx::Everyone(this, AntSfx::HumanPanic, GetActorLocation() + FVector(0.f, 0.f, 600.f), 1.3f);
 	UE_LOG(LogTemp, Display, TEXT("ANTSTUN the Human is stunned for %.1f s by %s"), Seconds, *What);
-	if (AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
+	if (AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>(); GM && Fig == HumanFig::Dad)
 	{
 		GM->OnHumanStunned(By, What);
 	}
@@ -458,7 +493,9 @@ void AHumanCharacter::TrySwat(const FVector& InPoint)
 	const FVector Chest = GetActorLocation() + FVector(0.f, 0.f, 600.f);
 	// The jointed body: a low target gets the bare left hand (he has to crouch for it), anything higher the rolled newspaper.
 	// Both land only where the arm really gets to.
-	const bool bSlap = bNewBody && Point.Z - (GetActorLocation().Z - HalfHeight) < 260.f;
+	const FHumanStyle& St = HumanBody::Style(Fig);
+	const float SwatR = St.SwatRadius;
+	const bool bSlap = bNewBody && Fig == HumanFig::Dad && Point.Z - FeetZ() < 260.f;   // (grandma swats the floor with her swatter too)
 	float Delay = 0.28f;
 	if (bSlap)
 	{
@@ -472,35 +509,35 @@ void AHumanCharacter::TrySwat(const FVector& InPoint)
 	}
 	else if (bNewBody)
 	{
-		const FVector Shoulder = GetActorLocation() + FVector(0.f, 0.f, 960.f);
-		if (FVector::Dist(Point, Shoulder) > 2500.f)
+		const FVector Shoulder = GetActorLocation() + FVector(0.f, 0.f, 960.f * FigScale);
+		if (FVector::Dist(Point, Shoulder) > 2500.f * FigScale)
 		{
-			Point = Shoulder + (Point - Shoulder).GetSafeNormal() * 2500.f;
+			Point = Shoulder + (Point - Shoulder).GetSafeNormal() * (2500.f * FigScale);
 		}
-		Delay = HumanAct::SwatHit;
+		Delay = St.SwatHit;
 	}
 	else if (FVector::Dist(Point, Chest) > SwatRange)
 	{
 		Point = Chest + (Point - Chest).GetSafeNormal() * SwatRange;
 	}
-	SwatReadyTime = Now + 2.6f * (1.f - 0.15f * Rage);
+	SwatReadyTime = Now + St.SwatEvery * (1.f - 0.15f * Rage);
 	MulticastSwat(Point);
 	if (bNewBody)
 	{
 		StartAct(bSlap ? HumanAct::Slap : HumanAct::Swat, 0, Point);
 	}
 	FTimerHandle H;
-	GetWorldTimerManager().SetTimer(H, FTimerDelegate::CreateWeakLambda(this, [this, Point]()
+	GetWorldTimerManager().SetTimer(H, FTimerDelegate::CreateWeakLambda(this, [this, Point, SwatR]()
 	{
 		AntSfx::Everyone(this, AntSfx::Swat, Point, FMath::FRandRange(0.9f, 1.05f));
 		if (AAntSwarm* Swarm = AAntSwarm::Get(GetWorld()))
 		{
-			Swarm->KillInSphere(Point, SwatRadius);
+			Swarm->KillInSphere(Point, SwatR);
 		}
 		for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
 		{
 			AAntCharacter* Ant = *It;
-			if (Ant && !Ant->bDead && !Ant->IsInNest() && FVector::Dist(Ant->GetActorLocation(), Point) < SwatRadius + AAntCharacter::BodyRadius)
+			if (Ant && !Ant->bDead && !Ant->IsInNest() && FVector::Dist(Ant->GetActorLocation(), Point) < SwatR + AAntCharacter::BodyRadius)
 			{
 				UGameplayStatics::ApplyDamage(Ant, 150.f, GetController(), this, UDamageType::StaticClass());
 			}
@@ -508,7 +545,7 @@ void AHumanCharacter::TrySwat(const FVector& InPoint)
 		for (TActorIterator<AKitchenLoot> It(GetWorld()); It; ++It)
 		{
 			const FVector To = It->GetActorLocation() - Point;
-			if (To.Size() < SwatRadius * 1.6f)
+			if (To.Size() < SwatR * 1.6f)
 			{
 				It->Kick(To.GetSafeNormal() * 500.f + FVector(0.f, 0.f, 300.f), It->GetActorLocation());
 			}
@@ -614,7 +651,9 @@ bool AHumanCharacter::IsBodyBusy() const
 	switch (Act.Kind)
 	{
 	case HumanAct::Stomp: return T < HumanAct::StompHit;
-	case HumanAct::Swat: return T < HumanAct::SwatHit;
+	case HumanAct::Swat: return T < HumanBody::Style(Fig).SwatHit;
+	case HumanAct::Rise: return T < HumanAct::SitTime * HumanBody::Style(Fig).SitSlow;
+	case HumanAct::Sweep: return T < HumanAct::SweepHit + 0.5f;
 	case HumanAct::Slap: return T < HumanAct::SlapHit + 0.3f;
 	case HumanAct::Grab: return T < HumanAct::GrabGrip + 0.1f;
 	case HumanAct::Throw: return T < HumanAct::ThrowRelease + 0.05f;
@@ -733,23 +772,24 @@ void AHumanCharacter::MulticastStomp_Implementation(uint8 Leg)
 
 FVector AHumanCharacter::GetStompPoint(int32 Leg) const
 {
-	return GetActorLocation() + GetActorForwardVector() * 480.f + GetActorRightVector() * (Leg == 0 ? -180.f : 180.f) - FVector(0.f, 0.f, HalfHeight);
+	return GetActorLocation() + (GetActorForwardVector() * 480.f + GetActorRightVector() * (Leg == 0 ? -180.f : 180.f)) * FigScale - FVector(0.f, 0.f, GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
 }
 
 void AHumanCharacter::DoStompImpact()
 {
 	const FVector P = GetStompPoint(PendingLeg);
+	const float SR = GetStompRadius();
 	if (AAntSwarm* Swarm = AAntSwarm::Get(GetWorld()))
 	{
-		Swarm->KillInSphere(P, StompRadius * 1.15f);
+		Swarm->KillInSphere(P, SR * 1.15f);
 	}
 	// The floor shakes: food nearby jumps (and carriers often lose it).
 	for (TActorIterator<AKitchenLoot> It(GetWorld()); It; ++It)
 	{
 		const FVector To = It->GetActorLocation() - P;
-		if (To.Size2D() < StompRadius * 2.6f && FMath::Abs(To.Z) < 300.f)
+		if (To.Size2D() < SR * 2.6f && FMath::Abs(To.Z) < 300.f)
 		{
-			const float K = 1.f - (float)To.Size2D() / (StompRadius * 2.6f);
+			const float K = 1.f - (float)To.Size2D() / (SR * 2.6f);
 			It->Kick(To.GetSafeNormal2D() * 650.f * K + FVector(0.f, 0.f, 800.f * K), It->GetActorLocation() + FMath::VRand() * 10.f);
 		}
 	}
@@ -766,14 +806,14 @@ void AHumanCharacter::DoStompImpact()
 			continue;   // can't stomp what's crawling up your own leg
 		}
 		const float D2 = (float)FVector::Dist2D(A, P);
-		if (D2 < StompRadius && A.Z - P.Z < 220.f)
+		if (D2 < SR && A.Z - P.Z < 220.f)
 		{
 			UGameplayStatics::ApplyDamage(Ant, 200.f, GetController(), this, UDamageType::StaticClass());
 		}
-		else if (D2 < StompRadius * 2.6f && FMath::Abs(A.Z - P.Z) < 260.f && !Ant->IsAttached())
+		else if (D2 < SR * 2.6f && FMath::Abs(A.Z - P.Z) < 260.f && !Ant->IsAttached())
 		{
 			// A near miss: only what is right under the slipper dies, the shockwave throws the rest across the floor.
-			const float K = 1.f - (D2 - StompRadius) / (StompRadius * 1.6f);
+			const float K = 1.f - (D2 - SR) / (SR * 1.6f);
 			const FVector Out = (A - P).GetSafeNormal2D();
 			Ant->ApplyLaunch((Out * (450.f + 950.f * K) + FVector(0.f, 0.f, 380.f + 440.f * K)) * AntKit::SpeedK);
 			if (Ant->Carrying && K > 0.45f)
@@ -856,6 +896,11 @@ float AHumanCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damage
 	{
 		return 0.f;
 	}
+	if (Fig != HumanFig::Dad)
+	{
+		OnFolkHurt(Actual, EventInstigator);   // grandma and the kid are not knocked out by bites: they react
+		return Actual;
+	}
 	Health = FMath::Max(0.f, Health - Actual);
 	LastHurtTime = GetWorld()->GetTimeSeconds();
 	if (Health <= 0.f)
@@ -911,6 +956,10 @@ void AHumanCharacter::ResetHuman(const FVector& Location)
 
 FString AHumanCharacter::GetDisplayName() const
 {
+	if (Fig != HumanFig::Dad)
+	{
+		return Fig == HumanFig::Grandma ? TEXT("Бабушка") : TEXT("Малыш");
+	}
 	if (const APlayerState* PS = GetPlayerState())
 	{
 		return FString::Printf(TEXT("Человек (%s)"), *PS->GetPlayerName());

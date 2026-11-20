@@ -56,7 +56,21 @@ public:
 
 	void SetRage(uint8 NewRage);
 	float GetSprayRange() const { return SprayRange * (1.f + 0.25f * Rage); }
-	float GetWalkSpeed() const { return bStunned ? 1.f : bKnockedOut ? 260.f : 720.f * (1.f + 0.12f * Rage); }
+	float GetWalkSpeed() const { return bStunned ? 1.f : bKnockedOut ? (Fig == HumanFig::Kid ? 1000.f : 260.f) : HumanBody::Style(Fig).WalkSpeed * (1.f + 0.12f * Rage); }
+
+	// ---- The family: grandma and the kid are this same jointed figure with their own tables, size and habits (FolkCharacters.h) ----
+	/** HumanFig: who wears the figure. Set in the constructor of the subclass (InitFigure). */
+	uint8 Fig = HumanFig::Dad;
+	/** The whole figure's size on top of its model (the Dad 1). */
+	float FigScale = 1.f;
+	/** The family: what they are looking at (zero: nothing in particular). The head turns to it before the body does. */
+	UPROPERTY(Replicated) FVector_NetQuantize FolkLook;
+	/** The left hand is held up in front with something small in its fingers (the kid carrying an ant). */
+	UPROPERTY(Replicated) bool bCarryPose = false;
+	float GetStompRadius() const { return StompRadius * FigScale; }
+	float FeetZ() const;
+	/** Server: runs about with the hands in the air for that long (the kid, bitten). */
+	void Panic(float Seconds);
 
 	/** Server: something heavy landed on him. He reels for a moment (there is a cooldown) and gets angrier. False = no effect. */
 	bool Stun(float Seconds, class AAntCharacter* By, const FString& What, uint8 Kind = 0);
@@ -94,7 +108,7 @@ public:
 	bool bDevPuppet = false;
 	FVector DevWalk = FVector::ZeroVector;
 	float DevWalkScale = 1.f;
-	void DevAct(const FString& What, const FVector& Target);
+	virtual void DevAct(const FString& What, const FVector& Target);
 	FString DevDescribe() const;
 
 	/** Server: start a stomp with leg 0 (left) / 1 (right), -1 = alternate. */
@@ -126,6 +140,19 @@ public:
 	FString GetDisplayName() const;
 
 protected:
+	/** For the constructors of the family: the figure's own capsule, size and speed. */
+	void InitFigure(uint8 InFig);
+	/** Server: the family are hurt (an ant bit an ankle). They do not get knocked out by it: they react. */
+	virtual void OnFolkHurt(float Damage, AController* By) {}
+	void StartAct(uint8 Kind, uint8 Arg, const FVector& Target);
+	/** One component per HumanSeg, made in the constructor: a base ants ride needs the same name on every machine. */
+	UPROPERTY(VisibleAnywhere) TArray<UStaticMeshComponent*> Segs;
+	bool bNewBody = false;
+	FHumanRig Rig;
+	UPROPERTY() USceneComponent* SwatterPivot = nullptr;
+	UPROPERTY() USceneComponent* BroomPivot = nullptr;
+	UPROPERTY() TArray<UStaticMeshComponent*> NeedleArt;
+
 	void MoveForward(float Value);
 	void MoveRight(float Value);
 	void TurnRate(float Value);
@@ -151,7 +178,6 @@ protected:
 
 private:
 	// ---- the jointed body ----
-	void StartAct(uint8 Kind, uint8 Arg, const FVector& Target);
 	void SetupJointedBody();
 	void BuildHeldThings();
 	/** Places every segment for this frame. Runs on every machine, the server too: ants ride the same pose. */
@@ -163,10 +189,6 @@ private:
 	/** The nozzle of the spray can when the arm is out, body space: where the cloud and the damage cone start. */
 	FVector SprayNozzleBody() const;
 	FVector SwatHitPoint = FVector::ZeroVector;
-	/** One component per HumanSeg, made in the constructor: a base ants ride needs the same name on every machine. */
-	UPROPERTY(VisibleAnywhere) TArray<UStaticMeshComponent*> Segs;
-	bool bNewBody = false;
-	FHumanRig Rig;
 	FTimerHandle GrabTimer;
 	FTimerHandle ThrowTimer;
 

@@ -71,7 +71,7 @@ namespace AntOrder
 /** Things that make noise. The AI Human walks to the loudest recent one. */
 namespace AntNoise
 {
-	enum EKind : uint8 { None, Faucet, Toaster, Microwave, TV, Crash, Door, Trap, Bark, Count };
+	enum EKind : uint8 { None, Faucet, Toaster, Microwave, TV, Crash, Door, Trap, Bark, Scream, Count };
 	ANTKITCHEN_API const TCHAR* Name(uint8 Kind);
 }
 

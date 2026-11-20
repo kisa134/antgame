@@ -99,7 +99,7 @@ namespace AntNoise
 {
 	const TCHAR* Name(uint8 Kind)
 	{
-		static const TCHAR* Names[Count] = { TEXT("шум"), TEXT("кран"), TEXT("тостер"), TEXT("микроволновка"), TEXT("телевизор"), TEXT("грохот"), TEXT("хлопнула дверь"), TEXT("мышеловка"), TEXT("лай Бадрика") };
+		static const TCHAR* Names[Count] = { TEXT("шум"), TEXT("кран"), TEXT("тостер"), TEXT("микроволновка"), TEXT("телевизор"), TEXT("грохот"), TEXT("хлопнула дверь"), TEXT("мышеловка"), TEXT("лай Бадрика"), TEXT("визг малыша") };
 		return Kind < Count ? Names[Kind] : Names[0];
 	}
 }
