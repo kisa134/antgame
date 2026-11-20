@@ -27,7 +27,7 @@ namespace
 	};
 	const FNpcLook GDogLooks[] =
 	{
-		{ TEXT("Fawn"),      nullptr, 0.f, 0.80f, 0.60f, 0.38f, 0.85f, FurStep },
+		{ TEXT("Fawn"),      nullptr, 0.f, 0.78f, 0.55f, 0.32f, 0.85f, FurStep },
 		{ TEXT("FawnDark"),  nullptr, 0.f, 0.20f, 0.15f, 0.13f, 0.8f,  FurStep },
 		{ TEXT("DogWhite"),  nullptr, 0.f, 0.95f, 0.93f, 0.88f, 0.85f, FurStep },
 		{ TEXT("EarPink"),   nullptr, 0.f, 0.93f, 0.62f, 0.62f, 0.7f,  nullptr },

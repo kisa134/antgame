@@ -69,6 +69,7 @@ public:
 	void DevAct(const FString& What, const FVector& Target);
 	void DevPlace(const FVector& P, float Yaw);
 	void DevPrey(AAntCharacter* Ant);
+	void DevPoke(const FString& What);
 	FString DevDescribe() const;
 
 private:

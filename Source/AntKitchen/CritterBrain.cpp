@@ -1615,7 +1615,7 @@ void ACritter::DogThink(float Dt, float Now)
 	{
 		// His ball: push it (a dash into it) and he is off after it.
 		bBallMade = true;
-		const FTransform TM(Rests[0].P + FVector(650.f, -350.f, 80.f));
+		const FTransform TM(Rests[0].P + FVector(0.f, 750.f, 90.f));   // on the open floor north of his mat (not in a bowl)
 		if (AKitchenProp* P = W->SpawnActorDeferred<AKitchenProp>(AKitchenProp::StaticClass(), TM, nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn))
 		{
 			P->ShapeIndex = (uint8)EAntShape::Sphere;
@@ -2123,6 +2123,42 @@ void ACritter::DevAct(const FString& What, const FVector& Target)
 	else { UE_LOG(LogTemp, Warning, TEXT("ANTNPC unknown dev act: %s"), *What); }
 }
 
+void ACritter::DevPoke(const FString& What)
+{
+	UWorld* W = GetWorld();
+	const float Now = W->GetTimeSeconds();
+	const FVector Me = GetActorLocation();
+	if (What == TEXT("food"))
+	{
+		// The nearest loose food is put on the floor ahead of him, as if an ant had just dropped it there.
+		AKitchenLoot* Best = nullptr;
+		float BestD = 1.e9f;
+		for (TActorIterator<AKitchenLoot> It(W); It; ++It)
+		{
+			const float D = (float)FVector::Dist(It->GetActorLocation(), Me);
+			if (!It->bIsGear && !It->bVault && !It->bTrophy && !It->bBody && !It->bHeld && !It->IsCarried() && It->Weight <= 8 && D < BestD) { BestD = D; Best = *It; }
+		}
+		if (Best)
+		{
+			const FVector At = Me + GetActorForwardVector() * 1500.f + FVector(0.f, 0.f, 60.f);
+			Best->SetActorLocation(At, false, nullptr, ETeleportType::TeleportPhysics);
+			LeftFood.Add(Best, Now - 10.f);
+			UE_LOG(LogTemp, Display, TEXT("ANTDOG dev: «%s» left lying at %s"), *Best->LootName, *At.ToCompactString());
+		}
+	}
+	else if (What == TEXT("ball"))
+	{
+		if (AKitchenProp* B = Ball.Get())
+		{
+			if (UPrimitiveComponent* Root = Cast<UPrimitiveComponent>(B->GetRootComponent()))
+			{
+				Root->AddImpulse(GetActorRightVector() * 900.f + FVector(0.f, 0.f, 200.f), NAME_None, true);
+				UE_LOG(LogTemp, Display, TEXT("ANTDOG dev: the ball is pushed from %s"), *B->GetActorLocation().ToCompactString());
+			}
+		}
+	}
+}
+
 FString ACritter::DevDescribe() const
 {
 	const FQuadRig& R = Rig;
@@ -2241,6 +2277,7 @@ bool DevCommand(AAntKitchenGameMode* GM, const TArray<FString>& A)
 		else if (Sub == TEXT("scare")) { C->Scare(A.Num() >= 5 ? Vec(2) : B.TransformPosition(FVector(800.f, 0.f, 0.f)), TEXT("испытаний")); }
 		else if (Sub == TEXT("zoom")) { C->Zoomies(Num(2, 12.f)); }
 		else if (Sub == TEXT("prey") && Me) { C->DevPrey(Me); }
+		else if (Sub == TEXT("food") || Sub == TEXT("ball")) { C->DevPoke(Sub); }
 		else if (Sub == TEXT("bite") && Me) { C->Bitten(Me); }
 		else if (Sub == TEXT("me") && Me)
 		{
