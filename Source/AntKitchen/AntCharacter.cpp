@@ -1592,7 +1592,10 @@ FVector AAntCharacter::GetHoldPoint() const
 	FVector Fwd = GetActorForwardVector();
 	Fwd = (Fwd - Up * FVector::DotProduct(Fwd, Up)).GetSafeNormal();
 	const float S = VisScale() / AntScale;
-	return GetActorLocation() + (Up * 30.f + Fwd * 18.f) * AntScale * S * 1.3f;
+	// The jointed ant (AntBody.h) holds its load in its jaws, lower than the old one did: the load hung in the air above its head.
+	// The same on every machine (the flag, not the rig, decides: a dedicated server has no rig). -AntHoldUp= tunes it.
+	static const float HoldUp = [] { float V = AntRig::Enabled() ? 20.f : 30.f; FParse::Value(FCommandLine::Get(), TEXT("AntHoldUp="), V); return V; }();
+	return GetActorLocation() + (Up * (Creature == 0 ? HoldUp : 30.f) + Fwd * 18.f) * AntScale * S * 1.3f;
 }
 
 void AAntCharacter::Webbed(float Seconds)

@@ -1054,7 +1054,9 @@ void UAntBodyComponent::UpdateBodyFrame(float Dt)
 
 	// ---- standing height (ant-local, above the plane of the feet)
 	Sag = 2.2f * (6 - NumAlive) + (NumAlive <= 3 ? 8.f : 0.f);
-	float Stand = Ground - 2.f - (bSprint ? 3.f : 0.f) - 4.5f * Wall - 6.5f * Effort - 3.f * Wound - Sag + Dip;
+	// (20.11 merge: it stood about 7 units too low, the gaster near the floor; -AntStandLift= tunes it)
+	static const float StandLift = [] { float V = 5.f; FParse::Value(FCommandLine::Get(), TEXT("AntStandLift="), V); return V; }();
+	float Stand = Ground + StandLift - (bSprint ? 3.f : 0.f) - 4.5f * Wall - 6.5f * Effort - 3.f * Wound - Sag + Dip;
 	Stand += 0.7f * Sp * FMath::Sin(4.f * PI * Phase + 0.6f) * (1.f + 1.5f * Effort);
 	Stand += 0.35f * FMath::Sin(Time * 2.1f + Hash01(1) * 6.f);   // breathing
 	if (Ant->HasStatus(AntStatus::Webbed)) { Stand -= 5.f; }
