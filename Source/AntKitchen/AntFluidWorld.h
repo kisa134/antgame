@@ -128,7 +128,11 @@ private:
 	void CoupleAnts(float Dt);
 	void CoupleFeet(float Dt);
 	TMap<TWeakObjectPtr<AActor>, FVector> LastFoot[2];
-	TMap<TWeakObjectPtr<AActor>, float> WasIn;   // props: were they in liquid last tick (for the splash on entry)
+	TMap<TWeakObjectPtr<AActor>, float> WasIn;
+	TWeakObjectPtr<AActor> LastProp;
+	UPROPERTY() class UPhysicalMaterial* OilMat = nullptr;      // what a thing lying on an oil film slides on
+	TMap<TWeakObjectPtr<AActor>, TWeakObjectPtr<class UPhysicalMaterial>> Oiled;
+	TMap<TWeakObjectPtr<AAntCharacter>, FVector2f> AntGrip;    // an ant's own ground friction and braking, while it is on oil   // props: were they in liquid last tick (for the splash on entry)
 
 	// ---- layer B: the surface
 	UPROPERTY() AActor* Holder = nullptr;
@@ -166,7 +170,7 @@ private:
 	void RunDemo(int32 N);
 	TArray<TPair<float, FString>> DemoScript;
 	float DemoT0 = 0.f;
-	float FrameMs = 0.f;
+	float FrameMs = 0.f, GpuMs = 0.f;
 	int32 Demo = 0;
 	bool bDemoStarted = false;
 	void LogStats();

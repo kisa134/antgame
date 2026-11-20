@@ -14,6 +14,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Camera/CameraActor.h"
 #include "Engine/StaticMeshActor.h"
+#include "PhysicalMaterials/PhysicalMaterial.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/PlayerController.h"
@@ -93,6 +94,7 @@ void UAntFluidWorld::Tick(float DeltaTime)
 	}
 	const float Dt = FMath::Min(DeltaTime, 0.1f);
 	FrameMs += (DeltaTime * 1000.f - FrameMs) * 0.05f;
+	GpuMs += (FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles(0)) - GpuMs) * 0.05f;
 	double T0 = FPlatformTime::Seconds();
 	if (!bFrozen) { StepSim(Dt); }
 	double T1 = FPlatformTime::Seconds();
@@ -224,16 +226,19 @@ void UAntFluidWorld::AsciiMap(const FBasin& B, int32 Layer) const
 
 int32 UAntFluidWorld::BasinUnder(const FVector& P, int32 Skip) const
 {
+	// the basin whose bed right under the point is the highest one not above it (the sink's bottom lies far below the worktop's level)
 	int32 Best = -1;
+	float BestZ = -1.e9f;
 	for (int32 b = 0; b < Basins.Num(); ++b)
 	{
 		const FBasin& B = *Basins[b];
-		if (b == Skip || !B.Contains((float)P.X, (float)P.Y) || B.Z0 > P.Z + 5.f) { continue; }
+		if (b == Skip || !B.Contains((float)P.X, (float)P.Y)) { continue; }
 		int32 I, J;
 		B.CellAt((float)P.X, (float)P.Y, I, J);
 		if (B.Kind[B.Idx(I, J)] != Open) { continue; }
-		if (B.Z0 + B.Bed[B.Idx(I, J)] > P.Z + 5.f) { continue; }
-		if (Best < 0 || B.Z0 > Basins[Best]->Z0) { Best = b; }
+		const float BedZ = B.Z0 + B.Bed[B.Idx(I, J)];
+		if (BedZ > P.Z + 5.f) { continue; }
+		if (BedZ > BestZ) { Best = b; BestZ = BedZ; }
 	}
 	return Best;
 }
@@ -671,7 +676,24 @@ void UAntFluidWorld::CoupleProps(float Dt)
 		const float R = FMath::Max(3.f, (float)Bd.BoxExtent.Z);
 		const float RXY = FMath::Max(3.f, 0.5f * (float)(Bd.BoxExtent.X + Bd.BoxExtent.Y));
 		FSample S; int32 b = -1;
-		if (!SampleAt(P, S, &b) || S.Total < 0.3f) { WasIn.Remove(A); continue; }
+		const bool bAny = SampleAt(P, S, &b);
+		{
+			// an oil film under it: it slides (a physical material with almost no friction while it lies on the film)
+			const bool bOil = bAny && S.Depth[LOil] > 0.03f && S.Depth[LWater] < 1.f && (float)Bd.Origin.Z - (float)Bd.BoxExtent.Z < S.Surface + 6.f;
+			const bool bWas = Oiled.Contains(A);
+			if (bOil != bWas)
+			{
+				if (bOil)
+				{
+					if (!OilMat) { OilMat = NewObject<UPhysicalMaterial>(this); OilMat->Friction = 0.02f; OilMat->StaticFriction = 0.02f; OilMat->FrictionCombineMode = EFrictionCombineMode::Min; OilMat->bOverrideFrictionCombineMode = true; }
+					Oiled.Add(A, Body->BodyInstance.GetSimplePhysicalMaterial());
+					Body->SetPhysMaterialOverride(OilMat);
+				}
+				else { Body->SetPhysMaterialOverride(nullptr); Oiled.Remove(A); }
+				if (LogOn()) { UE_LOG(LogTemp, Display, TEXT("ANTFLUID %s %s an oil film at %s"), *A->GetName(), bOil ? TEXT("slides onto") : TEXT("leaves"), *P.ToCompactString()); }
+			}
+		}
+		if (!bAny || S.Total < 0.3f) { WasIn.Remove(A); continue; }
 		const float Bottom = (float)Bd.Origin.Z - R;
 		const float Sub = FMath::Clamp((S.Surface - Bottom) / (2.f * R), 0.f, 1.f);
 		if (Sub <= 0.f) { WasIn.Remove(A); continue; }
@@ -734,6 +756,11 @@ void UAntFluidWorld::CoupleAnts(float Dt)
 		FSample S; int32 b = -1;
 		const bool bIn = SampleAt(P, S, &b) && S.Total > 0.4f && P.Z - R < S.Surface + 2.f;
 		const bool bSwim = bIn && (S.Depth[LWater] > R * 1.1f);
+		const bool bOil = bIn && S.Depth[LOil] > 0.03f && S.Depth[LWater] < 1.f;
+		if (bOil && !AntGrip.Contains(Ant)) { AntGrip.Add(Ant, FVector2f(CM->GroundFriction, CM->BrakingDecelerationWalking)); CM->GroundFriction = 0.15f; CM->BrakingDecelerationWalking = 20.f; }
+		else if (!bOil && AntGrip.Contains(Ant)) { const FVector2f G0 = AntGrip.FindAndRemoveChecked(Ant); CM->GroundFriction = G0.X; CM->BrakingDecelerationWalking = G0.Y; }
+		// honey holds: an ant in it barely moves
+		if (bIn && S.Depth[LHoney] > 2.f && !bSwim) { CM->Velocity *= FMath::Max(0.f, 1.f - 12.f * Dt); }
 		static TSet<TWeakObjectPtr<AAntCharacter>> Swimmers;
 		if (bSwim)
 		{
@@ -1294,6 +1321,7 @@ bool UAntFluidWorld::DevCommand(const TArray<FString>& A)
 	else if (Op == TEXT("freeze")) { bFrozen = A.Num() >= 3 && A[2] == TEXT("on"); }
 	else if (Op == TEXT("clear")) { for (TUniquePtr<FBasin>& B : Basins) { for (int32 L = 0; L < LCount; ++L) { B->Layers[L].H.Init(0.f, B->Nx * B->Ny); B->Layers[L].X1 = B->Layers[L].X0; } } Falls.Reset(); Drops.Reset(); }
 	else if (Op == TEXT("stats")) { LogStats(); }
+	else if (Op == TEXT("show") && Holder) { Holder->SetActorHiddenInGame(NumAt(A, 2, 1.f) < 0.5f); for (FAntFluidVolume& V : Volumes) { if (V.Comp) { V.Comp->SetVisibility(NumAt(A, 2, 1.f) >= 0.5f); } } }   // A/B: the liquid drawn or not (it still simulates)
 	else if (Op == TEXT("profile") && PC) { PC->ConsoleCommand(TEXT("ProfileGPU"), false); }   // one frame of GPU passes into the log
 	else if (Op == TEXT("map"))
 	{
@@ -1353,7 +1381,13 @@ bool UAntFluidWorld::DevCommand(const TArray<FString>& A)
 			M->SetMassOverrideInKg(NAME_None, Kind == TEXT("sponge") ? 0.004f : (Kind == TEXT("brick") ? 0.2f : 0.03f), true);
 			Box->Tags.Add(Kind == TEXT("sponge") ? FName(TEXT("AntSponge")) : (Kind == TEXT("brick") ? FName(TEXT("AntSinks")) : FName(TEXT("AntFloat"))));
 			UE_LOG(LogTemp, Display, TEXT("ANTFLUID prop %s at %s, size %s, mass %.4f kg"), *Kind, *At.ToCompactString(), *Size.ToCompactString(), M->GetMass());
+			LastProp = Box;
 		}
+	}
+	else if (Op == TEXT("shove"))
+	{
+		// fluid shove vx vy: the last prop is given a velocity (to compare a slide on oil with one on a dry floor)
+		if (AActor* Pr = LastProp.Get()) { if (UPrimitiveComponent* Pc = Cast<UPrimitiveComponent>(Pr->GetRootComponent())) { Pc->SetPhysicsLinearVelocity(FVector(NumAt(A, 2), NumAt(A, 3), 0.f)); } }
 	}
 	else if (Op == TEXT("loot"))
 	{
@@ -1373,7 +1407,14 @@ bool UAntFluidWorld::DevCommand(const TArray<FString>& A)
 	else if (Op == TEXT("ant") && PC)
 	{
 		// fluid ant x y z: the player's ant is put there (onto a sponge, into the water)
-		if (AAntCharacter* Me = Cast<AAntCharacter>(PC->GetPawn())) { Me->ApplyTeleport(FVector(NumAt(A, 2), NumAt(A, 3), NumAt(A, 4))); }
+		AAntCharacter* Me = Cast<AAntCharacter>(PC->GetPawn());
+		FVector To(NumAt(A, 2), NumAt(A, 3), NumAt(A, 4));
+		if (A.IsValidIndex(2) && A[2] == TEXT("sponge"))
+		{
+			// onto the sponge, wherever it has drifted
+			for (TActorIterator<AActor> It(W); It; ++It) { if (It->ActorHasTag(TEXT("AntSponge"))) { To = It->GetActorLocation() + FVector(0.f, 0.f, 70.f); break; } }
+		}
+		if (Me) { Me->ApplyTeleport(To); UE_LOG(LogTemp, Display, TEXT("ANTFLUID ant put at %s"), *To.ToCompactString()); }
 	}
 	else if (Op == TEXT("track"))
 	{
@@ -1419,7 +1460,6 @@ bool UAntFluidWorld::DevCommand(const TArray<FString>& A)
 void UAntFluidWorld::LogStats()
 {
 	UWorld* W = GetWorld();
-	const float GpuMs = FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles(0));
 	UE_LOG(LogTemp, Display, TEXT("ANTFLUID stats t=%.1f: frame %.2f ms, gpu %.2f ms | sim %.3f ms, couple %.3f, drops %.3f, view %.3f (game thread) | falls %d, columns %d, 3D volumes %d, drops %d, lost %.2f l, quality %d"),
 		W->GetTimeSeconds(), FrameMs, GpuMs, SimMs, CoupleMs, DropMs, ViewMs, Falls.Num(), Columns.Num(), Volumes.Num(), Drops.Num(), LostVolume / Litre, Quality);
 	for (const TUniquePtr<FBasin>& B : Basins)
@@ -1465,13 +1505,40 @@ void UAntFluidWorld::RunDemo(int32 N)
 			At(11.5f, TEXT("fluid prop block -3250 3650 1720"));
 			At(11.5f, TEXT("fluid prop brick -3800 4150 1720"));
 			At(12.f, TEXT("fluid loot 3 -3350 4050 1720"));
-			At(15.f, TEXT("fluid ant -3600 3750 1800"));
+			At(15.f, TEXT("fluid ant sponge"));
+			At(20.f, TEXT("fluid track"));
+			At(23.f, TEXT("fluid ant sponge"));
 			At(16.f, TEXT("fluid track"));
 			At(26.f, TEXT("fluid track"));
 			At(36.f, TEXT("fluid ant -3250 4250 1650"));
 			At(38.f, TEXT("fluid track"));
 			At(46.f, TEXT("fluid track"));
 			At(56.f, TEXT("fluid track"));
+		}
+		else if (N == 3)
+		{
+			// D3: the Human walks through a puddle on the floor; a jar falls into it
+			At(0.5f, TEXT("fluid spill water -3000 1100 20 120 450"));
+			At(6.f, TEXT("fluid human -3000 -2000 90 -3000 3200 0.45"));
+			At(20.f, TEXT("fluid prop block -2700 1100 1300 140 140 170"));
+			At(9.f, TEXT("fluid stats"));
+			At(16.f, TEXT("fluid stats"));
+			At(24.f, TEXT("fluid stats"));
+		}
+		else if (N == 4)
+		{
+			// D4: an oil film (things slide on it) and a honey blob (slow, it holds what it touches)
+			At(0.5f, TEXT("fluid spill oil -1500 -1500 20 1.5 250"));
+			At(0.5f, TEXT("fluid spill honey 900 -1500 20 5 150"));
+			At(8.f, TEXT("fluid prop block -1900 -1500 60"));
+			At(8.5f, TEXT("fluid shove 600 0"));
+			At(8.f, TEXT("fluid prop block -1900 -2400 60"));
+			At(8.5f, TEXT("fluid shove 600 0"));
+			At(9.f, TEXT("fluid ant 900 -1500 60"));
+			At(12.f, TEXT("fluid track"));
+			At(20.f, TEXT("fluid track"));
+			At(30.f, TEXT("fluid track"));
+			At(31.f, TEXT("fluid stats"));
 		}
 		UE_LOG(LogTemp, Display, TEXT("ANTFLUID demo %d: %d scripted commands"), N, DemoScript.Num());
 	}
@@ -1532,7 +1599,7 @@ void UAntFluidWorld::DrawStreams()
 			FSample Smp;
 			const float Bottom = SampleAt(S.Pos - FVector(0.f, 0.f, 50.f), Smp) ? Smp.Surface : (float)S.Pos.Z - 600.f;
 			const float R0 = FMath::Clamp(FMath::Sqrt(S.Rate / Litre) * 10.f, 5.f, 32.f);
-			Chain(S.Pos, FVector2f::ZeroVector, Bottom, R0, R0 * 0.62f, Quality >= 2 ? 10 : 5, 0.f);
+			Chain(S.Pos, FVector2f::ZeroVector, Bottom, R0, R0 * 0.8f, Quality >= 2 ? 10 : 5, 0.f);
 		}
 		for (const FColumn& C : Columns)
 		{
