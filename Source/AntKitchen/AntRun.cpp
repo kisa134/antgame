@@ -13,6 +13,7 @@
 #include "KitchenArt.h"
 #include "KitchenEvents.h"
 #include "Critters.h"
+#include "NpcBody.h"
 #include "AntSwarm.h"
 #include "AntArmy.h"
 #include "Misc/CommandLine.h"
@@ -98,7 +99,7 @@ namespace AntNoise
 {
 	const TCHAR* Name(uint8 Kind)
 	{
-		static const TCHAR* Names[Count] = { TEXT("шум"), TEXT("кран"), TEXT("тостер"), TEXT("микроволновка"), TEXT("телевизор"), TEXT("грохот"), TEXT("хлопнула дверь"), TEXT("мышеловка") };
+		static const TCHAR* Names[Count] = { TEXT("шум"), TEXT("кран"), TEXT("тостер"), TEXT("микроволновка"), TEXT("телевизор"), TEXT("грохот"), TEXT("хлопнула дверь"), TEXT("мышеловка"), TEXT("лай Бадрика") };
 		return Kind < Count ? Names[Kind] : Names[0];
 	}
 }
@@ -115,6 +116,7 @@ namespace AntEvent
 		{ TEXT("РАКОВИНА ПЕРЕЛИЛАСЬ"),  TEXT("Лужа у мойки: в воде медленно, еда плавает"), 40.f },
 		{ TEXT("ПРИВЕЗЛИ ПИЦЦУ"),       TEXT("Коробка у двери в гостиную. Минута, пока не унесли"), 60.f },
 		{ TEXT("ХОЛОДИЛЬНИК НАРАСПАШКУ"), TEXT("Человек забыл закрыть дверь: 20 секунд"), 20.f },
+		{ TEXT("БАДРИК НОСИТСЯ"),       TEXT("На него нашло: полминуты галопом по всему дому. С открытого пола — прочь!"), 28.f },
 	};
 	const TCHAR* Name(uint8 Id) { return Id < Count ? Defs[Id].Name : TEXT(""); }
 	const TCHAR* Text(uint8 Id) { return Id < Count ? Defs[Id].Text : TEXT(""); }
@@ -1158,6 +1160,16 @@ void AAntKitchenGameMode::StartEvent(uint8 Id)
 			}
 		}
 		break;
+	case AntEvent::Zoomies:
+		for (TActorIterator<ACritter> It(W); It; ++It)
+		{
+			if (It->Kind == 0)
+			{
+				It->Zoomies(Len);
+				Where = It->GetActorLocation();
+			}
+		}
+		break;
 	case AntEvent::Vacuum:
 	{
 		Where = FVector(5300.f, -3600.f, ARobotVacuum::Height * 0.5f + 2.f);
@@ -1284,6 +1296,10 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 	if (A.Num() == 0)
 	{
 		return;
+	}
+	if (NpcWorld::DevCommand(this, A))
+	{
+		return;   // the pets and the family: cat ..., dog ..., gran ..., kid ..., npclevel N (CritterBrain.cpp)
 	}
 	const FString Op = A[0].ToLower();
 	auto Num = [&A](int32 i, float Def = 0.f) { return A.IsValidIndex(i) ? FCString::Atof(*A[i]) : Def; };

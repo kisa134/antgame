@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "NpcBody.h"
 
 class UStaticMeshComponent;
 class UMaterialInstanceDynamic;
@@ -47,26 +48,12 @@ namespace HumanAct
 	constexpr float ReachTouch = 0.40f;
 }
 
-struct FHumanSegDef
-{
-	const TCHAR* Name;
-	int32 Parent;
-	FVector Joint;
-};
-
+// The segment table, the planted foot, the looks, two-bone IK and the easing helpers are shared with the other
+// jointed creatures of the house (NpcBody.h): grandma and the kid are this same figure with their own tables,
+// the cat and the dog use the same kit on four legs (QuadBody.h).
+using FHumanSegDef = FNpcSegDef;
 /** One foot of the walk: planted in the world, or swinging to where it will be planted next. */
-struct FHumanFoot
-{
-	FVector Pos = FVector::ZeroVector;    // world: the middle of the sole
-	float Yaw = 0.f;                      // world
-	FVector From = FVector::ZeroVector;
-	float FromYaw = 0.f;
-	float T = 1.f;                        // < 1: swinging
-	float Dur = 0.5f;
-	float Lift = 0.f;                     // height of the sole above the floor right now
-	float Pitch = 0.f;                    // degrees, toes up > 0
-	bool bInit = false;
-};
+using FHumanFoot = FNpcFoot;
 
 /** Everything the pose remembers between frames (local to each machine, never replicated). */
 struct FHumanRig

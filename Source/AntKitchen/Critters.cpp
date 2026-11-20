@@ -55,6 +55,21 @@ ACritter::ACritter()
 	SetReplicatingMovement(true);
 	SetNetUpdateFrequency(20.f);
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
+
+	// The jointed body: one component per segment, made here so that each has the same name on every machine
+	// (an ant standing on a paw is replicated relative to that paw). Meshes and collision come in SetupJointedBody.
+	BodyPivot = CreateDefaultSubobject<USceneComponent>(TEXT("BodyPivot"));
+	BodyPivot->SetupAttachment(RootComponent);
+	for (int32 i = 0; i < QuadSeg::Count; ++i)
+	{
+		UStaticMeshComponent* C = CreateDefaultSubobject<UStaticMeshComponent>(FName(*FString::Printf(TEXT("Seg_%s"), QuadBody::SegName(i))));
+		C->SetupAttachment(BodyPivot);
+		C->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		C->SetCanEverAffectNavigation(false);
+		C->SetGenerateOverlapEvents(false);
+		C->SetVisibility(false);
+		Segs.Add(C);
+	}
 }
 
 void ACritter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -62,12 +77,26 @@ void ACritter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetime
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(ACritter, Kind);
 	DOREPLIFETIME(ACritter, State);
+	DOREPLIFETIME(ACritter, Mood);
+	DOREPLIFETIME(ACritter, Act);
+	DOREPLIFETIME(ACritter, LookAt);
 }
 
 void ACritter::BeginPlay()
 {
 	Super::BeginPlay();
 	LastPos = GetActorLocation();
+	bNewBody = QuadBody::Enabled(Kind);
+	if (bNewBody)
+	{
+		SetupJointedBody();
+		if (HasAuthority())
+		{
+			BrainBegin();
+		}
+		return;
+	}
+	// ---- from here on: the old primitive-built pets (-AntOldNpc, or a build without /Game/Npc) ----
 	if (HasAuthority())
 	{
 		if (Kind == 0)
@@ -184,6 +213,10 @@ void ACritter::Hunt(float Seconds)
 	{
 		HuntUntil = GetWorld()->GetTimeSeconds() + Seconds;
 		NextHuntPounce = 0.f;
+		if (bNewBody && (Brain == EBrain::Rest || Brain == EBrain::Idle || Brain == EBrain::Cower))
+		{
+			BrainUntil = 0.f;   // up it gets
+		}
 		UE_LOG(LogTemp, Display, TEXT("ANTCAT the cat hunts for %.0f s"), Seconds);
 	}
 }
@@ -426,6 +459,15 @@ void ACritter::ServerHurtAnts(float Dt)
 void ACritter::Tick(float Dt)
 {
 	Super::Tick(Dt);
+	if (bNewBody)
+	{
+		if (HasAuthority())
+		{
+			BrainTick(Dt);
+		}
+		PoseBody(Dt);
+		return;
+	}
 	if (HasAuthority())
 	{
 		ThinkTimer += Dt;
@@ -491,6 +533,11 @@ void ACritter::Bitten(AAntCharacter* By)
 {
 	if (!HasAuthority())
 	{
+		return;
+	}
+	if (bNewBody)
+	{
+		BittenNew(By);
 		return;
 	}
 	AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>();

@@ -26,6 +26,8 @@ public:
 
 private:
 	AAntCharacter* PickTarget(const AHumanCharacter* H) const;
+	/** Where to stroll to next: now and then right up to the worktops, the west wall or the window wall (found from the room itself). */
+	FVector PickWander(const class AHumanCharacter* H) const;
 	void MoveTowards(AHumanCharacter* H, const FVector& Goal, float Scale);
 
 	TWeakObjectPtr<AAntCharacter> Target;

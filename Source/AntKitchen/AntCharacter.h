@@ -227,7 +227,13 @@ public:
 	UPROPERTY(ReplicatedUsing = OnRep_Link) AAntCharacter* HeldBy = nullptr;
 	/** The ant this one is carrying. */
 	UPROPERTY(Replicated) AAntCharacter* HoldingAnt = nullptr;
-	bool IsAttached() const { return Chain != nullptr || HeldBy != nullptr; }
+	/** Held by something of the house that is not an ant (the cat's paw, the dog's tongue, the kid's fingers): the ant hangs at that point of it and cannot move. [Space] struggles. */
+	UPROPERTY(ReplicatedUsing = OnRep_Link) USceneComponent* NpcHold = nullptr;
+	/** In NpcHold's own space. */
+	UPROPERTY(Replicated) FVector_NetQuantize100 NpcHoldAt;
+	/** Server: Comp null lets go. */
+	void SetNpcHold(USceneComponent* Comp, const FVector& LocalPoint);
+	bool IsAttached() const { return Chain != nullptr || HeldBy != nullptr || NpcHold != nullptr; }
 	/** How heavy this ant is to lift. */
 	float AntWeight() const;
 	/** Server. */

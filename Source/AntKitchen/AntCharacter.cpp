@@ -28,6 +28,7 @@
 #include "AntBotController.h"
 #include "AntChain.h"
 #include "Critters.h"
+#include "NpcBody.h"
 #include "AntGibs.h"
 #include "AntFx.h"
 #include "Misc/CommandLine.h"
@@ -101,6 +102,8 @@ void AAntCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	DOREPLIFETIME(AAntCharacter, bLayingTrail);
 	DOREPLIFETIME(AAntCharacter, Chain);
 	DOREPLIFETIME(AAntCharacter, HeldBy);
+	DOREPLIFETIME(AAntCharacter, NpcHold);
+	DOREPLIFETIME(AAntCharacter, NpcHoldAt);
 	DOREPLIFETIME(AAntCharacter, HoldingAnt);
 	DOREPLIFETIME(AAntCharacter, LostLegs);
 	DOREPLIFETIME(AAntCharacter, DeathKind);
@@ -1597,21 +1600,10 @@ void AAntCharacter::ServerBite_Implementation()
 			bHit = true;
 		}
 	}
-	// The pets: a bite on a paw (or on the back, while riding one).
+	// The pets and the family: a bite on a paw (or on the back while riding one, or on whatever holds you).
+	if (NpcWorld::AntBites(this, Reach))
 	{
-		const UAntMovementComponent* MM = GetAntMovement();
-		const UPrimitiveComponent* RiddenComp = MM ? MM->GetRiddenComponent() : nullptr;
-		for (TActorIterator<ACritter> It(GetWorld()); It; ++It)
-		{
-			ACritter* C = *It;
-			const bool bRiding = RiddenComp && RiddenComp->GetOwner() == C;
-			if (bRiding || FVector::Dist(C->GetActorLocation(), Me) < C->BodyLength() * 0.7f + Reach)
-			{
-				C->Bitten(this);
-				Toast(FString::Printf(TEXT("Укусил: %s"), *C->DisplayName()));
-				bHit = true;
-			}
-		}
+		bHit = true;
 	}
 	// Big food: bite a piece off it that you can carry alone.
 	if (!bHit && !Carrying)
@@ -1909,6 +1901,7 @@ void AAntCharacter::Die(AController* Killer, AActor* Causer)
 	if (HoldingAnt) { ReleaseAnt(false); }
 	if (HeldBy && IsValid(HeldBy)) { HeldBy->ReleaseAnt(false); }
 	if (Chain) { Chain->Leave(this); }
+	if (NpcHold) { NpcHold = nullptr; OnRep_Link(); }
 	if (bLayingTrail)
 	{
 		CancelTrail(TEXT("Ты погиб — тропа оборвалась"));
@@ -2530,6 +2523,25 @@ void AAntCharacter::SetChain(AAntChain* NewChain)
 	OnRep_Link();
 }
 
+void AAntCharacter::SetNpcHold(USceneComponent* Comp, const FVector& LocalPoint)
+{
+	if (!HasAuthority() || (bDead && Comp))
+	{
+		return;
+	}
+	if (Comp)
+	{
+		if (Carrying) { LetGo(); }
+		Pulling = nullptr;
+		if (HoldingAnt) { ReleaseAnt(false); }
+		if (HeldBy && IsValid(HeldBy)) { HeldBy->ReleaseAnt(false); }
+		if (Chain) { Chain->Leave(this); }
+	}
+	NpcHold = Comp;
+	NpcHoldAt = LocalPoint;
+	OnRep_Link();
+}
+
 void AAntCharacter::OnRep_Link()
 {
 	const bool bAtt = IsAttached();
@@ -2589,6 +2601,12 @@ void AAntCharacter::ApplyAttachedPose()
 			Along = FVector::CrossProduct(Up, Along).GetSafeNormal();
 		}
 	}
+	else if (NpcHold)
+	{
+		// Under the cat's paw, on the dog's tongue, between the kid's fingers: wherever that thing is right now.
+		P = NpcHold->GetComponentTransform().TransformPosition(FVector(NpcHoldAt));
+		Along = FVector::VectorPlaneProject(NpcHold->GetForwardVector(), Up).GetSafeNormal();
+	}
 	else if (Chain)
 	{
 		const int32 Idx = Chain->IndexOf(this);
@@ -2646,6 +2664,11 @@ void AAntCharacter::DoLink(const FVector& Aim)
 {
 	if (!HasAuthority() || bDead)
 	{
+		return;
+	}
+	if (NpcHold)
+	{
+		NpcWorld::Struggle(this);   // whoever holds it may lose its grip
 		return;
 	}
 	if (HeldBy)

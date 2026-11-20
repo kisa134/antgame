@@ -71,7 +71,7 @@ namespace AntOrder
 /** Things that make noise. The AI Human walks to the loudest recent one. */
 namespace AntNoise
 {
-	enum EKind : uint8 { None, Faucet, Toaster, Microwave, TV, Crash, Door, Trap, Count };
+	enum EKind : uint8 { None, Faucet, Toaster, Microwave, TV, Crash, Door, Trap, Bark, Count };
 	ANTKITCHEN_API const TCHAR* Name(uint8 Kind);
 }
 
@@ -87,7 +87,7 @@ struct FAntNoise
 /** One random event per shift. */
 namespace AntEvent
 {
-	enum EId : uint8 { None, Blackout, Cat, Vacuum, Flood, Pizza, FridgeOpen, Count };
+	enum EId : uint8 { None, Blackout, Cat, Vacuum, Flood, Pizza, FridgeOpen, Zoomies, Count };
 	ANTKITCHEN_API const TCHAR* Name(uint8 Id);
 	ANTKITCHEN_API const TCHAR* Text(uint8 Id);
 	ANTKITCHEN_API float Length(uint8 Id);

@@ -7,6 +7,7 @@
 #include "KitchenLoot.h"
 #include "AntKitchenGameMode.h"
 #include "EngineUtils.h"
+#include "NpcBody.h"
 #include "AntTypes.h"
 #include "Components/CapsuleComponent.h"
 #include "EngineUtils.h"
@@ -39,6 +40,7 @@ AAntCharacter* AHumanAIController::PickTarget(const AHumanCharacter* H) const
 	const float Notice = AntCard::Has(this, AntCard::Quiet) ? 0.7f : 1.f;
 	float BestScore = 8000.f * Notice;
 	const FVector Me = H->GetActorLocation();
+	const FVector Eyes = Me + FVector(0.f, 0.f, H->GetSimpleCollisionHalfHeight() * 0.8f);
 	const bool bDark = !AKitchenSwitch::AreLightsOn(GetWorld());
 	for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
 	{
@@ -48,8 +50,15 @@ AAntCharacter* AHumanAIController::PickTarget(const AHumanCharacter* H) const
 			continue;
 		}
 		const FVector AL = Ant->GetActorLocation();
-		// Can't see ants hiding inside the fridge, the oven, the walls or behind the cabinets.
-		if (AL.Y > 4750.f || FBox(FVector(2700.f, 3000.f, 0.f), FVector(4700.f, 4750.f, 3700.f)).IsInside(AL)
+		// He cannot follow an ant out through a crack in the wall: what is out in the yard or the street is none of his business
+		// (he used to pick such an ant and walk into the wall at the crack).
+		if (AKitchenBuilder::Region(AL) >= 2)
+		{
+			continue;
+		}
+		// Can't see ants hiding inside the fridge, the oven, the walls or behind the cabinets. Past the line of the cabinet fronts he sees
+		// only what is in plain sight from where he stands (the back of the worktop, the tap, the spice shelves, the rail, the cabinet tops).
+		if ((AL.Y > 4750.f && !NpcWorld::CanSee(GetWorld(), Eyes, AL + FVector(0.f, 0.f, 10.f))) || FBox(FVector(2700.f, 3000.f, 0.f), FVector(4700.f, 4750.f, 3700.f)).IsInside(AL)
 			|| FBox(FVector(-1500.f, 3000.f, 120.f), FVector(0.f, 4750.f, 1650.f)).IsInside(AL)
 			|| FBox(FVector(-4200.f, 3000.f, 0.f), FVector(-2800.f, 4750.f, 1100.f)).IsInside(AL))
 		{
@@ -73,6 +82,30 @@ AAntCharacter* AHumanAIController::PickTarget(const AHumanCharacter* H) const
 		}
 	}
 	return Best;
+}
+
+FVector AHumanAIController::PickWander(const AHumanCharacter* H) const
+{
+	FVector P = AKitchenBuilder::RandomFloorPoint();
+	const FBox Area = AKitchenBuilder::PlayArea();
+	// The box he strolls in stops short of the worktops and of the west and south walls. Some of his kitchen walks now end
+	// right at one of them: wherever the room itself says it is (a trace from the edge of the box), less his own width.
+	if (P.X >= Area.Min.X && P.X <= Area.Max.X && P.Y >= Area.Min.Y && P.Y <= Area.Max.Y && FMath::FRand() < 0.4f)
+	{
+		const float Roll = FMath::FRand();
+		FVector From = P, Dir;
+		if (Roll < 0.6f) { From.Y = Area.Max.Y; Dir = FVector(0.f, 1.f, 0.f); }          // up to the cabinets
+		else if (Roll < 0.8f) { From.X = Area.Min.X; Dir = FVector(-1.f, 0.f, 0.f); }    // the west wall
+		else { From.Y = Area.Min.Y; Dir = FVector(0.f, -1.f, 0.f); }                     // under the window
+		From.Z = 320.f;
+		FHitResult Hit;
+		if (GetWorld()->LineTraceSingleByObjectType(Hit, From, From + Dir * 1800.f, FCollisionObjectQueryParams(ECC_WorldStatic), FCollisionQueryParams(SCENE_QUERY_STAT(HumanWander), false, H)))
+		{
+			P = Hit.ImpactPoint - Dir * (H->GetSimpleCollisionRadius() + 70.f);
+			P.Z = 0.f;
+		}
+	}
+	return P;
 }
 
 void AHumanAIController::MoveTowards(AHumanCharacter* H, const FVector& Goal, float Scale)
@@ -390,7 +423,7 @@ void AHumanAIController::Tick(float DeltaSeconds)
 			}
 		}
 	}
-	else if (AAntSwarm* Swarm = AAntSwarm::Get(GetWorld()); Swarm && Swarm->FindStompTarget(MyLoc, 7000.f, SwarmPoint))
+	else if (AAntSwarm* Swarm = AAntSwarm::Get(GetWorld()); Swarm && Swarm->FindStompTarget(MyLoc, 7000.f, SwarmPoint) && AKitchenBuilder::Region(SwarmPoint) < 2)
 	{
 		// No ant players around: go stomp the worker trails.
 		H->SetSpraying(false);
@@ -417,7 +450,7 @@ void AHumanAIController::Tick(float DeltaSeconds)
 		if (WanderTimer <= 0.f || FVector::Dist2D(MyLoc, WanderPoint) < 400.f)
 		{
 			WanderTimer = 6.f;
-			WanderPoint = AKitchenBuilder::RandomFloorPoint() + FVector(0.f, 0.f, MyLoc.Z);
+			WanderPoint = PickWander(H) + FVector(0.f, 0.f, MyLoc.Z);
 		}
 		DesiredRotation.Pitch = -15.f;
 		MoveTowards(H, WanderPoint, 0.5f);

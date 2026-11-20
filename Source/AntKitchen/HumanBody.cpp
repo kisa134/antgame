@@ -32,17 +32,9 @@
 
 namespace
 {
-	/** Material slot -> the game's surface look. Textured looks use /Game/Human/M_HumanSurface: M_Surface projected in the
+	/** Material slot -> the game's surface look (NpcRig::Material). Textured looks use /Game/Human/M_HumanSurface: M_Surface projected in the
 	 *  segment's own space (a world-space weave would swim over a moving leg). Tex null: plain paint. */
-	struct FHumanLook
-	{
-		const TCHAR* Slot;
-		const TCHAR* Tex;
-		float Size;
-		float R, G, B;
-		float Rough;
-		const TCHAR* Step;
-	};
+	using FHumanLook = FNpcLook;
 	const TCHAR* const ClothStep = TEXT("Surf_Fabric");
 	const FHumanLook GHumanLooks[] =
 	{
@@ -60,78 +52,10 @@ namespace
 		{ TEXT("Mouth"),        nullptr, 0.f, 0.42f, 0.10f, 0.10f, 0.5f,  nullptr },
 	};
 
-	/** One material per look, shared by all segments. Rooted: the cache is static and must survive the map reload from the menu. */
-	UMaterialInstanceDynamic* HumanMaterial(const FHumanLook& L)
-	{
-		static TMap<const FHumanLook*, UMaterialInstanceDynamic*> Cache;
-		if (UMaterialInstanceDynamic** Found = Cache.Find(&L))
-		{
-			return *Found;
-		}
-		UMaterialInstanceDynamic* M = nullptr;
-		UMaterialInterface* Base = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Human/M_HumanSurface.M_HumanSurface"), nullptr, LOAD_NoWarn | LOAD_Quiet);
-		if (!Base)
-		{
-			Base = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Textures/M_Surface.M_Surface"));
-		}
-		if (Base)
-		{
-			M = UMaterialInstanceDynamic::Create(Base, GetTransientPackage());
-			UTexture* T = L.Tex ? LoadObject<UTexture>(nullptr, *FString::Printf(TEXT("/Game/Textures/%s.%s"), L.Tex, L.Tex)) : nullptr;
-			M->SetScalarParameterValue(TEXT("Mode"), T ? 0.f : 4.f);
-			M->SetScalarParameterValue(TEXT("TileSize"), FMath::Max(1.f, L.Size));
-			M->SetScalarParameterValue(TEXT("Roughness"), L.Rough);
-			M->SetScalarParameterValue(TEXT("Metallic"), 0.f);
-			M->SetVectorParameterValue(TEXT("Tint"), FLinearColor(L.R, L.G, L.B, 1.f));
-			if (T)
-			{
-				M->SetTextureParameterValue(TEXT("Tex"), T);
-			}
-			M->AddToRoot();
-		}
-		return Cache.Add(&L, M);
-	}
-
-	FQuat RX(float Deg) { return FQuat(FVector::XAxisVector, FMath::DegreesToRadians(Deg)); }
-	/** About Y: something pointing up leans FORWARD for a positive angle, a hanging limb swings BACK. */
-	FQuat RY(float Deg) { return FQuat(FVector::YAxisVector, FMath::DegreesToRadians(Deg)); }
-	FQuat RZ(float Deg) { return FQuat(FVector::ZAxisVector, FMath::DegreesToRadians(Deg)); }
-	float Ease(float T) { T = FMath::Clamp(T, 0.f, 1.f); return T * T * (3.f - 2.f * T); }
-	float EaseIn(float T) { T = FMath::Clamp(T, 0.f, 1.f); return T * T; }
-	float EaseOut(float T) { T = FMath::Clamp(T, 0.f, 1.f); return 1.f - (1.f - T) * (1.f - T); }
-	float Ramp(float T, float A, float B) { return FMath::Clamp((T - A) / FMath::Max(1.e-4f, B - A), 0.f, 1.f); }
-	void Approach(float& V, float Target, float Rate, float Dt) { V += (Target - V) * (1.f - FMath::Exp(-Rate * Dt)); }
-
-	/** A limb segment hangs along its local -Z: the rotation that points it along Dir, its front (local X) towards XHint. */
-	FQuat BoneRot(const FVector& Dir, const FVector& XHint)
-	{
-		return FRotationMatrix::MakeFromZX(-Dir, XHint).ToQuat();
-	}
-
-	/** Two-bone IK: the middle joint of A -> T. T is pulled back into reach. OutPole: the side the joint sticks out to. */
-	FVector TwoBone(const FVector& A, FVector& T, float L1, float L2, const FVector& PoleHint, const FVector& Fallback, FVector& OutPole)
-	{
-		FVector D = T - A;
-		float Len = (float)D.Size();
-		const FVector Dir = Len > KINDA_SMALL_NUMBER ? D / Len : FVector(0.f, 0.f, -1.f);
-		const float Clamped = FMath::Clamp(Len, FMath::Abs(L1 - L2) + 2.f, L1 + L2 - 1.f);
-		if (Clamped != Len)
-		{
-			T = A + Dir * Clamped;
-			Len = Clamped;
-		}
-		FVector Pole = FVector::VectorPlaneProject(PoleHint, Dir);
-		if (Pole.SizeSquared() < 1.e-4f)
-		{
-			Pole = FVector::VectorPlaneProject(Fallback, Dir);
-		}
-		Pole = Pole.GetSafeNormal(UE_SMALL_NUMBER, FVector::ForwardVector);
-		OutPole = Pole;
-		const float Along = (L1 * L1 - L2 * L2 + Len * Len) / (2.f * Len);
-		const float Out = FMath::Sqrt(FMath::Max(0.f, L1 * L1 - Along * Along));
-		return A + Dir * Along + Pole * Out;
-	}
 }
+
+// The materials, the easing helpers, the bone rotation and the two-bone IK live in NpcBody.h now: every jointed creature uses them.
+using namespace NpcRig;
 
 namespace HumanBody
 {
@@ -208,7 +132,7 @@ void ApplyLook(UStaticMeshComponent* C)
 			UE_LOG(LogTemp, Warning, TEXT("HumanBody: no look for slot %s of %s"), *Slot, *M->GetName());
 			continue;
 		}
-		if (UMaterialInstanceDynamic* Mat = HumanMaterial(*Look))
+		if (UMaterialInstanceDynamic* Mat = NpcRig::Material(*Look))
 		{
 			C->SetMaterial(i, Mat);
 		}
@@ -379,7 +303,6 @@ namespace
 		}
 		return FRotationMatrix::MakeFromXZ(XN, Z).ToQuat();
 	}
-	float Deg(float Rad) { return FMath::RadiansToDegrees(Rad); }
 }
 
 FVector AHumanCharacter::SprayNozzleBody() const
