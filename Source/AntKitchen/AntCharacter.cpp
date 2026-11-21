@@ -39,6 +39,7 @@
 #include "HAL/IConsoleManager.h"
 #include "AntRun.h"
 #include "AntBody.h"
+#include "AntFilm.h"
 
 AAntCharacter::AAntCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<UAntMovementComponent>(ACharacter::CharacterMovementComponentName))
@@ -2006,6 +2007,13 @@ float AAntCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEv
 		{
 			return 0.f;   // no friendly fire
 		}
+	}
+	if (AntFilm::NoHarm() && !(EventInstigator && Cast<AAntCharacter>(EventInstigator->GetPawn())))
+	{
+		// Filming mode, "no attacks": the blow plays (the body flinches) but nothing in the house harms an ant.
+		const FVector From = DamageCauser ? DamageCauser->GetActorLocation() : GetActorLocation() + FVector(VisNormal);
+		NoteBodyAct(AntAct::Flinch, GetActorLocation() - From, FMath::Min(1.f, DamageAmount / 40.f));
+		return 0.f;
 	}
 	const float Actual = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 	if (Actual <= 0.f)

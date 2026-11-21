@@ -1216,3 +1216,88 @@ bool BiteHolder(AAntCharacter* Ant)
 }
 
 } // namespace FolkWorld
+
+// ---------------------------------------------------------------------------------------------
+// Filming mode (AntFilm.h): the director's keys
+// ---------------------------------------------------------------------------------------------
+
+void AHouseFolk::DirectorDoze(bool bSleep)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+	bDevPuppet = bSleep;
+	DevWalk = FVector::ZeroVector;
+	FolkLook = FVector::ZeroVector;
+	if (IsSeated())
+	{
+		SetSitHow(bSleep ? 1 : (Fig == HumanFig::Grandma ? 0 : 2));
+	}
+	else if (bSleep)
+	{
+		GetCharacterMovement()->StopMovementImmediately();
+	}
+}
+
+void AGrandmaCharacter::DirectorSweep(const FVector& Point)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+	const bool bWasPuppet = bDevPuppet;
+	bDevPuppet = true;   // her own head stays out of it for the stroke
+	auto Go = [this, Point]()
+	{
+		const FVector Me = GetActorLocation();
+		const FVector To = Flat2(Point - Me);
+		const float D = (float)To.Size();
+		const FVector Dir = D > 1.f ? To / D : GetActorForwardVector();
+		if (D > GranSweepFar - 300.f || D < GranSweepNear)
+		{
+			const FVector At = Point - Dir * 1300.f;
+			SetActorLocation(FloorPoint(FVector(At.X, At.Y, 0.f)), false, nullptr, ETeleportType::TeleportPhysics);
+		}
+		const FRotator R(0.f, (float)Dir.Rotation().Yaw, 0.f);
+		SetActorRotation(R);
+		if (Controller) { Controller->SetControlRotation(R); }
+		NextSweep = 0.f;
+		TrySweep(Point);
+	};
+	GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+	float Wait = 0.f;
+	if (IsSeated())
+	{
+		GetUp();
+		Wait = HumanAct::SitTime * HumanBody::Style(Fig).SitSlow + 0.2f;
+	}
+	FTimerHandle T1, T2;
+	if (Wait > 0.f) { GetWorldTimerManager().SetTimer(T1, FTimerDelegate::CreateWeakLambda(this, Go), Wait, false); }
+	else { Go(); }
+	GetWorldTimerManager().SetTimer(T2, FTimerDelegate::CreateWeakLambda(this, [this, bWasPuppet]() { bDevPuppet = bWasPuppet; }), Wait + 3.f, false);
+}
+
+void AKidCharacter::DirectorGrab(AAntCharacter* Ant)
+{
+	if (!HasAuthority() || !Ant)
+	{
+		return;
+	}
+	const float Now = GetWorld()->GetTimeSeconds();
+	bDevPuppet = false;
+	if (IsSeated())
+	{
+		GetUp();
+	}
+	GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+	Quarry = Ant;
+	SeenSince = Now - 2.f;
+	LastSeen = Now;
+	NextGrab = 0.f;
+	DevWant = 2;   // he picks it up (no stomping, no poking)
+	SetMode(Chase, 10.f);
+	FTimerHandle T;
+	GetWorldTimerManager().SetTimer(T, FTimerDelegate::CreateWeakLambda(this, [this]() { DevWant = -1; }), 12.f, false);
+	UE_LOG(LogTemp, Display, TEXT("ANTKID director: goes to pick up %s"), *Ant->GetDisplayName());
+}

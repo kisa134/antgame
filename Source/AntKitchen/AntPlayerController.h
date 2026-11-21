@@ -94,6 +94,8 @@ public:
 	UFUNCTION(Server, Reliable) void ServerAddBot(int32 Team, int32 Count);
 
 	TSharedPtr<class SWidget> MenuWidget;
+	/** Filming mode (F8, AntFilm.h): made for the local player only. */
+	UPROPERTY() class UAntFilm* Film = nullptr;
 	bool bShowScores = false;
 	float HitMarkerTime = -100.f;
 	bool bHitCrit = false;

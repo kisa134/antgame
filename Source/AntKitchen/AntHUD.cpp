@@ -27,6 +27,9 @@
 #include "AntFx.h"
 #include "AntRun.h"
 #include "AntRaid.h"
+#include "AntFilm.h"
+#include "KitchenSlick.h"
+#include "Misc/ScopeExit.h"
 
 namespace
 {
@@ -195,6 +198,15 @@ void AAntHUD::DrawHUD()
 	AAntGameState* GS = GetWorld()->GetGameState<AAntGameState>();
 	AAntPlayerController* PC = Cast<AAntPlayerController>(PlayerOwner);
 	APawn* Me = PlayerOwner ? PlayerOwner->GetPawn() : nullptr;
+
+	// Filming mode (F8): F2 hides everything of the HUD - the crosshair, the toasts, the panels; the film's own overlay stays.
+	UAntFilm* Film = PC ? PC->Film : nullptr;
+	if (Film && Film->HidesHud())
+	{
+		Film->DrawOverlay(this, Canvas);
+		return;
+	}
+	ON_SCOPE_EXIT { if (Film && Canvas) { Film->DrawOverlay(this, Canvas); } };
 
 	// A raid: the nest screen and the results cover everything else.
 	AAntRaid* Raid = (GS && GS->bHeistMode) ? AAntRaid::Get(GetWorld()) : nullptr;
@@ -794,7 +806,7 @@ void AAntHUD::DrawAnt(AAntCharacter* Ant)
 	{
 		// Straining at a door that will not give: say how many more it takes.
 		const float Beat = 0.75f + 0.25f * FMath::Abs(FMath::Sin(GetWorld()->GetTimeSeconds() * 6.f));
-		Txt(FString::Printf(TEXT("ДВЕРЬ НЕ ПОДДАЁТСЯ  ·  Нужно ещё %d"), (int32)Ant->Pulling->PullMissing), W * 0.5f, H * 0.5f + 70.f * S, FLinearColor(1.f, 0.55f, 0.2f, Beat), Med, 1.2f * S, true);
+		Txt(FString::Printf(TEXT("%s  ·  Нужно ещё %d"), Ant->Pulling->IsA<AKitchenSpillBottle>() ? TEXT("БУТЫЛКА НЕ ПОДДАЁТСЯ") : TEXT("ДВЕРЬ НЕ ПОДДАЁТСЯ"), (int32)Ant->Pulling->PullMissing), W * 0.5f, H * 0.5f + 70.f * S, FLinearColor(1.f, 0.55f, 0.2f, Beat), Med, 1.2f * S, true);
 		Txt(TEXT("Держи [E]. Зови своих, выведи армию (F) или переоденься в Солдата"), W * 0.5f, H * 0.5f + 106.f * S, Grey, Small, 1.1f * S, true);
 	}
 	else if (Gadget && (!NearLoot || GadgetDist < FVector::Dist(NearLoot->GetActorLocation(), Ant->GetActorLocation())))
@@ -804,7 +816,7 @@ void AAntHUD::DrawAnt(AAntCharacter* Ant)
 		if (Missing > 0)
 		{
 			Txt(FString::Printf(TEXT("[E] держать — %s"), *Gadget->GetPrompt(Ant)), W * 0.5f, H * 0.5f + 70.f * S, Gold, Med, 1.05f * S, true);
-			Txt(FString::Printf(TEXT("%s: одному не открыть, нужно ещё %d"), DoorClass >= AntDoor::Heavy ? TEXT("Тяжёлая дверь") : TEXT("Тугая дверца"), Missing),
+			Txt(FString::Printf(TEXT("%s, нужно ещё %d"), Gadget->IsA<AKitchenSpillBottle>() ? TEXT("Тяжёлая бутылка: одному не опрокинуть") : DoorClass >= AntDoor::Heavy ? TEXT("Тяжёлая дверь: одному не открыть") : TEXT("Тугая дверца: одному не открыть"), Missing),
 				W * 0.5f, H * 0.5f + 104.f * S, Gold, Small, 1.1f * S, true);
 		}
 		else

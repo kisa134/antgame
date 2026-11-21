@@ -214,6 +214,8 @@ public:
 	bool IsBurning() const { return HasStatus(AntStatus::Burning); }
 	float VisScale() const { return AntScale * GetClassDef().BodyScale * ExtraScale; }
 	bool bBodycam = false;
+	/** Filming mode (AntFilm.h): the bodycam on or off without the toast dance of [V]. */
+	void SetBodycam(bool bOn) { if (bBodycam != bOn) { ToggleBodycam(); } }
 	/** The macro-lens depth of field is on (off with -AntNoDOF). */
 	bool bMiniDof = false;
 	AKitchenLoot* FindNearestLoot(float Radius) const;

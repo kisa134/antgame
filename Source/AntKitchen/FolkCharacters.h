@@ -33,6 +33,8 @@ public:
 	/** Server: an ant held in the fingers struggles. */
 	virtual void Struggle(AAntCharacter* Ant) {}
 	FString FolkDescribe() const;
+	/** Filming mode (AntFilm.h): asleep where they are (dozing if seated) and left alone by their own head; false wakes them. */
+	void DirectorDoze(bool bSleep);
 
 protected:
 	virtual void Think(float Dt, float Now) {}
@@ -73,6 +75,8 @@ public:
 	AGrandmaCharacter();
 	/** Server: one long stroke of the broom across the floor through Point. */
 	void TrySweep(const FVector& Point);
+	/** Filming mode: up from the armchair if need be, close enough (put there), one stroke of the broom through Point. */
+	void DirectorSweep(const FVector& Point);
 	virtual void DevAct(const FString& What, const FVector& Target) override;
 
 protected:
@@ -104,6 +108,8 @@ class ANTKITCHEN_API AKidCharacter : public AHouseFolk
 public:
 	AKidCharacter();
 	virtual void Struggle(AAntCharacter* Ant) override;
+	/** Filming mode: he goes for this ant and picks it up between two fingers. */
+	void DirectorGrab(AAntCharacter* Ant);
 	/** One of the crumbs a kid dropped (grandma tidies those up). */
 	static bool IsCrumb(const UWorld* W, const AKitchenLoot* L);
 	virtual void DevAct(const FString& What, const FVector& Target) override;

@@ -24,6 +24,7 @@
 #include "AntRaid.h"
 #include "AntSquad.h"
 #include "EngineUtils.h"
+#include "AntFilm.h"
 
 void AAntPlayerController::BeginPlay()
 {
@@ -38,6 +39,11 @@ void AAntPlayerController::BeginPlay()
 		FInputModeGameOnly Mode;
 		SetInputMode(Mode);
 		bShowMouseCursor = false;
+
+		// Filming mode for the marketer's clips: F8 (docs/FILMING.md).
+		Film = NewObject<UAntFilm>(this, TEXT("AntFilm"));
+		Film->RegisterComponent();
+		Film->Init(this);
 
 		// A touch of grade over the whole kitchen: warmer, punchier, a soft vignette. -AntNoPP switches it off to compare.
 		if (!FParse::Param(FCommandLine::Get(), TEXT("AntNoPP")))
