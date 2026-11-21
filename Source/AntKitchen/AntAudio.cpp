@@ -114,7 +114,7 @@ namespace
 		D(StepGrass,   "A_StepRug*5",                     1.0f, 0.12f, AttTiny,   KSfx, 10, 0.f,  Count, 0.f, 0.f),
 		// ---- ants
 		D(StepSticky,  "A_StepSticky*5",                  0.9f, 0.10f, AttTiny,   KSfx, 8, 0.f,   Count, 0.f, 0.f),
-		D(AcidHit,     "A_AcidHit*3",                     0.7f, 0.08f, AttSmall,  KSfx, 4, 0.05f, Count, 0.f, 0.f),
+		D(AcidHit,     "A_AcidHit*3",                     0.7f, 0.08f, AttSmall,  KSfx, 3, 0.30f, Count, 0.f, 0.f),
 		D(AntHurt,     "A_AntHurt*3",                     0.7f, 0.10f, AttSmall,  KVoice, 3, 0.10f, Count, 0.f, 0.f),
 		D(Release,     "A_Release*3",                     0.8f, 0.08f, AttSmall,  KSfx, 4, 0.05f, Count, 0.f, 0.f),
 		D(CarryStrain, "A_CarryStrain*3",                 0.7f, 0.06f, AttSmall,  KSfx, 2, 1.20f, Count, 0.f, 0.f),
@@ -1117,15 +1117,19 @@ void UAntAudioSubsystem::UpdateState()
 	float Chase = 0.f;
 	const float Threat = bInRaid ? ComputeThreat(Chase) : 0.f;
 	const float RageAll = GS ? GS->HumanRage / 3.f * 0.5f : 0.f;
-	float I = FMath::Max(Threat, RageAll) + 0.55f * Chase + 0.7f * Excitement;
-	if ((GS && GS->bWarMode) || AntVersus::Active(W))
+	// Two questions: is somebody dangerous about (tension: a resident near, angry) and is it happening now (action: a chase,
+	// a crash, a blow, a fall). Danger alone never brings the chaos layer, so the music calms down when the noise stops.
+	float Tense = FMath::Max(Threat, RageAll);
+	float Act = 0.7f * Chase + 0.8f * Excitement + (GS && GS->HumanRage >= 3 && Threat > 0.4f ? 0.25f : 0.f);
+	if (bInRaid && ((GS && GS->bWarMode) || AntVersus::Active(W)))
 	{
-		I = FMath::Max(I, 0.5f);   // war, versus (a player is the Human): a fight all the way
+		Act = FMath::Max(Act, 0.55f);   // war, versus (a player is the Human): a fight all the way
 	}
+	float I = FMath::Max(Tense * 0.6f, FMath::Min(1.f, Tense * 0.3f + Act));
 	const float Force = CVarForce.GetValueOnGameThread();
 	if (Force >= 0.f)
 	{
-		I = Force;
+		I = Tense = Act = Force;
 	}
 	I = FMath::Clamp(I, 0.f, 1.f);
 	ThreatSmoothed = I;
@@ -1137,8 +1141,8 @@ void UAntAudioSubsystem::UpdateState()
 		PlaySting(EAntSting::LastLight);
 	}
 	LayerTarget[0] = 1.f;
-	LayerTarget[1] = bInRaid ? FMath::Max(Smooth01(0.12f, 0.42f, I), bUrgent ? 0.7f : 0.f) : 0.f;
-	LayerTarget[2] = bInRaid ? Smooth01(0.5f, 0.8f, I) : 0.f;
+	LayerTarget[1] = bInRaid ? FMath::Max(Smooth01(0.2f, 0.55f, FMath::Max(Tense, Act)), bUrgent ? 0.7f : 0.f) : 0.f;
+	LayerTarget[2] = bInRaid ? Smooth01(0.3f, 0.65f, Act) : 0.f;
 	LayerTarget[3] = bInRaid && bUrgent ? 1.f : 0.f;
 }
 

@@ -70,10 +70,12 @@ Reads replicated state only, so each machine hears its own mix of the same game:
 - which set: `AAntRaid::Phase` (Nest → the march; Raid → Funk/Lounge by raid number; Results → the march) or, with no raid actor,
   `AAntGameState::Phase` (0 = playing). After two loops of a raid set (about 4 min) it crossfades (4 s) to the other set,
   only at a calm moment.
-- intensity 0..1 (every 0.2 s): the nearest resident's proximity scaled by his rage, the replicated Human rage, a chase (a resident
-  moving towards you, the spray, a cat or dog stalking / in the air), and excitement (crashes, breaks, stomps, roars, falls near you
-  push it up; it decays 0.07/s). Versus/war: a floor of 0.45-0.5.
-- layers: Base always; Tension from 0.12..0.42; Action from 0.5..0.8 (up fast, down slow); Urgency when `TimeRemaining <= 30`.
+- every 0.2 s two numbers: **tension** = the nearest resident's proximity scaled by his rage, or the replicated Human rage;
+  **action** = a chase (a resident moving towards you, the spray, a cat or dog stalking / in the air) + excitement (crashes,
+  breaks, stomps, slaps, roars, falls, weapon blows near you push it up; it decays 0.07/s) + rage 3 with him near.
+  Danger alone never brings the chaos layer: when the noise stops the music settles back. Versus / war: action >= 0.55.
+- layers: Base always; Tension from 0.2..0.55 of max(tension, action); Action from 0.3..0.65 of action (up fast, down slow);
+  Urgency when `TimeRemaining <= 30` (Tension held at 0.7 under it).
 - stings on phase changes (raid start, results: win if `Result.End == Left`, else fail), card picked, last light.
 - ducking: `AntAudio::Duck(Ctx, Seconds)` and every sting dip the music to 45 % (and push `SM_AntDuck`).
 - the four stems of a set start in the same frame, are force-inline and play-when-silent (never virtualized), so they stay locked.
