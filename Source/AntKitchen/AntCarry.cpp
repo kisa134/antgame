@@ -81,6 +81,8 @@ struct FAntCarryState
 		FVector Vrel = FVector::ZeroVector;
 		FVector Pull = FVector::ZeroVector;
 		float Strain = 0.f, Share = 0.f, Over = 0.f, NextYank = 0.f;
+		FVector LastPos = FVector::ZeroVector;   // ants: where it was last tick (its real velocity: input is not motion when the load holds it)
+		FVector RealV = FVector::ZeroVector;
 		bool bDragged = false, bAtLimit = false;
 		bool IsWorker() const { return Worker >= 0; }
 	};
@@ -187,6 +189,14 @@ namespace
 			Sum += S[i];
 		}
 		for (float& V : S) { V = (float)(V / Sum); }
+		// Statics with several grips has many answers; the least-norm one can pile most of the weight on one ant when the grips
+		// are uneven. Ants also shift the weight among themselves: a third of it is shared evenly, nobody bears more than 60 %.
+		if (N >= 2)
+		{
+			Sum = 0;
+			for (float& V : S) { V = FMath::Min(0.7f * V + 0.3f / N, N >= 3 ? 0.6f : 1.f); Sum += V; }
+			for (float& V : S) { V = (float)(V / Sum); }
+		}
 	}
 
 	/** Speed of carriers for strength / weight R and N carriers: dragged below 1, a little faster with every bit of surplus;
@@ -250,20 +260,29 @@ int32 AntCarry::MaxCarriers(const AKitchenLoot* L)
 
 FVector AntCarry::PickGrip(const AKitchenLoot* L, const FVector& From, const FVector& Closest)
 {
-	// The jaws close on the side facing the ant, at the height of its jaws (not the bottom edge under its feet, not the top).
-	const FVector C = L->GetActorLocation();
-	FVector P = Closest;
+	// The jaws close on the side facing the ant, at the height of its jaws: the point of the surface nearest to a spot a little
+	// above the ant's feet, approached from outside (from inside a box the "nearest point" is the spot itself: a grip in the
+	// middle of the load, with no lever arm at all).
 	const UBoxComponent* B = FAntCarrySolver::Body(L);
-	if (B)
+	if (!B)
 	{
-		const FVector Ext = B->GetScaledBoxExtent();
-		const float Low = (float)(C.Z - Ext.Z);
-		P.Z = FMath::Clamp((float)From.Z + 1.5f, Low + FMath::Min(3.f, (float)Ext.Z), (float)C.Z + Ext.Z * 0.5f);
-		FVector Q;
-		if (B->GetClosestPointOnCollision(P + Flat(From - P).GetSafeNormal() * 2.f, Q) >= 0.f)
+		return Closest;
+	}
+	const FVector C = L->GetActorLocation();
+	const FVector Out = Flat(From - C).GetSafeNormal(UE_SMALL_NUMBER, FVector::ForwardVector);
+	const float Reach = (float)B->GetScaledBoxExtent().Size() + 20.f;
+	FVector Q = FVector(From.X, From.Y, From.Z + 2.f);
+	FVector P = Closest;
+	for (int32 k = 0; k < 4; ++k)
+	{
+		FVector Hit;
+		const float D = B->GetClosestPointOnCollision(Q, Hit);
+		if (D > 0.01f)
 		{
-			P = Q;
+			P = Hit;
+			break;
 		}
+		Q += Out * Reach * 0.5f;   // inside: step out along the ant's side and try again
 	}
 	return P;
 }
@@ -767,7 +786,7 @@ void FAntCarrySolver::Yanks(AKitchenLoot* L, FAntCarryState& S, float Dt, const 
 	TArray<FVector, TInlineAllocator<24>> Vel;
 	for (const FAntCarryState::FMate& M : S.Mates)
 	{
-		const FVector V = M.IsWorker() ? Flat(M.JawV) : (M.Ant.IsValid() ? Flat(M.Ant->GetVelocity()) : FVector::ZeroVector);
+		const FVector V = M.IsWorker() ? Flat(M.JawV) : Flat(M.RealV);
 		Vel.Add(V);
 		Mean += V;
 	}
@@ -894,6 +913,7 @@ void FAntCarrySolver::Tick(AKitchenLoot* L, float Dt, const float* Extra, int32 
 	const float G = FMath::Abs(W->GetGravityZ());
 	const float FPS = AKitchenLoot::KgPerWeight * G;
 	const bool bLift = L->bMain && L->CarryStrength >= (float)L->Weight;
+	const float Ratio0 = L->Weight > 0 ? L->CarryStrength / (float)L->Weight : 10.f;
 
 	TArray<FVector, TInlineAllocator<24>> P, H, V;
 	TArray<float, TInlineAllocator<24>> Str;
@@ -915,13 +935,18 @@ void FAntCarrySolver::Tick(AKitchenLoot* L, float Dt, const float* Extra, int32 
 			const int32 k = L->Carriers.IndexOfByKey(A);
 			P.Add(AntGrip(L, k));
 			H.Add(A->GetHoldPoint());
-			V.Add(A->GetVelocity());
+			const FVector Here = A->GetActorLocation();
+			const FVector Went = M.LastPos.IsZero() ? FVector::ZeroVector : (Here - M.LastPos) / Dt;
+			M.LastPos = Here;
+			M.RealV += (Went.GetClampedToMaxSize(2000.f) - M.RealV) * (1.f - FMath::Exp(-Dt / 0.05f));
+			V.Add(M.RealV);
 			Str.Add(A->GetStrength() + (Extra && L->Carriers.IsValidIndex(k) ? Extra[k] : 0.f));
 			Team.Add(FMath::Clamp<int32>(A->Team, 0, 1));
 			if (!M.bExplicit) { M.Desired = Flat(A->GetVelocity()); }
 		}
 		Pts.Add(P.Last());
 		if (bLift && Team.Last() == Win) { H.Last().Z += 28.f; }
+		else if (Team.Last() == Win && Ratio0 >= 1.f) { H.Last().Z += FMath::Min(4.f + 6.f * (Ratio0 - 1.f), 10.f); }   // lifted clear of the floor
 	}
 
 	// ---- the weight, shared by the lever arms
@@ -1171,6 +1196,27 @@ void AntCarry::ClientTick(AKitchenLoot* L, float Dt)
 		Rot = FQuat::Slerp(A.Q, Bn.Q, U);
 	}
 	L->SetActorLocationAndRotation(Pos, Rot, false, nullptr, ETeleportType::TeleportPhysics);
+
+	// Dev (-AntCarryClientLog): how smooth the load moves here - the mean and worst "kink" (second difference of the shown
+	// position per frame) next to its speed, once a second.
+	static const bool bClientLog = FParse::Param(FCommandLine::Get(), TEXT("AntCarryClientLog"));
+	if (bClientLog)
+	{
+		static TMap<TWeakObjectPtr<AKitchenLoot>, FVector4> Acc;   // sum kink, worst kink, frames, time
+		static TMap<TWeakObjectPtr<AKitchenLoot>, TPair<FVector, FVector>> Prev;
+		TPair<FVector, FVector>& Pv = Prev.FindOrAdd(L, TPair<FVector, FVector>(Pos, Pos));
+		const float Kink = (float)(Pos - 2.0 * Pv.Key + Pv.Value).Size();
+		Pv.Value = Pv.Key;
+		Pv.Key = Pos;
+		FVector4& A = Acc.FindOrAdd(L, FVector4(0, 0, 0, 0));
+		A.X += Kink; A.Y = FMath::Max((float)A.Y, Kink); A.Z += 1.f; A.W += Dt;
+		if (A.W >= 1.f)
+		{
+			UE_LOG(LogTemp, Display, TEXT("ANTCARRY client «%s» at %s speed %.0f carriers %d snaps %d lag %.3f s kink mean %.2f worst %.2f (frames %d)"),
+				*L->LootName, *Pos.ToCompactString(), Net.Vel.Size(), Net.Grips.Num(), S.Snaps.Num(), (float)(ServerNow(L) - S.Snaps.Last().T), A.X / FMath::Max(1.0, A.Z), A.Y, (int32)A.Z);
+			A = FVector4(0, 0, 0, 0);
+		}
+	}
 }
 
 // =============================================================================================
@@ -1723,7 +1769,7 @@ bool AntCarry::DevCommand(AAntKitchenGameMode* GM, const TArray<FString>& A)
 			PC->SetViewTargetWithBlend(PC->GetPawn(), 0.f);
 			return true;
 		}
-		const float Dist = Num(3, 300.f), Hgt = Num(4, 80.f);
+		const float Dist = Num(3, 900.f), Hgt = Num(4, 220.f);
 		D.CamFov = Num(5, 40.f);
 		FVector G = GroupDir();
 		if (G.IsNearlyZero()) { G = FVector::ForwardVector; }
