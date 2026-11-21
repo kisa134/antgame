@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "AntTypes.h"
+#include "AntCarry.h"
 #include "KitchenLoot.generated.h"
 
 class UStaticMeshComponent;
@@ -109,6 +110,8 @@ public:
 	UFUNCTION() void OnRep_Held();
 
 	UPROPERTY(Replicated) TArray<AAntCharacter*> Carriers;
+	/** Carrying together (AntCarry.h): every carrier's grip, strain and share, the rhythm, the shouts, the smoothed transform. */
+	UPROPERTY(Replicated) FAntCarryNet CarryNet;
 	UPROPERTY(Replicated) float CarryStrength = 0.f;
 	UPROPERTY(Replicated) uint8 CarrierTeam = 0;
 
@@ -159,6 +162,9 @@ public:
 	bool GrabPointOf(const AAntCharacter* Ant, FVector& Out) const;
 private:
 
+	/** AntCarry's own per-load state (server: carriers and workers; clients: snapshots). */
+	TSharedPtr<struct FAntCarryState> CarryState;
+	friend struct FAntCarrySolver;
 	/** Where each carrier bit into the food (local space of the body), same order as Carriers. Server. */
 	TArray<FVector> GrabLocal;
 	float Phase = 0.f;

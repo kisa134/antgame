@@ -12,6 +12,7 @@
 #include "AntKitchenGameMode.h"
 #include "HumanCharacter.h"
 #include "KitchenLoot.h"
+#include "AntCarry.h"
 #include "KitchenBuilder.h"
 #include "KitchenArt.h"
 #include "KitchenInteractables.h"
@@ -399,6 +400,7 @@ void AAntArmy::DropCargo()
 	if (Cargo && bCargoHeld && IsValid(Cargo))
 	{
 		Cargo->SquadDrop();
+		AntCarry::RemoveArmy(Cargo, this);   // the workers let go of their grips (AntCarry)
 	}
 	Cargo = nullptr;
 	bCargoHeld = false;
@@ -655,6 +657,9 @@ bool AAntArmy::SquadTick(float Dt, FVector& OutGoal)
 
 	case EArmyMode::Haul:
 	{
+		// The squad carries like ants do (AntCarry.h): each worker that fits round the load holds its own grip point and walks
+		// towards the goal; the rest of the squad walks alongside. The load is a physics body: it sways, dips at a weak end,
+		// overshoots when the crowd is strong, and anybody (the commander, other ants, the red thieves) can take hold too.
 		AKitchenLoot* L = Cargo;
 		if (!IsValid(L))
 		{
@@ -668,11 +673,11 @@ bool AAntArmy::SquadTick(float Dt, FVector& OutGoal)
 		{
 			if (Cmd->Carrying == L)
 			{
-				Cargo = nullptr;   // the commander has it himself: following him is helping him carry
+				Cargo = nullptr;   // the commander has it himself: following him, the workers take hold as his helpers
 				GoHomeMode();
 				break;
 			}
-			if (L->bHeld || L->IsCarried() || Strength() < Need)
+			if (L->bHeld || (L->IsCarried() && L->CarryTeam() != Team) || Strength() < Need)
 			{
 				if (!bForaging) { Cmd->Toast(FString::Printf(TEXT("Отряд: «%s» не взять"), *L->LootName)); }
 				Cargo = nullptr;
@@ -683,16 +688,23 @@ bool AAntArmy::SquadTick(float Dt, FVector& OutGoal)
 			ServerMove(GroundAt(OutGoal), Dt, 1.4f);
 			if (FVector::Dist(GetActorLocation(), OutGoal) < Radius() + L->GetRadius() + 30.f)
 			{
-				L->SquadPick(this, RootComponent, FVector(0.f, 0.f, L->GetRadius() * 0.7f + 6.f));
+				const int32 Got = AntCarry::AddArmy(L, this, FMath::Min(Count, AntCarry::MaxCarriers(L)));
+				if (Got <= 0)
+				{
+					if (!bForaging) { Cmd->Toast(FString::Printf(TEXT("Отряд: вокруг «%s» нет места"), *L->LootName)); }
+					Cargo = nullptr;
+					GoHomeMode();
+					break;
+				}
 				bCargoHeld = true;
 				if (bCargoHome) { BuildWayHome(); }
 				if (!bForaging) { Cmd->Toast(FString::Printf(TEXT("Отряд несёт «%s»%s"), *L->LootName, bCargoHome ? TEXT(" домой") : TEXT(" рядом с тобой"))); }
-				UE_LOG(LogTemp, Display, TEXT("ANTSQUAD picked up «%s» (weight %d, value %d) with strength %.0f, home %d"), *L->LootName, L->Weight, L->Value, Strength(), bCargoHome ? 1 : 0);
+				UE_LOG(LogTemp, Display, TEXT("ANTSQUAD picked up «%s» (weight %d, value %d) with strength %.0f, %d workers holding, home %d"), *L->LootName, L->Weight, L->Value, Strength(), Got, bCargoHome ? 1 : 0);
 			}
 			break;
 		}
 		// Carrying it.
-		if (!L->bHeld || L->GetAttachParentActor() != this)
+		if (L->bHeld || AntCarry::ArmyOn(L, this) == 0)
 		{
 			Cmd->Toast(FString::Printf(TEXT("У отряда отняли «%s»!"), *L->LootName));
 			UE_LOG(LogTemp, Display, TEXT("ANTSQUAD lost its cargo «%s»"), *L->LootName);
@@ -708,18 +720,22 @@ bool AAntArmy::SquadTick(float Dt, FVector& OutGoal)
 			GoHomeMode();
 			break;
 		}
-		const float Ratio = FMath::Clamp(Strength() / FMath::Max(1.f, (float)L->Weight), 0.5f, 1.f);
-		const float Load = 0.72f * Ratio * HaulSpeedMul;
+		if (AntCarry::ArmyOn(L, this) < FMath::Min(Count, AntCarry::MaxCarriers(L)) && FMath::FRand() < Dt * 2.f)
+		{
+			AntCarry::AddArmy(L, this, Count);   // workers torn off at a corner run back and take hold again
+		}
+		const FVector LoadAt = L->GetActorLocation();
+		FVector Goal = LoadAt;
 		if (bCargoHome && Way.IsValidIndex(WayAt))
 		{
 			// Home on its own: point by point; it waits when the Human stands close to where it has to go.
 			bool bWait = false;
-			if (WaitFor < 9.f && !AHumanCharacter::InCover(W, Me))
+			if (WaitFor < 9.f && !AHumanCharacter::InCover(W, LoadAt))
 			{
 				const AAntGameState* GS = W->GetGameState<AAntGameState>();
 				for (TActorIterator<AHumanCharacter> It(W); It; ++It)
 				{
-					if (It->Fig == HumanFig::Dad && GS && GS->ShiftStage >= 1 && !It->IsKnockedOut() && FVector::Dist2D(It->GetActorLocation(), Me) < 1300.f) { bWait = true; }
+					if (It->Fig == HumanFig::Dad && GS && GS->ShiftStage >= 1 && !It->IsKnockedOut() && FVector::Dist2D(It->GetActorLocation(), LoadAt) < 1300.f) { bWait = true; }
 				}
 			}
 			if (bWait)
@@ -729,9 +745,8 @@ bool AAntArmy::SquadTick(float Dt, FVector& OutGoal)
 			else
 			{
 				WaitFor = FMath::Max(0.f, WaitFor - Dt * 0.5f);
-				OutGoal = Way[WayAt];
-				ServerMove(GroundAt(OutGoal), Dt, 1.5f * Load);
-				if (FVector::Dist2D(GetActorLocation(), OutGoal) < 90.f) { ++WayAt; }
+				Goal = Way[WayAt];
+				if (FVector::Dist2D(LoadAt, Goal) < 90.f + L->GetRadius() * 0.5f) { ++WayAt; }
 			}
 		}
 		else if (bCargoHome)
@@ -740,22 +755,28 @@ bool AAntArmy::SquadTick(float Dt, FVector& OutGoal)
 		}
 		else
 		{
-			FollowCrumbs(Load);
+			// beside its commander: to him, stopping a step short (a strong squad still overshoots: ants brake badly)
+			Goal = Cmd->GetActorLocation();
+			if (FVector::Dist2D(LoadAt, Goal) < L->GetRadius() + 60.f) { Goal = LoadAt; }
 		}
-		if (HomePoint(GetActorLocation()))
+		OutGoal = Goal;
+		AntCarry::SetArmyGoal(L, this, Goal, HaulSpeedMul);
+		ServerMove(GroundAt(LoadAt), Dt, 2.f);   // the squad (and the workers that do not hold) walks with its load
+		if (HomePoint(LoadAt))
 		{
 			// Delivered: the same as an ant carrying it in.
 			AAntKitchenGameMode* GM = W->GetAuthGameMode<AAntKitchenGameMode>();
 			const FString Name = L->LootName;
-			L->SquadDrop();
+			AntCarry::Notify(L, AntCarryEvent::Delivered, 0);
 			if (GM)
 			{
 				TArray<AAntCharacter*> Who;
 				Who.Add(Cmd);
 				GM->OnFoodDelivered(0, L, Who);
-				AntSfx::Everyone(this, AntSfx::Deliver, GetActorLocation(), 1.1f);
+				AntSfx::Everyone(this, AntSfx::Deliver, LoadAt, 1.1f);
 			}
-			UE_LOG(LogTemp, Display, TEXT("ANTSQUAD delivered «%s» at %s"), *Name, *GetActorLocation().ToCompactString());
+			UE_LOG(LogTemp, Display, TEXT("ANTSQUAD delivered «%s» at %s"), *Name, *LoadAt.ToCompactString());
+			L->ReleaseAll();
 			L->Destroy();
 			Cargo = nullptr;
 			bCargoHeld = false;

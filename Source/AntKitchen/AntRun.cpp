@@ -39,6 +39,7 @@
 #include "KitchenSlick.h"
 #include "AntFilm.h"
 #include "Engine/OverlapResult.h"
+#include "AntCarry.h"
 
 namespace
 {
@@ -515,8 +516,9 @@ void AAntKitchenGameMode::SpawnMainObject(int32 ForceSpot)
 	{
 		// A raid: the threat tier decides how big the slice is.
 		D.Value = Raid->TierDef().CakeValue / 2;
-		// Heavier for a bigger team (+20% a player after the first): four players alone must not walk off with it.
-		int32 W = FMath::RoundToInt(Raid->TierDef().CakeWeight * (1.f + 0.2f * (FMath::Max(1, GetNumPlayers()) - 1)));
+		// Heavier for a bigger team (+20% a player after the first up to four, +12% each from five to eight - AntCarry::CakePlayerMul):
+		// the team must not walk off with it alone.
+		int32 W = FMath::RoundToInt(Raid->TierDef().CakeWeight * AntCarry::CakePlayerMul(GetNumPlayers()));
 		FParse::Value(FCommandLine::Get(), TEXT("AntCakeWeight="), W);
 		D.Weight = FMath::Clamp(W, 6, 200);
 	}
@@ -1537,6 +1539,10 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 	if (Raid && Raid->DevCommand(A))
 	{
 		return;   // raid ..., nest ... (AntRaid.cpp)
+	}
+	if (AntCarry::DevCommand(this, A))
+	{
+		return;   // carrying together: carry spawn|crew|go|desync|yank|stop|kill|human|rivals|army|workers|ramp|corner|cam|shot|log|info (AntCarry.cpp)
 	}
 	if (AntBodyRules::DevCommand(this, A))
 	{

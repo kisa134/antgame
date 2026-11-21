@@ -1,4 +1,5 @@
 ﻿#include "AntArmy.h"
+#include "AntCarry.h"
 #include "AntCharacter.h"
 #include "HumanCharacter.h"
 #include "KitchenLoot.h"
@@ -144,6 +145,12 @@ void AAntArmy::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	if (HasAuthority() && Cargo && bCargoHeld && IsValid(Cargo))
 	{
 		Cargo->SquadDrop();   // whatever it carried falls where it stood
+	}
+	if (HasAuthority())
+	{
+		// workers holding a load (AntCarry) let go: theirs, or their commander's
+		if (IsValid(Cargo)) { AntCarry::RemoveArmy(Cargo, this); }
+		if (IsValid(Commander) && IsValid(Commander->Carrying)) { AntCarry::RemoveArmy(Commander->Carrying, this); }
 	}
 	Super::EndPlay(EndPlayReason);
 }
@@ -336,9 +343,18 @@ void AAntArmy::Tick(float Dt)
 	{
 		const float Ph = Phases[i];
 		FVector Dir = MoveDir;
-		FVector P = SlotPos(i, Offsets.Num(), &Dir);
+		FVector P;
+		float Lift = 0.f;
+		// a worker holding a load (AntCarry) stands at its grip, facing it; dragged, it hangs nose-up, feet off the floor
+		const bool bGrip = bSquad && AntCarry::WorkerPose(this, i, P, Dir, Lift);
+		if (!bGrip) { P = SlotPos(i, Offsets.Num(), &Dir); }
 		FRotator Rot;
-		if (bSwarming)
+		if (bGrip)
+		{
+			Rot = FRotationMatrix::MakeFromXZ(Dir, FVector::UpVector).Rotator();
+			Rot.Pitch += Lift * 35.f + FMath::Sin(T * 9.f + Ph * 20.f) * 4.f;
+		}
+		else if (bSwarming)
 		{
 			// Milling around: each ant wanders in a small loop around its spot.
 			P += FVector(FMath::Cos(T * 2.f + Ph * 6.28f) * 14.f, FMath::Sin(T * 2.3f + Ph * 6.28f) * 14.f, 0.f) * AAntCharacter::AntShrink;
@@ -356,7 +372,7 @@ void AAntArmy::Tick(float Dt)
 		{
 			Cur[i] = P;   // first frame / teleport
 		}
-		Cur[i] = FMath::Lerp(Cur[i], P, Blend);
+		Cur[i] = FMath::Lerp(Cur[i], P, bGrip ? 1.f - FMath::Exp(-30.f * Dt) : Blend);
 		Xf[i] = FTransform(Rot, Cur[i] + FVector(0.f, 0.f, 4.f * AAntCharacter::AntShrink), FVector(InstScale));
 	}
 	if (Xf.Num() > 0)

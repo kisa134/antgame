@@ -38,6 +38,7 @@
 #include "Misc/Parse.h"
 #include "HAL/IConsoleManager.h"
 #include "AntRun.h"
+#include "AntCarry.h"
 #include "AntBody.h"
 #include "AntFilm.h"
 
@@ -1589,6 +1590,11 @@ void AAntCharacter::ServerInteract_Implementation()
 
 FVector AAntCharacter::GetHoldPoint() const
 {
+	FVector CarryJaws;
+	if (AntCarry::HoldPoint(this, CarryJaws))
+	{
+		return CarryJaws;   // carrying: the jaws reach towards the grip (AntCarry.h)
+	}
 	const FVector Up = VisNormal;
 	FVector Fwd = GetActorForwardVector();
 	Fwd = (Fwd - Up * FVector::DotProduct(Fwd, Up)).GetSafeNormal();
@@ -2180,6 +2186,7 @@ void AAntCharacter::UpdateSpeed()
 		else if (R >= 0.5f) { Load = FMath::Max(0.05f, 0.43f * (R - 0.5f) / 0.5f); bVeryHeavy = true; }
 		else { Load = 0.02f; bVeryHeavy = true; }
 		bHeavy = R < 1.4f;
+		Load = AntCarry::SpeedMul(this, Load);   // surplus strength is speed; strain and the rhythm (AntCarry.h)
 	}
 	if (HoldingAnt)
 	{
@@ -2296,6 +2303,7 @@ void AAntCharacter::UpdateVisuals(float DeltaSeconds)
 			Desired = VisHeading;
 		}
 	}
+	AntCarry::Heading(this, VisNormal, Desired);   // a carrier faces its grip: backs up dragging, sidesteps along a big load
 	VisHeading = FVector::VectorPlaneProject(FMath::VInterpNormalRotationTo(VisHeading, Desired, DeltaSeconds, 540.f), VisNormal).GetSafeNormal();
 	if (VisHeading.IsNearlyZero())
 	{
