@@ -30,8 +30,9 @@ bool Enabled()
 
 bool FixturesOn()
 {
-	// Step C: the interactive objects are actors (KitchenFixture). Until that code is in, the base builds them as plain pieces.
-	return false;
+	// The interactive objects are actors (KitchenFixture.h). -AntNoFixtures keeps them plain pieces of the base (to compare).
+	static const bool bOn = !FParse::Param(FCommandLine::Get(), TEXT("AntNoFixtures"));
+	return bOn;
 }
 
 TConstArrayView<FKitchenArtInst> BaseArt() { return TConstArrayView<FKitchenArtInst>(GKitchenArtV3, UE_ARRAY_COUNT(GKitchenArtV3)); }
@@ -79,6 +80,71 @@ void FixtureRows(TSet<int32>& Out)
 		if (F.Inst >= 0) { Out.Add(F.Inst); }
 	}
 	for (int32 i = 0; GV3FixtureParts[i][0] >= 0; ++i) { Out.Add(GV3FixtureParts[i][1]); }
+	for (const FLevelV3Fixture& F : GV3Fixtures)
+	{
+		if (FCString::Strcmp(F.Id, TEXT("toaster")) == 0 || FCString::Strcmp(F.Id, TEXT("upper_doors")) == 0)
+		{
+			Out.Remove(F.Inst);   // (not fixture actors: the toaster's gadget and the cabinet stay where they were)
+			continue;
+		}
+		for (const TCHAR* E : ExtraParts(F.Id)) { const int32 R = FindBase(E); if (R >= 0) { Out.Add(R); } }
+	}
+}
+
+TArray<const TCHAR*> ExtraParts(const TCHAR* Id)
+{
+	const FString S(Id);
+	if (S == TEXT("balloons")) { return { TEXT("v3_bal1"), TEXT("v3_bal2"), TEXT("v3_str1"), TEXT("v3_str2") }; }
+	if (S == TEXT("curtain_k")) { return { TEXT("v3_curt_e") }; }
+	if (S == TEXT("fridge_art")) { return { TEXT("v3_draw1") }; }
+	return {};
+}
+
+float PushNeed(const TCHAR* Id)
+{
+	const FString S(Id);
+	// one ant: 14; "вдвоём": 24; "втроём": 40 (AntDoor's classes)
+	if (S == TEXT("pickles") || S == TEXT("cereal") || S == TEXT("cola")) { return 24.f; }
+	if (S == TEXT("glasses")) { return 40.f; }
+	if (S == TEXT("trolley")) { return 24.f; }
+	return 14.f;
+}
+
+const TCHAR* VarId(int32 V) { return V >= 0 && V < (int32)UE_ARRAY_COUNT(GV3VarArtIds) ? GV3VarArtIds[V] : TEXT(""); }
+
+bool IsVarActive(int32 V)
+{
+	for (int32 D = 0; D < NumDistricts(); ++D)
+	{
+		const int32 Vi = CurrentVariant(D);
+		if (Vi == INDEX_NONE) { continue; }
+		const FLevelV3Variant& Vr = GV3Variants[Vi];
+		for (int32 k = 0; k < Vr.NumOps; ++k)
+		{
+			if (GV3Ops[Vr.FirstOp + k].Kind == Add && GV3Ops[Vr.FirstOp + k].A == V) { return true; }
+		}
+	}
+	return false;
+}
+
+int32 ActiveVarRow(const TCHAR* Obj)
+{
+	for (int32 v = 0; v < (int32)UE_ARRAY_COUNT(GV3VarArtIds); ++v)
+	{
+		if (FCString::Strcmp(GV3VarArtIds[v], Obj) == 0 && IsVarActive(v)) { return v; }
+	}
+	return INDEX_NONE;
+}
+
+bool IsFixtureObject(const TCHAR* Obj)
+{
+	if (!FixturesOn() || !Obj || !*Obj) { return false; }
+	const FString S(Obj);
+	for (const FLevelV3Fixture& F : GV3Fixtures)
+	{
+		if (F.Inst < 0 && (S == F.Obj || S.StartsWith(FString(F.Obj) + TEXT("_")))) { return true; }
+	}
+	return S.StartsWith(TEXT("v3_cup")) && FixturesOn();   // the cups ride the tablecloth
 }
 
 bool IsVariantRow(int32 Inst)
@@ -353,6 +419,13 @@ void ClearPlayZones()
 {
 	GPlayZones.Reset();
 	RebuildZones();
+	Recompute();   // (drops the play covers too)
+}
+
+void AddCover(const FVector& C, float R, float H, const TCHAR* Name)
+{
+	EnsureInit();
+	GCover.Add({ (float)C.X - R, (float)C.Y - R, (float)C.Z - 10.f, (float)C.X + R, (float)C.Y + R, (float)C.Z + H, Name });
 }
 
 bool ShardsAt(const FVector& P)

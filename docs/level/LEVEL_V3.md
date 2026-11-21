@@ -1,5 +1,7 @@
 # Уровень v3 — «одна семья, один вечер»
 
+> **Внедрение (21.11.2026, ветка `code/ANT-heist-core`):** v3 в игре под ключом `-AntLevelV3` — см. `docs/FEATURES.md`, раздел 22, и `docs/STATUS.md`. Отличия от этого документа, принятые владельцем: кто дома и время суток задаёт угроза (`SEED['by_threat']`: I — день, малыш в садике; II — день, все дома; III — вечер, бабушки нет; IV — вечер, все дома), ночь не выпадает; пять прототипных пандусов v2 заменены мешами v3.1 тех же габаритов (`Tools/blender/level_v31_pieces.py`); сиды берутся из проверенной таблицы (`Tools/level/gen_level_v3_code.py`, 1024/1024). Сделано из «нужен код»: seed, who_home, slots, fasteners, break, liquid (кола, рассол, чай), slip (существующая лужа), ткань — как «после»-меши (без симуляции). Не сделано: routines, inside, time_of_day (свет).
+
 > Статус на 2026-11-21: **проект, в игре его нет.** Код не менялся, игра не запускалась. Данные: `docs/level/level_v3.json` (схема v2 + расширения), раскладка — `Tools/level/level_v3_layout.py` (источник правды), проверка сидов — `Tools/level/check_level_v3.py` → `docs/level/level_v3_check.json`, карта — `docs/level/level_map_v3.html`, модели и рендеры — `SourceArt/Blender/level_v3/`, внедрение — `docs/level/LEVEL_V3_INTEGRATION.md`. Документ собран скриптом `Tools/level/write_level_v3_docs.py`: числа — из данных.
 
 ## 1. Почему v2 выглядит прототипом (диагноз)

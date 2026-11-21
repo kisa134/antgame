@@ -59,6 +59,20 @@ namespace LevelV3
 	ANTKITCHEN_API void FixtureRows(TSet<int32>& Out);
 	/** Is this base row removed or moved by some district variant? (Those are built movable.) */
 	ANTKITCHEN_API bool IsVariantRow(int32 Inst);
+	/** Base rows that go with fixture Id besides the table's parts (the other balloons, the second kitchen curtain). */
+	ANTKITCHEN_API TArray<const TCHAR*> ExtraParts(const TCHAR* Id);
+	/** Strength it takes to push fixture Id over its edge (the design: "вдвоём", "втроём"...). */
+	ANTKITCHEN_API float PushNeed(const TCHAR* Id);
+	/** The design id of variant row V (GV3VarArtIds). */
+	ANTKITCHEN_API const TCHAR* VarId(int32 V);
+	/** Is variant row V added by a variant in play now? */
+	ANTKITCHEN_API bool IsVarActive(int32 V);
+	/** The variant row that puts design object Obj into play now, or -1. */
+	ANTKITCHEN_API int32 ActiveVarRow(const TCHAR* Obj);
+	/** Is design object Obj (a variant's piece) built by a fixture actor instead of the base builder? */
+	ANTKITCHEN_API bool IsFixtureObject(const TCHAR* Obj);
+	/** Every machine: a heap that fell in play is cover now. */
+	ANTKITCHEN_API void AddCover(const FVector& Center, float Radius, float Height, const TCHAR* Name);
 	/** Base rows that belong to fixture F (brackets, lids...). */
 	ANTKITCHEN_API void FixtureParts(int32 F, TArray<int32>& Out);
 	ANTKITCHEN_API TConstArrayView<FLevelV3Seed> Seeds();

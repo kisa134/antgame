@@ -32,6 +32,7 @@
 #include "AntMovementComponent.h"
 #include "LevelV2.h"
 #include "LevelV3.h"
+#include "KitchenFixture.h"
 #include "KitchenBuilder.h"
 #include "HumanCharacter.h"
 #include "AntRaid.h"
@@ -2184,6 +2185,7 @@ void AAntKitchenGameMode::ApplyV3Doors()
 	{
 		return;
 	}
+	AKitchenFixture::ResetAll(GetWorld());   // everything whole and fastened, the variant's pieces (tablecloth, teapot) in place
 	const TConstArrayView<FKitchenArtMover> Parts = KitchenArt::Movers();
 	TMap<int32, float> Want;   // mover -> -1 shut, 1 open, 0..1 ajar
 	if (const FLevelV3Seed* S = LevelV3::Current())
@@ -2274,5 +2276,38 @@ void AAntKitchenGameMode::SpawnV3Scatter()
 		}
 	}
 	UE_LOG(LogTemp, Display, TEXT("ANTSEED scatter: %d crumbs of seed %d"), N, S->Seed);
+}
+
+void AAntKitchenGameMode::OnV3Break(AKitchenFixture* What, AAntCharacter* By)
+{
+	AAntGameState* GS = GetGameState<AAntGameState>();
+	++V3Breaks;
+	V3BreakRage += AKitchenFixture::RagePerBreak;
+	const FString Name = What ? What->DoorNoun() : FString(TEXT("что-то"));
+	UE_LOG(LogTemp, Display, TEXT("ANTFIX break %d: %s by %s, rage from breaks %.2f, Human rage %d"), V3Breaks, *Name, By ? *By->GetDisplayName() : TEXT("-"), V3BreakRage, Human ? (int32)Human->Rage : -1);
+	if (V3BreakRage >= 1.f && Human && Human->Rage < 3)
+	{
+		V3BreakRage -= 1.f;
+		Human->SetRage(Human->Rage + 1);
+		if (GS) { GS->HumanRage = Human->Rage; }
+		Broadcast(FString::Printf(TEXT("Человек слышит, как бьётся посуда: ЯРОСТЬ %d"), (int32)Human->Rage), RunBad);
+		AntSfx::Everyone(this, AntSfx::Rage, Human->GetActorLocation(), 1.f - 0.1f * Human->Rage);
+	}
+	else
+	{
+		Broadcast(FString::Printf(TEXT("Разбито: %s. Человек злится (ещё %d — и ярость растёт)"), *Name, FMath::Max(1, FMath::CeilToInt((1.f - V3BreakRage) / AKitchenFixture::RagePerBreak))), RunGold);
+	}
+}
+
+void AAntKitchenGameMode::OnV3Fixture(AKitchenFixture* What, const TCHAR* Event, AAntCharacter* By)
+{
+	if (!What)
+	{
+		return;
+	}
+	const FString E(Event), Id = What->FixId();
+	if (E == TEXT("hang")) { Broadcast(FString::Printf(TEXT("%s повисает на одной стороне!"), *What->DoorNoun()), RunGold); }
+	else if (E == TEXT("fall") && (Id == TEXT("shelf") || Id == TEXT("curtain_rod") || Id == TEXT("tablecloth") || Id == TEXT("curtain_k"))) { Broadcast(FString::Printf(TEXT("%s падает!"), *What->DoorNoun()), RunGold); }
+	else if (E == TEXT("knitting")) { Broadcast(TEXT("Спица вытащена: бабушкин шарф распускается"), RunGold); }
 }
 

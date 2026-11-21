@@ -193,6 +193,8 @@ private:
 	void PickLevelSeed(int32 Want);
 	/** Level v3, server: whoever the seed (the tier) says is out is taken out of the flat for this raid; the others are put back. */
 	void ApplyWhoIsHome();
+	/** Dev (-AntDo), level v3: fastener list | fastener undo <id|all|fixture> | fix list | fix fall <id> | break <id> | chain C1..C6 | state chaos. */
+	bool DevFixture(const TArray<FString>& A);
 	TMap<TWeakObjectPtr<AActor>, FTransform> AwaySpots;
 	int32 LivingPlayers(int32* OutHome = nullptr, FString* OutAway = nullptr) const;
 	void Say(const FString& Text, const FLinearColor& Color) const;

@@ -215,6 +215,12 @@ void AAntGameState::MulticastMessage_Implementation(const FString& Text, FLinear
 
 void AAntGameState::OnRep_LevelSeed()
 {
+	if (LevelSeedKey >= 0 && !LevelV3::Enabled())
+	{
+		// The host plays level v3 and this machine built v2: the flats differ. Both need -AntLevelV3 (until v3 is the default).
+		UE_LOG(LogTemp, Error, TEXT("ANTSEED the host plays level v3 (seed %d) but this machine runs level v2: start it with -AntLevelV3"), LevelSeedKey / 8);
+		return;
+	}
 	if (!LevelV3::Enabled() || LevelSeedKey < 0)
 	{
 		return;

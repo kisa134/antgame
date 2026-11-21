@@ -2307,6 +2307,10 @@ void AKitchenBuilder::ApplyV3Layout()
 		for (int32 k = 0; k < Vr.NumOps; ++k)
 		{
 			const FLevelV3Op& O = Ops[Vr.FirstOp + k];
+			if (O.Kind == LevelV3::Add && Var.IsValidIndex(O.A) && LevelV3::IsFixtureObject(O.Text))
+			{
+				continue;   // the tablecloth, the teapot, the cups, the trolley: AKitchenFixture builds them (they move and break)
+			}
 			if (O.Kind == LevelV3::Add && Var.IsValidIndex(O.A))
 			{
 				Added += AddV3Piece(Var[O.A], LevelV3::VarFlags(O.A), LevelV3::VarTint(O.A)) ? 1 : 0;

@@ -14,6 +14,7 @@
 #include "KitchenArt.h"
 #include "LevelV2.h"
 #include "LevelV3.h"
+#include "KitchenFixture.h"
 #include "NpcBody.h"
 #include "AntClan.h"
 #include "AntSquad.h"
@@ -1548,6 +1549,10 @@ bool AAntRaid::DevCommand(const TArray<FString>& A)
 		else { PickLevelSeed(Sub == TEXT("random") ? -1 : FCString::Atoi(*Sub)); }
 		return true;
 	}
+	if (Op == TEXT("fastener") || Op == TEXT("fix") || Op == TEXT("break") || Op == TEXT("chain") || Op == TEXT("state"))
+	{
+		return DevFixture(A);
+	}
 	if (Op == TEXT("raid"))
 	{
 		if (Sub == TEXT("start")) { StartRaid(); }
@@ -1658,3 +1663,99 @@ bool AAntRaid::DevCommand(const TArray<FString>& A)
 	}
 	return false;
 }
+
+bool AAntRaid::DevFixture(const TArray<FString>& A)
+{
+	UWorld* W = GetWorld();
+	const FString Op = A[0].ToLower(), Sub = A.IsValidIndex(1) ? A[1].ToLower() : FString();
+	const FString Arg = A.IsValidIndex(2) ? A[2] : FString();
+	AAntPlayerController* PC = Cast<AAntPlayerController>(W->GetFirstPlayerController());
+	AAntCharacter* Me = PC ? Cast<AAntCharacter>(PC->GetPawn()) : nullptr;
+	auto UndoFastener = [W, Me](const FString& Id)
+	{
+		int32 N = 0;
+		for (TActorIterator<AKitchenFastener> It(W); It; ++It)
+		{
+			const TConstArrayView<FLevelV3FastenerDef> All = LevelV3::Fasteners();
+			if (!All.IsValidIndex(It->Def) || It->bDone) { continue; }
+			const FString FId = All[It->Def].Id;
+			const FString FixName = LevelV3::Fixtures().IsValidIndex(All[It->Def].Fixture) ? LevelV3::Fixtures()[All[It->Def].Fixture].Id : TEXT("");
+			if (Id == TEXT("all") || FId.Equals(Id, ESearchCase::IgnoreCase) || FixName.Equals(Id, ESearchCase::IgnoreCase)) { It->ForceDone(Me); ++N; }
+		}
+		return N;
+	};
+	auto Push = [W, Me](const FString& Id)
+	{
+		AKitchenFixture* F = AKitchenFixture::Find(W, Id);
+		if (F) { F->ForceDone(Me); }
+		return F != nullptr;
+	};
+	auto PushDir = [W, &A](const FString& Id)
+	{
+		if (AKitchenFixture* F = AKitchenFixture::Find(W, Id))
+		{
+			if (A.IsValidIndex(4)) { F->PushDir = FVector(FCString::Atof(*A[3]), FCString::Atof(*A[4]), 0.f); }
+		}
+	};
+	if (Op == TEXT("fastener") && Sub == TEXT("list"))
+	{
+		for (TActorIterator<AKitchenFastener> It(W); It; ++It)
+		{
+			const TConstArrayView<FLevelV3FastenerDef> All = LevelV3::Fasteners();
+			if (All.IsValidIndex(It->Def))
+			{
+				UE_LOG(LogTemp, Display, TEXT("ANTFIX fastener %s of %s: %s, need %.0f, %.1f s, loose %d, progress %.2f, done %d at %s"), All[It->Def].Id, LevelV3::Fixtures()[All[It->Def].Fixture].Id,
+					*AKitchenFastener::KindName(All[It->Def].Kind), It->Need, It->Seconds, It->bLoose ? 1 : 0, It->Progress, It->bDone ? 1 : 0, *It->GetActorLocation().ToCompactString());
+			}
+		}
+		for (TActorIterator<AKitchenFixture> It(W); It; ++It)
+		{
+			UE_LOG(LogTemp, Display, TEXT("ANTFIX fixture %s: state %d, own work %d (need %.0f), at %s"), *It->FixId(), (int32)It->State, It->CanInteract(nullptr) ? 1 : 0, It->Need, *It->GetActorLocation().ToCompactString());
+		}
+		return true;
+	}
+	if (Op == TEXT("fastener") && Sub == TEXT("undo"))
+	{
+		UE_LOG(LogTemp, Display, TEXT("ANTFIX dev undo %s: %d fasteners"), *Arg, UndoFastener(Arg));
+		return true;
+	}
+	if (Op == TEXT("fix") && Sub == TEXT("push"))
+	{
+		PushDir(Arg);   // fix push <id> [dx dy]
+		UE_LOG(LogTemp, Display, TEXT("ANTFIX dev push %s: %s"), *Arg, Push(Arg) ? TEXT("ok") : TEXT("no such fixture"));
+		return true;
+	}
+	if (Op == TEXT("fix") && Sub == TEXT("fall"))
+	{
+		if (AKitchenFixture* F = AKitchenFixture::Find(W, Arg)) { F->Fall(FVector(A.IsValidIndex(3) ? FCString::Atof(*A[3]) : 1.f, A.IsValidIndex(4) ? FCString::Atof(*A[4]) : 0.f, 0.f), Me, TEXT("dev")); }
+		return true;
+	}
+	if (Op == TEXT("break"))
+	{
+		if (AKitchenFixture* F = AKitchenFixture::Find(W, Sub)) { F->BreakNow(Me); } else { UE_LOG(LogTemp, Warning, TEXT("ANTFIX dev break: no fixture %s"), *Sub); }
+		return true;
+	}
+	if (Op == TEXT("chain"))
+	{
+		// The six chain reactions of the design, started at their first step; the rest follows by itself.
+		const FString C = Sub.ToUpper();
+		if (C == TEXT("C1")) { UndoFastener(TEXT("v3_shelf_sc0")); UndoFastener(TEXT("v3_shelf_sc1")); }          // shelf -> jars -> jam / brine -> the Human slips
+		else if (C == TEXT("C2")) { Push(TEXT("tablecloth")); }                                                    // tablecloth -> teapot, cups -> crash -> the dog
+		else if (C == TEXT("C3")) { UndoFastener(TEXT("v3_rod_sc0")); UndoFastener(TEXT("v3_rod_sc1")); }        // rod -> curtains -> plant
+		else if (C == TEXT("C4")) { UndoFastener(TEXT("v3_cola_cap")); Push(TEXT("cola")); }                      // cola -> sticky floor
+		else if (C == TEXT("C5")) { UndoFastener(TEXT("v3_str0")); if (GM) { GM->MakeNoise(FVector(17700.f, -650.f, 4600.f), 1.f, AntNoise::Crash, nullptr, Me); } }   // balloon -> pop -> everyone to the sofa
+		else if (C == TEXT("C6")) { UndoFastener(TEXT("v3_needle0")); }                                           // needle -> yarn -> grandma
+		UE_LOG(LogTemp, Display, TEXT("ANTFIX dev chain %s started"), *C);
+		return true;
+	}
+	if (Op == TEXT("state") && Sub == TEXT("chaos"))
+	{
+		// "after the battle": every chain gone off at once
+		for (const TCHAR* C : { TEXT("C1"), TEXT("C2"), TEXT("C3"), TEXT("C4"), TEXT("C5"), TEXT("C6") }) { DevFixture({ TEXT("chain"), C }); }
+		Push(TEXT("cereal")); Push(TEXT("glasses"));
+		UndoFastener(TEXT("photo_l")); UndoFastener(TEXT("fridge_art"));
+		return true;
+	}
+	return false;
+}
+

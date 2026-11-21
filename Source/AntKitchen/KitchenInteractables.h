@@ -67,7 +67,7 @@ public:
 protected:
 	/** Server, from the door's Tick: ants still pulling, helpers arriving. */
 	void PullTick(float Dt);
-	bool TryOpenByPull();
+	virtual bool TryOpenByPull();
 	/** Every machine, from the door's Tick: how far (0..1 of its travel) the straining door is cracked open right now. */
 	float StrainNow(float Dt);
 	float PullClock = 0.f;

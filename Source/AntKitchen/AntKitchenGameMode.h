@@ -170,6 +170,15 @@ private:
 	void SpawnInitialLoot();
 	/** Level v3, server: the doors and drawers of the seed (variant states, 0-3 cabinet doors ajar) and its scatter of crumbs. */
 	void ApplyV3Doors();
+public:
+	/** Level v3, server: something broke (glass, china, terracotta; a shelf or a rod torn off): the Human gets angrier. */
+	void OnV3Break(class AKitchenFixture* What, class AAntCharacter* By);
+	/** Level v3, server: a fixture did something worth telling (hang, fall, knitting...). */
+	void OnV3Fixture(class AKitchenFixture* What, const TCHAR* Event, class AAntCharacter* By);
+	/** Rage from breaks, in levels (AKitchenFixture::RagePerBreak each); a whole level goes to the Human. */
+	float V3BreakRage = 0.f;
+	int32 V3Breaks = 0;
+private:
 	void SpawnV3Scatter();
 	TSet<uint8> V3GadgetsOpened;
 	void RefillLoot();

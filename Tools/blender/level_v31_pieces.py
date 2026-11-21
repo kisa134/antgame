@@ -45,7 +45,7 @@ for k in range(14):                                                 # ragged tip
     UB(x - 18, x + 18, -1427 + R.uniform(-4, 20), -1380, 0, R.uniform(120, 170), "Sisal", 4)
 UB(-300, 300, -1360, -860, 160, 273, "Plinth", 14)                  # the block
 a, b = (0, -1000, 250), (0, 1345, 1838)
-UT([a, b], 26, "Butcher", 10)                                       # the handle up to the top of the box (it leans on the wall)
+UT([a, b], 26, "Walnut", 10)                                       # the handle up to the top of the box (it leans on the wall)
 UT([(0, 1345, 1838), (0, 1395, 1872)], 30, "Plinth", 10)            # cap
 US(28, 0, 1399, 1857, "Plinth", nu=10, nv=6)
 UT([(-300, -1100, 230), (-300, -1090, 260)], 4, "Plinth", 4); UT([(300, -1100, 230), (300, -1090, 260)], 4, "Plinth", 4)   # (box corners)
