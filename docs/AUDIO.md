@@ -1,7 +1,7 @@
 # Ant Kitchen — sound and music (branch code/ANT-sound)
 
 Everything audible in the game goes through one module: `Source/AntKitchen/AntAudio.h/.cpp`.
-Licences and sources of every file: `docs/AUDIO_CREDITS.md`. Feature summary: `docs/FEATURES.md`, section 27.
+Licences and sources of every file: `docs/AUDIO_CREDITS.md`. Feature summary: `docs/FEATURES.md`, section 28.
 
 ## 1. Audit (before this branch, code/ANT-heist-core @ 209cf29)
 

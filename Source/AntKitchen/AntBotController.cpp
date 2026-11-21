@@ -1,4 +1,5 @@
 ﻿#include "AntBotController.h"
+#include "AntCarry.h"
 #include "AntCharacter.h"
 #include "AntMovementComponent.h"
 #include "HumanCharacter.h"
@@ -258,8 +259,15 @@ void AAntBotController::Think(AAntCharacter* Ant)
 	AKitchenLoot* Carry = Ant->Carrying;
 	if (!Carry && LastCarried.IsValid())
 	{
-		IgnoreUntil.Add(LastCarried.Get(), Now + 12.f);   // slipped out: try something else for a while
-		FoodTarget = nullptr;
+		if (AntCarry::JustTumbled(Ant))
+		{
+			FoodTarget = LastCarried.Get();   // torn out of the grip by a yank: back on its feet and take hold again
+		}
+		else
+		{
+			IgnoreUntil.Add(LastCarried.Get(), Now + 12.f);   // slipped out: try something else for a while
+			FoodTarget = nullptr;
+		}
 	}
 	LastCarried = Carry;
 	bCarryWithPlayer = false;
@@ -484,6 +492,17 @@ void AAntBotController::Tick(float DeltaSeconds)
 		return;
 	}
 	AttachedFor = 0.f;
+	// An order on its load (AntCarry::SetDesired) or a dev carrying script walks it.
+	FVector CarryDir;
+	float CarryScale = 0.f;
+	if (AntCarry::DevSteer(Ant, CarryDir, CarryScale))
+	{
+		if (CarryScale > 0.f && !CarryDir.IsNearlyZero())
+		{
+			Ant->AddMovementInput(CarryDir, CarryScale);
+		}
+		return;
+	}
 	ThinkTimer -= DeltaSeconds;
 	if (ThinkTimer <= 0.f)
 	{

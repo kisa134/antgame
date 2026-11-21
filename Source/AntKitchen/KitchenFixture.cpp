@@ -1,4 +1,7 @@
 ﻿#include "KitchenFixture.h"
+#include "AntMess.h"
+#include "AntWreck.h"
+#include "AntWeapon.h"
 #include "KitchenArt.h"
 #include "KitchenLoot.h"
 #include "KitchenMover.h"
@@ -886,6 +889,7 @@ void AKitchenFixture::Spill(AAntCharacter* By)
 	};
 	FRandomStream R(GetUniqueID() ^ 0x5EED);
 	auto Around = [&R, &At](float Rad) { return At + FVector(R.FRandRange(-Rad, Rad), R.FRandRange(-Rad, Rad), 40.f); };
+	AntMess::OnFixtureSpill(this, Id, At, State == Broken, Mat());   // stains, scratches, the burst (AntMess.cpp)
 	if (Id == TEXT("jam_jar") && State == Broken)
 	{
 		for (int32 i = 0; i < 3; ++i) { Food(TEXT("Варенье"), 12, 2, FLinearColor(0.55f, 0.05f, 0.12f), EAntShape::Sphere, 0.16f, Around(250.f)); }
@@ -1312,6 +1316,8 @@ void AKitchenFixture::KnockRiders(const FVector& Dir, AAntCharacter* By)
 
 void AKitchenFixture::ResetAll(UWorld* World)
 {
+	AntWreck::ResetAll(World);   // the wrecked furniture comes back with the fixtures (AntWreck.h)
+	AntWeapons::SpawnAll(World);   // and the Human's weapons lie in their places again (AntWeapon.h)
 	if (!World || !LevelV3::Enabled() || !LevelV3::FixturesOn())
 	{
 		return;

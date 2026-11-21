@@ -32,6 +32,7 @@
 #include "Engine/World.h"
 #include "TimerManager.h"
 #include "NpcRoutine.h"
+#include "AntSnowball.h"
 
 namespace
 {
@@ -391,12 +392,13 @@ void AAntRaid::StartRaid()
 		Nest.Larvae = 1;
 		Say(TEXT("Личинок не было: Королева отложила последнюю. Берегите её"), RaidInfo);
 	}
-	if (Nest.Workers < 6)
+	const int32 MinWorkers = FMath::Max(6, 2 * FMath::Clamp(GM ? GM->GetNumPlayers() : 1, 1, 8));   // (5-8 players: two each at least)
+	if (Nest.Workers < MinWorkers)
 	{
 		// Never a dead end either: a raid cut short (the game closed or crashed after the squads left) loses the workers taken out,
-		// and with none at all a tier-1 cake (48) cannot be lifted. The nest always has six to send.
-		UE_LOG(LogTemp, Display, TEXT("ANTNEST only %d workers left: the nest makes it six for this raid"), Nest.Workers);
-		Nest.Workers = 6;
+		// and with none at all a tier-1 cake (48) cannot be lifted. The nest always has six to send (two a player with 5-8).
+		UE_LOG(LogTemp, Display, TEXT("ANTNEST only %d workers left: the nest makes it %d for this raid"), Nest.Workers, MinWorkers);
+		Nest.Workers = MinWorkers;
 	}
 	Tier = (uint8)FMath::Clamp(Nest.Tier, 1, Nest.MaxTier);
 	RaidNo = Nest.Raids + 1;
@@ -453,13 +455,15 @@ void AAntRaid::OnWorldReset()
 	{
 		return;
 	}
+	AntSnowball::OnWorldReset(this);   // the last raid's squad ants and trails go (AntSnowball.cpp)
 	const AntTier::FDef& T = TierDef();
 	const int32 Players = FMath::Max(1, GM->GetNumPlayers());
 	S->Shift = RaidNo;
 	S->Larvae = Nest.Larvae;
 	S->ShiftStage = 0;
 	S->bQuotaMet = false;
-	S->TargetScore = T.CakeValue + FMath::RoundToInt(T.Ask * (1.f + 0.4f * (Players - 1)) / 10.f) * 10;   // the cake, and side loot for every mouth
+	// the cake, and side loot for every mouth (+40 % a player up to four, +25 % each from five to eight)
+	S->TargetScore = T.CakeValue + FMath::RoundToInt(T.Ask * (1.f + 0.4f * (FMath::Min(Players, 4) - 1) + 0.25f * FMath::Clamp(Players - 4, 0, 4)) / 10.f) * 10;
 	// What the nest has built (and the boosts bought for this raid) acts through the old run cards.
 	TArray<uint8> Cards;
 	AntNest::Cards(Nest, Cards);
@@ -557,6 +561,14 @@ void AAntRaid::OnWorldReset()
 
 void AAntRaid::StartSquads()
 {
+	if (InRaid() && AntSnowball::Enabled(this))
+	{
+		// The snowball raid: everybody goes out alone; squads and workers come from the picks (AntSnowball.h).
+		AntSnowball::OnRaidStart(this);
+		SpawnGuards();
+		SaveNest();
+		return;
+	}
 	if (InRaid() && !FParse::Param(FCommandLine::Get(), TEXT("AntNoSquad")))   // (dev: a raid without squads)
 	{
 		Result.SquadOut = AntSquad::SpawnAll(this);
@@ -831,6 +843,7 @@ void AAntRaid::RaidSecond()
 	FParse::Value(FCommandLine::Get(), TEXT("AntQuiet="), Quiet);   // dev
 	const uint8 Stage = Left <= 30.f ? 3 : Left <= T.Final ? 2 : Gone >= Quiet ? 1 : 0;
 	GM->RunTick();   // greed, the event, who is shut in the fridge, what the Human is up to
+	AntSnowball::RaidSecond(this);   // picks, squad tasks, the timeline
 	if (S->Phase != 0 || !InRaid())
 	{
 		return;
@@ -1117,6 +1130,7 @@ void AAntRaid::EndRaid(uint8 How)
 		return;
 	}
 	Phase = AntRaidPhase::Results;   // first: what follows may kill ants, and their deaths must not end the raid again
+	AntSnowball::OnRaidEnd(this);   // squad ants and trails go; the story gets each player's snowball
 	int32 Home = 0;
 	FString Away;
 	const int32 Living = LivingPlayers(&Home, &Away);

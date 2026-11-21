@@ -637,7 +637,15 @@ void AGrandmaCharacter::Think(float Dt, float Now)
 		const FVector P = FloorPoint(FVector(St.X, St.Y, 0.f));
 		if (Act.Kind != HumanAct::Busy)
 		{
-			if (WalkTowards(P, 1.f, 220.f) || Now - ModeSince > 45.f)
+			const bool bThere = WalkTowards(P, 1.f, 220.f);
+			if (!bThere && Now - ModeSince > 45.f && FVector::Dist2D(GetActorLocation(), P) > 900.f)
+			{
+				NpcRoutine::Log(W, NpcRoutine::Gran, TEXT("could not get there, goes back"), S, Me);
+				SetTask(-1, 0);
+				SetMode(Returning, 40.f);
+				break;
+			}
+			if (bThere || Now - ModeSince > 45.f)
 			{
 				GetCharacterMovement()->StopMovementImmediately();
 				SetActorRotation(FRotator(0.f, St.Yaw, 0.f));

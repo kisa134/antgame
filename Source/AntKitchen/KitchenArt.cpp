@@ -62,7 +62,7 @@ namespace
 		// ---- wood and paint
 		{ TEXT("Cabinet"),      Textured, TEXT("T_Cabinet_Sage"),  900.f,  1.f, 1.f, 1.f,           0.5f,  0.f, Wood },
 		{ TEXT("CabinetInset"), Textured, TEXT("T_Cabinet_Sage"),  900.f,  0.86f, 0.86f, 0.86f,     0.55f, 0.f, Wood },
-		{ TEXT("Butcher"),      Textured, TEXT("T_Wood_Oak"),      1100.f, 1.f, 1.f, 1.f,           0.4f,  0.f, Wood },
+		{ TEXT("Butcher"),      Textured, TEXT("T_Wood_Oak"),      1100.f, 1.f, 1.f, 1.f,           0.28f, 0.f, Wood },   // oiled and wiped: the worktop starts clean (the mess reads against it)
 		{ TEXT("Walnut"),       Textured, TEXT("T_Wood_Walnut"),   900.f,  1.5f, 1.45f, 1.4f,       0.5f,  0.f, Wood },
 		{ TEXT("Plinth"),       Flat,     nullptr,                 0.f,    0.08f, 0.08f, 0.09f,     0.7f,  0.f, nullptr },
 		// ---- metal

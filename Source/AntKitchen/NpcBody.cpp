@@ -433,6 +433,18 @@ bool BestScent(const UWorld* W, const FVector& From, float Radius, float MinStre
 	return bFound;
 }
 
+void ScentAdd(const UWorld* W, const FVector& P, float Amount)
+{
+	int32 X, Y;
+	if (!W || !FScentGrid::Index(P, X, Y))
+	{
+		return;
+	}
+	GScent.For(W);
+	float& V = GScent.V[Y * FScentGrid::NX + X];
+	V = FMath::Min(2.f, V + Amount);
+}
+
 void ScentClear(const UWorld* W, const FVector& P, float Radius)
 {
 	int32 CX, CY;

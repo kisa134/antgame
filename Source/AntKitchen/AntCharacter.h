@@ -180,6 +180,14 @@ public:
 	float DamageScale = 1.f;
 	float HealthOverride = 0.f;    // > 0: ignores the caste
 	float StrengthOverride = -1.f; // >= 0: ignores the caste (0 = can't carry)
+	/** Admin mode (AntAdmin.h), set by the server: 1 no harm, 2 endless acid and dash, 4 flies through walls, 8 carries anything. */
+	UPROPERTY(ReplicatedUsing = OnRep_Admin) uint8 AdminFlags = 0;
+	UPROPERTY(ReplicatedUsing = OnRep_Admin) float AdminSpeed = 1.f;
+	/** Server: new admin flags / speed (applies the fly mode and the speed at once). */
+	void SetAdmin(uint8 Flags, float Speed);
+	UFUNCTION() void OnRep_Admin();
+	void ApplyAdmin();
+	uint8 AdminApplied = 0;
 	float LegLength = 1.f;
 	float LegThickness = 1.f;
 	const TCHAR* LegUpperArt = TEXT("SM_Ant_Femur");
@@ -207,6 +215,9 @@ public:
 	float DevGoJumpAt = 0.f;
 	/** Dev (scripted test runs): a commander order without the keyboard. */
 	void DevCommand(uint8 Cmd, const FVector& Point);
+	/** Mess (AntMess.cpp): a cosmetic multiplier on the chitin's tint (a coat of jam reddens it, cream pales it). White: clean. Local. */
+	void SetMessTint(const FLinearColor& Mul) { if (!MessTint.Equals(Mul, 0.004f)) { MessTint = Mul; OnRep_BodyColor(); } }
+	FLinearColor MessTint = FLinearColor::White;
 	/** Local camera shake (0..1, adds up, decays). */
 	void AddTrauma(float Amount) { Trauma = FMath::Min(1.f, Trauma + Amount); }
 	/** Server: set on fire for a few seconds (spreads to ants nearby, water puts it out). */

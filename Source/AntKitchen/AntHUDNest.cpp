@@ -415,19 +415,26 @@ void AAntHUD::DrawNest(AAntRaid* Raid, AAntGameState* GS)
 	// ------------------------------------------------------------------ right: who goes
 	Panel(1312.f, 768.f, 578.f, 132.f, TEXT("КТО ИДЁТ"));
 	{
-		int32 Row = 0;
+		int32 Row = 0, Going = 0;
 		for (APlayerState* P : GS->PlayerArray)
 		{
 			const AAntPlayerState* A = Cast<AAntPlayerState>(P);
-			if (!A || A->bIsHuman || A->IsABot() || Row >= 4) { continue; }
+			Going += (A && !A->bIsHuman && !A->IsABot()) ? 1 : 0;
+		}
+		const float RowH = Going > 4 ? 22.f : 42.f;   // up to eight players: four rows of two, tighter
+		for (APlayerState* P : GS->PlayerArray)
+		{
+			const AAntPlayerState* A = Cast<AAntPlayerState>(P);
+			if (!A || A->bIsHuman || A->IsABot() || Row >= 8) { continue; }
 			const int32 Cap = AntNest::SquadCap(N);
 			const int32 Want = A->SquadWant == 255 ? Cap : FMath::Min<int32>(A->SquadWant, Cap);
-			const float X = 1328.f + 278.f * (Row % 2), Y = 806.f + 42.f * (Row / 2);
+			const float X = 1328.f + 278.f * (Row % 2), Y = 806.f + RowH * (Row / 2) - (Going > 4 ? 4.f : 0.f);
 			DrawRect(A->bNestReady ? NGood : FLinearColor(0.3f, 0.3f, 0.3f, 1.f), PX(X), PY(Y + 6.f), 14.f * U, 14.f * U);
 			float TW = 0.f, TH = 0.f;
 			const FString Line = FString::Printf(TEXT("%s · отряд %d%s"), *A->GetPlayerName(), Want, (A->Tool0 || A->Tool1) ? TEXT(" · с инструм.") : TEXT(""));
-			GetTextSize(Line, TW, TH, Small, 1.08f * Fs);
-			Txt(Line, PX(X + 22.f), PY(Y), A->bNestReady ? NText : NDim, Small, 1.08f * Fs * FMath::Min(1.f, 244.f * U / FMath::Max(1.f, TW)));
+			const float Ls = (Going > 4 ? 0.9f : 1.08f) * Fs;
+			GetTextSize(Line, TW, TH, Small, Ls);
+			Txt(Line, PX(X + 22.f), PY(Y), A->bNestReady ? NText : NDim, Small, Ls * FMath::Min(1.f, 244.f * U / FMath::Max(1.f, TW)));
 			++Row;
 		}
 	}

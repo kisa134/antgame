@@ -1,4 +1,7 @@
 ﻿#include "AntRun.h"
+#include "AntWreck.h"
+#include "AntWeapon.h"
+#include "AntVersus.h"
 #include "AntKitchenGameMode.h"
 #include "AntGameState.h"
 #include "AntPlayerState.h"
@@ -38,8 +41,11 @@
 #include "AntRaid.h"
 #include "KitchenSlick.h"
 #include "AntFilm.h"
+#include "AntMess.h"
 #include "Engine/OverlapResult.h"
 #include "NpcRoutine.h"
+#include "AntCarry.h"
+#include "AntSnowball.h"
 
 namespace
 {
@@ -516,8 +522,9 @@ void AAntKitchenGameMode::SpawnMainObject(int32 ForceSpot)
 	{
 		// A raid: the threat tier decides how big the slice is.
 		D.Value = Raid->TierDef().CakeValue / 2;
-		// Heavier for a bigger team (+20% a player after the first): four players alone must not walk off with it.
-		int32 W = FMath::RoundToInt(Raid->TierDef().CakeWeight * (1.f + 0.2f * (FMath::Max(1, GetNumPlayers()) - 1)));
+		// Heavier for a bigger team (+20% a player after the first up to four, +12% each from five to eight - AntCarry::CakePlayerMul):
+		// the team must not walk off with it alone.
+		int32 W = FMath::RoundToInt(Raid->TierDef().CakeWeight * AntCarry::CakePlayerMul(GetNumPlayers()));
 		FParse::Value(FCommandLine::Get(), TEXT("AntCakeWeight="), W);
 		D.Weight = FMath::Clamp(W, 6, 200);
 	}
@@ -1535,13 +1542,29 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 	{
 		return;   // the pets and the family: cat ..., dog ..., gran ..., kid ..., npclevel N (CritterBrain.cpp)
 	}
+	if (AntMess::DevCommand(this, A))
+	{
+		return;   // mess stain|test|break|splat|burst|jamwalk|walk|dust|stir|clean|fill|hide|cost|profilegpu|info (AntMess.cpp); before NpcRoutine: its bare "mess" would swallow these
+	}
 	if (NpcRoutine::DevCommand(this, A))
 	{
 		return;   // level v3, the residents' evening and their mess: routine plan|info|warp S|skip who|goto step|off|on, mess, react <fixture>
 	}
+	if (AntSnowball::DevCommand(this, A))
+	{
+		return;   // snow ..., trail ..., rts ..., perf ..., squad+ ... (AntSnowball.cpp)
+	}
 	if (Raid && Raid->DevCommand(A))
 	{
 		return;   // raid ..., nest ... (AntRaid.cpp)
+	}
+	if (AntCarry::DevCommand(this, A))
+	{
+		return;   // carrying together: carry spawn|crew|go|desync|yank|stop|kill|human|rivals|army|workers|ramp|corner|cam|shot|log|info (AntCarry.cpp)
+	}
+	if (AntWreck::DevCommand(this, A) || AntWeapons::DevCommand(this, A) || AntVersus::DevCommand(this, A))
+	{
+		return;   // wreck ..., weapon ..., rage N, versus ... (AntWreck.cpp, AntWeapon.cpp, AntVersus.cpp)
 	}
 	if (AntBodyRules::DevCommand(this, A))
 	{

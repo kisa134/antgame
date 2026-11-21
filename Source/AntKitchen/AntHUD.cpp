@@ -1,4 +1,6 @@
 ﻿#include "AntHUD.h"
+#include "AntCarry.h"
+#include "AntVersus.h"
 #include "KitchenInteractables.h"
 #include "AntSwarm.h"
 #include "AntCharacter.h"
@@ -30,6 +32,8 @@
 #include "AntFilm.h"
 #include "KitchenSlick.h"
 #include "Misc/ScopeExit.h"
+#include "AntRts.h"
+#include "AntAdmin.h"
 
 namespace
 {
@@ -220,6 +224,7 @@ void AAntHUD::DrawHUD()
 	if (!bVoteScreen)
 	{
 		DrawWorldTags(Me);   // names and health bars would sit on top of the cards
+		AntCarry::DrawHud(this, Canvas, Me);   // strain marks on carried loads, the carriers' shouts
 	}
 
 	if (AAntCharacter* Ant = Cast<AAntCharacter>(Me))
@@ -241,6 +246,8 @@ void AAntHUD::DrawHUD()
 	DrawTrophies(GS, Me);
 	DrawRun(GS, Me);
 	if (Raid) { DrawRaid(Raid, GS, Me); }
+	if (Raid) { AntRts::DrawHud(this, Canvas, PC); }   // the snowball: mass, picks, squad groups, selection (AntRts.cpp)
+	AntAdmin::DrawHud(this, Canvas, PC);   // the АДМИН badge, "show everyone" (AntAdmin.h)
 	DrawFeed(GS);
 	DrawToastsAndNumbers(PC);
 	DrawHelp(Me);
@@ -926,6 +933,16 @@ void AAntHUD::DrawHuman(AHumanCharacter* H, AAntGameState* GS)
 	const bool bSwatReady = ServerNow >= H->SwatReadyTime;
 	Txt(bSwatReady ? TEXT("Q — ГАЗЕТОЙ по прицелу (стены, столы): готово") : TEXT("Q — газета: замах..."), X, Y + 130.f * S, bSwatReady ? Green : Grey, Small, 1.2f * S);
 	Txt(H->Held ? TEXT("E — ШВЫРНУТЬ еду (разобьётся!)") : TEXT("E — схватить еду у прицела"), X, Y + 154.f * S, H->Held ? Gold : White, Small, 1.2f * S);
+	{
+		// The weapon in hand, and in versus his patience and the x-ray (AntVersus.h).
+		float Pat = -1.f;
+		Txt(AntVersus::HudLine(GetWorld(), H, Pat), X, Y + 178.f * S, Gold, Small, 1.2f * S);
+		if (Pat >= 0.f)
+		{
+			Txt(TEXT("Терпение"), X + 420.f * S, Y + 56.f * S, White, Small, 1.2f * S);
+			Bar(X + 420.f * S, Y + 82.f * S, 260.f * S, 14.f * S, Pat, FLinearColor(1.f, 0.55f, 0.2f));
+		}
+	}
 	// Where the slippers will land.
 	for (int32 Leg = 0; Leg < 2; ++Leg)
 	{
@@ -941,7 +958,7 @@ void AAntHUD::DrawHuman(AHumanCharacter* H, AAntGameState* GS)
 	for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
 	{
 		AAntCharacter* Ant = *It;
-		if (Ant && !Ant->bDead && Ant->IsCarrying() && FVector::Dist(Ant->GetActorLocation(), H->GetActorLocation()) < 7000.f)
+		if (Ant && !Ant->bDead && Ant->IsCarrying() && FVector::Dist(Ant->GetActorLocation(), H->GetActorLocation()) < 7000.f && AntVersus::XrayOn(GetWorld()))
 		{
 			Marker(Ant->GetActorLocation() + FVector(0.f, 0.f, 60.f), TEXT("сладкое!"), FLinearColor(1.f, 0.6f, 0.1f), false);
 		}
@@ -979,6 +996,16 @@ void AAntHUD::DrawWorldTags(APawn* Me)
 		const FVector S2 = Project(P);
 		const AAntCharacter* MyAnt = Cast<AAntCharacter>(Me);
 		const bool bEnemy = MyAnt ? MyAnt->IsEnemy(Ant) : Ant->Team != 0;
+		if (!bEnemy && !Ant->IsPlayerControlled())
+		{
+			// A friendly bot / squad ant: its name only when the crosshair is on it or it is selected (a squad of 30 «Муравей» tags hid the kitchen).
+			const UAntRtsInput* Rts = UAntRtsInput::Of(PlayerOwner);
+			const bool bSelected = Rts && Rts->Selection.Contains(TWeakObjectPtr<AAntCharacter>(Ant));
+			if (!bSelected && !Aimed(P, 2.5f))
+			{
+				continue;
+			}
+		}
 		Txt(Ant->GetDisplayName(), S2.X, S2.Y - 18.f * S, bEnemy ? FLinearColor(1.f, 0.4f, 0.25f) : FLinearColor(0.8f, 0.9f, 1.f), Small, 1.f * S, true);
 		if (bEnemy)
 		{

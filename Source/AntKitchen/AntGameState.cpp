@@ -5,6 +5,7 @@
 #include "AntCharacter.h"
 #include "AntTypes.h"
 #include "AntFx.h"
+#include "AntMess.h"
 #include "Net/UnrealNetwork.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
@@ -145,6 +146,7 @@ void AAntGameState::MulticastSfx_Implementation(uint8 Id, FVector_NetQuantize Lo
 	{
 	case AntSfx::Stomp:
 		AntFx::StompDust(this, At);
+		AntMess::Stir(this, At, 160.f, 2200.f);   // the dust in the air jumps too (AntMess.cpp)
 		break;
 	case AntSfx::Zap:
 		AntFx::Sparks(this, At + FVector(0.f, 0.f, 10.f), 16, 7.f);

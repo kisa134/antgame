@@ -25,6 +25,10 @@
 #include "AntSquad.h"
 #include "EngineUtils.h"
 #include "AntFilm.h"
+#include "AntAdmin.h"
+#include "GameFramework/HUD.h"
+#include "AntSnowball.h"
+#include "AntRts.h"
 
 void AAntPlayerController::BeginPlay()
 {
@@ -44,6 +48,40 @@ void AAntPlayerController::BeginPlay()
 		Film = NewObject<UAntFilm>(this, TEXT("AntFilm"));
 		Film->RegisterComponent();
 		Film->Init(this);
+		UAntRtsInput::Attach(this);   // the snowball raid's squad selection and orders (AntRts.h)
+
+		// Admin mode (AntAdmin.h): -AntAdmin opens the panel a moment after the start (not over the main menu);
+		// -AntAdminDo="t:cmd;t:cmd" runs panel commands at those seconds through the same path as the buttons (tests).
+		if (AntAdmin::Launched() && AntAdmin::CanUse(this))
+		{
+			FTimerHandle AH;
+			GetWorldTimerManager().SetTimer(AH, FTimerDelegate::CreateWeakLambda(this, [this]()
+			{
+				if (!MenuWidget.IsValid() && !AdminWidget.IsValid() && !FParse::Param(FCommandLine::Get(), TEXT("AntAdminClosed"))) { ToggleAdmin(); }
+			}), 2.5f, false);
+		}
+		FString AdminDo;
+		if (FParse::Value(FCommandLine::Get(), TEXT("AntAdminDo="), AdminDo, false))
+		{
+			TArray<FString> Steps;
+			AdminDo.ParseIntoArray(Steps, TEXT(";"));
+			for (const FString& Step : Steps)
+			{
+				FString T, C;
+				if (!Step.Split(TEXT(":"), &T, &C)) { continue; }
+				FTimerHandle SH;
+				GetWorldTimerManager().SetTimer(SH, FTimerDelegate::CreateWeakLambda(this, [this, C]()
+				{
+					UE_LOG(LogTemp, Display, TEXT("ANTADMIN script: %s"), *C);
+					if (C == TEXT("panel")) { ToggleAdmin(); }
+					else if (C.StartsWith(TEXT("aim ")))
+					{
+						Admin(C.Mid(4) + TEXT(" ") + FString::Printf(TEXT("%.0f %.0f %.0f"), CrosshairPoint().X, CrosshairPoint().Y, CrosshairPoint().Z));   // "aim killaim" -> killaim x y z
+					}
+					else { Admin(C); }
+				}), FMath::Max(0.1f, FCString::Atof(*T)), false);
+			}
+		}
 
 		// A touch of grade over the whole kitchen: warmer, punchier, a soft vignette. -AntNoPP switches it off to compare.
 		if (!FParse::Param(FCommandLine::Get(), TEXT("AntNoPP")))
@@ -261,7 +299,7 @@ void AAntPlayerController::SetupInputComponent()
 	InputComponent->BindKey(EKeys::K, IE_Pressed, this, &AAntPlayerController::BecomeSpider);
 	InputComponent->BindKey(EKeys::P, IE_Pressed, this, &AAntPlayerController::SwitchTeam);
 	InputComponent->BindKey(EKeys::F9, IE_Pressed, this, &AAntPlayerController::AddAllyBot);
-	InputComponent->BindKey(EKeys::F10, IE_Pressed, this, &AAntPlayerController::AddEnemyBot);
+	InputComponent->BindKey(EKeys::F10, IE_Pressed, this, &AAntPlayerController::ToggleAdmin).bExecuteWhenPaused = true;   // admin panel (AntAdmin.h); enemy bots: in the panel
 	InputComponent->BindKey(EKeys::MiddleMouseButton, IE_Pressed, this, &AAntPlayerController::PingPressed);
 	InputComponent->BindKey(EKeys::F1, IE_Pressed, this, &AAntPlayerController::ShowHelp);
 	InputComponent->BindKey(EKeys::Q, IE_Pressed, this, &AAntPlayerController::SquadHaul);
@@ -315,6 +353,10 @@ void AAntPlayerController::ServerPing_Implementation(FVector_NetQuantize Locatio
 
 bool AAntPlayerController::TryVote(int32 Option)
 {
+	if (AntSnowball::TryPick(this, Option))
+	{
+		return true;   // keys 1/2/3 take the snowball pick first (AntSnowball.h)
+	}
 	const AAntGameState* GS = GetWorld()->GetGameState<AAntGameState>();
 	if (!GS || GS->Interlude != 2 || !GS->CardOffer.IsValidIndex(Option))
 	{
@@ -501,6 +543,11 @@ void AAntPlayerController::CloseMenu()
 
 void AAntPlayerController::ToggleMenu()
 {
+	if (AdminWidget.IsValid())
+	{
+		ToggleAdmin();   // Esc closes the admin panel first
+		return;
+	}
 	if (MenuWidget.IsValid())
 	{
 		CloseMenu();
@@ -519,5 +566,90 @@ void AAntPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		GEngine->GameViewport->RemoveViewportWidgetContent(MenuWidget.ToSharedRef());
 	}
 	MenuWidget.Reset();
+	if (AdminWidget.IsValid() && GEngine && GEngine->GameViewport)
+	{
+		GEngine->GameViewport->RemoveViewportWidgetContent(AdminWidget.ToSharedRef());
+	}
+	AdminWidget.Reset();
 	Super::EndPlay(EndPlayReason);
+}
+
+// ---------------------------------------------------------------------------------------------
+// Admin mode (AntAdmin.h)
+// ---------------------------------------------------------------------------------------------
+
+void AAntPlayerController::ToggleAdmin()
+{
+	if (!IsLocalController() || !GEngine || !GEngine->GameViewport)
+	{
+		return;
+	}
+	if (AdminWidget.IsValid())
+	{
+		GEngine->GameViewport->RemoveViewportWidgetContent(AdminWidget.ToSharedRef());
+		AdminWidget.Reset();
+		if (!MenuWidget.IsValid())
+		{
+			FInputModeGameOnly Mode;
+			SetInputMode(Mode);
+			bShowMouseCursor = false;
+		}
+		UE_LOG(LogTemp, Display, TEXT("ANTADMIN panel closed"));
+		return;
+	}
+	if (!AntAdmin::CanUse(this))
+	{
+		ClientToast(TEXT("Админ-панель есть только у хоста или в одиночной игре"));
+		UE_LOG(LogTemp, Display, TEXT("ANTADMIN panel refused: a client of an online game"));
+		return;
+	}
+	AdminWidget = AntAdmin::MakePanel(this);
+	GEngine->GameViewport->AddViewportWidgetContent(AdminWidget.ToSharedRef(), 90);
+	// The game keeps running and keeps the keyboard (WASD); the mouse is for the panel.
+	FInputModeGameAndUI Mode;
+	Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	Mode.SetHideCursorDuringCapture(false);
+	SetInputMode(Mode);
+	bShowMouseCursor = true;
+	UE_LOG(LogTemp, Display, TEXT("ANTADMIN panel opened"));
+}
+
+void AAntPlayerController::Admin(const FString& Cmd)
+{
+	const FString C = Cmd.TrimStartAndEnd();
+	if (C.IsEmpty())
+	{
+		return;
+	}
+	AntAdmin::MarkUsed();
+	const FString Low = C.ToLower();
+	// This machine's own: the engine console, the HUD, the filming mode.
+	if (Low.StartsWith(TEXT("con ")) || Low.StartsWith(TEXT("stat ")) || Low.StartsWith(TEXT("highresshot")))
+	{
+		const FString Console = Low.StartsWith(TEXT("con ")) ? C.Mid(4) : C;
+		UE_LOG(LogTemp, Display, TEXT("ANTADMIN local console: %s"), *Console);
+		ConsoleCommand(Console, false);
+		return;
+	}
+	if (Low == TEXT("hudtoggle"))
+	{
+		if (AHUD* H = GetHUD()) { H->bShowHUD = !H->bShowHUD; UE_LOG(LogTemp, Display, TEXT("ANTADMIN local hud %d"), H->bShowHUD ? 1 : 0); }
+		return;
+	}
+	if ((Low == TEXT("film") || Low == TEXT("freecam")) && Film)
+	{
+		if (Low == TEXT("film") || !Film->IsOn()) { Film->OnKey(EKeys::F8); }
+		if (Low == TEXT("freecam")) { Film->OnKey(EKeys::F5); }
+		UE_LOG(LogTemp, Display, TEXT("ANTADMIN local %s: filming %d"), *Low, Film->IsOn() ? 1 : 0);
+		return;
+	}
+	ServerAdmin(C);
+}
+
+void AAntPlayerController::ServerAdmin_Implementation(const FString& Cmd)
+{
+	if (AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
+	{
+		GM->AdminCommand(this, Cmd.Left(400));
+	}
 }

@@ -362,9 +362,11 @@ void AAntClan::SetPlan(uint8 NewPlan, const TCHAR* Why)
 void AAntClan::SpawnRoster()
 {
 	const AntTier::FDef& T = Raid->TierDef();
-	// More of us, more of them: an escort for every player after the first, an ambusher for every second one.
-	const int32 Players = FMath::Max(1, GM ? GM->GetNumPlayers() : 1);
-	const int32 Want[ClanRole::Count] = { T.Scouts, T.Haulers, T.Escorts + (Players - 1), T.Ambushers + Players / 2 };
+	// More of us, more of them: up to four players an escort for every player after the first and an ambusher for every second
+	// one; from five to eight an escort for every second player more and an ambusher for every third (8 players: +5, +3).
+	const int32 Players = FMath::Clamp(GM ? GM->GetNumPlayers() : 1, 1, 8);
+	const int32 Over4 = FMath::Max(0, Players - 4);
+	const int32 Want[ClanRole::Count] = { T.Scouts, T.Haulers, T.Escorts + (FMath::Min(Players, 4) - 1) + (Over4 + 1) / 2, T.Ambushers + FMath::Min(Players, 4) / 2 + Over4 / 3 };
 	static const TCHAR* RoleNames[ClanRole::Count] = { TEXT("Разведчик"), TEXT("Носильщик"), TEXT("Охранник"), TEXT("Засадник") };
 	int32 Have[ClanRole::Count] = { 0, 0, 0, 0 };
 	// Those of the raid before stay; a smaller tier sends the extra ones home for good.

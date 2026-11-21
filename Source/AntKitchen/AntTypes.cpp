@@ -2,6 +2,7 @@
 #include "AntAudio.h"
 #include "Engine/StaticMesh.h"
 #include "Sound/SoundBase.h"
+#include "Misc/PackageName.h"
 #include "Sound/SoundAttenuation.h"
 #include "Kismet/GameplayStatics.h"
 #include "AntGameState.h"
