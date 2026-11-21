@@ -33,6 +33,7 @@
 #include "Components/PointLightComponent.h"
 #include "TimerManager.h"
 #include "Misc/Paths.h"
+#include "AntCarry.h"
 
 #include "AntBodyData.inl"
 
@@ -630,6 +631,14 @@ void UAntBodyComponent::UpdateInjuries(float Dt)
 		const float Ratio = L->CarryRatio();
 		WantEffort = L->CarryTeam() != Ant->Team ? 1.f : FMath::Clamp((1.9f - Ratio) / 1.2f, 0.12f, 1.f);
 	}
+	{
+		// carrying together (AntCarry): what its own grip asks of it; dragged off its feet it strains all out
+		FAntCarryFeel CF;
+		if (AntCarry::Feel(Ant, CF))
+		{
+			WantEffort = FMath::Max(WantEffort, CF.bDragged ? 1.f : FMath::Clamp(0.15f + 0.8f * CF.Strain, 0.f, 1.f));
+		}
+	}
 	if (Ant->HoldingAnt) { WantEffort = FMath::Max(WantEffort, 0.45f); }
 	if (Ant->Pulling) { WantEffort = 1.f; }
 	Effort += (WantEffort - Effort) * (1.f - FMath::Exp(-5.f * Dt));
@@ -819,7 +828,8 @@ void UAntBodyComponent::UpdateGait(float Dt)
 	const AAntCharacter* Leader = nullptr;
 	if (const AKitchenLoot* Load = Ant->Carrying)
 	{
-		if (Load->Carriers.Num() > 1 && Load->Carriers[0] && Load->Carriers[0] != Ant && Load->Carriers[0]->Rig)
+		// (only while they move as one: out of step each walks its own beat - AntCarry's rhythm, visible)
+		if (Load->Carriers.Num() > 1 && Load->Carriers[0] && Load->Carriers[0] != Ant && Load->Carriers[0]->Rig && Load->CarryNet.Sync > 150)
 		{
 			Leader = Load->Carriers[0];
 		}
@@ -1028,6 +1038,7 @@ void UAntBodyComponent::UpdateBodyFrame(float Dt)
 
 	// ---- where the top of the body is pushed: into the acceleration, into the turn, towards a missing leg
 	FVector WantLean = FVector::ZeroVector;
+	FVector CarryOff = FVector::ZeroVector;
 	if (Mode == M_Ground)
 	{
 		WantLean = (FVector::VectorPlaneProject(Acc, N) * 8.5e-5f).GetClampedToMaxSize(0.3f);
@@ -1035,6 +1046,16 @@ void UAntBodyComponent::UpdateBodyFrame(float Dt)
 		WantLean += (H * SagDir.X + R * SagDir.Y) * 0.085f;
 		if (Ant->Pulling) { WantLean -= H * 0.2f; }
 		else if (Effort > 0.f) { WantLean -= H * 0.09f * Effort; }
+		FAntCarryFeel CF;
+		if (AntCarry::Feel(Ant, CF))
+		{
+			// the load pulls at the jaws: the body digs its heels in against it (leans away), and when it is dragged off its
+			// feet it is thrown towards it; the body itself is drawn a little towards the grip (CarryOff below)
+			const FVector PullN = FVector::VectorPlaneProject(CF.Pull, N);
+			const float Pk = FMath::Clamp((float)PullN.Size() / (14.f * VS / 0.158f), 0.f, 1.f);
+			WantLean += PullN.GetSafeNormal() * Pk * (CF.bDragged ? 0.3f : -0.18f);
+			CarryOff = PullN.GetClampedToMaxSize(3.5f * VS / 0.158f) * 0.45f;
+		}
 		WantLean += (R * FMath::Sin(Time * 5.3f) * 0.13f + H * FMath::Sin(Time * 3.9f) * 0.07f) * Stun;
 	}
 	else if (Mode == M_Air)
@@ -1091,7 +1112,7 @@ void UAntBodyComponent::UpdateBodyFrame(float Dt)
 			Roll += 5.f * FMath::Sin(T * 2.f * PI) * Bump(T, 0.f, 0.2f, 0.8f, 1.f);
 		}
 		WantQ = Base * FRotator(Pitch, Yaw, Roll).Quaternion();
-		WantO = P + N * FitC + Up * Stand * VS + Shove + Lurch;
+		WantO = P + N * FitC + Up * Stand * VS + Shove + Lurch + CarryOff;
 		break;
 	}
 	case M_Air:
@@ -1208,6 +1229,12 @@ void UAntBodyComponent::UpdateSpine(float Dt)
 				bLookAt = true;
 			}
 		}
+	}
+	if (Ant->Carrying && Lod <= 1)
+	{
+		// the head is locked on its grip, every frame (the load moves under the jaws)
+		FVector GripAt;
+		if (AntCarry::GripWorld(Ant, GripAt)) { LookAt = GripAt; bLookAt = true; }
 	}
 	float WantYaw = 0.f, WantPitch = 0.f, WantRoll = 0.f;
 	float WantJaw = 0.f;

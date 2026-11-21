@@ -1,4 +1,6 @@
 ﻿#include "AntMovementComponent.h"
+#include "AntCarry.h"
+#include "AntCharacter.h"
 #include "KitchenLoot.h"
 #include "KitchenInteractables.h"
 #include "GameFramework/Character.h"
@@ -315,7 +317,9 @@ void UAntMovementComponent::PhysCrawl(float DeltaTime)
 	const FQuat Rot = UpdatedComponent->GetComponentQuat();
 
 	// 2. Move along the surface; bumping into a wall while pushing towards it = climb it.
-	const FVector Delta = V * DeltaTime;
+	// A carrier is held by its grip: the load pulls it (AntCarry::Tether; a correction, not added to the velocity it keeps).
+	const FVector Pull = FVector::VectorPlaneProject(AntCarry::Tether(Cast<AAntCharacter>(CharacterOwner), N, DeltaTime), N);
+	const FVector Delta = (V + Pull) * DeltaTime;
 	if (!Delta.IsNearlyZero(0.01f))
 	{
 		FHitResult Hit(1.f);

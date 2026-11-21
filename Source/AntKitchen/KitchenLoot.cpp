@@ -94,6 +94,7 @@ void AKitchenLoot::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	DOREPLIFETIME(AKitchenLoot, ShardPath);
 	DOREPLIFETIME(AKitchenLoot, ShardSeed);
 	DOREPLIFETIME(AKitchenLoot, ShardScale);
+	DOREPLIFETIME(AKitchenLoot, CarryNet);
 }
 
 float AKitchenLoot::GetRadius() const
@@ -270,6 +271,7 @@ void AKitchenLoot::Shatter(const FVector& At)
 	const int32 PieceWeight = FMath::Max(2, FMath::RoundToInt((float)Weight / N));
 	const FString Base = LootName.StartsWith(TEXT("Кусок")) ? LootName : FString::Printf(TEXT("Кусок: %s"), *LootName);
 	const FVector C = GetActorLocation() + FVector(0.f, 0.f, 15.f);
+	AntCarry::Notify(this, AntCarryEvent::Broken, CarrierTeam);
 	ReleaseAll();
 	const int32 CutSeed = FMath::RandRange(1, 1000000);
 	for (int32 i = 0; i < N; ++i)
@@ -494,6 +496,10 @@ void AKitchenLoot::Tick(float DeltaSeconds)
 			TickWater(DeltaSeconds);
 		}
 	}
+	else
+	{
+		AntCarry::ClientTick(this, DeltaSeconds);   // carried: follow the server's smoothed state
+	}
 	// Ants and the Human bump into food lying around (and can shove it);
 	// carriers hold it from inside, so they don't collide with what they carry.
 	if (!bIsGear && Body)
@@ -544,6 +550,10 @@ void AKitchenLoot::PickUpBy(USceneComponent* Hand, const FVector& RelativeLocati
 	if (!HasAuthority() || bIsGear || !Hand)
 	{
 		return;
+	}
+	if (IsCarried() || AntCarry::HasWorkers(this))
+	{
+		AntCarry::Notify(this, AntCarryEvent::Snatched, CarrierTeam);
 	}
 	ReleaseAll();
 	SquadHolder = nullptr;
@@ -618,9 +628,9 @@ bool AKitchenLoot::TryGrab(AAntCharacter* Ant, FString& Why)
 	{
 		return true;
 	}
-	if (Carriers.Num() >= 8)
+	if (!AntCarry::MakeRoom(this))
 	{
-		Why = TEXT("Вокруг уже нет места — 8 муравьёв держат это");
+		Why = FString::Printf(TEXT("Вокруг уже нет места — %d муравьёв держат это"), AntCarry::MaxCarriers(this));
 		return false;
 	}
 	// Bite into the side of the food closest to the ant.
@@ -632,8 +642,10 @@ bool AKitchenLoot::TryGrab(AAntCharacter* Ant, FString& Why)
 	UE_LOG(LogTemp, Display, TEXT("ANTCARRY grab %s by %s w=%d"), *LootName, *Ant->GetDisplayName(), Weight);
 	AntSfx::Everyone(this, AntSfx::Grab, GetActorLocation(), FMath::Clamp(1.4f - Weight * 0.015f, 0.6f, 1.4f));
 	Carriers.Add(Ant);
-	GrabLocal.Add(GetActorTransform().InverseTransformPosition(Closest));
+	// the jaws close on the side facing the ant, at the height of its jaws (AntCarry)
+	GrabLocal.Add(GetActorTransform().InverseTransformPosition(AntCarry::PickGrip(this, Ant->GetActorLocation(), Closest)));
 	Ant->SetCarrying(this);
+	AntCarry::ServerCarriersChanged(this);
 	ServerCarryTick(0.f);
 	return true;
 }
@@ -651,10 +663,11 @@ void AKitchenLoot::Release(AAntCharacter* Ant)
 			Ant->SetCarrying(nullptr);
 		}
 	}
-	if (Carriers.Num() == 0)
+	if (Carriers.Num() == 0 && !AntCarry::HasWorkers(this))
 	{
 		CarryStrength = 0.f;
 	}
+	AntCarry::ServerCarriersChanged(this);
 }
 
 void AKitchenLoot::ReleaseAll()
@@ -666,6 +679,7 @@ void AKitchenLoot::ReleaseAll()
 	}
 	Carriers.Reset();
 	GrabLocal.Reset();
+	AntCarry::ReleaseAllWorkers(this);
 	for (AAntCharacter* A : Old)
 	{
 		if (IsValid(A) && A->Carrying == this)
@@ -674,6 +688,7 @@ void AKitchenLoot::ReleaseAll()
 		}
 	}
 	CarryStrength = 0.f;
+	AntCarry::ServerCarriersChanged(this);
 }
 
 void AKitchenLoot::ServerCarryTick(float Dt)
@@ -698,7 +713,7 @@ void AKitchenLoot::ServerCarryTick(float Dt)
 		Destroy();   // fell out of the world; refill spawns new food
 		return;
 	}
-	if (Carriers.Num() == 0)
+	if (Carriers.Num() == 0 && !AntCarry::HasWorkers(this))
 	{
 		return;
 	}
@@ -722,7 +737,7 @@ void AKitchenLoot::ServerCarryTick(float Dt)
 			}
 		}
 	}
-	if (Carriers.Num() == 0)
+	if (Carriers.Num() == 0 && !AntCarry::HasWorkers(this))
 	{
 		CarryStrength = 0.f;
 		return;
@@ -739,12 +754,7 @@ void AKitchenLoot::ServerCarryTick(float Dt)
 		const AAntArmy* Army = AAntArmy::FindFor(A);
 		if (Army && Army->bSquad)
 		{
-			// A raid: the squad that follows its commander helps him carry anything he takes hold of.
-			if (Army->HelpsCommander(A))
-			{
-				Extra[i] = Army->Strength();
-				Str[FMath::Clamp<int32>(A->Team, 0, 1)] += Extra[i];
-			}
+			// A raid squad no longer adds to its commander's grip: its workers take hold of the load themselves (AntCarry).
 		}
 		else if (bMain)
 		{
@@ -755,6 +765,7 @@ void AKitchenLoot::ServerCarryTick(float Dt)
 			}
 		}
 	}
+	AntCarry::AddWorkerStrength(this, Str);   // squad workers holding it (AntCarry)
 	const int32 Win = Str[1] > Str[0] ? 1 : 0;
 	CarrierTeam = (uint8)Win;
 	CarryStrength = FMath::Max(0.f, Str[Win] - Str[1 - Win]);
@@ -763,45 +774,13 @@ void AKitchenLoot::ServerCarryTick(float Dt)
 		return;
 	}
 
-	// Real physics: every ant is a spring pulling its bite point to its mandibles,
-	// limited by its own strength. Strength 1 lifts 1 weight unit against gravity.
-	Body->WakeAllRigidBodies();
-	const float Mass = Body->GetMass();
-	const float Gravity = FMath::Abs(GetWorld()->GetGravityZ());
-	const float ForcePerStrength = KgPerWeight * Gravity;
-	const int32 N = Carriers.Num();
-	// The main object (the birthday cake) is carried by a crowd that is only just strong enough (ratio 1.0 - 1.1). With every
-	// ant pulling for itself at the edge of its strength the weak side sagged, the piece ploughed the floor and a door rail
-	// 12 uu high stopped it. So: its carriers share the weight evenly (the pooled strength of the side that is winning); once
-	// they can carry it at all (ratio >= 1) they grip it as firmly as a lone ant grips a crumb (the springs get the force of
-	// ratio 1.75, the walking speed stays that of the real ratio) and hold it 28 uu clear of the ground: over rails, the
-	// carpet edge, the garden stones. Dragged (ratio < 1) it behaves like any other load.
-	int32 OnWin = 0;
-	for (const AAntCharacter* A : Carriers) { OnWin += FMath::Clamp<int32>(A->Team, 0, 1) == Win ? 1 : 0; }
-	const bool bLift = bMain && CarryStrength >= (float)Weight;
-	const float Pool = (bMain && OnWin > 0) ? (bLift ? FMath::Max(Str[Win], 1.75f * Weight) : Str[Win]) / OnWin * ForcePerStrength : 0.f;
-	for (int32 i = 0; i < N; ++i)
+	// Carrying together (AntCarry.cpp): every carrier holds its own point of the surface with a spring-damper to its jaws, the
+	// weight is shared by the lever arms, each share limited by the carrier's strength; surplus strength is speed, braking is
+	// weak; strides lock when they move as one. (The cake keeps its old margin: lifted 28 clear, up to 1.75 of its weight.)
+	AntCarry::ServerTick(this, Dt, Extra.GetData(), Win, Str);
+	if (IsPendingKillPending() || (Carriers.Num() == 0 && !AntCarry::HasWorkers(this)))
 	{
-		AAntCharacter* A = Carriers[i];
-		const bool bPooled = Pool > 0.f && FMath::Clamp<int32>(A->Team, 0, 1) == Win;
-		const FVector P = TM.TransformPosition(GrabLocal[i]);
-		const FVector H = HoldPoint(A) + FVector(0.f, 0.f, (bLift && bPooled) ? 28.f : 0.f);
-		const FVector V = Body->GetPhysicsLinearVelocityAtPoint(P) - A->GetVelocity();
-		const float Share = Mass / N;
-		FVector F = Share * (40.f * (H - P) - 7.f * V) + FVector(0.f, 0.f, Share * Gravity);   // spring + hold up its share
-		const float MaxF = bPooled ? Pool : (A->GetStrength() + Extra[i]) * ForcePerStrength;
-		if (bPooled && bLift)
-		{
-			// A carrier that stands lower than the load (it has stepped down off a shelf, the others are still up there) does
-			// not drag it down: gravity does that. (It did: the leader below pulled the front of the cake onto the edge with all
-			// its share while the three above could not hold both the weight and him.)
-			F.Z = FMath::Max((float)F.Z, 0.f);
-		}
-		if (F.SizeSquared() > MaxF * MaxF)
-		{
-			F = F.GetSafeNormal() * MaxF;
-		}
-		Body->AddForceAtLocation(F, P);
+		return;
 	}
 
 	// Home?
@@ -827,6 +806,8 @@ void AKitchenLoot::ServerCarryTick(float Dt)
 			{
 				if (A->Team == CarrierTeam) { Team.Add(A); }
 			}
+			AntCarry::CreditAnts(this, CarrierTeam, Team);   // the commanders of the workers that carried it
+			AntCarry::Notify(this, AntCarryEvent::Delivered, CarrierTeam);
 			GM->OnFoodDelivered(CarrierTeam, this, Team);
 			AntSfx::Everyone(this, AntSfx::Deliver, L, CarrierTeam == 0 ? 1.f : 0.75f);
 		}

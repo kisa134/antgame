@@ -1,4 +1,5 @@
 ﻿#include "AntHUD.h"
+#include "AntCarry.h"
 #include "KitchenInteractables.h"
 #include "AntSwarm.h"
 #include "AntCharacter.h"
@@ -220,6 +221,7 @@ void AAntHUD::DrawHUD()
 	if (!bVoteScreen)
 	{
 		DrawWorldTags(Me);   // names and health bars would sit on top of the cards
+		AntCarry::DrawHud(this, Canvas, Me);   // strain marks on carried loads, the carriers' shouts
 	}
 
 	if (AAntCharacter* Ant = Cast<AAntCharacter>(Me))
