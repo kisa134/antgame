@@ -1107,7 +1107,7 @@ namespace AntRts
 
 		// ---- The mass meter (left).
 		{
-			const float X = 24.f * K, Y = 300.f * K, BW = 300.f * K, BH = 14.f * K;
+			const float X = 24.f * K, Y = 150.f * K, BW = 300.f * K, BH = 14.f * K;
 			const float Frac = FMath::Clamp((float)(S->Mass - S->PrevAt) / FMath::Max(1, S->NextAt - S->PrevAt), 0.f, 1.f);
 			Text(Cv, FString::Printf(TEXT("МАССА %d · до выбора %d"), S->Mass, FMath::Max(0, S->NextAt - S->Mass)), X, Y - 22.f * K, RtsGold, Med, 1.f * K);
 			Rect(Cv, X, Y, BW, BH, FLinearColor(0.f, 0.f, 0.f, 0.5f));
@@ -1126,7 +1126,7 @@ namespace AntRts
 
 		// ---- Groups and their jobs (left, under the meter).
 		{
-			float Y = 350.f * K;
+			float Y = 200.f * K;
 			const float X = 24.f * K;
 			int32 Followers = 0;
 			for (uint8 T : P->SquadTask) { Followers += T == 255 ? 1 : 0; }
@@ -1147,7 +1147,7 @@ namespace AntRts
 				}
 				Text(Cv, Line, X, Y, C, Small, 1.f * K);
 				Y += 16.f * K;
-				if (Y > 560.f * K) { break; }
+				if (Y > 390.f * K) { break; }
 			}
 			if (In)
 			{

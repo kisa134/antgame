@@ -136,6 +136,13 @@ void AAntTrailNet::BeginPlay()
 	UMaterialInterface* Glow = LoadObject<UMaterialInterface>(nullptr, TEXT("/Engine/EngineMaterials/EmissiveMeshMaterial.EmissiveMeshMaterial"));
 	auto MakeDots = [this, Glow](const TCHAR* Name, const FLinearColor& Color)
 	{
+		if (bHasMaterial)
+		{
+			// The swarm's GPU material (it is made for instances): a flat glowing disc that does not move (speed 0).
+			UInstancedStaticMeshComponent* D = MakeWorkerPart(Name, FVector::ZeroVector, FVector(4.5f, 4.5f, 0.8f), 0.f, Color * 0.4f, AntKit::ShapeMesh(EAntShape::Sphere), nullptr);
+			if (MIDs.Num() > 0) { MIDs.Last()->SetVectorParameterValue(TEXT("Glow"), Color); }
+			return D;
+		}
 		UInstancedStaticMeshComponent* C = NewObject<UInstancedStaticMeshComponent>(this, Name);
 		C->SetupAttachment(RootComponent);
 		C->SetMobility(EComponentMobility::Movable);
@@ -282,6 +289,8 @@ void AAntTrailNet::Rebuild()
 	TArray<float> Data;
 	TArray<FTransform> DotXf;
 	TArray<FTransform> LayXf;
+	TArray<float> DotData;
+	TArray<float> LayData;
 	const AAntSnowball* Snow = AAntSnowball::Get(GetWorld());
 	for (const FAntTrailLine& L : Lines)
 	{
@@ -292,6 +301,7 @@ void AAntTrailNet::Rebuild()
 		}
 		// The dotted line.
 		TArray<FTransform>& Into = L.bLaying ? LayXf : DotXf;
+		TArray<float>& IntoData = L.bLaying ? LayData : DotData;
 		float Carry = 0.f;
 		for (int32 i = 0; i + 1 < NP && Into.Num() < 6000; ++i)
 		{
@@ -303,7 +313,10 @@ void AAntTrailNet::Rebuild()
 			while (T < Seg)
 			{
 				const FVector P = FMath::Lerp(A, B, Seg > 0.f ? T / Seg : 0.f) + Nn * 1.2f;
-				Into.Add(FTransform(FQuat::Identity, P, FVector(0.035f, 0.035f, 0.012f)));
+				const FVector Q = P + (B - A).GetSafeNormal() * 2.f;
+				const float DD[TrailLook::NumData] = { (float)P.X, (float)P.Y, (float)P.Z, (float)Q.X, (float)Q.Y, (float)Q.Z, (float)Nn.X, (float)Nn.Y, (float)Nn.Z, 0.f, 0.f, 0.f, 0.f };
+				Into.Add(bHasMaterial ? FTransform(FQuat::Identity, P, FVector(1.6f)) : FTransform(FQuat::Identity, P, FVector(0.035f, 0.035f, 0.012f)));
+				IntoData.Append(DD, TrailLook::NumData);
 				T += TrailLook::DotStep;
 			}
 			Carry = T - Seg;
@@ -378,10 +391,19 @@ void AAntTrailNet::Rebuild()
 		}
 		C->MarkRenderStateDirty();
 	}
-	Dots->ClearInstances();
-	if (DotXf.Num() > 0) { Dots->AddInstances(DotXf, false, true); }
-	LayDots->ClearInstances();
-	if (LayXf.Num() > 0) { LayDots->AddInstances(LayXf, false, true); }
+	auto FillDots = [this](UInstancedStaticMeshComponent* C, const TArray<FTransform>& T, const TArray<float>& D)
+	{
+		C->ClearInstances();
+		if (T.Num() == 0) { return; }
+		C->AddInstances(T, false, true);
+		if (bHasMaterial)
+		{
+			for (int32 i = 0; i < T.Num(); ++i) { C->SetCustomData(i, TArrayView<const float>(D.GetData() + i * TrailLook::NumData, TrailLook::NumData), false); }
+		}
+		C->MarkRenderStateDirty();
+	};
+	FillDots(Dots, DotXf, DotData);
+	FillDots(LayDots, LayXf, LayData);
 }
 
 void AAntTrailNet::DrawFerries()

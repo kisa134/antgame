@@ -12,6 +12,8 @@
 #include "AntKitchenGameMode.h"
 #include "KitchenLoot.h"
 #include "KitchenBuilder.h"
+#include "AntRoutes.h"
+#include "AntRun.h"
 #include "Net/UnrealNetwork.h"
 #include "EngineUtils.h"
 #include "Engine/World.h"
@@ -218,7 +220,7 @@ void AAntSnowball::Begin(AAntRaid* Raid)
 	for (FAntSnowPlayer& P : Players) { P.PicksDone = 0; }
 	NextAt = Threshold(0);
 	int32 Auto = -1;
-	if (FParse::Value(FCommandLine::Get(), TEXT("AntAutoPick="), Auto)) { AutoPick = FMath::Clamp(Auto - 1, -1, 2); }
+	if (FParse::Value(FCommandLine::Get(), TEXT("AntAutoPick="), Auto)) { AutoPick = Auto == 9 ? 8 : FMath::Clamp(Auto - 1, -1, 2); }
 	if (AAntTrailNet* T = AAntTrailNet::Get(GetWorld(), true)) { T->Clear(); }
 	if (Raid)
 	{
@@ -454,7 +456,26 @@ void AAntSnowball::Second()
 		}
 		if (P.Offer.Num() > 0 && (Now >= P.OfferEnds || AutoPick >= 0))
 		{
-			const int32 Opt = AutoPick >= 0 ? FMath::Min(AutoPick, P.Offer.Num() - 1) : Rng.RandRange(0, P.Offer.Num() - 1);
+			int32 Opt = AutoPick >= 0 ? FMath::Min(AutoPick, P.Offer.Num() - 1) : Rng.RandRange(0, P.Offer.Num() - 1);
+			if (AutoPick == 8)
+			{
+				// Dev (-AntAutoPick=9): what a sensible player would take - workers when the trail is empty, a squad, then the trail.
+				auto Score = [&P](uint8 Id)
+				{
+					switch (Id)
+					{
+					case AntPick::Workers12: case AntPick::Workers25: return P.Workers < 12 ? 100 : 45;
+					case AntPick::Recruit2: case AntPick::Recruit3: case AntPick::Veteran: return P.Squad.Num() < 8 ? 90 : 60;
+					case AntPick::TrailForage: return P.Workers > 0 && P.Lv[AntBoost::Forage] == 0 ? 80 : 35;
+					case AntPick::TrailFast: case AntPick::TrailHeavy: return 50;
+					case AntPick::SquadStrong: case AntPick::SquadFast: return 55;
+					case AntPick::Carry: case AntPick::Speed: return 40;
+					default: return 20;
+					}
+				};
+				Opt = 0;
+				for (int32 i = 1; i < P.Offer.Num(); ++i) { if (Score(P.Offer[i]) > Score(P.Offer[Opt])) { Opt = i; } }
+			}
 			if (AutoPick < 0) { UE_LOG(LogTemp, Display, TEXT("ANTSNOW auto pick for %s (10 s passed)"), *P.PS->GetPlayerName()); }
 			Pick(P.PS, Opt);
 		}
@@ -722,6 +743,51 @@ namespace AntSnowball
 			{
 				const int32 K = T->Cut(FVector(ANum(2), ANum(3), ANum(4)), ANum(5, 200.f), TEXT("отладка"));
 				UE_LOG(LogTemp, Display, TEXT("ANTTRAIL dev cut: %d workers"), K);
+			}
+			else if (Sub == TEXT("key"))
+			{
+				// trail key: [T] for the player's ant (start / finish laying)
+				if (AAntCharacter* Ant = PS ? Cast<AAntCharacter>(PS->GetPawn()) : nullptr) { AntTrail::OnToggleKey(Ant); }
+			}
+			else if (Sub == TEXT("goto"))
+			{
+				// trail goto <route node>: the host's ant walks there along the route graph, on the floor (the dev walker of "go")
+				AAntCharacter* Ant = Host ? Cast<AAntCharacter>(Host->GetPawn()) : nullptr;
+				const int32 Node = FMath::Clamp((int32)ANum(2), 0, AntRoutes::NumNodes() - 1);
+				TArray<FVector> Way;
+				if (Ant && AntRoutes::PathPoints(Ant->GetActorLocation(), AntRoutes::Point(Node), false, Way, nullptr, AntRoutes::FloorOnly))
+				{
+					GM->DevGoPts = Way;
+					GM->DevGoStart = GM->DevGoBestAt = W->GetTimeSeconds();
+					GM->DevGoBest = 1.e9f;
+					GM->DevGoLogAt = 0.f;
+					UE_LOG(LogTemp, Display, TEXT("ANTTRAIL dev goto %d: %d points"), Node, Way.Num());
+				}
+			}
+			else if (Sub == TEXT("fetch"))
+			{
+				// trail fetch: the host's ant walks to the nearest light food on the floor (then "grab" and "trail goto 0" bring it home)
+				AAntCharacter* Ant = Host ? Cast<AAntCharacter>(Host->GetPawn()) : nullptr;
+				AKitchenLoot* Best = nullptr;
+				float BestD = FMath::Square(ANum(2, 6000.f));
+				for (TActorIterator<AKitchenLoot> It(W); Ant && It; ++It)
+				{
+					const FVector P = It->GetActorLocation();
+					if (It->bIsGear || It->bMain || It->bBody || It->IsCarried() || It->bHeld || It->IsHidden() || It->Weight > 12 || P.Z > 150.f
+						|| FVector::Dist2D(P, AKitchenBuilder::NestLocation(0)) < 1300.f || KitchenContainers::SealedAt(W, P) >= 0) { continue; }
+					const float D = (float)FVector::DistSquared(P, Ant->GetActorLocation());
+					if (D < BestD) { BestD = D; Best = *It; }
+				}
+				TArray<FVector> Way;
+				if (Best && AntRoutes::PathPoints(Ant->GetActorLocation(), Best->GetActorLocation(), false, Way, nullptr, AntRoutes::FloorOnly))
+				{
+					Way.Add(Best->GetActorLocation());
+					GM->DevGoPts = Way;
+					GM->DevGoStart = GM->DevGoBestAt = W->GetTimeSeconds();
+					GM->DevGoBest = 1.e9f;
+					GM->DevGoLogAt = 0.f;
+				}
+				UE_LOG(LogTemp, Display, TEXT("ANTTRAIL dev fetch: %s at %s, %d points"), Best ? *Best->LootName : TEXT("nothing"), Best ? *Best->GetActorLocation().ToCompactString() : TEXT("-"), Way.Num());
 			}
 			else if (Sub == TEXT("mid"))
 			{
