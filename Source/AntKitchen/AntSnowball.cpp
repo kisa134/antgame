@@ -485,6 +485,19 @@ void AAntSnowball::Second()
 		}
 		AntRts::TasksSecond(P);
 	}
+	// The family drops crumbs all evening: a light crumb on the floor every few seconds, so that trails have something to
+	// fetch (the flat holds only ~30 light pieces on its floors at the start). -AntCrumbEvery=N seconds, 0 = off.
+	static float CrumbEvery = -1.f;
+	if (CrumbEvery < 0.f) { CrumbEvery = 6.f; FParse::Value(FCommandLine::Get(), TEXT("AntCrumbEvery="), CrumbEvery); }
+	if (CrumbEvery > 0.f && Now >= NextCrumb)
+	{
+		NextCrumb = Now + CrumbEvery;
+		if (AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
+		{
+			const FVector P = AKitchenBuilder::RandomFloorPoint() + FVector(0.f, 0.f, 30.f);
+			if (FVector::Dist2D(P, AKitchenBuilder::NestLocation(0)) > 1500.f && KitchenContainers::SealedAt(GetWorld(), P) < 0) { GM->SpawnFood(P, 0); }
+		}
+	}
 	if (Now >= NextTimeline)
 	{
 		NextTimeline = Now + 10.f;

@@ -137,6 +137,7 @@ public:
 	int32 AutoPick = -1;
 	float StartedAt = 0.f;
 	float NextTimeline = 0.f;
+	float NextCrumb = 0.f;
 	TArray<uint8> CardsAdded;
 	FRandomStream Rng;
 };

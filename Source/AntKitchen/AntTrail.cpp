@@ -812,7 +812,7 @@ void AAntTrailNet::Forage(FAntTrailLine& L, float Dt)
 	// Bounding box of the trail, grown by the reach.
 	FBox Box(ForceInit);
 	for (const FVector_NetQuantize& P : L.Points) { Box += FVector(P); }
-	Box = Box.ExpandBy(Reach + 60.f);
+	Box = Box.ExpandBy(FMath::Max(Reach, 700.f) + 60.f);
 	TArray<TPair<float, AKitchenLoot*>> Found;
 	for (TActorIterator<AKitchenLoot> It(GetWorld()); It; ++It)
 	{
