@@ -195,6 +195,8 @@ private:
 	void ServerPhysicsTick(float Dt);
 	void SpillRiders(const FVector& Vel);
 	void Crush(const FVector& At, float Radius, float Kg);
+	/** Server: level v3 fixtures lying or standing on it (the tablecloth, a jar) go over with it. */
+	void KnockFixtures(const FVector& Dir, const TCHAR* Why);
 	void PushPose();
 	float NetNow() const;
 	UFUNCTION() void OnPhysHit(UPrimitiveComponent* HitComp, AActor* Other, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);

@@ -666,6 +666,7 @@ void AAntWreckBody::ApplyLean(const FVector& InDir)
 	const FVector L = Pivot + Q.RotateVector(GetActorLocation() - Pivot);
 	SetActorLocationAndRotation(L, Q * GetActorQuat(), false, nullptr, ETeleportType::TeleportPhysics);
 	PushPose();
+	KnockFixtures(Dir, TEXT("lean"));
 	UE_LOG(LogTemp, Display, TEXT("ANTWRECK %s leans %.0f deg toward (%.2f, %.2f)"), *PieceName(), Deg, Dir.X, Dir.Y);
 }
 
@@ -743,6 +744,7 @@ bool AAntWreckBody::Wake(const FVector& Impulse, const FVector& At, bool bForce)
 	}
 	// Its boxes only approximate it: where one starts inside a neighbour it eases out instead of being fired off.
 	Root->BodyInstance.SetMaxDepenetrationVelocity(60.f);
+	KnockFixtures(Impulse, TEXT("wake"));
 	Root->SetSimulatePhysics(true);
 	Root->SetMassOverrideInKg(NAME_None, Mass, true);
 	Root->SetLinearDamping(0.08f);
@@ -846,6 +848,24 @@ void AAntWreckBody::OnPhysHit(UPrimitiveComponent* HitComp, AActor* Other, UPrim
 	TakeHit(At, FVector::ZeroVector, SelfDmg, this);
 }
 
+void AAntWreckBody::KnockFixtures(const FVector& InDir, const TCHAR* Why)
+{
+	const FBox Me = WorldBox();
+	const FVector Dir = InDir.GetSafeNormal2D().IsNearlyZero() ? FVector::ForwardVector : InDir.GetSafeNormal2D();
+	for (TActorIterator<AKitchenFixture> It(GetWorld()); It; ++It)
+	{
+		AKitchenFixture* Fx = *It;
+		const FVector L = Fx->GetActorLocation();
+		if (Fx->State != AKitchenFixture::Fixed || L.X < Me.Min.X || L.X > Me.Max.X || L.Y < Me.Min.Y || L.Y > Me.Max.Y || L.Z < Me.Max.Z - 250.f || L.Z > Me.Max.Z + 600.f)
+		{
+			continue;
+		}
+		Fx->PushDir = Dir;
+		Fx->Fall(Dir, nullptr, Why);
+		UE_LOG(LogTemp, Display, TEXT("ANTWRECK %s takes the fixture %s with it (%s)"), *PieceName(), *Fx->FixId(), Why);
+	}
+}
+
 void AAntWreckBody::Crush(const FVector& At, float Radius, float Kg)
 {
 	if (AAntSwarm* Swarm = AAntSwarm::Get(GetWorld()))
@@ -915,7 +935,9 @@ void AAntWreckBody::RebuildLook()
 		{
 			continue;
 		}
-		const FVector Off = (Cut[c]->Box.GetCenter() - All.GetCenter()).GetSafeNormal() * Gap;
+		FVector Off = Cut[c]->Box.GetCenter() - All.GetCenter();
+		Off.Z = FMath::Min(0.f, (float)Off.Z);   // (sideways and down, never up through what lies on it)
+		Off = Off.GetSafeNormal() * Gap;
 		for (int32 k = 0; k < Cut[c]->Sections.Num(); ++k)
 		{
 			FProcMeshSection Sec = Cut[c]->Sections[k];
@@ -1007,6 +1029,7 @@ void AAntWreckBody::BreakApart(const FVector& Dir)
 		return;
 	}
 	SpillRiders(Dir * 300.f + FVector(0.f, 0.f, 100.f));
+	KnockFixtures(Dir, TEXT("break"));
 	const TArray<TSharedPtr<const AntWreckGeo::FGeo>>& Cut = AntWreckGeo::Cut(this, Mesh->GetStaticMesh(), Seed, AntWreckGeo::ChunkCount((float)WorldBox().GetSize().GetMax()));
 	for (int32 c = 0; c < Cut.Num() && c < 16; ++c)
 	{
