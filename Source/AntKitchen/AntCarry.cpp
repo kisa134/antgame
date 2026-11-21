@@ -37,7 +37,10 @@ namespace
 		float C = Opt(TEXT("AntCarryC="), 7.f);               // grip damper, 1/s
 		float Reserve = Opt(TEXT("AntCarryReserve="), 1.35f);// a carrier may give 135 % of its strength while the team has slack
 		float MainReserve = 1.75f;                            // the cake (it was carried with 1.75 before: over door rails)
-		float Brake = Opt(TEXT("AntCarryBrake="), 0.4f);     // ants brake with 40 % of their strength: the feet slip
+		float Brake = Opt(TEXT("AntCarryBrake="), 0.3f);     // braking: the feet slip - friction 0.3 of what presses them down
+		float SideMu = Opt(TEXT("AntCarrySide="), 0.5f);     // turning a running load: friction 0.5 (claws sideways)
+		float AntW = 0.6f;                                    // an ant's own weight, in weight units (it brakes even under a crumb)
+		float Upright = Opt(TEXT("AntCarryUpright="), 22.f); // how stiffly the jaws keep the load from tipping (1/s^2)
 		float Beat = Opt(TEXT("AntCarryBeat="), 55.f);       // units of travel per beat of the carriers' stride
 		float BeatAmp = Opt(TEXT("AntCarryBeatAmp="), 0.2f); // how much each carrier's support rises and falls with its stride
 		float Entrain = 4.f;                                  // how fast strides lock when they move as one (1/s)
@@ -95,6 +98,7 @@ struct FAntCarryState
 	int32 LastStrongEnough = -1;
 	bool bWasActive = false;
 	// clients
+	FVector UpRef = FVector::UpVector;   // server: which way was up when they took hold (the jaws keep it so)
 	struct FSnap { double T; FVector P; FQuat Q; FVector V; };
 	TArray<FSnap> Snaps;
 	float LastStamp = -1.f;
@@ -600,6 +604,10 @@ void AntCarry::ServerCarriersChanged(AKitchenLoot* L)
 		// While ants carry it the server sends its own smoothed state (FAntCarryNet); the engine's movement replication would
 		// make clients simulate it with gravity and snap it back 30 times a second.
 		L->SetReplicatingMovement(!bActive);
+		if (bActive)
+		{
+			S.UpRef = L->GetActorQuat().GetUpVector();
+		}
 		if (!bActive && !L->bHeld && !L->IsPendingKillPending())
 		{
 			AntCarry::Notify(L, AntCarryEvent::Dropped, L->CarrierTeam);
@@ -1063,15 +1071,18 @@ void FAntCarrySolver::Tick(AKitchenLoot* L, float Dt, const float* Extra, int32 
 	{
 		FAntCarryState::FMate& M = S.Mates[i];
 		const float Own = FMath::Max(0.5f, Str[i]) * FPS;
-		// ants brake badly: against the way the load goes they hold with a part of their strength (feet slip)
-		if (LoadSp > 80.f)
+		// Pushing ahead the claws dig in (strength is the limit); braking and turning a running load the feet slip: friction of
+		// what presses them down (their share of the load and their own weight). Easy to start, hard to stop or turn.
+		if (LoadSp > 60.f)
 		{
-			const float Along = (float)FVector::DotProduct(Flat(F[i]), LoadDir);
-			const float MaxBrake = K.Brake * Own;
-			if (Along < -MaxBrake)
-			{
-				F[i] -= LoadDir * (Along + MaxBrake);
-			}
+			const float Normal = (Share[i] * Mass + K.AntW * AKitchenLoot::KgPerWeight) * G;
+			const FVector Fh = Flat(F[i]);
+			float Along = (float)FVector::DotProduct(Fh, LoadDir);
+			FVector Side = Fh - LoadDir * Along;
+			const float MaxBrake = K.Brake * Normal, MaxSide = K.SideMu * Normal;
+			if (Along < -MaxBrake) { Along = -MaxBrake; }
+			if (Side.Size() > MaxSide) { Side = Side.GetSafeNormal() * MaxSide; }
+			F[i] = LoadDir * Along + Side + FVector(0.f, 0.f, F[i].Z);
 		}
 		const float Max = Own * Reserve * SyncEff;
 		const float Asked = (float)F[i].Size();
@@ -1084,6 +1095,20 @@ void FAntCarrySolver::Tick(AKitchenLoot* L, float Dt, const float* Extra, int32 
 		M.Share = Share[i];
 		M.Pull = Flat(F[i]) / Own;
 		B->AddForceAtLocation(F[i], P[i]);
+	}
+	// The jaws keep the load the way it was taken (it does not topple off the grips): a tilt spring, limited by the winning
+	// side's strength; turning about the vertical stays free (twisting is the carriers' business).
+	{
+		const FVector Up = L->GetActorQuat().GetUpVector();
+		const FVector Axis = FVector::CrossProduct(Up, S.UpRef);
+		const FVector Wang = B->GetPhysicsAngularVelocityInRadians();
+		const FVector Wtilt = Wang - FVector::UpVector * Wang.Z;
+		const float R = L->GetRadius();
+		const float I = Mass * R * R * 0.4f;
+		FVector Tq = I * (K.Upright * Axis - 5.f * Wtilt);
+		const float MaxTq = TeamStr[Win] * FPS * R * 0.5f;
+		if (Tq.Size() > MaxTq) { Tq = Tq.GetSafeNormal() * MaxTq; }
+		B->AddTorqueInRadians(Tq);
 	}
 	// no explosions: a carried load never goes faster than a thrown one, nor spins like a top
 	if (LoadV.Size() > K.MaxLoadSpeed)
@@ -1204,6 +1229,39 @@ void AntCarry::ClientTick(AKitchenLoot* L, float Dt)
 		Rot = FQuat::Slerp(A.Q, Bn.Q, U);
 	}
 	L->SetActorLocationAndRotation(Pos, Rot, false, nullptr, ETeleportType::TeleportPhysics);
+
+	// Dev (-AntCarryClientShots=20,24,28): a client looks at the carried load from the side and takes a picture at these seconds
+	// (Saved/Screenshots/carry/client_NN.png) - to see the replicated load on a client.
+	static TArray<float> ShotAt = [] { TArray<float> Out; FString V; if (FParse::Value(FCommandLine::Get(), TEXT("AntCarryClientShots="), V, false)) { TArray<FString> P; V.ParseIntoArray(P, TEXT(",")); for (const FString& X : P) { Out.Add(FCString::Atof(*X)); } } return Out; }();
+	static uint64 ShotFrame = 0;
+	if (ShotAt.Num() > 0 && ShotFrame != GFrameCounter)
+	{
+		ShotFrame = GFrameCounter;
+		static TWeakObjectPtr<ACameraActor> Cam;
+		static int32 Shot = 0;
+		APlayerController* PC = L->GetWorld()->GetFirstPlayerController();
+		if (PC && Net.Grips.Num() > 1)
+		{
+			if (!Cam.IsValid())
+			{
+				Cam = L->GetWorld()->SpawnActor<ACameraActor>();
+				if (Cam.IsValid()) { Cam->GetCameraComponent()->SetFieldOfView(55.f); Cam->GetCameraComponent()->bConstrainAspectRatio = false; }
+			}
+			if (ACameraActor* C = Cam.Get())
+			{
+				const FVector Off(0.f, -(L->GetRadius() * 1.6f + 150.f), 90.f);
+				C->SetActorLocationAndRotation(Pos + Off, (-Off).Rotation());
+				if (PC->GetViewTarget() != C) { PC->SetViewTargetWithBlend(C, 0.f); }
+			}
+			const float Tw = L->GetWorld()->GetTimeSeconds();
+			if (ShotAt.IsValidIndex(Shot) && Tw >= ShotAt[Shot])
+			{
+				FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir() / TEXT("Screenshots") / TEXT("carry") / FString::Printf(TEXT("client_%02d.png"), Shot), true, false);
+				UE_LOG(LogTemp, Display, TEXT("ANTCARRY client shot %d at %.1f s of «%s» (%d carriers)"), Shot, Tw, *L->LootName, Net.Grips.Num());
+				++Shot;
+			}
+		}
+	}
 
 	// Dev (-AntCarryClientLog): how smooth the load moves here - the mean and worst "kink" (second difference of the shown
 	// position per frame) next to its speed, once a second.
