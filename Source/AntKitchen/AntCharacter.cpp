@@ -538,6 +538,7 @@ void AAntCharacter::OnRep_BodyColor()
 	{
 		Tint = FMath::Lerp(FLinearColor::White, BodyColor / MaxC, 0.7f) * 1.3f;
 	}
+	Tint *= MessTint;   // a coat of jam or cream (AntMess.cpp)
 	for (UMaterialInstanceDynamic* M : ArtMIDs)
 	{
 		if (M) { M->SetVectorParameterValue(TEXT("Tint"), Tint); }

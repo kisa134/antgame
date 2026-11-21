@@ -38,6 +38,7 @@
 #include "AntRaid.h"
 #include "KitchenSlick.h"
 #include "AntFilm.h"
+#include "AntMess.h"
 #include "Engine/OverlapResult.h"
 #include "NpcRoutine.h"
 #include "AntCarry.h"
@@ -1548,6 +1549,10 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 	if (AntCarry::DevCommand(this, A))
 	{
 		return;   // carrying together: carry spawn|crew|go|desync|yank|stop|kill|human|rivals|army|workers|ramp|corner|cam|shot|log|info (AntCarry.cpp)
+	}
+	if (AntMess::DevCommand(this, A))
+	{
+		return;   // mess stain|test|break|splat|burst|jamwalk|walk|dust|stir|clean|fill|hide|cost|profilegpu|info (AntMess.cpp)
 	}
 	if (AntBodyRules::DevCommand(this, A))
 	{
