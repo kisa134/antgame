@@ -31,6 +31,7 @@
 #include "AntFilm.h"
 #include "KitchenSlick.h"
 #include "Misc/ScopeExit.h"
+#include "AntRts.h"
 
 namespace
 {
@@ -243,6 +244,7 @@ void AAntHUD::DrawHUD()
 	DrawTrophies(GS, Me);
 	DrawRun(GS, Me);
 	if (Raid) { DrawRaid(Raid, GS, Me); }
+	if (Raid) { AntRts::DrawHud(this, Canvas, PC); }   // the snowball: mass, picks, squad groups, selection (AntRts.cpp)
 	DrawFeed(GS);
 	DrawToastsAndNumbers(PC);
 	DrawHelp(Me);

@@ -19,6 +19,7 @@
 #include "LevelV2.h"
 #include "EngineUtils.h"
 #include "Engine/World.h"
+#include "AntRts.h"
 
 namespace
 {
@@ -216,6 +217,10 @@ void OnDoorSlammed(AKitchenInteractable* Door)
 
 bool Recall(AAntCharacter* Ant)
 {
+	if (AntRts::RecallAll(Ant))
+	{
+		return true;
+	}
 	AAntArmy* A = Find(Ant);
 	if (!A)
 	{
@@ -233,6 +238,10 @@ bool Recall(AAntCharacter* Ant)
 void Order(AAntCharacter* Ant, uint8 Order, const FVector& Aim)
 {
 	if (!Ant || Ant->bDead)
+	{
+		return;
+	}
+	if (AntRts::SquadKey(Ant, Order, Aim))
 	{
 		return;
 	}
@@ -366,6 +375,10 @@ bool HandleCommand(AAntCharacter* Ant, uint8 Cmd, const FVector& Point)
 	}
 	// F / Z: follow.  R / X: attack what I aim at (aimed at my own feet: follow).  C: free.
 	const uint8 What = (Cmd == 0 || Cmd == 2) ? Follow : (Cmd == 1 || Cmd == 3) ? Attack : Free;
+	if (AntRts::SquadKey(Ant, What, Point))
+	{
+		return true;   // the snowball raid: the keys go to the smart squad (AntRts.cpp)
+	}
 	if (What == Attack && FVector::Dist(Point, Ant->GetActorLocation()) < 120.f)
 	{
 		Order(Ant, Follow, Point);

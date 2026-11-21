@@ -42,6 +42,7 @@
 #include "Engine/OverlapResult.h"
 #include "NpcRoutine.h"
 #include "AntCarry.h"
+#include "AntSnowball.h"
 
 namespace
 {
@@ -1538,9 +1539,17 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 	{
 		return;   // the pets and the family: cat ..., dog ..., gran ..., kid ..., npclevel N (CritterBrain.cpp)
 	}
+	if (AntMess::DevCommand(this, A))
+	{
+		return;   // mess stain|test|break|splat|burst|jamwalk|walk|dust|stir|clean|fill|hide|cost|profilegpu|info (AntMess.cpp); before NpcRoutine: its bare "mess" would swallow these
+	}
 	if (NpcRoutine::DevCommand(this, A))
 	{
 		return;   // level v3, the residents' evening and their mess: routine plan|info|warp S|skip who|goto step|off|on, mess, react <fixture>
+	}
+	if (AntSnowball::DevCommand(this, A))
+	{
+		return;   // snow ..., trail ..., rts ..., perf ..., squad+ ... (AntSnowball.cpp)
 	}
 	if (Raid && Raid->DevCommand(A))
 	{
@@ -1549,10 +1558,6 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 	if (AntCarry::DevCommand(this, A))
 	{
 		return;   // carrying together: carry spawn|crew|go|desync|yank|stop|kill|human|rivals|army|workers|ramp|corner|cam|shot|log|info (AntCarry.cpp)
-	}
-	if (AntMess::DevCommand(this, A))
-	{
-		return;   // mess stain|test|break|splat|burst|jamwalk|walk|dust|stir|clean|fill|hide|cost|profilegpu|info (AntMess.cpp)
 	}
 	if (AntBodyRules::DevCommand(this, A))
 	{

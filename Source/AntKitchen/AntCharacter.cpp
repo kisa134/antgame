@@ -41,6 +41,8 @@
 #include "AntCarry.h"
 #include "AntBody.h"
 #include "AntFilm.h"
+#include "AntSnowball.h"
+#include "AntTrail.h"
 
 AAntCharacter::AAntCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<UAntMovementComponent>(ACharacter::CharacterMovementComponentName))
@@ -125,13 +127,13 @@ void AAntCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 float AAntCharacter::GetStrength() const
 {
 	const float S = StrengthOverride >= 0.f ? StrengthOverride : GetClassDef().Strength;
-	return (Team == 0 && Creature == 0 && AntCard::Has(this, AntCard::Jaws)) ? S * 1.25f : S;
+	return ((Team == 0 && Creature == 0 && AntCard::Has(this, AntCard::Jaws)) ? S * 1.25f : S) * AntSnowball::CarryMul(this);
 }
 
 float AAntCharacter::AcidCost() const
 {
 	const float Cost = Weapon.bWeb ? 18.f : 7.f + Weapon.Damage * 0.25f;
-	return (Team == 0 && AntCard::Has(this, AntCard::Acid)) ? Cost * 0.65f : Cost;
+	return ((Team == 0 && AntCard::Has(this, AntCard::Acid)) ? Cost * 0.65f : Cost) * AntSnowball::AcidMul(this);
 }
 
 float AAntCharacter::DashCooldown() const
@@ -761,7 +763,7 @@ void AAntCharacter::RamCheck()
 			continue;
 		}
 		RamUntil = 0.f;
-		const bool bHadLoad = O->Carrying != nullptr;
+		const bool bHadLoad = O->Carrying != nullptr && !AntSnowball::Grip(O);
 		if (bHadLoad)
 		{
 			O->LetGo();
@@ -855,6 +857,10 @@ void AAntCharacter::ServerToggleTrail_Implementation()
 	{
 		return;
 	}
+	if (AntTrail::OnToggleKey(this))
+	{
+		return;   // the snowball raid: trails from the nest with workers that fetch crumbs (AntTrail.cpp)
+	}
 	if (bLayingTrail)
 	{
 		CancelTrail(TEXT("Тропа отменена"));
@@ -892,6 +898,10 @@ void AAntCharacter::ServerToggleTrail_Implementation()
 
 void AAntCharacter::ServerRecallSwarm_Implementation()
 {
+	if (AntTrail::OnRecallKey(this))
+	{
+		return;
+	}
 	if (AAntSwarm* Swarm = AAntSwarm::Get(GetWorld()))
 	{
 		const int32 N = Swarm->RecallStreams(GetDisplayName());
@@ -1675,7 +1685,7 @@ void AAntCharacter::ServerBite_Implementation()
 	const FVector Me = GetActorLocation();
 	FVector Fwd = Controller ? Controller->GetControlRotation().Vector() : GetActorForwardVector();
 	const float Reach = 95.f * AntShrink;
-	const float Dmg = 30.f * DamageMult();
+	const float Dmg = 30.f * DamageMult() * AntSnowball::BiteMul(this);
 	bool bHit = false;
 	AAntPlayerController* PC = Cast<AAntPlayerController>(GetController());
 
@@ -1706,7 +1716,7 @@ void AAntCharacter::ServerBite_Implementation()
 			O->TearLegOff(Me);
 			UGameplayStatics::ApplyDamage(O, Dmg, GetController(), this, UDamageType::StaticClass());
 			O->ApplyLaunch((To.GetSafeNormal() * 520.f + O->GetVisualUp() * 260.f) * SpeedK);
-			if (O->Carrying) { O->LetGo(); O->Toast(TEXT("Тебя укусили — груз выпал!")); }
+			if (O->Carrying && !AntSnowball::Grip(O)) { O->LetGo(); O->Toast(TEXT("Тебя укусили — груз выпал!")); }
 			if (PC) { PC->ClientDamageNumber(O->GetActorLocation(), FMath::RoundToInt(Dmg), false); }
 			bHit = true;
 		}
@@ -2198,6 +2208,7 @@ void AAntCharacter::UpdateSpeed()
 
 	float Mult = 1.f - 0.1f * NumLostLegs();   // every torn-off leg costs speed
 	if (!Carrying && Team == 0 && Creature == 0 && AntCard::Has(this, AntCard::Legs)) { Mult *= 1.15f; }
+	Mult *= AntSnowball::SpeedMul(this);
 	if (HasStatus(AntStatus::Sticky)) { Mult *= 0.35f; }
 	if (HasStatus(AntStatus::Wet)) { Mult *= 0.7f; }
 	if (Temperature < 8.f)

@@ -60,6 +60,8 @@ public:
 	UFUNCTION(Server, Reliable) void ServerRaid(uint8 Cmd, int32 A, int32 B);
 	/** An order to my squad (AntSquad::EOrder) with the point under the crosshair: [Q] haul, [B] hold. */
 	UFUNCTION(Server, Reliable) void ServerSquad(uint8 Order, FVector_NetQuantize Aim);
+	/** The snowball raid (AntRts.h): a pick, the RTS selection, an order to some of my squad ants. Body in AntRts.cpp. */
+	UFUNCTION(Server, Reliable) void ServerSwarm(uint8 Cmd, int32 A, const TArray<class AAntCharacter*>& Ants, FVector_NetQuantize Point, AActor* Target);
 	void SquadHaul();
 	void SquadHold();
 	void UseTool0();
