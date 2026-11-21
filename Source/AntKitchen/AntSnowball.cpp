@@ -494,7 +494,18 @@ void AAntSnowball::Second()
 		NextCrumb = Now + CrumbEvery;
 		if (AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
 		{
-			const FVector P = AKitchenBuilder::RandomFloorPoint() + FVector(0.f, 0.f, 30.f);
+			// Half of them fall near the far end of somebody's trail (people drop crumbs where they eat; that is why ants lay trails there).
+			FVector P = AKitchenBuilder::RandomFloorPoint() + FVector(0.f, 0.f, 30.f);
+			const AAntTrailNet* TN = AAntTrailNet::Get(GetWorld());
+			if (TN && TN->Lines.Num() > 0 && Rng.FRand() < 0.5f)
+			{
+				const FAntTrailLine& L = TN->Lines[Rng.RandRange(0, TN->Lines.Num() - 1)];
+				if (!L.bLaying && L.Points.Num() > 1 && L.Points.Last().Z < 150.f)
+				{
+					const FVector2D Off = FMath::RandPointInCircle(1200.f);
+					P = FVector(L.Points.Last()) + FVector(Off.X, Off.Y, 40.f);
+				}
+			}
 			if (FVector::Dist2D(P, AKitchenBuilder::NestLocation(0)) > 1500.f && KitchenContainers::SealedAt(GetWorld(), P) < 0) { GM->SpawnFood(P, 0); }
 		}
 	}
