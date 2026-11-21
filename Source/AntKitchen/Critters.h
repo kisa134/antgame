@@ -169,6 +169,7 @@ private:
 	FVector SlideVel = FVector::ZeroVector;   // on spilled oil: the paws go out sideways (KitchenSlick.h)
 	float StuckTime = 0.f;
 	float LastNoiseTime = 0.f;
+	float NextWaterLook = 0.f, NextLapLog = 0.f;   // the real water (AntFluidWorld): the cat runs from it, the dog laps at it
 	FVector ScareFrom = FVector::ZeroVector;
 	FString ScareWhy;
 	TWeakObjectPtr<AActor> Interest;          // the food he is going to eat, the ball he is after

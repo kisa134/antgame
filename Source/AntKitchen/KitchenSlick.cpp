@@ -2,6 +2,7 @@
 #include "AntCharacter.h"
 #include "AntKitchenGameMode.h"
 #include "AntFx.h"
+#include "AntFluidWorld.h"
 #include "AntTypes.h"
 #include "KitchenArt.h"
 #include "Components/StaticMeshComponent.h"
@@ -119,19 +120,25 @@ void AKitchenSlick::Tick(float DeltaSeconds)
 		Destroy();
 		return;
 	}
+	// The real water (AntFluidWorld) draws the liquid itself and spreads it; this keeps the slip rule. A towel mops the real water too.
+	const bool bReal = UAntFluidWorld::Wanted();
+	if (bReal && HasAuthority() && WipeStart >= 0.f)
+	{
+		if (UAntFluidWorld* F = UAntFluidWorld::Active(this)) { F->Mop(GetActorLocation(), MaxRadius * 1.2f, DeltaSeconds); }
+	}
 	if (Pool)
 	{
 		const float K = FMath::Max(0.01f, R / MeshR);
 		Pool->SetRelativeScale3D(FVector(K, K * 0.82f, MeshR == 50.f ? 0.02f : KitchenArt::ImportScale));
-		Pool->SetVisibility(R > 4.f);
+		Pool->SetVisibility(R > 4.f && !bReal);
 	}
 	if (Sheen)
 	{
 		const float D = FMath::Max(0.01f, R * 2.f * 0.92f / 100.f);
 		Sheen->SetRelativeScale3D(FVector(D, D * 0.8f, 0.02f));
-		Sheen->SetVisibility(R > 4.f);
+		Sheen->SetVisibility(R > 4.f && !bReal);
 	}
-	if (GetNetMode() != NM_DedicatedServer && R > 20.f)
+	if (GetNetMode() != NM_DedicatedServer && R > 20.f && !bReal)
 	{
 		// Glugs while it runs out, then a ripple now and then; splashes under the towel while it is wiped.
 		FxClock += DeltaSeconds;
@@ -198,6 +205,12 @@ AKitchenSlick* AKitchenSlick::Spill(UWorld* World, const FVector& P, uint8 InKin
 	S->By = InBy;
 	S->FinishSpawning(TM);
 	UE_LOG(LogTemp, Display, TEXT("ANTSLICK %s puddle at %s, radius %.0f, lies %.0f s"), InKind == SlickKind::Oil ? TEXT("oil") : TEXT("water"), *At.ToCompactString(), S->MaxRadius, S->Life);
+	if (UAntFluidWorld* F = UAntFluidWorld::Active(World))
+	{
+		// The real liquid: as much as makes a puddle that big (a few millimetres of water; a film of oil), poured out over a second.
+		const float L = InKind == SlickKind::Oil ? 0.35f : FMath::Clamp(S->MaxRadius * S->MaxRadius * 2.6e-6f, 0.4f, 3.f);
+		F->AddSource(InKind == SlickKind::Oil ? AntFluid::Oil : AntFluid::Water, At + FVector(0.f, 0.f, 25.f), L, 1.f, 80.f);
+	}
 	return S;
 }
 

@@ -1,6 +1,7 @@
 ﻿#include "KitchenInteractables.h"
 #include "AntAudio.h"
 #include "AntFx.h"
+#include "AntFluidWorld.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "AntCharacter.h"
@@ -672,6 +673,11 @@ void AKitchenDoor::AffectAnt(AAntCharacter* Ant, FAntEnv& Env) const
 // Faucet
 // =============================================================================================
 
+bool AKitchenFaucet::RealWater()
+{
+	return UAntFluidWorld::Wanted();
+}
+
 AKitchenFaucet::AKitchenFaucet()
 {
 	InteractRadius = 230.f;
@@ -731,7 +737,8 @@ void AKitchenFaucet::Tick(float DeltaSeconds)
 
 	if (HasAuthority())
 	{
-		WaterLevel = FMath::Clamp(WaterLevel + (bOn ? 32.f : -14.f) * DeltaSeconds, BasinFloor, BasinTop);
+		// With the real water the sink fills by itself (AntFluidWorld); the stand-in level stays at the bottom.
+		WaterLevel = RealWater() ? BasinFloor : FMath::Clamp(WaterLevel + (bOn ? 32.f : -14.f) * DeltaSeconds, BasinFloor, BasinTop);
 	}
 	ShownLevel = FMath::FInterpTo(ShownLevel, WaterLevel, DeltaSeconds, 4.f);
 	for (int32 i = 0; i < Taps.Num() && i < 2; ++i)
@@ -779,8 +786,8 @@ void AKitchenFaucet::Tick(float DeltaSeconds)
 	}
 	if (StreamMesh)
 	{
-		StreamMesh->SetVisibility(bOn);
-		if (bOn)
+		StreamMesh->SetVisibility(bOn && !RealWater());
+		if (bOn && !RealWater())
 		{
 			const FVector S = Spout();
 			const float Bottom = FMath::Max(BasinFloor, ShownLevel);
@@ -831,6 +838,21 @@ void AKitchenFaucet::Interact(AAntCharacter* Ant)
 	}
 	else
 	{
+		if (RealWater() && !bOn)
+		{
+			// The valve is stiff for an 8 mm ant: two of them have to lean on the lever together (bots of the squad count).
+			const FVector V = bHotValve ? HotValve() : ColdValve();
+			int32 Near = 0;
+			for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
+			{
+				if (!It->bDead && FVector::Dist(It->GetActorLocation(), V) < 330.f) { ++Near; }
+			}
+			if (Near < 2)
+			{
+				Ant->Toast(TEXT("Вентиль тугой: нужен ещё один муравей рядом — вдвоём на рычаг!"));
+				return;
+			}
+		}
 		SetWater(true, bHotValve);
 		bNoisy = true;   // an ant left the tap running: the Human hears it and comes to turn it off
 		NextNoise = 0.f;

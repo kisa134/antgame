@@ -158,6 +158,10 @@ public:
 	/** Server: Human turns the tap on/off. */
 	void SetWater(bool bOn, bool bHotWater);
 	bool IsOn() const { return bOn; }
+	/** Server: the Human is told about it (the floor floods): he comes to shut it. */
+	void Alarm() { if (bOn) { bNoisy = true; NextNoise = 0.f; } }
+	/** The real water (UAntFluidWorld) draws the stream and the sink; the old stand-ins are off. */
+	static bool RealWater();
 
 	UPROPERTY(Replicated) bool bOn = false;
 	UPROPERTY(Replicated) bool bHot = false;

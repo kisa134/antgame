@@ -1,4 +1,5 @@
 ﻿#include "Critters.h"
+#include "AntFluidWorld.h"
 #include "AntCharacter.h"
 #include "AntArmy.h"
 #include "AntFx.h"
@@ -834,6 +835,30 @@ bool ACritter::CheckFrights(float Now)
 		{
 			Scare(It->GetActorLocation(), TEXT("воды"));
 			return true;
+		}
+	}
+	// The real water (AntFluidWorld): the cat will not set a paw in it and runs; Badrik laps at it (the puddle gets smaller).
+	if (UAntFluidWorld* Fluid = UAntFluidWorld::Active(this))
+	{
+		if (Me.Z < 250.f && Now >= NextWaterLook)
+		{
+			NextWaterLook = Now + 0.5f;
+			const FVector Fwd = GetActorForwardVector().GetSafeNormal2D();
+			FVector WetAt = FVector::ZeroVector; bool bWet = false;
+			for (const FVector& P : { Me, Me + Fwd * 350.f, Me + Fwd * 650.f })
+			{
+				if (Fluid->DepthAt(FVector(P.X, P.Y, Me.Z + 20.f)) > 1.5f) { WetAt = P; bWet = true; break; }
+			}
+			if (bWet && Kind == 1)
+			{
+				Scare(WetAt, TEXT("воды"));
+				return true;
+			}
+			if (bWet && Kind != 1)
+			{
+				Fluid->Mop(Me + Fwd * 200.f, 140.f, 0.5f * 0.35f);   // a dog drinks about a third of what a towel takes
+				if (Now >= NextLapLog) { NextLapLog = Now + 6.f; UE_LOG(LogTemp, Display, TEXT("ANTFLUID %s laps at the water at %s"), *DisplayName(), *WetAt.ToCompactString()); }
+			}
 		}
 	}
 	// A crash, the toaster going off, the trap snapping, the tap gushing.

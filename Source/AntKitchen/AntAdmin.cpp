@@ -1231,6 +1231,20 @@ void SAntAdminPanel::Rebuild()
 			{ TEXT("C4"), TEXT("Кола → лужа") }, { TEXT("C5"), TEXT("Шарик") }, { TEXT("C6"), TEXT("Спица → шарф") } };
 		for (const auto& C : Chains) { Btn(C[1], R(FString(TEXT("chain ")) + C[0]), Danger); }
 		Btn(TEXT("Всё сразу (хаос)"), R(TEXT("state chaos")), Danger);
+		Section(TEXT("Вода (настоящая жидкость, docs/FEATURES.md §29)"));
+		Btn(TEXT("Кран вкл"), R(TEXT("fluid tap on 5")), Blue);
+		Btn(TEXT("Кран сильно"), R(TEXT("fluid tap on 14")), Blue);
+		Btn(TEXT("Кран выкл"), R(TEXT("fluid tap off")));
+		Btn(TEXT("ПОТОП (кран 30 л/с, 20 с)"), R(TEXT("fluid flood 20 30")), Danger);
+		Btn(TEXT("Вылить ведро у прицела"), [this]() { Run(TEXT("fluid bucket ") + Aim() + TEXT(" 8")); }, Danger);
+		Btn(TEXT("Кола + ментос у прицела"), [this]() { Run(TEXT("fluid geyser ") + Aim() + TEXT(" 8")); }, Danger);
+		Btn(TEXT("Масло у прицела"), [this]() { Run(TEXT("fluid spill oil ") + Aim() + TEXT(" 0.5 200")); });
+		Btn(TEXT("Мёд у прицела"), [this]() { Run(TEXT("fluid spill honey ") + Aim() + TEXT(" 2 120")); });
+		Btn(TEXT("Осушить всё"), R(TEXT("fluid dry")), On);
+		Btn(TEXT("Слив раковины открыт"), R(TEXT("fluid drain 6")));
+		Btn(TEXT("Слив забит (переполнится)"), R(TEXT("fluid drain 0")));
+		Btn(TEXT("Отладка воды (на экран)"), R(TEXT("fluid debug")));
+		Btn(TEXT("Вода: инфо (в лог)"), R(TEXT("fluid info")));
 	}
 	else if (Tab == 5)   // ---------------------------------------------------------------- raid
 	{

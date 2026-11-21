@@ -1,5 +1,6 @@
 ﻿#include "KitchenBuilder.h"
 #include "AntGameState.h"
+#include "AntFluidWorld.h"
 #include "AntCharacter.h"
 #include "KitchenInteractables.h"
 #include "KitchenArt.h"
@@ -1631,6 +1632,7 @@ void AKitchenBuilder::BuildLivingRoom()
 
 void AKitchenBuilder::EnvironmentFor(const AAntCharacter* Ant, FAntEnv& Env)
 {
+	if (const UAntFluidWorld* Fluid = UAntFluidWorld::Get(Ant)) { Fluid->AffectAnt(Ant, Env); }   // the liquid prototype (-AntFluid)
 	const FVector P = Ant->GetActorLocation();
 	const bool bV2 = KitchenArt::Enabled();
 	// The radiator. Level v2: it hangs under the new living-room window in the south wall.

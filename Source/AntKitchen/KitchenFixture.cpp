@@ -1,5 +1,6 @@
 ﻿#include "KitchenFixture.h"
 #include "AntMess.h"
+#include "AntFluidWorld.h"
 #include "AntWreck.h"
 #include "AntWeapon.h"
 #include "KitchenArt.h"
@@ -890,6 +891,18 @@ void AKitchenFixture::Spill(AAntCharacter* By)
 	FRandomStream R(GetUniqueID() ^ 0x5EED);
 	auto Around = [&R, &At](float Rad) { return At + FVector(R.FRandRange(-Rad, Rad), R.FRandRange(-Rad, Rad), 40.f); };
 	AntMess::OnFixtureSpill(this, Id, At, State == Broken, Mat());   // stains, scratches, the burst (AntMess.cpp)
+	if (UAntFluidWorld* F = UAntFluidWorld::Active(W))
+	{
+		// The real liquid (AntFluidWorld): the open cola runs out for 20 s; a broken glass, jug or vase lets its water go at once.
+		if (Id == TEXT("cola")) { F->AddSource(AntFluid::Cola, At + FVector(-120.f, 0.f, 40.f), 0.12f, 20.f, 50.f); }
+		else if (Id.Contains(TEXT("glass")) || Id.Contains(TEXT("jug")) || Id.Contains(TEXT("vase")) || Id.Contains(TEXT("kettle")))
+		{
+			// broken: it all goes at once; tipped over whole: it glugs out over a couple of seconds
+			if (State == Broken) { F->AddSource(AntFluid::Water, At + FVector(0.f, 0.f, 40.f), 1.5f, 1.f, 90.f); }
+			else { F->AddSource(AntFluid::Water, At + FVector(0.f, 0.f, 60.f), 0.6f, 2.5f, 50.f); }
+		}
+		else if (Id == TEXT("teapot") && State != Broken) { F->AddSource(AntFluid::Water, At + FVector(0.f, 0.f, 60.f), 0.35f, 3.f, 50.f); }   // tipped over: the tea runs out of the spout
+	}
 	if (Id == TEXT("jam_jar") && State == Broken)
 	{
 		for (int32 i = 0; i < 3; ++i) { Food(TEXT("Варенье"), 12, 2, FLinearColor(0.55f, 0.05f, 0.12f), EAntShape::Sphere, 0.16f, Around(250.f)); }
@@ -1191,6 +1204,7 @@ void AKitchenFixture::ShowAfter()
 	{
 		// the open bottle lies there and runs: 20 s of a growing sticky pool
 		Pool = Put(TEXT("SM_V3_ColaPuddle"), 0.05f, 0.f, FVector(-200.f, 0.f, 1.f));
+		if (Pool && UAntFluidWorld::Wanted()) { Pool->SetVisibility(false); }   // the real cola runs out of it (Spill)
 		PoolStart = NetNow();
 		LevelV3::AddZone(0, At, 700.f);
 	}
@@ -1318,6 +1332,7 @@ void AKitchenFixture::ResetAll(UWorld* World)
 {
 	AntWreck::ResetAll(World);   // the wrecked furniture comes back with the fixtures (AntWreck.h)
 	AntWeapons::SpawnAll(World);   // and the Human's weapons lie in their places again (AntWeapon.h)
+	UAntFluidWorld::ResetAll(World);   // the flat is dry again, the tap shut (AntFluidWorld.h)
 	if (!World || !LevelV3::Enabled() || !LevelV3::FixturesOn())
 	{
 		return;

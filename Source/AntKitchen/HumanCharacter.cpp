@@ -1,5 +1,6 @@
 ﻿#include "HumanCharacter.h"
 #include "AntWeapon.h"
+#include "AntFluidWorld.h"
 #include "AntVersus.h"
 #include "AntFx.h"
 #include "KitchenLoot.h"
@@ -1504,7 +1505,8 @@ void AHumanCharacter::CheckSlip(int32 Leg, bool bAttack)
 		return;
 	}
 	const FVector At = Rig.Feet[Leg & 1].Pos;
-	if (!AKitchenSlick::At(GetWorld(), At))
+	const UAntFluidWorld* Fluid = UAntFluidWorld::Active(this);
+	if (!AKitchenSlick::At(GetWorld(), At) && !(Fluid && Fluid->IsSlippery(At)))   // a puddle, or the real water / oil on the floor
 	{
 		return;
 	}
