@@ -799,7 +799,7 @@ void AAntTrailNet::Forage(FAntTrailLine& L, float Dt)
 	const AAntSnowball* S = AAntSnowball::Get(GetWorld());
 	const AAntRaid* Raid = AAntRaid::Get(GetWorld());
 	const int32 Carry = 4 + 4 * (S ? S->LvOf(L.Owner, AntBoost::WorkerCarry) : 0) + (Raid ? Raid->Nest.Tier_(AntUp::Carriers) : 0);
-	const float Reach = 120.f + 450.f * (S ? S->LvOf(L.Owner, AntBoost::Forage) : 0);
+	const float Reach = 300.f + 500.f * (S ? S->LvOf(L.Owner, AntBoost::Forage) : 0);
 	const float Speed = BaseSpeed * (1.f + 0.35f * (S ? S->LvOf(L.Owner, AntBoost::WorkerSpeed) : 0));
 	int32 Busy = 0;
 	for (const FAntFerry& F : Ferries) { Busy += F.Trail == L.Id ? 1 : 0; }

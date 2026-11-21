@@ -45,7 +45,7 @@ namespace AntPick
 		{ TEXT("Вторая тропа"),       TEXT("Ещё одна тропа одновременно"), PTrail, 255 },
 		{ TEXT("Быстрые рабочие"),    TEXT("Рабочие на тропах на 35 % быстрее"), PTrail, 255 },
 		{ TEXT("Крепкие рабочие"),    TEXT("Рабочий уносит еду тяжелее (+4 к весу)"), PTrail, 255 },
-		{ TEXT("Сбор у тропы"),       TEXT("Рабочие сами сходят за едой в стороне от тропы (+450)"), PTrail, 255 },
+		{ TEXT("Сбор у тропы"),       TEXT("Рабочие сами сходят за едой в стороне от тропы (+500)"), PTrail, 255 },
 		{ TEXT("Острые жвала"),       TEXT("Твой укус на 25 % сильнее"), PPersonal, 255 },
 		{ TEXT("Быстрые лапы"),       TEXT("Ты на 10 % быстрее"), PPersonal, 255 },
 		{ TEXT("Сильная спина"),      TEXT("Ты тянешь на 30 % больше"), PPersonal, 255 },
@@ -820,6 +820,17 @@ namespace AntSnowball
 				return true;
 			}
 			if (Sub == TEXT("mass")) { S->AddMass(PS, (int32)ANum(2, 20), TEXT("отладка")); }
+			else if (Sub == TEXT("food"))
+			{
+				// snow food K x y z: a big prize (AntKit::HeavyFood K: 0 cake piece, 1 golden bear, 2 chocolate, 3 cheese) dropped there
+				const FVector At(ANum(3), ANum(4), ANum(5) + 40.f);
+				if (AKitchenLoot* F = W->SpawnActorDeferred<AKitchenLoot>(AKitchenLoot::StaticClass(), FTransform(At), nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn))
+				{
+					F->InitFood(AntKit::HeavyFood((int32)ANum(2, 3)));
+					F->FinishSpawning(FTransform(At));
+					UE_LOG(LogTemp, Display, TEXT("ANTSNOW dev food «%s» weight %d at %s"), *F->LootName, F->Weight, *At.ToCompactString());
+				}
+			}
 			else if (Sub == TEXT("pick")) { S->Pick(PS, (int32)ANum(2, 1) - 1); }
 			else if (Sub == TEXT("auto")) { S->AutoPick = Args.IsValidIndex(2) && Args[2] != TEXT("off") ? FMath::Clamp((int32)ANum(2, 1) - 1, 0, 2) : -1; }
 			else if (Sub == TEXT("give")) { if (FAntSnowPlayer* P = S->For(PS)) { const uint8 Id = (uint8)FMath::Clamp((int32)ANum(2), 0, AntPick::Count - 1); P->Taken.Add(Id); S->Apply(*P, Id); } }
