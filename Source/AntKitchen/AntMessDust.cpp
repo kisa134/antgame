@@ -9,6 +9,9 @@
 #include "GameFramework/PlayerController.h"
 #include "Camera/PlayerCameraManager.h"
 #include "HAL/IConsoleManager.h"
+#include "Components/DirectionalLightComponent.h"
+#include "Components/SpotLightComponent.h"
+#include "UObject/UObjectIterator.h"
 
 // =====================================================================================================================
 // Dust motes and micro-particles. Each layer is ONE procedural mesh of quads (one draw call) whose motion is entirely in
@@ -23,8 +26,10 @@
 
 namespace
 {
-	TAutoConsoleVariable<int32> CVarDustLit(TEXT("ant.MessDustLit"), 1, TEXT("Dust motes: 1 lit translucency (shows in the light), 0 unlit additive."));
+	TAutoConsoleVariable<int32> CVarDustLit(TEXT("ant.MessDustLit"), 0, TEXT("Dust motes: 0 (default) unlit, lit by the shader itself from the sun through the windows and the nearest spot lamp; 1 lit translucency (renderer lighting: too dim to read, kept for comparison)."));
 	TAutoConsoleVariable<float> CVarDustScale(TEXT("ant.MessDustScale"), 1.f, TEXT("Dust motes: brightness multiplier."));
+	TAutoConsoleVariable<float> CVarDustPix(TEXT("ant.MessDustPix"), 2.2f, TEXT("Dust motes: never drawn smaller than this many pixels (a smaller one grows and fades to match)."));
+	TAutoConsoleVariable<int32> CVarDustDebug(TEXT("ant.MessDustDebug"), 0, TEXT("Dust: log the light terms once a second."));
 
 	struct FLayerDef
 	{
@@ -40,15 +45,16 @@ namespace
 		float Sparkle;
 		float Bright;
 		FLinearColor Color;
+		float MinPix;        // never smaller than this many pixels (x ant.MessDustPix / 2.2)
 	};
 
 	const FLayerDef GLayers[] =
 	{
-		{ 2200, FVector(240.f, 240.f, 240.f),     0.16f, FVector4(3.f, 1.f, 0.8f, 7.f),   false, FVector2D(0, 0),       FVector4(0, 0, 0, 0),           1.f,  2.f,  1.f, 1.3f, FLinearColor(0.95f, 0.92f, 0.86f) },
-		{ 2400, FVector(1400.f, 1400.f, 1400.f),  0.55f, FVector4(6.f, 2.5f, 1.5f, 30.f), false, FVector2D(0, 0),       FVector4(0, 0, 0, 0),           1.f,  12.f, 1.f, 1.0f, FLinearColor(0.95f, 0.92f, 0.86f) },
-		{ 1600, FVector(6000.f, 6000.f, 5000.f),  2.6f,  FVector4(12.f, 5.f, 2.5f, 110.f), false, FVector2D(0, 0),      FVector4(0, 0, 0, 0),           1.f,  60.f, 1.f, 0.8f, FLinearColor(0.95f, 0.92f, 0.86f) },
-		{ 700,  FVector(1500.f, 1500.f, 100.f),   0.75f, FVector4(-6.f, -14.f, 0.f, 9.f), true,  FVector2D(2.f, 70.f),  FVector4(3700.f, 2600.f, 0.f, 1500.f), 0.f, 4.f, 0.3f, 1.2f, FLinearColor(0.85f, 0.82f, 0.76f) },
-		{ 700,  FVector(1500.f, 1500.f, 100.f),   0.75f, FVector4(3.f, 2.f, 14.f, 12.f), true,  FVector2D(2.f, 160.f), FVector4(0.f, -4600.f, 0.f, 1600.f), 0.f, 4.f, 0.3f, 1.2f, FLinearColor(0.88f, 0.84f, 0.78f) },
+		{ 3000, FVector(240.f, 240.f, 240.f),     0.16f, FVector4(3.f, 1.f, 0.8f, 7.f),   false, FVector2D(0, 0),       FVector4(0, 0, 0, 0),           1.f,  2.f,  1.f, 1.3f, FLinearColor(0.95f, 0.92f, 0.86f), 2.2f },
+		{ 9000, FVector(1400.f, 1400.f, 1400.f),  0.55f, FVector4(6.f, 2.5f, 1.5f, 30.f), false, FVector2D(0, 0),       FVector4(0, 0, 0, 0),           1.f,  12.f, 1.f, 0.3f, FLinearColor(0.95f, 0.92f, 0.86f), 1.5f },
+		{ 3000, FVector(6000.f, 6000.f, 5000.f),  1.2f,  FVector4(12.f, 5.f, 2.5f, 110.f), false, FVector2D(0, 0),      FVector4(0, 0, 0, 0),           1.f,  60.f, 0.5f, 0.06f, FLinearColor(0.95f, 0.92f, 0.86f), 1.0f },
+		{ 700,  FVector(1500.f, 1500.f, 100.f),   0.75f, FVector4(-6.f, -14.f, 0.f, 9.f), true,  FVector2D(2.f, 70.f),  FVector4(3700.f, 2600.f, 0.f, 1500.f), 0.f, 4.f, 0.3f, 1.2f, FLinearColor(0.85f, 0.82f, 0.76f), 2.f },
+		{ 700,  FVector(1500.f, 1500.f, 100.f),   0.75f, FVector4(3.f, 2.f, 14.f, 12.f), true,  FVector2D(2.f, 160.f), FVector4(0.f, -4600.f, 0.f, 1600.f), 0.f, 4.f, 0.3f, 1.2f, FLinearColor(0.88f, 0.84f, 0.78f), 2.f },
 	};
 }
 
@@ -156,7 +162,49 @@ void AAntMess::TickDust(float Dt)
 	const AAntFxManager* Fx = AAntFxManager::Get(this);
 	const float Amb = Fx ? Fx->Ambient : 1.f;
 	const bool bLit = CVarDustLit.GetValueOnGameThread() != 0;
-	const float Inten = CVarDustScale.GetValueOnGameThread() * (bLit ? 1.f : FMath::Clamp(Amb, 0.2f, 1.f));
+	const float Inten = CVarDustScale.GetValueOnGameThread() * (bLit ? 1.f : 14.f);   // unlit: the light terms are in the shader (WinY.w carries the room light)
+	// The lights the shader traces (once a second): the sun, and the strongest spot lamp near the camera.
+	static float LightScan = 10.f;
+	static FLinearColor SunP(0.f, 1.f, -0.4f, 0.f), SunC(1.f, 0.9f, 0.75f), LampP(0.f, 0.f, -1.e6f, 0.f), LampD(0.f, 0.f, -1.f, 0.7f), LampC(1.f, 0.76f, 0.48f);
+	LightScan += Dt;
+	if (LightScan > 1.f)
+	{
+		LightScan = 0.f;
+		SunP.A = 0.f;
+		LampP = FLinearColor(0.f, 0.f, -1.e6f, 0.f);
+		float BestLamp = 0.f;
+		for (TObjectIterator<ULightComponent> It; It; ++It)
+		{
+			ULightComponent* L = *It;
+			if (!L || L->GetWorld() != GetWorld() || !L->IsVisible() || L->Intensity <= 0.f)
+			{
+				continue;
+			}
+			if (UDirectionalLightComponent* S = Cast<UDirectionalLightComponent>(L))
+			{
+				const FVector Dir = S->GetDirection();   // the way the light travels
+				SunP = FLinearColor(Dir.X, Dir.Y, Dir.Z, FMath::Clamp(S->Intensity / 10.f, 0.f, 2.f) * 1.6f);
+				SunC = S->GetLightColor();
+			}
+			else if (USpotLightComponent* Sp = Cast<USpotLightComponent>(L))
+			{
+				const float Dist = FVector::Dist(Sp->GetComponentLocation(), Cam);
+				const float Score = Sp->Intensity / FMath::Max(1000.f, Dist);
+				if (Dist < 7000.f && Score > BestLamp)
+				{
+					BestLamp = Score;
+					const FVector P = Sp->GetComponentLocation(), Dir = Sp->GetDirection();
+					LampP = FLinearColor(P.X, P.Y, P.Z, FMath::Clamp(Sp->Intensity / 18.f, 0.f, 1.5f) * 0.9f);
+					LampD = FLinearColor(Dir.X, Dir.Y, Dir.Z, FMath::Cos(FMath::DegreesToRadians(Sp->OuterConeAngle)));
+					LampC = Sp->GetLightColor();
+				}
+			}
+		}
+	}
+	if (CVarDustDebug.GetValueOnGameThread() && LightScan == 0.f)
+	{
+		UE_LOG(LogTemp, Display, TEXT("ANTMESS dust light: sun %s w %.2f, lamp at %s w %.2f cos %.2f, amb %.2f, cam %s"), *FVector(SunP.R, SunP.G, SunP.B).ToCompactString(), SunP.A, *FVector(LampP.R, LampP.G, LampP.B).ToCompactString(), LampP.A, LampD.A, Amb, *Cam.ToCompactString());
+	}
 	for (int32 i = 0; i < Dust.Num(); ++i)
 	{
 		FDustLayer& D = Dust[i];
@@ -168,9 +216,19 @@ void AAntMess::TickDust(float Dt)
 		// the layer's bounds ride with the camera (the motes themselves stay put in the world: the shader wraps them)
 		const FVector Loc = D.bBand ? FVector(Cam.X - D.Box.X * 0.5f, Cam.Y - D.Box.Y * 0.5f, 0.f) : Cam - D.Box * 0.5f;
 		D.C->SetWorldLocation(Loc);
-		D.M->SetVectorParameterValue(TEXT("Pix"), FLinearColor(PixPerUU, 1.4f, L.NearFade, L.Sparkle));
+		D.M->SetVectorParameterValue(TEXT("Pix"), FLinearColor(PixPerUU, L.MinPix * CVarDustPix.GetValueOnGameThread() / 2.2f, L.NearFade, L.Sparkle));
 		D.M->SetVectorParameterValue(TEXT("Stir"), FLinearColor(StirAt.X, StirAt.Y, StirAt.Z, FMath::Max(0.f, Age)));
 		D.M->SetVectorParameterValue(TEXT("Stir2"), FLinearColor(StirRadius, StirStrength, 0.f, 0.f));
 		D.M->SetScalarParameterValue(TEXT("Intensity"), Inten * L.Bright);
+		D.M->SetVectorParameterValue(TEXT("Sun"), SunP);
+		D.M->SetVectorParameterValue(TEXT("SunColor"), SunC);
+		D.M->SetVectorParameterValue(TEXT("Lamp"), LampP);
+		D.M->SetVectorParameterValue(TEXT("LampD"), LampD);
+		D.M->SetVectorParameterValue(TEXT("LampColor"), LampC);
+		// the two south windows (level v2/v3: kitchen and living room), soft edge, and the share of plain room light
+		D.M->SetVectorParameterValue(TEXT("Win1"), FLinearColor(-1500.f, 1500.f, 2200.f, 4200.f));
+		D.M->SetVectorParameterValue(TEXT("Win2"), FLinearColor(16785.f, 19785.f, 2200.f, 4200.f));
+		D.M->SetVectorParameterValue(TEXT("WinY"), FLinearColor(-5000.f, -9000.f, 80.f, (D.bBand ? 0.5f : 0.09f) * FMath::Clamp(Amb, 0.3f, 1.f)));
+		D.M->SetVectorParameterValue(TEXT("AmbColor"), Fx ? Fx->AmbientTint : FLinearColor::White);
 	}
 }

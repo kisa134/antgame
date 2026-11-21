@@ -290,13 +290,31 @@ float stir = 1.0 + 2.5 * Stir2.y * exp(-Stir.w * 1.1) * saturate(1.0 - sdl / max
 // hot spots (fridge, radiator): Spot.w is the radius; outside every spot the layer keeps Wind's share only
 float spot = 1.0;
 if (Spot.w > 0.0) { spot = saturate(Spot2.x + (1.0 - length((W - Spot.xyz) / float3(Spot.w, Spot.w, Spot.w * 3.0)))); }
-float k = edge * nearf * (0.25 + 0.75 * VA) * (tw + spark) * stir * spot / (grow * grow);
-return float4(k, spark, 0, 0);
+float k = edge * nearf * (0.25 + 0.75 * VA) * (tw + spark) * stir * spot / grow;   // a mote grown to stay visible keeps most of its brightness (it is a glint, not a disc)
+// The light the mote is in, worked out here and not by the renderer (it is cheaper and it always reads):
+// a sun shaft = the mote, traced back along the sun to a window plane, lands inside the window; a lamp cone; a little ambient.
+float beam = 0.0;
+if (Sun.w > 0.0 && Sun.y > 0.05)
+{
+    float t1 = (W.y - WinY.x) / Sun.y;
+    if (t1 > 0.0) { float3 q = W - Sun.xyz * t1; beam = max(beam, saturate(min(q.x - Win1.x, Win1.y - q.x) / WinY.z) * saturate(min(q.z - Win1.z, Win1.w - q.z) / WinY.z) * saturate(1.0 - t1 / 14000.0)); }
+    float t2 = (W.y - WinY.y) / Sun.y;
+    if (t2 > 0.0) { float3 q = W - Sun.xyz * t2; beam = max(beam, saturate(min(q.x - Win2.x, Win2.y - q.x) / WinY.z) * saturate(min(q.z - Win2.z, Win2.w - q.z) / WinY.z) * saturate(1.0 - t2 / 14000.0)); }
+    beam *= Sun.w;
+}
+float lamp = 0.0;
+if (Lamp.w > 0.0)
+{
+    float3 L = W - Lamp.xyz; float d = max(length(L), 1.0);
+    lamp = Lamp.w * saturate((dot(L / d, LampD.xyz) - LampD.w) / max(1.0 - LampD.w, 0.01) * 2.5) * saturate(1.0 - d / 6000.0);
+}
+return float4(k, beam, lamp, spark);
 """
 
 DUSTSPRITE = r"""
 float r = length(UV);
-return saturate(1.0 - r) * saturate(1.0 - r) ;
+float c = saturate(1.0 - r);
+return c * c * (3.0 - 2.0 * c);
 """
 
 def build_dust(lit):
@@ -340,8 +358,14 @@ def build_dust(lit):
     w = custom(m, DUSTWPO, unreal.CustomMaterialOutputType.CMOT_FLOAT3, ["P0", "VC", "Cam", "T", "Box", "Wind", "Band", "Stir", "Stir2", "Pix", "UV", "CamF", "AWP"], -1200, -300, "DustWPO")
     wire(w, common + [(uv, "UV"), (fwd, "CamF"), (awp, "AWP")])
     MEL.connect_material_property(w, "", unreal.MaterialProperty.MP_WORLD_POSITION_OFFSET)
-    fd = custom(m, DUSTFADE, unreal.CustomMaterialOutputType.CMOT_FLOAT4, ["P0", "VC", "Cam", "T", "Box", "Wind", "Band", "Stir", "Stir2", "Pix", "Spot", "Spot2", "VA"], -1200, 300, "DustFade")
-    wire(fd, common + [(spot, "Spot"), (spot2, "Spot2")])
+    fd = custom(m, DUSTFADE, unreal.CustomMaterialOutputType.CMOT_FLOAT4, ["P0", "VC", "Cam", "T", "Box", "Wind", "Band", "Stir", "Stir2", "Pix", "Spot", "Spot2", "VA", "Sun", "Win1", "Win2", "WinY", "Lamp", "LampD"], -1200, 300, "DustFade")
+    sun = vparam(m, "Sun", (0, 1, -0.4, 0), -2200, 300)             # xyz: the way sunlight travels, w: shaft strength
+    win1 = vparam(m, "Win1", (-1500, 1500, 2200, 4200), -2200, 450)  # window 1: x from, to, z from, to
+    win2 = vparam(m, "Win2", (16785, 19785, 2200, 4200), -2200, 600)
+    winy = vparam(m, "WinY", (-5000, -9000, 60, 0.12), -2200, 750)   # x, y: the windows' wall planes (y), z: soft edge, w: ambient share
+    lampp = vparam(m, "Lamp", (0, 0, -1e6, 0), -2200, 900)          # xyz: a spot lamp, w: its strength
+    lampd = vparam(m, "LampD", (0, 0, -1, 0.7), -2200, 1050)        # xyz: its axis, w: cos of its outer cone
+    wire(fd, common + [(spot, "Spot"), (spot2, "Spot2"), (sun, "Sun"), (win1, "Win1"), (win2, "Win2"), (winy, "WinY"), (lampp, "Lamp"), (lampd, "LampD")])
     MEL.connect_material_expressions(vc, "A", fd, "VA")
     vi = MEL.create_material_expression(m, unreal.MaterialExpressionVertexInterpolator, -900, 300)
     MEL.connect_material_expressions(fd, "", vi, "")
@@ -358,9 +382,19 @@ def build_dust(lit):
         MEL.connect_material_property(sat, "", unreal.MaterialProperty.MP_OPACITY)
         MEL.connect_material_property(col, "", unreal.MaterialProperty.MP_BASE_COLOR)
     else:
-        e = MEL.create_material_expression(m, unreal.MaterialExpressionMultiply, -200, 200)
-        MEL.connect_material_expressions(col, "", e, "A"); MEL.connect_material_expressions(a2, "", e, "B")
-        MEL.connect_material_property(e, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+        sunc = vparam(m, "SunColor", (1, 0.9, 0.75, 1), -900, 700)
+        lampc = vparam(m, "LampColor", (1, 0.76, 0.48, 1), -900, 850)
+        ambc = vparam(m, "AmbColor", (1, 0.95, 0.9, 1), -900, 1000)
+        LIGHT = r"""
+float3 c = Col.rgb * (Ln.y * SunC.rgb + Ln.z * LampC.rgb + WinY.w * AmbC.rgb);
+c += Ln.w * Ln.y * SunC.rgb * 3.0;   // glints only where the sun is
+return c * K;
+"""
+        li = custom(m, LIGHT, unreal.CustomMaterialOutputType.CMOT_FLOAT3, ["Col", "Ln", "SunC", "LampC", "AmbC", "WinY", "K"], -150, 300, "DustLight")
+        wire(li, [(col, "Col"), (sunc, "SunC"), (lampc, "LampC"), (ambc, "AmbC"), (winy, "WinY")])
+        MEL.connect_material_expressions(vi, "", li, "Ln")
+        MEL.connect_material_expressions(a2, "", li, "K")
+        MEL.connect_material_property(li, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
     MEL.layout_material_expressions(m)
     MEL.recompile_material(m)
     EAL.save_asset(DIR + "/" + name)

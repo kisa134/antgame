@@ -423,7 +423,7 @@ void AAntMess::ApplyDecal(FDecal& D, uint8 Kind, uint8 Shape, const FVector& Pos
 	FLinearColor Thick = L.Thick, Thin = L.Thin;
 	if (bTinted)
 	{
-		if (Kind == MessKind::Cream) { Thick = FMath::Lerp(Thick, Tint, 0.3f); Thin = FMath::Lerp(Thin, Tint, 0.4f); }
+		if (Kind == MessKind::Cream) { Thick = FMath::Lerp(Thick, Tint, 0.15f); Thin = FMath::Lerp(Thin, Tint, 0.25f); }
 		else if (Kind == MessKind::Print || Kind == MessKind::Juice) { Thick = Tint * 0.7f; Thin = Tint; }
 		else { Thick = Tint * 0.78f; Thin = Tint * 0.95f; }
 	}
@@ -816,7 +816,7 @@ void AAntMess::Burst(uint8 Kind, const FVector& At, const FVector& InN, float Si
 		const bool bCream = Kind == MessKind::Cream;
 		const FKindLook& L = Look(Kind);
 		const bool bWhite = Col.R > 0.98f && Col.G > 0.98f && Col.B > 0.98f;
-		const FLinearColor Base = bWhite ? L.Thin : bCream ? FMath::Lerp(L.Thick, Col, 0.3f) : Col;
+		const FLinearColor Base = bWhite ? L.Thin : bCream ? FMath::Lerp(L.Thick, Col, 0.15f) : Col;
 		for (int32 i = 0; i < Count; ++i)
 		{
 			const FVector V = Throw(300.f + S * 2.2f, (bCream ? 300.f : 450.f) + S * 2.f);
@@ -1178,7 +1178,7 @@ void AAntMess::TickAnts(float Dt)
 	for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
 	{
 		AAntCharacter* A = *It;
-		if (!A || A->bDead || A->Creature != 0 || FVector::DistSquared(A->GetActorLocation(), Cam) > FMath::Square(7000.f))
+		if (!A || A->bDead || A->Creature != 0 || (!A->IsLocallyControlled() && FVector::DistSquared(A->GetActorLocation(), Cam) > FMath::Square(9000.f)))
 		{
 			continue;
 		}
