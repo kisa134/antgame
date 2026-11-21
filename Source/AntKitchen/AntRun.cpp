@@ -1,8 +1,10 @@
 ﻿#include "AntRun.h"
 #include "AntWreck.h"
+#include "AntFluidWorld.h"
 #include "AntWeapon.h"
 #include "AntVersus.h"
 #include "AntKitchenGameMode.h"
+#include "AntFluidWorld.h"
 #include "AntGameState.h"
 #include "AntPlayerState.h"
 #include "AntPlayerController.h"
@@ -1333,6 +1335,12 @@ void AAntKitchenGameMode::StartEvent(uint8 Id)
 	case AntEvent::Flood:
 	{
 		Where = FVector(-3500.f, 2200.f, 1.f);
+		if (UAntFluidWorld* Fluid = UAntFluidWorld::Active(this))
+		{
+			// The real water: the dishwasher hose bursts under the worktop and the floor floods for real.
+			Fluid->AddSource(AntFluid::Water, FVector(-3500.f, 2500.f, 60.f), 3.f, FMath::Max(8.f, Len * 0.5f), 120.f);
+			break;
+		}
 		const FTransform TM(Where);
 		if (AKitchenFlood* F = W->SpawnActorDeferred<AKitchenFlood>(AKitchenFlood::StaticClass(), TM, nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn))
 		{
@@ -1569,6 +1577,10 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 	if (AntBodyRules::DevCommand(this, A))
 	{
 		return;   // the ant's own body: ant info | hp N | leg N | hit .. | knock .. | die kind | cam .. | slomo X (AntBody.cpp)
+	}
+	if (UAntFluidWorld* Fluid = UAntFluidWorld::Get(this))
+	{
+		if (Fluid->DevCommand(A)) { return; }   // fluid ... (water, AntFluidWorld.cpp)
 	}
 	const FString Op = A[0].ToLower();
 	auto Num = [&A](int32 i, float Def = 0.f) { return A.IsValidIndex(i) ? FCString::Atof(*A[i]) : Def; };
