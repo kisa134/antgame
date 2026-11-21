@@ -1,4 +1,5 @@
 ﻿#include "KitchenInteractables.h"
+#include "AntAudio.h"
 #include "AntFx.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
@@ -264,7 +265,7 @@ float AKitchenInteractable::StrainNow(float Dt)
 	if (GetNetMode() != NM_DedicatedServer && StrainT >= StrainSfxAt)
 	{
 		StrainSfxAt = StrainT + FMath::FRandRange(0.7f, 1.1f);
-		AntSfx::Play(this, AntSfx::FridgeDoor, GetActorLocation(), 0.5f, FMath::FRandRange(1.7f, 2.1f));   // a creak
+		AntAudio::Play(this, FMath::RandBool() ? EAntSfx::HingeCreak : EAntSfx::CarryStrain, GetActorLocation(), 0.7f);   // a creak, the ants straining
 	}
 	// It gives a crack, shudders and falls back.
 	const float Heave = FMath::Max(0.f, FMath::Sin(StrainT * 5.5f));

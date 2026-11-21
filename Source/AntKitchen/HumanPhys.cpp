@@ -4,6 +4,7 @@
 #include "AntWreck.h"
 #include "AntVersus.h"
 #include "AntFx.h"
+#include "AntAudio.h"
 #include "AntFilm.h"
 #include "AntTypes.h"
 #include "AntCharacter.h"
@@ -198,6 +199,10 @@ void AHumanCharacter::TrySwing(const FVector& Point, float Charge)
 	}
 	Combo = Step;
 	const float Wind = AntWeapons::SwingWindup(this, HumanBody::Style(Fig).SwatHit);
+	if (bCharged || Step == 2)
+	{
+		AntAudio::Everyone(this, EAntSfx::HumanGrumble, GetActorLocation() + FVector(0.f, 0.f, 2800.f), 0.8f + 0.4f * Charge);   // the grunt of a big one
+	}
 	if (!bCharged && Step < 2)
 	{
 		// The next click may follow right after this blow lands.
@@ -323,7 +328,9 @@ void AHumanCharacter::DoJumpImpact()
 	{
 		if (FVector::Dist2D(It->GetActorLocation(), P) < 7000.f) { It->Scare(P, TEXT("грохота")); }
 	}
-	AntSfx::Everyone(this, AntSfx::Stomp, P, 0.62f);
+	AntSfx::Everyone(this, AntSfx::Stomp, P, 0.62f);   // + the sound module (AntAudio.h): a heavy landing, the music jumps
+	AntAudio::Everyone(this, EAntSfx::SoftThud, P, 1.8f * FMath::Min(S, 2.f));
+	AntAudio::Excite(this, 0.8f, P);
 	AntSfx::Everyone(this, AntSfx::Drop, P, 0.5f);
 	MulticastJolt(FVector::DownVector, 1.2f, 5);
 	if (AAntKitchenGameMode* GM = W->GetAuthGameMode<AAntKitchenGameMode>())
@@ -352,6 +359,7 @@ void AHumanCharacter::TryKick()
 	}
 	KickReadyTime = Now + 0.95f;
 	StartAct(HumanAct::Kick, 1, KickPoint());
+	AntAudio::Everyone(this, EAntSfx::BatWhoosh, KickPoint(), 0.7f);
 	FTimerHandle H;
 	GetWorldTimerManager().SetTimer(H, FTimerDelegate::CreateWeakLambda(this, [this]() { DoKickImpact(); }), HumanAct::KickHit, false);
 }
@@ -405,7 +413,7 @@ void AHumanCharacter::DoKickImpact()
 	{
 		Jolt(Fwd, 0.35f, 0);
 	}
-	AntSfx::Everyone(this, AntSfx::Swat, P, FMath::FRandRange(0.75f, 0.9f));
+	AntAudio::Everyone(this, EAntSfx::SlipperSlap, P, FMath::Clamp(0.8f * S, 0.6f, 1.8f));   // the punt (what it hits rings by its own material: AntWreck)
 	UE_LOG(LogTemp, Display, TEXT("ANTHEAVY kick at %s: %d things, %d ants (x%.2f)"), *P.ToCompactString(), N, Ants, S);
 }
 
@@ -454,6 +462,7 @@ void AHumanCharacter::ThrowHeld(const FVector& InDir)
 		}
 		const FVector From = GetPalmLocation(1) + Dir * 200.f;
 		Mine->Launch(this, From, Dir * 3400.f * S + FVector(0.f, 0.f, 500.f));
+		AntAudio::Everyone(this, EAntSfx::BatWhoosh, From, 1.2f);
 	}), Release, false);
 	SwatReadyTime = GetWorld()->GetTimeSeconds() + Release + 0.6f;
 }
@@ -500,7 +509,7 @@ bool AHumanCharacter::Topple(const FVector& Dir, const TCHAR* Why)
 		if (IsValid(L) && L->bHeld) { L->Throw(Fwd * 900.f + FVector(0.f, 0.f, 1500.f)); }
 	}
 	AntWeapons::Drop(this, TEXT("упал"));
-	AntSfx::Everyone(this, AntSfx::HumanPanic, GetActorLocation() + FVector(0.f, 0.f, 600.f), 0.85f);
+	AntAudio::Everyone(this, EAntSfx::HumanSlip, GetActorLocation() + FVector(0.f, 0.f, 600.f), 1.f);   // slip and heavy fall
 	UE_LOG(LogTemp, Display, TEXT("ANTHEAVY topple: the Human goes down at %s (%s)"), *GetActorLocation().ToCompactString(), Why ? Why : TEXT("-"));
 	return true;
 }
@@ -824,6 +833,10 @@ void AHumanCharacter::BodyContacts(float Dt)
 				}
 				UE_LOG(LogTemp, Display, TEXT("ANTHEAVY the top of it jumps: %d riders spilled (k %.2f)"), Spilled, K);
 			}
+			if (Mo > 6.f && Approach > 450.f)
+			{
+				AntAudio::Everyone(this, EAntSfx::SoftThud, Pt, FMath::Clamp(Approach / 1300.f, 0.4f, 1.5f));   // his body into it (the piece rings by its material)
+			}
 			if (bGives && Mo > 6.f)
 			{
 				Jolt(-To, FMath::Clamp(Approach / 1500.f, 0.15f, 0.6f) * FMath::Min(1.f, Mo / Mh * 2.f), 0);   // the shove goes back into him a little
@@ -857,7 +870,9 @@ void AHumanCharacter::BodyContacts(float Dt)
 		const FVector Back = -Dirb * (450.f + 650.f * K);
 		if (IsPlayerControlled() && !IsLocallyControlled()) { ClientStagger(Back, 0.4f + 0.5f * K); }
 		else { LaunchCharacter(Back, true, false); }
-		AntSfx::Everyone(this, AntSfx::Stomp, BlockAt, 0.7f);
+		AntAudio::Everyone(this, EAntSfx::SoftThud, BlockAt, 1.f + K);
+		AntAudio::Everyone(this, EAntSfx::HumanGrumble, GetActorLocation() + FVector(0.f, 0.f, 2800.f), 1.f);
+		AntAudio::Excite(this, 0.35f + 0.3f * K, BlockAt);
 		UE_LOG(LogTemp, Display, TEXT("ANTHEAVY stagger: ran into something solid at %.0f uu/s (k %.2f) at %s"), MSb, K, *BlockAt.ToCompactString());
 		if (bRough && MSb > 1150.f && FMath::FRand() < 0.3f + 0.5f * K)
 		{

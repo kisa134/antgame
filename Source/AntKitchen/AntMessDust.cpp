@@ -137,6 +137,15 @@ void AAntMess::SetDust(bool bOn)
 
 void AAntMess::TickDust(float Dt)
 {
+	// The settings screen's dust switch (AntUiSettings.cpp: AntUi.Dust) on this machine.
+	// Only its changes count (the dev command "mess dust 0|1" still works in between).
+	static IConsoleVariable* UiDust = IConsoleManager::Get().FindConsoleVariable(TEXT("AntUi.Dust"));
+	static int32 LastUiDust = -1;
+	if (UiDust && UiDust->GetInt() != LastUiDust && Dust.Num() > 0)
+	{
+		LastUiDust = UiDust->GetInt();
+		SetDust(LastUiDust != 0);
+	}
 	if (!bDustOn || Dust.Num() == 0)
 	{
 		return;

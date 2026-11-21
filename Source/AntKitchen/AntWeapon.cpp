@@ -1,4 +1,5 @@
 ﻿#include "AntWeapon.h"
+#include "AntAudio.h"
 #include "AntWreck.h"
 #include "AntVersus.h"
 #include "AntTypes.h"
@@ -105,6 +106,10 @@ void AntWeapons::OnSwingLanded(AHumanCharacter* H, const FVector& Point)
 		Dir = (H->SwingDir.GetSafeNormal() + FVector(0.f, 0.f, -0.25f)).GetSafeNormal();
 	}
 	AntWreck::Hit(H->GetWorld(), Point, D.Radius * R * (P > 1.2f ? 1.25f : 1.f), Dir * D.Impulse * (1.f + 0.2f * H->Rage) * P, D.WorldDamage * (1.f + 0.25f * H->Rage) * P, H, D.Name);
+	if (W)
+	{
+		AntAudio::Everyone(H, AntAudio::ForWeapon(W->Kind), Point, (0.6f + 0.25f * D.Tier + 0.1f * H->Rage) * FMath::Min(P, 1.6f));   // the bat's thwack, the pan's clang...
+	}
 	if (W && D.Tier >= 2)
 	{
 		AntSfx::Everyone(H, AntSfx::Stomp, Point, FMath::FRandRange(0.6f, 0.75f));

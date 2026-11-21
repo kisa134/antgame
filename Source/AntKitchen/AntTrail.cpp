@@ -1,4 +1,5 @@
 ﻿#include "AntTrail.h"
+#include "AntAudio.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "AntSnowball.h"
@@ -1003,6 +1004,7 @@ int32 AAntTrailNet::Cut(const FVector& Center, float Radius, const TCHAR* Cause)
 		}
 		if (FAntSnowPlayer* P = S ? S->Find(TrailOwner) : nullptr) { P->Workers = FMath::Max(0, P->Workers - Under); }
 		++CutsDone;
+		AntAudio::Everyone(this, EAntSfx::TrailCut, Center, 1.f);   // the snip of a cut trail (+ the workers' squeak)
 		UE_LOG(LogTemp, Display, TEXT("ANTTRAIL cut %d (%s) at %s r %.0f: kept %.0f of %.0f, %d workers killed"), (int32)Id, Cause, *Center.ToCompactString(), Radius, CutAt, L.Length, Under);
 		if (CutAt < 400.f || Hit <= 2)
 		{

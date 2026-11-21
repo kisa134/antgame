@@ -1,4 +1,5 @@
 ﻿#include "AntMess.h"
+#include "AntAudio.h"
 #include "AntFx.h"
 #include "AntTypes.h"
 #include "AntCharacter.h"
@@ -1253,6 +1254,7 @@ void AAntMess::TickAnts(float Dt)
 				Speck(F, N, Dot * FMath::FRandRange(0.8f, 1.2f), bDry ? 0.8f : 0.35f, D.FeetColor * FMath::Lerp(1.25f, 0.95f, D.Feet), L.RWet + (bDry ? 0.5f : 0.08f), 50.f, Yaw, 1.4f);
 			}
 			D.LastStamp = G;
+			if (IsSticky(D.FeetKind) && D.Feet > 0.12f) { AntAudio::Play(A, EAntSfx::StepSticky, G, FMath::Clamp(D.Feet, 0.3f, 1.f)); }   // tacky feet
 			D.Feet *= D.FeetKind == MessKind::Water ? 0.85f : 0.95f;
 		}
 		else if (FVector::Dist(G, D.LastStamp) > Len * 2.f)
@@ -1505,6 +1507,7 @@ void AAntMess::MulticastBurst_Implementation(uint8 Kind, FVector_NetQuantize At,
 	if (GetNetMode() != NM_DedicatedServer)
 	{
 		Burst(Kind, At, N, Size, FLinearColor(Col), Seed * 131 + 7);
+		if (AntAudio::ForMess(Kind) != EAntSfx::Count) { AntAudio::Play(this, AntAudio::ForMess(Kind), At, FMath::Clamp(0.5f + Size / 300.f, 0.5f, 1.5f)); }
 	}
 }
 

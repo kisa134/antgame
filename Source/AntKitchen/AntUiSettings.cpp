@@ -13,13 +13,8 @@ namespace
 	const TCHAR* Section = TEXT("AntUi");
 	const TCHAR* VolKey[AntVol::Count] = { TEXT("VolMaster"), TEXT("VolMusic"), TEXT("VolSfx"), TEXT("VolVoice"), TEXT("VolUi") };
 
-	// The audio channels: AntAudio reads these. TODO(AntAudio): bind them to sound classes / submix volumes.
-	TAutoConsoleVariable<float> CVarMaster(TEXT("AntAudio.Master"), 1.f, TEXT("Master volume 0..1 (settings screen)"));
-	TAutoConsoleVariable<float> CVarMusic(TEXT("AntAudio.Music"), 0.8f, TEXT("Music volume 0..1 (settings screen)"));
-	TAutoConsoleVariable<float> CVarSfx(TEXT("AntAudio.Sfx"), 1.f, TEXT("Effects volume 0..1 (settings screen)"));
-	TAutoConsoleVariable<float> CVarVoice(TEXT("AntAudio.Voice"), 1.f, TEXT("Voice / barks volume 0..1 (settings screen)"));
-	TAutoConsoleVariable<float> CVarUi(TEXT("AntAudio.Ui"), 0.8f, TEXT("Menu sounds volume 0..1 (settings screen)"));
-	/** The dust in the air (AntMessDust can read it): 1 on, 0 off. */
+	// The audio channels are the sound module's own console variables (AntAudio.cpp: ant.Audio.Master / Music / Sfx / Voice / Ui).
+	/** The dust in the air (AAntMess::TickDust follows it): 1 on, 0 off. */
 	TAutoConsoleVariable<int32> CVarDust(TEXT("AntUi.Dust"), 1, TEXT("Floating dust on/off (settings screen)"));
 	TAutoConsoleVariable<int32> CVarSubs(TEXT("AntUi.Subtitles"), 1, TEXT("Subtitles for barks and the radio (settings screen)"));
 
@@ -118,11 +113,11 @@ bool FAntUiSettings::operator==(const FAntUiSettings& O) const
 
 void FAntUiSettings::Apply(APlayerController* PC) const
 {
-	SetCVar(TEXT("AntAudio.Master"), Vol[AntVol::Master]);
-	SetCVar(TEXT("AntAudio.Music"), Vol[AntVol::Music]);
-	SetCVar(TEXT("AntAudio.Sfx"), Vol[AntVol::Sfx]);
-	SetCVar(TEXT("AntAudio.Voice"), Vol[AntVol::Voice]);
-	SetCVar(TEXT("AntAudio.Ui"), Vol[AntVol::Ui]);
+	SetCVar(TEXT("ant.Audio.Master"), Vol[AntVol::Master]);
+	SetCVar(TEXT("ant.Audio.Music"), Vol[AntVol::Music]);
+	SetCVar(TEXT("ant.Audio.Sfx"), Vol[AntVol::Sfx]);
+	SetCVar(TEXT("ant.Audio.Voice"), Vol[AntVol::Voice]);
+	SetCVar(TEXT("ant.Audio.Ui"), Vol[AntVol::Ui]);
 	SetCVarInt(TEXT("AntUi.Dust"), bDust ? 1 : 0);
 	SetCVarInt(TEXT("AntUi.Subtitles"), bSubtitles ? 1 : 0);
 	SetCVarInt(TEXT("r.MotionBlurQuality"), bMotionBlur ? 4 : 0);

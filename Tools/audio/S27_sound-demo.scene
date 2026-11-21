@@ -1,0 +1,41 @@
+# Sound demo (branch code/ANT-sound): calm raid groove, the Human comes in (tension), chase + stomps (action),
+# chaos in the kitchen (crashes by material), the dust settles, last light (urgency), extraction (win sting), the nest march.
+id: AK_S27
+slug: sound-demo
+args: -AntRaidNow -AntQuiet=5 -AntSfxLog
+fps: 30
+resx: 1280
+resy: 720
+at0: 6
+take: t1
+do: 4.0: hud 0
+do: 4.2: noharm 1
+do: 4.3: cap god 1
+do: 4.5: hpuppet 1
+do: 4.7: hto 9000 -3000 0
+at: 0.0: tp -700 2300 5
+at: 0.0: cap face 180
+at: 0.0: cap smooth 0.35
+at: 0.0: cap cam 0 me 70 -34 34 me 0 0 8 56
+at: 0.0: cap lamp 2 260
+at: 0.1: fix list
+at: 0.2: cap rec 80
+at: 0.6: go -1100 2300 5 -1500 2450 5 -1800 2300 5
+at: 8.5: hto -3900 2100 0
+at: 9.0: hact rage1
+at: 12.0: hact rage2
+at: 12.5: hwalk 1 0 0.55
+at: 15.5: cap cam 1.2 me 260 -420 160 me 0 0 60 70
+at: 17.0: hact stomp1
+at: 19.5: hact swat
+at: 21.5: hwalk 0 0
+at: 22.5: cap lamp 0
+at: 22.5: cap cam 1.5 w -400 -1800 2300 w -2200 1600 500 74
+at: 24.0: state chaos
+at: 34.0: hto 9000 -3000 0
+at: 34.0: cap lamp 2 260
+at: 34.0: cap cam 1.0 me 70 -34 34 me 0 0 8 56
+at: 34.5: go -900 2300 5 -600 2500 5
+at: 50.0: raid time 31
+at: 66.0: raid end
+at: 80.5: cap exit
