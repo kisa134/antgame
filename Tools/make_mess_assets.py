@@ -269,6 +269,9 @@ float sz = Box.w * (0.35 + VC.r * VC.r * 1.3);
 float px = Pix.x * dist;
 float grow = max(1.0, Pix.y * px / sz);
 float size = sz * grow;
+// a mote right at the lens is faded out anyway: collapse it, or its quad would cover half the screen at zero opacity
+if (dist < Pix.z * 1.5) size = 0.0;
+size = min(size, 14.0 * px);
 float3 right = normalize(cross(CamF, float3(0, 0, 1)) + float3(1e-4, 0, 0));
 float3 up = cross(right, CamF);
 W += (right * UV.x + up * UV.y) * size;
