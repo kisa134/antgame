@@ -27,6 +27,11 @@
 #include "LevelV2.h"
 #include "AntRun.h"
 #include "EngineUtils.h"
+#include "KitchenSlick.h"
+#include "KitchenInteractables.h"
+#include "Critters.h"
+#include "AntFilm.h"
+#include "GameFramework/GameStateBase.h"
 
 namespace HumanLook
 {
@@ -150,6 +155,8 @@ void AHumanCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME(AHumanCharacter, StunKind);
 	DOREPLIFETIME(AHumanCharacter, FolkLook);
 	DOREPLIFETIME(AHumanCharacter, bCarryPose);
+	DOREPLIFETIME(AHumanCharacter, BackAcheUntil);
+	DOREPLIFETIME(AHumanCharacter, bTowel);
 }
 
 FVector AHumanCharacter::GetSoleLocation(int32 Leg) const
@@ -176,7 +183,7 @@ FVector AHumanCharacter::GetSoleLocation(int32 Leg) const
 bool AHumanCharacter::Stun(float Seconds, AAntCharacter* By, const FString& What, uint8 Kind)
 {
 	const float Now = GetWorld()->GetTimeSeconds();
-	if (!HasAuthority() || bKnockedOut || bStunned || Now < NextStunTime)
+	if (!HasAuthority() || bKnockedOut || bStunned || Now < NextStunTime || IsDown())
 	{
 		return false;
 	}
@@ -485,7 +492,7 @@ void AHumanCharacter::AnimateBody(float DeltaSeconds)
 void AHumanCharacter::ServerSwat_Implementation(FVector_NetQuantize Point) { TrySwat(Point); }
 void AHumanCharacter::ServerGrabOrThrow_Implementation(FVector_NetQuantize Point, FVector_NetQuantizeNormal Dir) { GrabOrThrow(Point, Dir); }
 
-void AHumanCharacter::TrySwat(const FVector& InPoint)
+void AHumanCharacter::TrySwat(const FVector& InPoint, int32 Force)
 {
 	const float Now = GetWorld()->GetTimeSeconds();
 	if (!HasAuthority() || bKnockedOut || Now < SwatReadyTime || IsBodyBusy())
@@ -499,7 +506,7 @@ void AHumanCharacter::TrySwat(const FVector& InPoint)
 	// Both land only where the arm really gets to.
 	const FHumanStyle& St = HumanBody::Style(Fig);
 	const float SwatR = St.SwatRadius;
-	const bool bSlap = bNewBody && Fig == HumanFig::Dad && Point.Z - FeetZ() < 260.f;   // (grandma swats the floor with her swatter too)
+	const bool bSlap = bNewBody && Fig == HumanFig::Dad && (Force >= 0 ? Force == 0 : Point.Z - FeetZ() < 260.f);   // (grandma swats the floor with her swatter too)
 	float Delay = 0.28f;
 	if (bSlap)
 	{
@@ -667,12 +674,18 @@ bool AHumanCharacter::IsBodyBusy() const
 	case HumanAct::Slap: return T < HumanAct::SlapHit + 0.3f;
 	case HumanAct::Grab: return T < HumanAct::GrabGrip + 0.1f;
 	case HumanAct::Throw: return T < HumanAct::ThrowRelease + 0.05f;
+	case HumanAct::Fall: return T < HumanAct::FallUp;
+	case HumanAct::Wipe: return T < Act.Arg * 0.1f;
 	default: return false;
 	}
 }
 
 bool AHumanCharacter::IsRooted() const
 {
+	if (bNewBody && (Act.Kind == HumanAct::Wipe || Act.Kind == HumanAct::Fall))
+	{
+		return IsBodyBusy();   // on the floor, or down on his haunches with the towel
+	}
 	if (!bNewBody || (Act.Kind != HumanAct::Slap && Act.Kind != HumanAct::Grab && Act.Kind != HumanAct::Reach))
 	{
 		return false;
@@ -709,6 +722,9 @@ void AHumanCharacter::DevAct(const FString& What, const FVector& Target)
 	else if (What == TEXT("stun0") || What == TEXT("stun1")) { NextStunTime = 0.f; Stun(6.f, nullptr, TEXT("dev"), What.EndsWith(TEXT("1")) ? 1 : 0); }
 	else if (What == TEXT("ko")) { KnockOut(nullptr); }
 	else if (What.StartsWith(TEXT("rage"))) { SetRage((uint8)FCString::Atoi(*What.RightChop(4))); }
+	else if (What == TEXT("slip")) { TrySlip(FVector(GetActorLocation().X, GetActorLocation().Y, FeetZ()), 1.f, true); }
+	else if (What == TEXT("wipe")) { bTowel = true; PlayWipe(Target, 4.f); }
+	else if (What == TEXT("towel1") || What == TEXT("towel0")) { bTowel = What.EndsWith(TEXT("1")); }
 	else { UE_LOG(LogTemp, Warning, TEXT("ANTHUMAN dev: unknown action %s"), *What); }
 	UE_LOG(LogTemp, Display, TEXT("ANTHUMAN dev %s -> %s"), *What, *DevDescribe());
 }
@@ -990,6 +1006,11 @@ void AHumanCharacter::ResetHuman(const FVector& Location)
 	bKnockedOut = false;
 	bStunned = false;
 	NextStunTime = 0.f;
+	NextFallTime = 0.f;
+	FallImpactAt = -1.f;
+	BackAcheUntil = -100.f;
+	bTowel = false;
+	SlippedOn = nullptr;
 	Act = FHumanActState();
 	OnRep_KnockedOut();
 	SetActorLocation(Location, false, nullptr, ETeleportType::TeleportPhysics);
@@ -1049,6 +1070,11 @@ void AHumanCharacter::Tick(float DeltaSeconds)
 			SprayFuel = FMath::Min(100.f, SprayFuel + 9.f * DeltaSeconds);
 		}
 
+		if (FallImpactAt > 0.f && Now >= FallImpactAt)
+		{
+			FallImpactAt = -1.f;
+			DoFallImpact();
+		}
 		if (bStunned && Now >= StunEnd)
 		{
 			bStunned = false;
@@ -1078,7 +1104,11 @@ void AHumanCharacter::Tick(float DeltaSeconds)
 		}
 	}
 
-	if (bDevPuppet && HasAuthority() && !DevWalk.IsZero())
+	if (bNewBody && Fig == HumanFig::Dad)
+	{
+		GetCharacterMovement()->MaxWalkSpeed = GetWalkSpeed();   // down after a slip: he does not move; his back hurts after: slow
+	}
+	if (bDevPuppet && HasAuthority() && !DevWalk.IsZero() && !IsDown() && !IsRooted())
 	{
 		// Dev: the puppet walks to a point (screenshots of the stride).
 		FVector To = DevWalk - GetActorLocation();
@@ -1223,4 +1253,223 @@ void AHumanCharacter::UpdateVisuals(float DeltaSeconds)
 		}
 		SprayFxAccum = FMath::Min(SprayFxAccum, 1.f);
 	}
+}
+
+// ---------------------------------------------------------------------------------------------
+// Slipping on a puddle: the fall, the landing, the back that hurts, the towel
+// ---------------------------------------------------------------------------------------------
+
+float AHumanCharacter::NetNow() const
+{
+	const UWorld* W = GetWorld();
+	const AGameStateBase* GS = W ? W->GetGameState() : nullptr;
+	return (HasAuthority() || !GS) ? W->GetTimeSeconds() : (float)GS->GetServerWorldTimeSeconds();
+}
+
+bool AHumanCharacter::IsDown() const
+{
+	if (!bNewBody || Act.Kind != HumanAct::Fall)
+	{
+		return false;
+	}
+	const float T = ActTime();
+	return T >= 0.f && T < HumanAct::FallUp;
+}
+
+bool AHumanCharacter::HasBackAche() const
+{
+	return !IsDown() && NetNow() < BackAcheUntil;
+}
+
+bool AHumanCharacter::IsWiping() const
+{
+	return bNewBody && Act.Kind == HumanAct::Wipe && ActTime() < Act.Arg * 0.1f;
+}
+
+void AHumanCharacter::FaceRotation(FRotator NewControlRotation, float DeltaTime)
+{
+	if (IsDown())
+	{
+		return;   // lying on his back: the body does not turn with the controller (it is posed in his own frame)
+	}
+	Super::FaceRotation(NewControlRotation, DeltaTime);
+}
+
+void AHumanCharacter::PlayWipe(const FVector& Point, float Seconds)
+{
+	if (bNewBody && HasAuthority() && !bKnockedOut && !bStunned && !IsDown())
+	{
+		StartAct(HumanAct::Wipe, (uint8)FMath::Clamp(FMath::RoundToInt(Seconds * 10.f), 5, 250), Point);
+	}
+}
+
+void AHumanCharacter::CheckSlip(int32 Leg, bool bAttack)
+{
+	if (!HasAuthority() || !bNewBody || Fig != HumanFig::Dad || IsDown())
+	{
+		return;
+	}
+	const FVector At = Rig.Feet[Leg & 1].Pos;
+	if (!AKitchenSlick::At(GetWorld(), At))
+	{
+		return;
+	}
+	// Not every step: a stroll may get across, a run never does; a stomp into it is likely to go wrong.
+	const float Speed = (float)GetVelocity().Size2D();
+	const float Run = HumanBody::Style(Fig).WalkSpeed * (1.f + 0.12f * Rage) * 0.8f;
+	float Chance = Speed >= Run ? 1.f : Speed < 100.f ? 0.f : FMath::Clamp((Speed - 120.f) / FMath::Max(1.f, Run - 120.f), 0.12f, 1.f) * 0.85f;
+	if (bAttack)
+	{
+		Chance = FMath::Max(Chance, 0.7f);
+	}
+	if (!TrySlip(At, Chance))
+	{
+		UE_LOG(LogTemp, Display, TEXT("ANTFALL foot %d in a puddle at speed %.0f (chance %.2f%s): kept his feet"), Leg, Speed, Chance, GetWorld()->GetTimeSeconds() < NextFallTime ? TEXT(", resting") : TEXT(""));
+	}
+}
+
+bool AHumanCharacter::TrySlip(const FVector& At, float Chance, bool bForce, AActor* By)
+{
+	UWorld* W = GetWorld();
+	const float Now = W->GetTimeSeconds();
+	if (!HasAuthority() || !bNewBody || Fig != HumanFig::Dad || bKnockedOut || bStunned || IsDown())
+	{
+		return false;
+	}
+	if (!bForce && (Now < NextFallTime || FMath::FRand() >= Chance))
+	{
+		return false;
+	}
+	// Which way: along where he was going (he goes down backwards, the feet shoot forward).
+	FVector Fwd = GetVelocity().GetSafeNormal2D();
+	if (Fwd.IsNearlyZero())
+	{
+		Fwd = GetActorForwardVector().GetSafeNormal2D();
+	}
+	const float SpeedBefore = (float)GetVelocity().Size2D();
+	const FRotator Face(0.f, (float)Fwd.Rotation().Yaw, 0.f);
+	SetActorRotation(Face);
+	if (Controller) { Controller->SetControlRotation(Face); }
+	GetCharacterMovement()->StopMovementImmediately();
+	const int32 Leg = FVector::DistSquared2D(Rig.Feet[0].Pos, At) <= FVector::DistSquared2D(Rig.Feet[1].Pos, At) ? 0 : 1;
+	const FVector Floor(GetActorLocation().X, GetActorLocation().Y, FeetZ());
+	StartAct(HumanAct::Fall, (uint8)Leg, Floor - Fwd * 2300.f * FigScale);
+	bSpraying = false;
+	bStompPending = false;
+	bTowel = false;
+	FallImpactAt = Now + HumanAct::FallHit;
+	NextFallTime = Now + HumanAct::FallUp + 45.f;
+	BackAcheUntil = Now + HumanAct::FallUp + 10.f;
+	if (Held)
+	{
+		// Whatever was in his hand flies.
+		AKitchenLoot* L = Held;
+		Held = nullptr;
+		if (IsValid(L) && L->bHeld) { L->Throw(Fwd * 900.f + FVector(0.f, 0.f, 1500.f)); }
+	}
+	SlippedOn = AKitchenSlick::At(W, At, 250.f);
+	// From now on he knows the puddles: he walks round them.
+	for (TActorIterator<AKitchenSlick> It(W); It; ++It) { It->bKnown = true; }
+	AntSfx::Everyone(this, AntSfx::HumanPanic, GetActorLocation() + FVector(0.f, 0.f, 600.f), 0.85f);
+	AActor* Who = By ? By : (SlippedOn.IsValid() ? SlippedOn->By.Get() : nullptr);
+	UE_LOG(LogTemp, Display, TEXT("ANTFALL the Human slips at %s (leg %d, speed %.0f, chance %.2f%s), falls towards yaw %.0f, puddle by %s"), *At.ToCompactString(), Leg,
+		SpeedBefore, Chance, bForce ? TEXT(", forced") : TEXT(""), (float)(-Fwd).Rotation().Yaw, *GetNameSafe(Who));
+	if (AAntKitchenGameMode* GM = W->GetAuthGameMode<AAntKitchenGameMode>())
+	{
+		GM->OnHumanFell(Cast<AAntCharacter>(Who));
+	}
+	return true;
+}
+
+void AHumanCharacter::DoFallImpact()
+{
+	UWorld* W = GetWorld();
+	const FVector Fwd = GetActorForwardVector().GetSafeNormal2D();
+	const FVector Floor(GetActorLocation().X, GetActorLocation().Y, FeetZ());
+	// Where his body lies: from the heels (ahead of where he stood) to the head (behind), about a shoulder wide.
+	const FVector Heels = Floor + Fwd * 900.f * FigScale, Head = Floor - Fwd * 2300.f * FigScale;
+	const float Wide = 420.f * FigScale;
+	int32 Squashed = 0, Thrown = 0, Jumped = 0;
+	if (AAntSwarm* Swarm = AAntSwarm::Get(W))
+	{
+		for (int32 i = 0; i <= 3; ++i) { Swarm->KillInSphere(FMath::Lerp(Heels, Head, i / 3.f), Wide); }
+	}
+	for (TActorIterator<AAntCharacter> It(W); It; ++It)
+	{
+		AAntCharacter* Ant = *It;
+		if (!Ant || Ant->bDead || Ant->IsInNest())
+		{
+			continue;
+		}
+		const FVector A = Ant->GetActorLocation();
+		if (Ant->GetRiddenHuman() == this)
+		{
+			Ant->ApplyLaunch((FVector(0.f, 0.f, 900.f) + FMath::VRand() * 300.f) * AntKit::SpeedK);   // riders fly off
+			++Thrown;
+			continue;
+		}
+		const FVector OnLine = FMath::ClosestPointOnSegment(A, Heels, Head);
+		const float D = (float)FVector::Dist2D(A, OnLine);
+		if (A.Z - Floor.Z > 400.f || InCover(W, A))
+		{
+			continue;
+		}
+		if (D < Wide)
+		{
+			UGameplayStatics::ApplyDamage(Ant, 400.f, GetController(), this, UDamageType::StaticClass());
+			++Squashed;
+			UE_LOG(LogTemp, Display, TEXT("ANTFALL %s squashed under the falling Human (%.0f from his spine)"), *Ant->GetDisplayName(), D);
+		}
+		else if (D < Wide * 3.2f && !Ant->IsAttached())
+		{
+			const float K = 1.f - (D - Wide) / (Wide * 2.2f);
+			Ant->ApplyLaunch(((A - OnLine).GetSafeNormal2D() * (400.f + 900.f * K) + FVector(0.f, 0.f, 420.f + 500.f * K)) * AntKit::SpeedK);
+			if (Ant->Carrying && K > 0.35f)
+			{
+				Ant->LetGo();
+				Ant->Toast(TEXT("Человек грохнулся — груз выбило!"));
+			}
+			++Thrown;
+		}
+	}
+	// The floor jumps: food on it, and the things standing on the low surfaces near him (tables, chairs, the worktop) jump too
+	// and some of them go over the edge.
+	const FVector Mid = (Heels + Head) * 0.5f;
+	for (TActorIterator<AKitchenLoot> It(W); It; ++It)
+	{
+		AKitchenLoot* L = *It;
+		if (L->bHeld)
+		{
+			continue;
+		}
+		const FVector P = L->GetActorLocation();
+		const float D = (float)FVector::Dist2D(P, Mid);
+		const float Up = (float)(P.Z - Floor.Z);
+		if (D < 3600.f && Up < 2000.f)
+		{
+			const float K = FMath::Clamp(1.f - D / 3600.f, 0.f, 1.f);
+			if (L->IsCarried() && K > 0.4f) { L->ReleaseAll(); }
+			const FVector Out = FVector(P - Mid).GetSafeNormal2D();
+			L->Kick((Out * 260.f + FMath::VRand() * 90.f) * (0.4f + K) + FVector(0.f, 0.f, (Up > 300.f ? 520.f : 700.f) * (0.35f + K)), P + FMath::VRand() * 8.f);
+			++Jumped;
+		}
+	}
+	for (TActorIterator<AKitchenProp> It(W); It; ++It)
+	{
+		const FVector P = It->GetActorLocation();
+		const float D = (float)FVector::Dist2D(P, Mid);
+		if (D < 3600.f && P.Z - Floor.Z < 2000.f)
+		{
+			const float K = FMath::Clamp(1.f - D / 3600.f, 0.f, 1.f);
+			It->Jolt(FVector(P - Mid).GetSafeNormal2D() * 160.f * K + FVector(0.f, 0.f, 260.f + 240.f * K) + FMath::VRand() * 60.f, this);
+			++Jumped;
+		}
+	}
+	for (TActorIterator<ACritter> It(W); It; ++It)
+	{
+		if (FVector::Dist2D(It->GetActorLocation(), Mid) < 6000.f) { It->Scare(Mid, TEXT("грохота")); }
+	}
+	AntSfx::Everyone(this, AntSfx::Stomp, Mid, 0.62f);
+	AntSfx::Everyone(this, AntSfx::Drop, Mid, 0.5f);
+	UE_LOG(LogTemp, Display, TEXT("ANTFALL the Human hits the floor at %s: %d ants squashed, %d thrown, %d things jumped"), *Mid.ToCompactString(), Squashed, Thrown, Jumped);
 }

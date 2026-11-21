@@ -352,6 +352,8 @@ public:
 	bool bDevPushed = false;
 	/** Server: an ant dashes into it. True if it was in reach and got shoved along Dir (harder the stronger the ant). */
 	bool TryShove(AAntCharacter* By, const FVector& From, const FVector& Dir, float Reach);
+	/** Server: the floor jumped under it (the Human fell nearby): a kick of this speed, uu/s. Not counted as pushed by an ant. */
+	void Jolt(const FVector& Velocity, AActor* By);
 
 	virtual void Tick(float DeltaSeconds) override;
 

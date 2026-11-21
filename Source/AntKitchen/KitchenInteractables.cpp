@@ -1533,6 +1533,17 @@ bool AKitchenProp::TryShove(AAntCharacter* By, const FVector& From, const FVecto
 	return true;
 }
 
+void AKitchenProp::Jolt(const FVector& Velocity, AActor* By)
+{
+	if (!HasAuthority() || !Mesh->IsSimulatingPhysics())
+	{
+		return;
+	}
+	Mesh->WakeAllRigidBodies();
+	Mesh->AddImpulse(Velocity, NAME_None, true);
+	Mesh->AddAngularImpulseInDegrees(FMath::VRand() * 120.f, NAME_None, true);
+}
+
 void AKitchenProp::OnPropHit(UPrimitiveComponent* HitComp, AActor* Other, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
 	if (!HasAuthority() || Mass < 3.f)

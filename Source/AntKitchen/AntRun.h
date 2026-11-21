@@ -61,6 +61,7 @@ namespace AntOrder
 		DropOnHuman,    // drop something on the Human
 		Distract,       // send the Human after a noise twice
 		Overfill,       // 150% of the quota
+		HumanFell,      // make the Human slip and fall (a puddle: KitchenSlick.h)
 		Count
 	};
 	ANTKITCHEN_API const TCHAR* Name(uint8 Id);

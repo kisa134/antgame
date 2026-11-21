@@ -48,7 +48,13 @@ namespace HumanAct
 		Sit,      // down onto the seat at Target and stays there. Arg: 0 knitting, 1 dozing, 2 playing on the floor
 		Rise,     // up from the seat at Target
 		Sweep,    // grandma's broom: drawn back (the warning), then one long stroke across the floor through Target
+		Fall,     // slipped in a puddle: the feet go out, he lands flat on his back, lies, sits up, gets up. Arg: the slipping leg
+		Wipe,     // down on his haunches, wiping the floor at Target with a towel. Arg: seconds * 10
 	};
+	/** The fall (HumanAct::Fall), seconds from the slip: the arms flail (the tell), the back hits the floor, he sits up, he stands. */
+	constexpr float FallHit = 0.92f;
+	constexpr float FallSitUp = 3.4f;
+	constexpr float FallUp = 6.0f;
 	constexpr float SitTime = 1.1f;       // times the figure's own slowness
 	constexpr float SweepHit = 0.85f;
 	/** Seconds from the start to the hit / the grip / the release. */
@@ -81,7 +87,7 @@ struct FHumanRig
 	float Crouch = 0.f, Bend = 0.f, Twist = 0.f, Lean = 0.f, Side = 0.f;
 	float HeadYaw = 0.f, HeadPitch = -10.f;
 	float Glance = 0.f, GlancePitch = -12.f, NextGlance = 0.f;
-	float SprayW = 0.f, HoldW = 0.f, PanicW = 0.f, StunW = 0.f, RageW = 0.f, PeerW = 0.f, SitW = 0.f;
+	float SprayW = 0.f, HoldW = 0.f, PanicW = 0.f, StunW = 0.f, RageW = 0.f, PeerW = 0.f, SitW = 0.f, AcheW = 0.f;
 	float Breath = 0.f, Clock = 0.f;
 	float IdleShift = 0.f, NextShift = 0.f, ShiftTarget = 0.f;
 	float HopPhase = 0.f;

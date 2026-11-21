@@ -14,6 +14,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "KitchenArt.h"
 #include "LevelV2.h"
+#include "KitchenSlick.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "EngineUtils.h"
@@ -135,7 +136,34 @@ void AHumanAIController::MoveTowards(AHumanCharacter* H, const FVector& Goal, fl
 			return;
 		}
 	}
-	const FVector D = (Next - Me).GetSafeNormal2D();
+	FVector D = (Next - Me).GetSafeNormal2D();
+	// Puddles he knows about (he has been on his back in one): he walks round them, not through.
+	for (TActorIterator<AKitchenSlick> It(GetWorld()); It && !D.IsNearlyZero(); ++It)
+	{
+		if (!It->bKnown || *It == ChorePuddle.Get() || !It->IsSlippery())
+		{
+			continue;
+		}
+		const FVector To = FVector(It->GetActorLocation() - Me) * FVector(1.f, 1.f, 0.f);
+		const float R = It->Radius() + 450.f;
+		const float Along = (float)FVector::DotProduct(To, D);
+		if (To.Size() < R)
+		{
+			D = (D * 0.4f - To.GetSafeNormal()).GetSafeNormal2D();   // standing in it already: out of it first
+			continue;
+		}
+		if (Along <= 0.f || Along > R + 1500.f)
+		{
+			continue;
+		}
+		const FVector Perp = To - D * Along;
+		const float PD = (float)Perp.Size();
+		if (PD < R)
+		{
+			const FVector Side = PD > 1.f ? -Perp / PD : FVector::CrossProduct(FVector::UpVector, D);
+			D = (D + Side * (1.f - PD / R) * 1.6f).GetSafeNormal2D();
+		}
+	}
 	if (!D.IsNearlyZero())
 	{
 		H->AddMovementInput(D, Scale);
@@ -156,6 +184,18 @@ void AHumanAIController::Tick(float DeltaSeconds)
 	if (H->bDevPuppet)
 	{
 		return;   // dev: a puppet for screenshots
+	}
+	if (H->IsDown())
+	{
+		// On his back in a puddle: nothing else for now.
+		H->SetSpraying(false);
+		DesiredRotation = H->GetActorRotation();
+		if (AAntKitchenGameMode* DownGM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
+		{
+			DownGM->SetHumanGoal(AntHumanGoal::Stunned, TEXT("поскользнулся и лежит"), H->GetActorLocation());
+		}
+		ChoreStage = 0;
+		return;
 	}
 	bMovedThisTick = false;
 	const FVector MyLoc = H->GetActorLocation();
@@ -190,6 +230,11 @@ void AHumanAIController::Tick(float DeltaSeconds)
 		// Something heavy landed on him: he just stands there and reels.
 		H->SetSpraying(false);
 		DesiredRotation.Pitch = 20.f;
+		return;
+	}
+
+	if (TickChores(H))
+	{
 		return;
 	}
 
@@ -604,4 +649,114 @@ void AHumanAIController::Tick(float DeltaSeconds)
 	{
 		StuckTimer = 0.f;
 	}
+}
+
+bool AHumanAIController::TickChores(AHumanCharacter* H)
+{
+	AKitchenSlick* S = H->SlippedOn.Get();
+	const float Now = GetWorld()->GetTimeSeconds();
+	if (!S || !H->HasJointedBody() || (ChoreStage > 0 && Now > ChoreGiveUp))
+	{
+		if (ChoreStage > 0 || H->bTowel)
+		{
+			UE_LOG(LogTemp, Display, TEXT("ANTFALL chores %s at %.1f"), S ? TEXT("given up") : ChoreStage == 4 ? TEXT("done: the puddle is wiped") : TEXT("over: the puddle is gone"), Now);
+		}
+		ChoreStage = 0;
+		H->bTowel = false;
+		H->SlippedOn = nullptr;
+		ChorePuddle = nullptr;
+		return false;
+	}
+	AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>();
+	const FVector Me = H->GetActorLocation();
+	const FVector C = S->GetActorLocation();
+	H->SetSpraying(false);
+	ChorePuddle = S;
+	if (ChoreStage == 0)
+	{
+		// The towel: the one on the oven handle or the mop by the fridge, whichever is near; otherwise a rag from his pocket.
+		ChoreGiveUp = Now + 30.f;
+		TowelPoint = FVector::ZeroVector;
+		float Best = 4200.f;
+		const TCHAR* Names[] = { TEXT("SM_K_Towel"), TEXT("SM_K_Mop") };
+		const FVector Fallback[] = { FVector(-750.f, 2853.f, 0.f), FVector(6450.f, 3953.f, 0.f) };
+		for (int32 i = 0; i < 2; ++i)
+		{
+			const FKitchenArtInst* I = KitchenArt::Enabled() ? KitchenArt::Find(Names[i]) : nullptr;
+			const FVector At = I ? FVector(I->Loc) : Fallback[i];
+			const FVector Stand(At.X, FMath::Min((float)At.Y, 3000.f) - 550.f, Me.Z);
+			const float D = (float)FVector::Dist2D(Stand, Me);
+			if (D < Best) { Best = D; TowelPoint = Stand; }
+		}
+		ChoreStage = TowelPoint.IsZero() ? 2 : 1;
+		if (ChoreStage == 2)
+		{
+			H->PlayReach(Me + H->GetActorRightVector() * 260.f - FVector(0.f, 0.f, 700.f));   // into the pocket
+			ChoreAt = Now + 0.9f;
+		}
+		UE_LOG(LogTemp, Display, TEXT("ANTFALL chores at %.1f: %s"), Now, ChoreStage == 1 ? *FString::Printf(TEXT("goes for the towel at %s"), *TowelPoint.ToCompactString()) : TEXT("a rag from his pocket"));
+	}
+	if (ChoreStage == 1)
+	{
+		if (GM) { GM->SetHumanGoal(AntHumanGoal::Shut, TEXT("держится за спину, идёт за полотенцем"), TowelPoint); }
+		if (FVector::Dist2D(Me, TowelPoint) > 380.f)
+		{
+			MoveTowards(H, TowelPoint, 0.6f);
+		}
+		else
+		{
+			H->PlayReach(TowelPoint + FVector(0.f, 550.f, 350.f));
+			ChoreAt = Now + HumanAct::ReachTouch + 0.2f;
+			ChoreStage = 2;
+		}
+		return true;
+	}
+	if (ChoreStage == 2)
+	{
+		if (Now >= ChoreAt)
+		{
+			H->bTowel = true;
+			ChoreStage = 3;
+			UE_LOG(LogTemp, Display, TEXT("ANTFALL chores at %.1f: towel in hand, to the puddle at %s"), Now, *C.ToCompactString());
+		}
+		return true;
+	}
+	if (ChoreStage == 3)
+	{
+		if (GM) { GM->SetHumanGoal(AntHumanGoal::Shut, TEXT("идёт вытирать лужу"), C); }
+		const FVector Out = FVector(Me - C).GetSafeNormal2D();
+		const FVector Stand = C + (Out.IsNearlyZero() ? FVector(1.f, 0.f, 0.f) : Out) * (S->Radius() * 0.4f + 650.f);
+		if (FVector::Dist2D(Me, Stand) > 260.f && FVector::Dist2D(Me, C) > S->Radius() * 0.4f + 500.f)
+		{
+			MoveTowards(H, FVector(Stand.X, Stand.Y, Me.Z), 0.55f);
+			return true;
+		}
+		DesiredRotation.Yaw = (float)(C - Me).Rotation().Yaw;
+		if (FMath::Abs(FMath::FindDeltaAngleDegrees((float)H->GetActorRotation().Yaw, (float)DesiredRotation.Yaw)) > 20.f)
+		{
+			return true;   // turning to it first
+		}
+		const float Len = 4.5f;
+		H->PlayWipe(C, Len);
+		S->StartWipe(Len);
+		ChoreAt = Now + Len + 0.2f;
+		ChoreStage = 4;
+		UE_LOG(LogTemp, Display, TEXT("ANTFALL chores at %.1f: wiping the puddle (%.1f s)"), Now, Len);
+		return true;
+	}
+	if (ChoreStage == 4)
+	{
+		if (GM) { GM->SetHumanGoal(AntHumanGoal::Shut, TEXT("вытирает лужу"), C); }
+		if (Now >= ChoreAt)
+		{
+			UE_LOG(LogTemp, Display, TEXT("ANTFALL chores at %.1f: done, the puddle is wiped"), Now);
+			H->bTowel = false;
+			H->SlippedOn = nullptr;
+			ChorePuddle = nullptr;
+			ChoreStage = 0;
+			return false;
+		}
+		return true;
+	}
+	return false;
 }

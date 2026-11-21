@@ -34,6 +34,8 @@
 #include "KitchenBuilder.h"
 #include "HumanCharacter.h"
 #include "AntRaid.h"
+#include "KitchenSlick.h"
+#include "AntFilm.h"
 
 namespace
 {
@@ -95,6 +97,7 @@ namespace AntOrder
 		TEXT("Уронить что-нибудь на Человека"),
 		TEXT("Дважды отвлечь Человека шумом"),
 		TEXT("Перевыполнить квоту в полтора раза"),
+		TEXT("Человек слишком спокоен. Сделайте, чтобы он упал"),
 	};
 	const TCHAR* Name(uint8 Id) { return Id < Count ? Names[Id] : TEXT("?"); }
 	bool AtEnd(uint8 Id) { return Id == NoDeaths || Id == Early || Id == NoBreak; }
@@ -391,11 +394,18 @@ bool AAntKitchenGameMode::HasCard(uint8 Id) const
 	return GS && GS->Cards.Contains(Id);
 }
 
+void AAntKitchenGameMode::OnHumanFell(AAntCharacter* By)
+{
+	Broadcast(By ? FString::Printf(TEXT("Человек поскользнулся на луже и грохнулся! Разлил: %s"), *By->GetDisplayName()) : FString(TEXT("Человек поскользнулся и грохнулся!")), RunGood);
+	CompleteOrder(AntOrder::HumanFell);
+	MakeNoise(Human ? Human->GetActorLocation() : FVector::ZeroVector, 1.f, AntNoise::Crash);
+}
+
 void AAntKitchenGameMode::OnDoorOpened(AKitchenInteractable* Door, AAntCharacter* By, int32 Class)
 {
-	if (!bHeist)
+	if (!bHeist || Cast<AKitchenSpillBottle>(Door))
 	{
-		return;
+		return;   // (a bottle tipped over is not a door)
 	}
 	if (By && By->Team == 0)
 	{
@@ -2098,6 +2108,55 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 			Me->GetAntMovement() && Me->GetAntMovement()->IsCrawling() ? 1 : 0, Me->bDead ? 1 : 0, Me->StuckTo ? 1 : 0, Sole,
 			Human ? Human->GetVelocity().Size2D() : 0.f, Human ? *Human->GetActorLocation().ToCompactString() : TEXT("-"));
 	}
+	// ---- puddles, bottles, the fall (KitchenSlick.h, HumanCharacter.cpp TrySlip)
+	else if (Op == TEXT("spill"))
+	{
+		// spill x y z [kind 0 water / 1 oil] [radius] [life]: a puddle on the floor under the point
+		AKitchenSlick::Spill(W, Vec(1), (uint8)FMath::Clamp((int32)Num(4, 1.f), 0, 1), Me, Num(5, -1.f), Num(6, -1.f));
+	}
+	else if (Op == TEXT("slicks"))
+	{
+		for (TActorIterator<AKitchenSlick> It(W); It; ++It)
+		{
+			UE_LOG(LogTemp, Display, TEXT("ANTSLICK at %s kind %d radius %.0f/%.0f age %.1f of %.0f wiping %d known %d"), *It->GetActorLocation().ToCompactString(), (int32)It->Kind, It->Radius(), It->MaxRadius,
+				W->GetTimeSeconds() - It->Born, It->Life, It->IsBeingWiped() ? 1 : 0, It->bKnown ? 1 : 0);
+		}
+	}
+	else if ((Op == TEXT("bottle") || Op == TEXT("bottlepush")) && A.Num() >= 2)
+	{
+		// bottle oil|water tip|stand|info   ·   bottlepush oil|water [bots]: the player and N ally bots at its back (the cabinet side), the player holds [E]
+		AKitchenSpillBottle* B = AKitchenSpillBottle::Nearest(W, Me ? Me->GetActorLocation() : FVector::ZeroVector, A[1].ToLower() == TEXT("water") ? SlickKind::Water : SlickKind::Oil);
+		if (!B)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("ANTSPILL no bottle"));
+		}
+		else if (Op == TEXT("bottlepush") && Me)
+		{
+			const FVector Back = B->GetActorLocation() + FVector(0.f, AKitchenSpillBottle::Radius + 18.f, 8.f);
+			Me->ApplyTeleport(Back);
+			int32 N = (int32)Num(2, 2.f), Got = 0;
+			if (Bots(0).Num() < N) { AddBots(0, N - Bots(0).Num()); }
+			for (AAntCharacter* Bot : Bots(0))
+			{
+				if (N-- <= 0) { break; }
+				Bot->LetGo();
+				Bot->ApplyTeleport(Back + FVector(FMath::FRandRange(-55.f, 55.f), FMath::FRandRange(-4.f, 4.f), 2.f));
+				++Got;
+			}
+			UE_LOG(LogTemp, Display, TEXT("ANTSPILL push: the player and %d bots at %s, need %.0f"), Got, *Back.ToCompactString(), B->PullNeed());
+			Me->DevInteract();
+			UE_LOG(LogTemp, Display, TEXT("ANTSPILL push: pulling %s, missing %d, tipped %d"), Me->Pulling ? *Me->Pulling->GetName() : TEXT("-"), (int32)B->PullMissing, B->IsDoorOpen() ? 1 : 0);
+		}
+		else if (A.Num() >= 3 && A[2].ToLower() == TEXT("tip")) { B->SetDoorOpen(true); }
+		else if (A.Num() >= 3 && A[2].ToLower() == TEXT("stand")) { B->SetDoorOpen(false); }
+		else
+		{
+			int32 Hands = 0;
+			UE_LOG(LogTemp, Display, TEXT("ANTSPILL %s at %s tipped %d yaw %.0f missing %d strength %.0f of %.0f (hands %d)"), *B->BottleName(), *B->GetActorLocation().ToCompactString(), B->IsDoorOpen() ? 1 : 0,
+				B->TipYaw, (int32)B->PullMissing, B->PullStrength(&Hands), B->PullNeed(), Hands);
+		}
+	}
+	else if (Op == TEXT("noharm")) { AntFilm::SetNoHarm(Num(1, 1.f) > 0.5f); UE_LOG(LogTemp, Display, TEXT("ANTFILM noharm %d"), AntFilm::NoHarm() ? 1 : 0); }
 	else if (Op == TEXT("pos"))
 	{
 		UE_LOG(LogTemp, Display, TEXT("ANTDEV pos me=%s human=%s goal=%d «%s» stage=%d score=%d/%d larvae=%d greed=%.1f"), Me ? *Me->GetActorLocation().ToCompactString() : TEXT("-"),

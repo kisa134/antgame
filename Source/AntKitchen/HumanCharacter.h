@@ -56,7 +56,7 @@ public:
 
 	void SetRage(uint8 NewRage);
 	float GetSprayRange() const { return SprayRange * (1.f + 0.25f * Rage); }
-	float GetWalkSpeed() const { return bStunned ? 1.f : bKnockedOut ? (Fig == HumanFig::Kid ? 1000.f : 260.f) : HumanBody::Style(Fig).WalkSpeed * (1.f + 0.12f * Rage); }
+	float GetWalkSpeed() const { return (bStunned || IsDown()) ? 1.f : bKnockedOut ? (Fig == HumanFig::Kid ? 1000.f : 260.f) : HumanBody::Style(Fig).WalkSpeed * (1.f + 0.12f * Rage) * (HasBackAche() ? 0.5f : 1.f); }
 
 	// ---- The family: grandma and the kid are this same jointed figure with their own tables, size and habits (FolkCharacters.h) ----
 	/** HumanFig: who wears the figure. Set in the constructor of the subclass (InitFigure). */
@@ -75,6 +75,28 @@ public:
 	/** Server: something heavy landed on him. He reels for a moment (there is a cooldown) and gets angrier. False = no effect. */
 	bool Stun(float Seconds, class AAntCharacter* By, const FString& What, uint8 Kind = 0);
 	bool IsStunned() const { return bStunned; }
+
+	// ---- Slipping on a puddle (KitchenSlick.h) ----
+	/** Server: his feet go out from under him at At (a puddle). Chance 0..1; bForce ignores the chance and the 45 s rest. True if he falls. */
+	bool TrySlip(const FVector& At, float Chance, bool bForce = false, AActor* By = nullptr);
+	/** Down on the floor after a slip (from the slip until he stands again): no walking, no attacks. */
+	bool IsDown() const;
+	/** After a fall: one hand on his back, slow (every machine, from the replicated time). */
+	bool HasBackAche() const;
+	/** Server: down on his haunches wiping the floor at Point with the towel. */
+	void PlayWipe(const FVector& Point, float Seconds);
+	bool IsWiping() const;
+	/** Server world time until which his back hurts. */
+	UPROPERTY(Replicated) float BackAcheUntil = -100.f;
+	/** A towel in the left hand (he is about to wipe a puddle). */
+	UPROPERTY(Replicated) bool bTowel = false;
+	/** Server: the puddle he slipped in (the AI goes and wipes it). */
+	TWeakObjectPtr<class AKitchenSlick> SlippedOn;
+	/** Server: not before this world time again (45 s after he is up). */
+	float NextFallTime = 0.f;
+	/** The world time on this machine: the server's clock on clients. */
+	float NetNow() const;
+	virtual void FaceRotation(FRotator NewControlRotation, float DeltaTime = 0.f) override;
 	UPROPERTY(ReplicatedUsing = OnRep_KnockedOut) bool bStunned = false;
 	/** Where the sole of that foot is right now: a squashed ant rides on it. */
 	FVector GetSoleLocation(int32 Leg) const;
@@ -119,8 +141,8 @@ public:
 
 	/** Server: start a stomp with leg 0 (left) / 1 (right), -1 = alternate. */
 	void TryStomp(int32 Leg = -1);
-	/** Server: rolled newspaper slap at a point (walls, tables, anywhere in reach). */
-	void TrySwat(const FVector& Point);
+	/** Server: rolled newspaper slap at a point (walls, tables, anywhere in reach). Force: -1 by height, 0 the bare palm, 1 the newspaper. */
+	void TrySwat(const FVector& Point, int32 Force = -1);
 	/** Server: grab the food nearest to Point, or throw what's in the hand along Dir. */
 	void GrabOrThrow(const FVector& Point, const FVector& Dir);
 	UPROPERTY(Replicated) class AKitchenLoot* Held = nullptr;
@@ -191,6 +213,13 @@ private:
 	/** Cosmetic, local: the spray cloud and hiss, what is shown in the hands. */
 	void BodyEffects(float DeltaSeconds);
 	void OnFootfall(int32 Leg, float Strength);
+	/** Server: a foot came down (Leg) - in a puddle? */
+	void CheckSlip(int32 Leg, bool bAttack);
+	/** Server: the back hits the floor: ants under him squashed, the rest thrown, things on the low surfaces nearby jump. */
+	void DoFallImpact();
+	float FallImpactAt = -1.f;
+	float LocalFallFx = -100.f;   // cosmetic: the Act.Start whose landing has been shown here
+	UPROPERTY() UStaticMeshComponent* TowelArt = nullptr;
 	FTransform BodyFrame() const;
 	/** The nozzle of the spray can when the arm is out, body space: where the cloud and the damage cone start. */
 	FVector SprayNozzleBody() const;

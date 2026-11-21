@@ -21,6 +21,7 @@
 #include "KitchenArt.h"
 #include "KitchenMover.h"
 #include "AntRaid.h"
+#include "KitchenSlick.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "EngineUtils.h"
@@ -186,6 +187,7 @@ void AAntKitchenGameMode::BeginPlay()
 
 	SpawnHuman();
 	SpawnGadgets();
+	AKitchenSpillBottle::SpawnAll(GetWorld());   // level v2: the oil and the water bottle ants can tip over
 	RunBeginPlay();
 	SpawnSwarm();
 	SpawnInitialLoot();

@@ -7,6 +7,8 @@
 #include "AntGameState.h"
 #include "AntMovementComponent.h"
 #include "KitchenLoot.h"
+#include "KitchenSlick.h"
+#include "AntFilm.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/AudioComponent.h"
@@ -259,6 +261,9 @@ void AHumanCharacter::BuildHeldThings()
 		}
 		return;
 	}
+	// The towel he wipes a puddle with (after a fall), folded over the left palm.
+	TowelArt = AntKit::AddPart(this, Segs[HumanSeg::HandL], EAntShape::Cube, FVector(30.f, 40.f, -210.f) * K, FVector(420.f, 300.f, 40.f) * (K / 100.f), FLinearColor(0.85f, 0.9f, 0.98f), FRotator::ZeroRotator, false, false);
+	TowelArt->SetVisibility(false);
 	const AntArt::FPart& Paper = AntArt::Get(TEXT("SM_RolledNewspaper"));
 	if (Paper.IsValid())
 	{
@@ -447,6 +452,8 @@ void AHumanCharacter::PoseBody(float Dt)
 	case HumanAct::Reach: ActDur = 1.0f; break;
 	case HumanAct::Shake: ActDur = 0.95f; break;
 	case HumanAct::Peer: ActDur = Act.Arg * 0.1f; break;
+	case HumanAct::Fall: ActDur = HumanAct::FallUp; break;
+	case HumanAct::Wipe: ActDur = Act.Arg * 0.1f; break;
 	default: break;
 	}
 	if (T < 0.f || T > ActDur || bStun || bKO)
@@ -529,6 +536,7 @@ void AHumanCharacter::PoseBody(float Dt)
 			F.Lift = 0.f;
 			F.Pitch = 0.f;
 			R.DipVel -= 2600.f;
+			if (HasAuthority()) { CheckSlip(StompLeg, true); }   // a stomp into a puddle
 		}
 		F.Pos.Z = FloorZ;
 		F.Yaw += FMath::FindDeltaAngleDegrees(F.Yaw, Yaw) * FMath::Min(1.f, Dt * 10.f);
@@ -561,6 +569,86 @@ void AHumanCharacter::PoseBody(float Dt)
 		L.Yaw = Yaw + (bFootStun ? -30.f : 0.f);
 		L.T = 0.5f;
 	}
+	// The fall: the slipping foot shoots forward and up, the other one leaves the floor, both legs come down on the floor straight
+	// out in front of him, a knee comes up while he lies there, both feet come in when he sits up and back under him as he stands.
+	const bool bFall = A == HumanAct::Fall;
+	const int32 SlipLeg = Act.Arg & 1;
+	const float PelLieZ = 250.f, PelLieX = -380.f;
+	if (bFall)
+	{
+		for (int32 i = 0; i < 2; ++i)
+		{
+			FHumanFoot& F = R.Feet[i];
+			bDrive[i] = true;
+			if (!R.bDriven[i])
+			{
+				F.From = F.Pos;
+				F.FromYaw = F.Yaw;
+			}
+			const bool bSlip = i == SlipLeg;
+			const float Sgn = i == 0 ? -1.f : 1.f;
+			const FVector FromB = Body.InverseTransformPosition(F.From);
+			const FVector Kick(950.f, Sgn * HipY * 1.15f, 0.f);
+			const FVector Air(PelLieX + LegReach * (bSlip ? 0.78f : 0.6f), Sgn * HipY * 1.35f, 0.f);
+			const FVector Flat(PelLieX + LegReach * (bSlip ? 1.0f : 0.96f), Sgn * HipY * 1.6f, 0.f);
+			const FVector Knee(PelLieX + LegReach * 0.56f, Sgn * HipY * 1.25f, 0.f);
+			const FVector Under(0.f, Sgn * HipY, 0.f);
+			FVector PB;
+			float Lift = 0.f, Pitch = 0.f;
+			const float LiftHit = bSlip ? 950.f : 640.f;
+			if (T < 0.40f)
+			{
+				const float U = EaseOut(T / 0.40f);
+				PB = bSlip ? FMath::Lerp(FromB, Kick, U) : FromB;
+				Lift = bSlip ? 650.f * U : 0.f;
+				Pitch = bSlip ? 35.f * U : -12.f * U;
+			}
+			else if (T < HumanAct::FallHit)
+			{
+				const float V = (T - 0.40f) / (HumanAct::FallHit - 0.40f);
+				PB = FMath::Lerp(bSlip ? Kick : FromB, Air, bSlip ? Ease(V) : EaseIn(V));
+				Lift = bSlip ? FMath::Lerp(650.f, LiftHit, V) : LiftHit * EaseIn(V);
+				Pitch = bSlip ? 35.f : FMath::Lerp(-12.f, 25.f, V);
+			}
+			else if (T < HumanAct::FallHit + 0.55f)
+			{
+				const float W = (T - HumanAct::FallHit) / 0.55f;
+				PB = FMath::Lerp(Air, Flat, Ease(W));
+				Lift = LiftHit * (1.f - EaseIn(W)) + 25.f;
+				Pitch = FMath::Lerp(30.f, 55.f, W);
+			}
+			else if (T < HumanAct::FallSitUp)
+			{
+				// Lying there. One knee comes up and goes down again (groaning).
+				const float Up = bSlip ? 0.f : Bump(T, 1.7f, 2.3f, 2.8f, 3.3f);
+				PB = FMath::Lerp(Flat, Knee, Up);
+				Lift = 25.f * (1.f - Up);
+				Pitch = 55.f * (1.f - Up);
+			}
+			else if (T < 4.6f)
+			{
+				const float Q = Ease((T - HumanAct::FallSitUp) / 1.2f);
+				PB = FMath::Lerp(bSlip ? Flat : Knee, Knee, Q);
+				Lift = 25.f * (1.f - Q);
+				Pitch = 55.f * (1.f - Q) * (bSlip ? 1.f : 0.f);
+			}
+			else
+			{
+				// Back onto his feet: they come in under him, one after the other.
+				const float Z = Ease(Ramp(T, 4.6f + (bSlip ? 0.25f : 0.f), HumanAct::FallUp - (bSlip ? 0.f : 0.25f)));
+				PB = FMath::Lerp(Knee, Under, Z);
+				Lift = 90.f * FMath::Sin(PI * Z);
+				Pitch = 0.f;
+			}
+			F.Pos = Body.TransformPosition(FVector(PB.X, PB.Y, 0.f));
+			F.Pos.Z = FloorZ;
+			F.Lift = Lift;
+			F.Pitch = Pitch;
+			F.T = 1.f;
+			const float SplayT = (T > HumanAct::FallHit && T < 4.6f) ? Sgn * 22.f : 0.f;
+			F.Yaw += FMath::FindDeltaAngleDegrees(F.Yaw, Yaw + SplayT) * FMath::Min(1.f, Dt * 8.f);
+		}
+	}
 	for (int32 i = 0; i < 2; ++i)
 	{
 		FHumanFoot& F = R.Feet[i];
@@ -581,7 +669,7 @@ void AHumanCharacter::PoseBody(float Dt)
 		Freq = 1.8f;   // panic: pattering away
 	}
 	const float SwingDur = FMath::Clamp(0.8f / Freq, 0.3f, 0.62f);
-	if (!bHop && StompLeg < 0)
+	if (!bHop && StompLeg < 0 && !bFall)
 	{
 		auto StartSwing = [&](int32 i, float Dur)
 		{
@@ -1004,6 +1092,177 @@ void AHumanCharacter::PoseBody(float Dt)
 		bLook = true;
 		LookB = HeadP;
 	}
+	else if (A == HumanAct::Wipe)
+	{
+		// Down on his haunches, the towel in the left hand going round and round on the floor; the other hand on the knee.
+		const float W = Ease(Ramp(T, 0.f, 0.6f)) * (1.f - Ease(Ramp(T, ActDur - 0.6f, ActDur)));
+		const float Reach2 = FMath::Clamp((float)FVector(TargetB.X, TargetB.Y, 0.f).Size() - 150.f, 520.f, 900.f);
+		const FVector WipeC = FlatDir * Reach2 + FVector(0.f, -120.f, 70.f);
+		const float Tw = TwistTo(WipeC, 0);
+		const float K = NeedReach(0, WipeC + FVector(0.f, 0.f, 60.f), ArmReach * 0.97f, Tw);
+		CrouchT += (K * CrouchMax + 250.f) * W;
+		BendT += (K * BendMax + 12.f) * W;
+		PelvisOff += FlatDir * (LungeMax * K * W);
+		TwistT += Tw * 0.6f * W;
+		FArmCtl& Lh = Arm[0];
+		Lh.W = W;
+		Lh.Abs = WipeC + FVector(FMath::Cos(C * 5.5f) * 210.f, FMath::Sin(C * 5.5f) * 170.f, 0.f);
+		Lh.AbsW = 1.f;
+		Lh.RotA = Lh.RotB = PalmDown0;
+		Lh.Curl = 0.35f;
+		Lh.bPole = true;
+		Lh.Pole = FVector(-0.2f, -0.9f, 0.1f);
+		FArmCtl& Rh = Arm[1];
+		Rh.W = W;
+		Rh.Abs = R.Knee[1] + FVector(60.f, 30.f, 150.f);
+		Rh.AbsW = 1.f;
+		Rh.RotW = 0.f;
+		Rh.bPole = true;
+		Rh.Pole = FVector(-0.2f, 0.9f, 0.2f);
+		bLook = true;
+		LookB = WipeC;
+	}
+	float FallHeadNod = 0.f;
+	if (bFall)
+	{
+		// Slip (0-0.4 s, the arms flail: the tell), down on his back (to 0.92), a bounce, lying (to 3.4), sitting up (to 4.6), up (to 6).
+		const float FW = Ease(Ramp(T, 0.f, 0.12f)) * (1.f - Ease(Ramp(T, HumanAct::FallUp - 0.45f, HumanAct::FallUp)));
+		float PelZ = HipZ - 30.f, Lean = 0.f, Bend = 0.f, Side = 0.f, Twist = 0.f, PelX = 0.f;
+		const float SlipSgn = SlipLeg == 0 ? -1.f : 1.f;
+		if (T < 0.40f)
+		{
+			const float U = T / 0.40f;
+			PelZ = HipZ - 30.f - 150.f * EaseIn(U);
+			Lean = -6.f - 26.f * EaseIn(U);
+			PelX = -90.f * U;
+			Side = SlipSgn * 7.f * U;
+			FallHeadNod = 18.f * U;
+		}
+		else if (T < HumanAct::FallHit)
+		{
+			const float V = (T - 0.40f) / (HumanAct::FallHit - 0.40f);
+			const float G = EaseIn(V);
+			PelZ = FMath::Lerp(HipZ - 180.f, PelLieZ, FMath::Pow(V, 1.6f));
+			Lean = FMath::Lerp(-32.f, -88.f, G);
+			PelX = FMath::Lerp(-90.f, PelLieX, Ease(V));
+			Side = SlipSgn * 7.f * (1.f - V);
+			Twist = SlipSgn * 6.f * FMath::Sin(PI * V);
+			FallHeadNod = FMath::Lerp(18.f, -32.f, V);   // chin to the chest as he goes
+		}
+		else if (T < HumanAct::FallSitUp)
+		{
+			const float W = T - HumanAct::FallHit;
+			const float Bounce = W < 0.45f ? FMath::Sin(PI * W / 0.45f) * (1.f - W / 0.45f) : 0.f;
+			PelZ = PelLieZ + 90.f * Bounce;
+			Lean = -88.f + 7.f * Bounce + 2.f * FMath::Sin(C * 1.4f) * Ramp(W, 0.5f, 1.f);
+			PelX = PelLieX;
+			Side = 4.f * FMath::Sin(C * 0.9f) * Ramp(W, 0.6f, 1.2f);
+			Twist = 7.f * FMath::Sin(C * 0.7f) * Ramp(W, 0.6f, 1.2f);
+			FallHeadNod = W < 0.25f ? FMath::Lerp(-32.f, 6.f, W / 0.25f) : 6.f - 4.f * Bump(T, 1.9f, 2.4f, 2.9f, 3.3f);   // the head knocks on the floor
+			HeadShake = 18.f * FMath::Sin(C * 0.8f) * Ramp(W, 0.7f, 1.4f);
+		}
+		else if (T < 4.6f)
+		{
+			const float Q = Ease((T - HumanAct::FallSitUp) / 1.2f);
+			PelZ = PelLieZ;
+			Lean = FMath::Lerp(-88.f, 30.f, Q);
+			Bend = 10.f * Q;
+			PelX = PelLieX;
+			FallHeadNod = -18.f * Q;
+			HeadShake = 12.f * FMath::Sin(C * 6.f) * Bump(T, 3.9f, 4.1f, 4.4f, 4.6f);   // dazed
+		}
+		else
+		{
+			const float Z = Ease((T - 4.6f) / (HumanAct::FallUp - 4.6f));
+			PelZ = FMath::Lerp(PelLieZ, HipZ - 60.f, Z);
+			Lean = FMath::Lerp(30.f, 8.f, Z);
+			Bend = FMath::Lerp(16.f, 10.f, Z);
+			PelX = FMath::Lerp(PelLieX, 0.f, Z);
+			FallHeadNod = -10.f;
+		}
+		// What the eased posture will be (the spine is built from it below): the shoulders the hands are put about.
+		CrouchT = FMath::Lerp(CrouchT, HipZ - PelZ, FW);
+		LeanT = FMath::Lerp(LeanT, Lean, FW);
+		BendT = FMath::Lerp(BendT, Bend, FW);
+		SideT = FMath::Lerp(SideT, Side, FW);
+		TwistT = FMath::Lerp(TwistT, Twist, FW);
+		PelvisOff = FMath::Lerp(PelvisOff, FVector(PelX, 0.f, 0.f), FW);
+		const FSpine FS = BuildSpine(HipZ - PelZ, Lean, Bend, Twist, Side, FVector(PelX, 0.f, 0.f));
+		for (int32 s = 0; s < 2; ++s)
+		{
+			const float SS = s == 0 ? -1.f : 1.f;
+			FArmCtl& H = Arm[s];
+			H = FArmCtl();
+			H.W = FW;
+			H.RotW = 0.f;
+			H.bPole = true;
+			H.Pole = FVector(-0.3f, SS * 0.9f, 0.f);
+			const FVector Flail(160.f + 260.f * FMath::Sin(C * 16.f + s * 2.f), SS * (560.f + 170.f * FMath::Sin(C * 13.f + s)), 420.f + 380.f * FMath::Sin(C * 18.f + 3.f * s));
+			const FVector Floor(FS.Shoulder[s].X + 200.f, FS.Shoulder[s].Y + SS * 720.f, 70.f);
+			if (T < 0.40f)
+			{
+				H.Rel = Flail;   // windmilling: the 0.4 s tell
+			}
+			else if (T < HumanAct::FallHit)
+			{
+				const float V = (T - 0.40f) / (HumanAct::FallHit - 0.40f);
+				H.Rel = FMath::Lerp(Flail, FVector(-250.f, SS * 780.f, -150.f), Ease(V));   // out to catch himself
+				H.Abs = Floor;
+				H.AbsW = Ease(Ramp(V, 0.6f, 1.f));
+			}
+			else if (T < HumanAct::FallSitUp)
+			{
+				H.Abs = Floor;
+				H.AbsW = 1.f;
+				if (s == 1)
+				{
+					// The right hand goes to his forehead for a moment.
+					const float Hold = Bump(T, 1.9f, 2.4f, 2.9f, 3.3f);
+					H.Abs = FMath::Lerp(Floor, R.SegPos[Head] + FVector(250.f, 60.f, 260.f), Hold);
+					H.Curl = 0.3f * Hold;
+				}
+			}
+			else if (T < 4.6f)
+			{
+				const float Q = Ease((T - HumanAct::FallSitUp) / 1.2f);
+				const FVector Push(FS.Pelvis.X - 300.f, FS.Pelvis.Y + SS * 640.f, 60.f);   // pushing up off the floor behind him
+				H.Abs = FMath::Lerp(Floor, Push, Ease(Ramp(Q, 0.f, 0.5f)));
+				H.Abs = FMath::Lerp(H.Abs, R.Knee[s] + FVector(40.f, SS * 30.f, 140.f), Ease(Ramp(Q, 0.6f, 1.f)));   // then onto the knees
+				H.AbsW = 1.f;
+			}
+			else
+			{
+				const float Z = Ease((T - 4.6f) / (HumanAct::FallUp - 4.6f));
+				H.Abs = R.Knee[s] + FVector(40.f, SS * 30.f, 140.f);
+				if (s == 1)
+				{
+					H.Abs = FMath::Lerp(H.Abs, R.SegPos[Pelvis] + FVector(-300.f, 180.f, 160.f), Ease(Ramp(Z, 0.5f, 1.f)));   // up: the hand to his back
+				}
+				H.AbsW = 1.f;
+				H.W = FW * (s == 1 ? 1.f : 1.f - Ease(Ramp(Z, 0.6f, 1.f)));
+			}
+		}
+		bLook = false;
+	}
+	// After the fall: his back hurts. A little hunched, slow, the right hand pressed to the small of his back.
+	Approach(R.AcheW, (HasBackAche() && A != HumanAct::Wipe) ? 1.f : 0.f, 3.f, Dt);
+	if (R.AcheW > 0.01f && !bFall)
+	{
+		BendT += 14.f * R.AcheW;
+		LeanT += 2.f * R.AcheW;
+		FArmCtl& H = Arm[1];
+		if (H.W < 0.05f)
+		{
+			H = FArmCtl();
+			H.W = R.AcheW;
+			H.Abs = R.SegPos[Pelvis] + FVector(-300.f, 180.f, 160.f);
+			H.AbsW = 1.f;
+			H.RotW = 0.f;
+			H.Curl = 0.2f;
+			H.bPole = true;
+			H.Pole = FVector(-0.1f, 0.9f, -0.3f);
+		}
+	}
 	if (A != HumanAct::Sit && A != HumanAct::Rise)
 	{
 		R.SitW = 0.f;
@@ -1222,6 +1481,13 @@ void AHumanCharacter::PoseBody(float Dt)
 	}
 	HeadPitchT += HeadUpT - 6.f * R.RageW + St.Hunch * 0.7f;
 	HeadPitchT = FMath::Clamp(HeadPitchT, -70.f, FMath::Min(30.f, 55.f - (R.Lean + R.Bend)));   // the neck only goes so far back
+	if (bFall)
+	{
+		// On his back the head lies along the body (the usual clamp would hold it up off the floor), nodding on its own.
+		HeadPitchT = -(R.Lean + R.Bend) + FallHeadNod;
+		HeadYawT = 0.f;
+		Approach(R.HeadPitch, HeadPitchT, 16.f, Dt);
+	}
 	Approach(R.HeadYaw, HeadYawT, 4.5f * Tempo, Dt);
 	Approach(R.HeadPitch, HeadPitchT, 4.5f * Tempo, Dt);
 	const FQuat QHead = RZ(ChestYaw + R.HeadYaw + HeadShake) * RY(-R.HeadPitch) * RX(-R.Side * 0.3f);
@@ -1297,6 +1563,10 @@ void AHumanCharacter::PoseBody(float Dt)
 
 void AHumanCharacter::OnFootfall(int32 Leg, float Strength)
 {
+	if (HasAuthority())
+	{
+		CheckSlip(Leg, false);   // a step into a puddle (KitchenSlick.h)
+	}
 	if (GetNetMode() == NM_DedicatedServer)
 	{
 		return;
@@ -1334,6 +1604,37 @@ void AHumanCharacter::BodyEffects(float DeltaSeconds)
 			if (N && N->IsVisible() != bKnit) { N->SetVisibility(bKnit); }
 		}
 		return;
+	}
+	if (TowelArt && TowelArt->IsVisible() != bTowel)
+	{
+		TowelArt->SetVisibility(bTowel);
+	}
+	// The fall: the moment his back hits the floor, here (cosmetic): the thud, dust along the body, a splash, the cameras jolt.
+	if (Act.Kind == HumanAct::Fall && Act.Start != LocalFallFx)
+	{
+		const float FT = ActTime();
+		if (FT >= HumanAct::FallHit && FT < HumanAct::FallHit + 1.f)
+		{
+			LocalFallFx = Act.Start;
+			const FTransform B = BodyFrame();
+			const FVector Mid = B.TransformPosition(FVector(-900.f, 0.f, 0.f));
+			AntSfx::Play(this, AntSfx::HumanStep, Mid, 1.f, 0.55f);
+			AntFx::StompDust(this, B.TransformPosition(FVector(-380.f, 0.f, 6.f)));
+			AntFx::LandDust(this, B.TransformPosition(FVector(-1700.f, 0.f, 6.f)), FVector::UpVector, 700.f * FigScale);
+			AntFx::LandDust(this, B.TransformPosition(FVector(700.f, 0.f, 6.f)), FVector::UpVector, 500.f * FigScale);
+			if (const AKitchenSlick* S = AKitchenSlick::At(GetWorld(), B.GetLocation(), 900.f))
+			{
+				AntFx::Splash(this, S->GetActorLocation() + FVector(0.f, 0.f, 6.f), 160.f);
+			}
+			if (const APlayerController* PC = GetWorld()->GetFirstPlayerController())
+			{
+				if (AAntCharacter* Me = Cast<AAntCharacter>(PC->GetPawn()))
+				{
+					Me->AddTrauma(FMath::Clamp(1.f - (float)FVector::Dist(Me->GetActorLocation(), Mid) / 5000.f, 0.f, 1.f) * 0.95f);
+				}
+			}
+			AntFilm::Shake(this, Mid, 0.95f, 7000.f);
+		}
 	}
 	const bool bCan = Rig.SprayW >= 0.35f;
 	if (PaperArt && PaperArt->IsVisible() == bCan)

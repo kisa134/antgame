@@ -156,6 +156,7 @@ private:
 	float LastBite = -100.f;
 	float RiderTime = 0.f;
 	float SteerSide = 0.f, SteerUntil = 0.f;
+	FVector SlideVel = FVector::ZeroVector;   // on spilled oil: the paws go out sideways (KitchenSlick.h)
 	float StuckTime = 0.f;
 	float LastNoiseTime = 0.f;
 	FVector ScareFrom = FVector::ZeroVector;

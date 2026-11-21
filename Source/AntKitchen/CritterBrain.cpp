@@ -22,6 +22,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "EngineUtils.h"
 #include "Engine/World.h"
+#include "KitchenSlick.h"
 
 // =============================================================================================
 // The pets' jointed bodies and their brains. Every number a player can feel is in this block
@@ -354,16 +355,25 @@ bool ACritter::WalkTo(const FVector& Dest, float Pace, float Dt, float Arrive)
 		return StuckTime > 1.6f;   // boxed in: call it there
 	}
 	StuckTime = FMath::Max(0.f, StuckTime - Dt);
+	// Spilled oil: the paws slide out sideways and it gets across slowly (it does not fall: it is a cat, or a bulldog).
+	const AKitchenSlick* Oil = AKitchenSlick::At(GetWorld(), Me);
+	const bool bOily = Oil && Oil->Kind == SlickKind::Oil;
+	if (bOily && SlideVel.SizeSquared() < 400.f)
+	{
+		SlideVel = Dir.RotateAngleAxis(FMath::RandBool() ? 40.f : -40.f, FVector::UpVector) * Pace * 0.55f;
+		UE_LOG(LogTemp, Display, TEXT("ANTSLICK %s slides on the oil at %s"), *DisplayName(), *Me.ToCompactString());
+	}
+	SlideVel *= FMath::Exp(-Dt * (bOily ? 1.2f : 4.f));
 	// It turns as it goes, and does not get up to speed until it faces where it is going.
 	const float Align = FMath::Clamp((float)FVector::DotProduct(GetActorForwardVector(), Dir) * 0.6f + 0.5f, 0.2f, 1.f);
-	const float Step = FMath::Min((float)FVector::Dist2D(Me, Way), Pace * Align * Dt);
-	FVector Next = Me + Dir * Step;
+	const float Step = FMath::Min((float)FVector::Dist2D(Me, Way), Pace * Align * Dt * (bOily ? 0.45f : 1.f));
+	FVector Next = Me + Dir * Step + SlideVel * Dt;
 	// The floor under the paws. It used to keep the height of the place it had rested on: the dog walked 15 uu in the air
 	// off his mat, the cat at carpet height across the bare boards.
 	const float Floor = NpcWorld::SurfaceZ(GetWorld(), Next, 150.f, 400.f);
 	Next.Z = FMath::FInterpConstantTo((float)Me.Z, Floor, Dt, 900.f);
 	SetActorLocation(Next);
-	SetActorRotation(FMath::RInterpTo(GetActorRotation(), FRotator(0.f, (float)Dir.Rotation().Yaw, 0.f), Dt, Pace > 900.f ? 10.f : 6.f));
+	SetActorRotation(FMath::RInterpTo(GetActorRotation(), FRotator(0.f, (float)Dir.Rotation().Yaw, 0.f), Dt, bOily ? 2.5f : Pace > 900.f ? 10.f : 6.f));
 	return false;
 }
 

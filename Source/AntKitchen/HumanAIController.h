@@ -30,6 +30,12 @@ private:
 	/** Where to stroll to next: now and then right up to the worktops, the west wall or the window wall (found from the room itself). */
 	FVector PickWander(const class AHumanCharacter* H) const;
 	void MoveTowards(AHumanCharacter* H, const FVector& Goal, float Scale);
+	/** After a fall: a towel (from the oven handle, the mop bucket, or his pocket), then down on his haunches over the puddle. True while busy with it. */
+	bool TickChores(AHumanCharacter* H);
+	int32 ChoreStage = 0;
+	float ChoreAt = 0.f, ChoreGiveUp = 0.f;
+	FVector TowelPoint = FVector::ZeroVector;
+	TWeakObjectPtr<class AKitchenSlick> ChorePuddle;
 
 	TWeakObjectPtr<AAntCharacter> Target;
 	FRotator DesiredRotation = FRotator::ZeroRotator;

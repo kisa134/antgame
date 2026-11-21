@@ -122,6 +122,8 @@ public:
 	void OnTrophyBroken(AKitchenLoot* Trophy);
 	void OnEnemyTorn(AAntCharacter* Victim, AAntCharacter* A, AAntCharacter* B);
 	void OnHumanStunned(AAntCharacter* By, const FString& What);
+	/** He slipped in a puddle and went down (By: the ant that spilled it, if any). */
+	void OnHumanFell(AAntCharacter* By);
 	/** A dead ant leaves a body that can be hauled home for a larva. */
 	void SpawnBody(AAntCharacter* Ant);
 	void CompleteOrder(uint8 OrderId);
