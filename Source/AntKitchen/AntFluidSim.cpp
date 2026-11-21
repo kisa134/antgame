@@ -49,16 +49,8 @@ namespace AntFluid
 		const int32 N = Nx * Ny;
 		Bed.Init(0.f, N);
 		Kind.Init(Open, N);
-		for (int32 L = 0; L < LCount; ++L)
-		{
-			FLayer& Ly = Layers[L];
-			Ly.H.Init(0.f, N);
-			Ly.U.Init(0.f, (Nx + 1) * Ny);
-			Ly.V.Init(0.f, Nx * (Ny + 1));
-			if (L == LWater) { Ly.Dye.Init(0.f, N); Ly.Foam.Init(0.f, N); }
-			Ly.X0 = Ly.Y0 = Ly.X1 = Ly.Y1 = 0;
-			Ly.Volume = 0.;
-		}
+		TX = (Nx + (1 << TileShift) - 1) >> TileShift; TY = (Ny + (1 << TileShift) - 1) >> TileShift;
+		Clear();
 		BedL.Init(0.f, N); Tmp.Init(0.f, N); Tmp2.Init(0.f, N); Tmp3.Init(0.f, N); Scale.Init(1.f, N);
 		FxS.Init(0.f, (Nx + 1) * Ny); FyS.Init(0.f, Nx * (Ny + 1));
 		Un.Init(0.f, (Nx + 1) * Ny); Vn.Init(0.f, Nx * (Ny + 1));
@@ -72,6 +64,23 @@ namespace AntFluid
 		// Oil: 8e-5 m^2/s, wets everything: a film a fraction of a millimetre thick.
 		Params[LOil].Viscosity = 290.f; Params[LOil].Contact = 0.45f; Params[LOil].BedDrag = 0.f;
 		Params[LOil].bAdvect = false; Params[LOil].Film = 0.05f; Params[LOil].FollowBelow = 30.f;
+	}
+
+	void FBasin::Clear()
+	{
+		const int32 N = Nx * Ny;
+		for (int32 L = 0; L < LCount; ++L)
+		{
+			FLayer& Ly = Layers[L];
+			Ly.H.Init(0.f, N);
+			Ly.U.Init(0.f, (Nx + 1) * Ny);
+			Ly.V.Init(0.f, Nx * (Ny + 1));
+			if (L == LWater) { Ly.Dye.Init(0.f, N); Ly.Foam.Init(0.f, N); }
+			Ly.Wake.Init(0, TX * TY); Ly.Run.Init(0, TX * TY); Ly.Dirty.Init(1, TX * TY); Ly.TileVol.Init(0.f, TX * TY);
+			Ly.X0 = Ly.Y0 = Ly.X1 = Ly.Y1 = 0;
+			Ly.Volume = 0.;
+		}
+		Spills.Reset();
 	}
 
 	void FBasin::Finish()
@@ -121,6 +130,20 @@ namespace AntFluid
 		++StepCount;
 	}
 
+	void FBasin::WakeRect(int32 L, int32 I0, int32 J0, int32 I1, int32 J1)
+	{
+		FLayer& Ly = Layers[L];
+		if (Ly.Wake.Num() != TX * TY) { return; }
+		const int32 T0 = FMath::Clamp(I0 >> TileShift, 0, TX - 1), T1 = FMath::Clamp((I1 - 1) >> TileShift, 0, TX - 1);
+		const int32 S0 = FMath::Clamp(J0 >> TileShift, 0, TY - 1), S1 = FMath::Clamp((J1 - 1) >> TileShift, 0, TY - 1);
+		for (int32 ty = S0; ty <= S1; ++ty) { for (int32 tx = T0; tx <= T1; ++tx) { Ly.Wake[ty * TX + tx] = WakeSteps; Ly.Dirty[ty * TX + tx] = 1; } }
+	}
+
+	void FBasin::WakeAll()
+	{
+		for (int32 L = 0; L < LCount; ++L) { WakeRect(L, 0, 0, Nx, Ny); }
+	}
+
 	void FBasin::StepLayer(int32 L)
 	{
 		FLayer& Ly = Layers[L];
@@ -140,171 +163,323 @@ namespace AntFluid
 		const float Visc3 = 3.f * P.Viscosity;
 		const float StabK = 4.f * Gravity * dt / (Dx * Dx);
 		const EParallelForFlags Flags = bParallel ? EParallelForFlags::None : EParallelForFlags::ForceSingleThread;
-		const int32 LNx = Nx, LNy = Ny;
+		const int32 LNx = Nx, LNy = Ny, LTX = TX, TS = 1 << TileShift, Sh = TileShift;
+		float* Dye = Ly.Dye.Num() ? Ly.Dye.GetData() : nullptr;
+		float* Foam = Ly.Foam.Num() ? Ly.Foam.GetData() : nullptr;
+		const float Cell2 = Dx * Dx;
 
-		// One face: momentum (advection, slope, friction), then the flux it carries. A = the cell behind the face, Bc = the cell ahead.
-		auto Face = [&](float u, int32 A, int32 Bc, float uBelow, bool bWaterBelow) -> FVector2f
+		// ---- which tiles run this step: the awake ones and a ring of one tile round them. The rest sleeps: still water costs nothing.
+		// The edge of the running region is shut for this step; a tile next to it that starts to move wakes the next one.
+		const int32 TX0 = FMath::Max((CX0 >> Sh) - 1, 0), TX1 = FMath::Min(((CX1 - 1) >> Sh) + 2, TX);
+		const int32 TY0 = FMath::Max((CY0 >> Sh) - 1, 0), TY1 = FMath::Min(((CY1 - 1) >> Sh) + 2, TY);
+		uint8* Wk = Ly.Wake.GetData(); uint8* Rn = Ly.Run.GetData(); float* TV = Ly.TileVol.GetData(); uint8* Dt8 = Ly.Dirty.GetData();
+		FMemory::Memzero(Rn, TX * TY);
+		TArray<int32> RunList;
+		for (int32 ty = TY0; ty < TY1; ++ty)
 		{
-			if (K[A] == Wall || K[Bc] == Wall) { return FVector2f(0.f, 0.f); }
-			const float ha = H[A], hb = H[Bc];
-			const bool aWet = ha > DryEps, bWet = hb > DryEps;
-			if (!aWet && !bWet) { return FVector2f(0.f, 0.f); }
-			const float ea = B[A] + ha, eb = B[Bc] + hb;
-			// A front wets the next dry cell only when the liquid behind it is thicker than the contact thickness and stands above that cell's bed.
-			if (!bWet && (ha <= P.Contact || ea <= B[Bc])) { return FVector2f(0.f, 0.f); }
-			if (!aWet && (hb <= P.Contact || eb <= B[A])) { return FVector2f(0.f, 0.f); }
-			// The head that drives the flow is never more than the depth of the cell it leaves (a weir, not a free fall inside the cell).
-			const float d = FMath::Clamp(ea - eb, -hb, ha);
-			u += gk * d;
-			if (bWaterBelow) { u += (uBelow - u) * Follow; }
-			const float hf = FMath::Max(u > 0.f ? ha : hb, 0.05f);
-			float Kf = Visc3 / (hf * hf) + P.BedDrag * FMath::Abs(u) / hf;
-			if (bWaterBelow) { Kf *= 0.03f; }
-			if (Kf * dt > 1.f) { Kf = FMath::Max(Kf, StabK * hf); }   // overdamped: keep the explicit creep stable
-			u /= (1.f + dt * Kf);
-			u = FMath::Clamp(u, -Umax, Umax);
-			return FVector2f(u, u * (u > 0.f ? ha : hb) * k);
-		};
-
-		// ---- U faces
-		const int32 FI0 = FMath::Max(CX0, 1), FI1 = FMath::Min(CX1, Nx - 1);
-		ParallelFor(CY1 - CY0, [&](int32 Row)
-		{
-			const int32 j = CY0 + Row;
-			for (int32 i = FI0; i <= FI1; ++i)
+			for (int32 tx = TX0; tx < TX1; ++tx)
 			{
-				const int32 A = j * LNx + i - 1, Bc = A + 1;
-				float u = U[j * UW + i];
-				if (P.bAdvect && (H[A] > DryEps || H[Bc] > DryEps))
+				bool r = !bSleep;
+				for (int32 dy = -1; dy <= 1 && !r; ++dy)
 				{
-					const float v = 0.25f * (V[j * LNx + i - 1] + V[j * LNx + i] + V[(j + 1) * LNx + i - 1] + V[(j + 1) * LNx + i]);
-					u = Bil(U, UW, LNy, (float)i - u * k, (float)j - v * k);
-				}
-				float ub = 0.f; bool bW = false;
-				if (Below) { bW = Below->H[A] > 0.3f && Below->H[Bc] > 0.3f; ub = Below->U[j * UW + i]; }
-				const FVector2f R = Face(u, A, Bc, ub, bW);
-				UnP[j * UW + i] = R.X; Fx[j * UW + i] = R.Y;
-			}
-		}, Flags);
-		// ---- V faces
-		const int32 FJ0 = FMath::Max(CY0, 1), FJ1 = FMath::Min(CY1, Ny - 1);
-		if (FJ1 >= FJ0)
-		{
-			ParallelFor(FJ1 - FJ0 + 1, [&](int32 Row)
-			{
-				const int32 j = FJ0 + Row;
-				for (int32 i = CX0; i < CX1; ++i)
-				{
-					const int32 A = (j - 1) * LNx + i, Bc = j * LNx + i;
-					float v = V[j * LNx + i];
-					if (P.bAdvect && (H[A] > DryEps || H[Bc] > DryEps))
+					for (int32 dx = -1; dx <= 1 && !r; ++dx)
 					{
-						const float u = 0.25f * (U[(j - 1) * UW + i] + U[(j - 1) * UW + i + 1] + U[j * UW + i] + U[j * UW + i + 1]);
-						v = Bil(V, LNx, LNy + 1, (float)i - u * k, (float)j - v * k);
+						const int32 x = tx + dx, y = ty + dy;
+						if (x >= 0 && y >= 0 && x < TX && y < TY && Wk[y * TX + x]) { r = true; }
 					}
-					float vb = 0.f; bool bW = false;
-					if (Below) { bW = Below->H[A] > 0.3f && Below->H[Bc] > 0.3f; vb = Below->V[j * LNx + i]; }
-					const FVector2f R = Face(v, A, Bc, vb, bW);
-					VnP[j * LNx + i] = R.X; Fy[j * LNx + i] = R.Y;
+				}
+				if (r) { Rn[ty * TX + tx] = 1; RunList.Add(ty * TX + tx); }
+			}
+		}
+		RunTiles[L] = RunList.Num();
+
+		if (RunList.Num() > 0)
+		{
+			// One face: momentum (advection, slope, friction), then the flux it carries. A = the cell behind the face, Bc = the cell ahead.
+			auto Face = [&](float u, int32 A, int32 Bc, float uBelow, bool bWaterBelow) -> FVector2f
+			{
+				if (K[A] == Wall || K[Bc] == Wall) { return FVector2f(0.f, 0.f); }
+				const float ha = H[A], hb = H[Bc];
+				const bool aWet = ha > DryEps, bWet = hb > DryEps;
+				if (!aWet && !bWet) { return FVector2f(0.f, 0.f); }
+				const float ea = B[A] + ha, eb = B[Bc] + hb;
+				// A front wets the next dry cell only when the liquid behind it is thicker than the contact thickness and stands above that cell's bed.
+				if (!bWet && (ha <= P.Contact || ea <= B[Bc])) { return FVector2f(0.f, 0.f); }
+				if (!aWet && (hb <= P.Contact || eb <= B[A])) { return FVector2f(0.f, 0.f); }
+				// The head that drives the flow is never more than the depth of the cell it leaves (a weir, not a free fall inside the cell).
+				const float d = FMath::Clamp(ea - eb, -hb, ha);
+				u += gk * d;
+				if (bWaterBelow) { u += (uBelow - u) * Follow; }
+				const float hf = FMath::Max(u > 0.f ? ha : hb, 0.05f);
+				float Kf = Visc3 / (hf * hf) + P.BedDrag * FMath::Abs(u) / hf;
+				if (bWaterBelow) { Kf *= 0.03f; }
+				if (Kf * dt > 1.f) { Kf = FMath::Max(Kf, StabK * hf); }   // overdamped: keep the explicit creep stable
+				u /= (1.f + dt * Kf);
+				u = FMath::Clamp(u, -Umax, Umax);
+				return FVector2f(u, u * (u > 0.f ? ha : hb) * k);
+			};
+			auto RunAt = [Rn, LTX, Sh](int32 i, int32 j) { return Rn[(j >> Sh) * LTX + (i >> Sh)] != 0; };
+
+			// ---- U faces: those of every running cell and the right edge of the running region (shut)
+			const int32 FI0 = FMath::Max(CX0, 1), FI1 = FMath::Min(CX1, Nx - 1);
+			ParallelFor(CY1 - CY0, [&](int32 Row)
+			{
+				const int32 j = CY0 + Row;
+				const int32 ty = j >> Sh;
+				for (int32 tx = TX0; tx < TX1; ++tx)
+				{
+					if (!Rn[ty * LTX + tx]) { continue; }
+					const bool bNextRuns = tx + 1 < LTX && Rn[ty * LTX + tx + 1];
+					const int32 I0 = FMath::Max(FI0, tx * TS), I1 = FMath::Min(FI1, bNextRuns ? tx * TS + TS - 1 : tx * TS + TS);
+					for (int32 i = I0; i <= I1; ++i)
+					{
+						const int32 A = j * LNx + i - 1, Bc = A + 1;
+						if (!RunAt(i - 1, j) || !RunAt(i, j)) { UnP[j * UW + i] = U[j * UW + i]; Fx[j * UW + i] = 0.f; continue; }
+						float u = U[j * UW + i];
+						if (P.bAdvect && (H[A] > DryEps || H[Bc] > DryEps))
+						{
+							const float v = 0.25f * (V[j * LNx + i - 1] + V[j * LNx + i] + V[(j + 1) * LNx + i - 1] + V[(j + 1) * LNx + i]);
+							u = Bil(U, UW, LNy, (float)i - u * k, (float)j - v * k);
+						}
+						float ub = 0.f; bool bW = false;
+						if (Below) { bW = Below->H[A] > 0.3f && Below->H[Bc] > 0.3f; ub = Below->U[j * UW + i]; }
+						const FVector2f R = Face(u, A, Bc, ub, bW);
+						UnP[j * UW + i] = R.X; Fx[j * UW + i] = R.Y;
+					}
+				}
+			}, Flags);
+			// ---- V faces: a face between two running cells is solved, one between a running and a sleeping cell is shut
+			const int32 FJ0 = FMath::Max(CY0, 1), FJ1 = FMath::Min(CY1, Ny - 1);
+			if (FJ1 >= FJ0)
+			{
+				ParallelFor(FJ1 - FJ0 + 1, [&](int32 Row)
+				{
+					const int32 j = FJ0 + Row;
+					const int32 ty = j >> Sh, tyb = (j - 1) >> Sh;
+					for (int32 tx = TX0; tx < TX1; ++tx)
+					{
+						const bool r1 = Rn[ty * LTX + tx] != 0, r0 = Rn[tyb * LTX + tx] != 0;
+						if (!r0 && !r1) { continue; }
+						const int32 I0 = FMath::Max(CX0, tx * TS), I1 = FMath::Min(CX1, tx * TS + TS);
+						for (int32 i = I0; i < I1; ++i)
+						{
+							if (!r0 || !r1) { VnP[j * LNx + i] = V[j * LNx + i]; Fy[j * LNx + i] = 0.f; continue; }
+							const int32 A = (j - 1) * LNx + i, Bc = j * LNx + i;
+							float v = V[j * LNx + i];
+							if (P.bAdvect && (H[A] > DryEps || H[Bc] > DryEps))
+							{
+								const float u = 0.25f * (U[(j - 1) * UW + i] + U[(j - 1) * UW + i + 1] + U[j * UW + i] + U[j * UW + i + 1]);
+								v = Bil(V, LNx, LNy + 1, (float)i - u * k, (float)j - v * k);
+							}
+							float vb = 0.f; bool bW = false;
+							if (Below) { bW = Below->H[A] > 0.3f && Below->H[Bc] > 0.3f; vb = Below->V[j * LNx + i]; }
+							const FVector2f R = Face(v, A, Bc, vb, bW);
+							VnP[j * LNx + i] = R.X; Fy[j * LNx + i] = R.Y;
+						}
+					}
+				}, Flags);
+			}
+			// commit the new face velocities (the same faces)
+			ParallelFor(CY1 - CY0, [&](int32 Row)
+			{
+				const int32 j = CY0 + Row;
+				const int32 ty = j >> Sh;
+				for (int32 tx = TX0; tx < TX1; ++tx)
+				{
+					if (!Rn[ty * LTX + tx]) { continue; }
+					const bool bNextRuns = tx + 1 < LTX && Rn[ty * LTX + tx + 1];
+					const int32 I0 = FMath::Max(FI0, tx * TS), I1 = FMath::Min(FI1, bNextRuns ? tx * TS + TS - 1 : tx * TS + TS);
+					if (I1 >= I0) { FMemory::Memcpy(U + j * UW + I0, UnP + j * UW + I0, (I1 - I0 + 1) * sizeof(float)); }
+				}
+			}, Flags);
+			if (FJ1 >= FJ0)
+			{
+				ParallelFor(FJ1 - FJ0 + 1, [&](int32 Row)
+				{
+					const int32 j = FJ0 + Row;
+					const int32 ty = j >> Sh, tyb = (j - 1) >> Sh;
+					for (int32 tx = TX0; tx < TX1; ++tx)
+					{
+						if (!Rn[ty * LTX + tx] && !Rn[tyb * LTX + tx]) { continue; }
+						const int32 I0 = FMath::Max(CX0, tx * TS), I1 = FMath::Min(CX1, tx * TS + TS);
+						if (I1 > I0) { FMemory::Memcpy(V + j * LNx + I0, VnP + j * LNx + I0, (I1 - I0) * sizeof(float)); }
+					}
+				}, Flags);
+			}
+
+			// ---- per running tile: a cell never gives more than it has
+			float* Sc = Scale.GetData();
+			auto TileCells = [&](int32 t, int32& I0, int32& I1, int32& J0, int32& J1)
+			{
+				const int32 tx = t % LTX, ty = t / LTX;
+				I0 = FMath::Max(CX0, tx * TS); I1 = FMath::Min(CX1, tx * TS + TS); J0 = FMath::Max(CY0, ty * TS); J1 = FMath::Min(CY1, ty * TS + TS);
+			};
+			ParallelFor(RunList.Num(), [&](int32 n)
+			{
+				int32 I0, I1, J0, J1; TileCells(RunList[n], I0, I1, J0, J1);
+				for (int32 j = J0; j < J1; ++j)
+				{
+					for (int32 i = I0; i < I1; ++i)
+					{
+						const int32 c = j * LNx + i;
+						const float Out = FMath::Max(0.f, Fx[j * UW + i + 1]) + FMath::Max(0.f, -Fx[j * UW + i]) + FMath::Max(0.f, Fy[(j + 1) * LNx + i]) + FMath::Max(0.f, -Fy[j * LNx + i]);
+						Sc[c] = Out > H[c] ? H[c] / Out : 1.f;
+					}
+				}
+			}, Flags);
+
+			// ---- mass (and the dye and the foam it carries)
+			float* Hn = Tmp.GetData(); float* Dn = Tmp2.GetData(); float* Fn = Tmp3.GetData();
+			const float FoamKeep = 1.f - dt * 1.1f;
+			ParallelFor(RunList.Num(), [&](int32 n)
+			{
+				int32 I0, I1, J0, J1; TileCells(RunList[n], I0, I1, J0, J1);
+				for (int32 j = J0; j < J1; ++j)
+				{
+					for (int32 i = I0; i < I1; ++i)
+					{
+						const int32 c = j * LNx + i;
+						const float fl = Fx[j * UW + i], fr = Fx[j * UW + i + 1], fd = Fy[j * LNx + i], fu = Fy[(j + 1) * LNx + i];
+						// flux through each face, scaled by the cell it leaves
+						const float Fl = fl * (fl > 0.f ? (i > 0 ? Sc[c - 1] : 1.f) : Sc[c]);
+						const float Fr = fr * (fr > 0.f ? Sc[c] : (i + 1 < LNx ? Sc[c + 1] : 1.f));
+						const float Fd = fd * (fd > 0.f ? (j > 0 ? Sc[c - LNx] : 1.f) : Sc[c]);
+						const float Fu = fu * (fu > 0.f ? Sc[c] : (j + 1 < LNy ? Sc[c + LNx] : 1.f));
+						float h = H[c] + Fl - Fr + Fd - Fu;
+						if (h < 0.f) { h = 0.f; }
+						if (Dye)
+						{
+							float m = H[c] * Dye[c];
+							m += Fl * ((Fl > 0.f && i > 0) ? Dye[c - 1] : Dye[c]);
+							m -= Fr * ((Fr > 0.f || i + 1 >= LNx) ? Dye[c] : Dye[c + 1]);
+							m += Fd * ((Fd > 0.f && j > 0) ? Dye[c - LNx] : Dye[c]);
+							m -= Fu * ((Fu > 0.f || j + 1 >= LNy) ? Dye[c] : Dye[c + LNx]);
+							Dn[c] = h > DryEps ? FMath::Clamp(m / h, 0.f, 1.f) : 0.f;
+						}
+						if (Foam)
+						{
+							const float uc = 0.5f * (U[j * UW + i] + U[j * UW + i + 1]), vc = 0.5f * (V[j * LNx + i] + V[(j + 1) * LNx + i]);
+							float f = Bil(Foam, LNx, LNy, (float)i - uc * k, (float)j - vc * k) * FoamKeep;
+							const float Sp2 = uc * uc + vc * vc;
+							// white water where it runs fast and shallow (supercritical) and where the flow piles up
+							const float Fr2 = Sp2 / (Gravity * FMath::Max(h, 0.5f));
+							if (Fr2 > 4.f && h > 2.f) { f += dt * 0.15f * FMath::Min(Fr2 - 4.f, 2.f); }
+							Fn[c] = h > DryEps ? FMath::Min(f, 1.f) : 0.f;
+						}
+						Hn[c] = h;   // seeping and drying: the slow pass below, for every tile (so they never keep a still tile awake)
+					}
+				}
+			}, Flags);
+
+			// ---- commit per tile, collect what fell over an edge, decide which tiles stay awake
+			TArray<TArray<FSpill>> TileSpills;
+			TileSpills.SetNum(RunList.Num());
+			ParallelFor(RunList.Num(), [&](int32 n)
+			{
+				const int32 t = RunList[n];
+				int32 I0, I1, J0, J1; TileCells(t, I0, I1, J0, J1);
+				double Vol = 0.;
+				float MaxDh = 0.f, MaxSp = 0.f, MaxFoam = 0.f;
+				for (int32 j = J0; j < J1; ++j)
+				{
+					for (int32 i = I0; i < I1; ++i)
+					{
+						const int32 c = j * LNx + i;
+						float h = Hn[c];
+						if (h > 0.f && K[c] == Void)
+						{
+							FSpill S; S.Cell = c; S.Layer = (uint8)L; S.Volume = h * Cell2; S.Dye = Dye ? Dn[c] : 0.f;
+							S.Vel = FVector2f(0.5f * (U[j * UW + i] + U[j * UW + i + 1]), 0.5f * (V[j * LNx + i] + V[(j + 1) * LNx + i]));
+							TileSpills[n].Add(S);
+							h = 0.f;
+							MaxDh = 1.f;
+						}
+						if (h < 1.e-5f) { h = 0.f; }
+						MaxDh = FMath::Max(MaxDh, FMath::Abs(h - H[c]));
+						H[c] = h;
+						if (Dye) { Dye[c] = Dn[c]; }
+						if (Foam) { Foam[c] = Fn[c]; MaxFoam = FMath::Max(MaxFoam, Fn[c]); }
+						if (h > 0.f)
+						{
+							Vol += h;
+							const float uc = 0.5f * (U[j * UW + i] + U[j * UW + i + 1]), vc = 0.5f * (V[j * LNx + i] + V[(j + 1) * LNx + i]);
+							MaxSp = FMath::Max(MaxSp, FMath::Abs(uc) + FMath::Abs(vc));
+						}
+					}
+				}
+				TV[t] = (float)Vol;
+				// awake while it visibly moves: more than ~0.15 mm of depth a second, or a current over ~1.5 mm/s
+				if (MaxDh > 3.e-4f || MaxSp > 3.f) { Wk[t] = WakeSteps; }
+				else if (Wk[t] > 0) { --Wk[t]; }
+				// the picture is written again when it changes enough to see (the slow pass marks the rest)
+				if (MaxDh > 1.e-3f || MaxSp > 6.f || MaxFoam > 0.02f) { Dt8[t] = 1; }
+			}, Flags);
+			for (TArray<FSpill>& Ts : TileSpills) { Spills.Append(Ts); }
+		}
+
+		// ---- sleeping water still seeps away and dries, its foam fades: every SlowEvery steps, in one go
+		if (((StepCount + (uint32)L * 7) % SlowEvery) == 0 && (P.Soak > 0.f || P.Evaporation > 0.f || Foam))
+		{
+			const float Ds = dt * (float)SlowEvery;
+			const float FoamK = FMath::Max(0.f, 1.f - Ds * 1.1f);
+			ParallelFor(TY1 - TY0, [&](int32 RowT)
+			{
+				const int32 ty = TY0 + RowT;
+				for (int32 tx = TX0; tx < TX1; ++tx)
+				{
+					const int32 t = ty * TX + tx;
+					if (TV[t] <= 0.f) { continue; }
+					const bool bSleeping = !Rn[t];
+					double Vol = 0.;
+					for (int32 j = ty * TS; j < FMath::Min(ty * TS + TS, Ny); ++j)
+					{
+						for (int32 i = tx * TS; i < FMath::Min(tx * TS + TS, Nx); ++i)
+						{
+							const int32 c = j * Nx + i;
+							float h = H[c];
+							if (h <= 0.f) { continue; }
+							if (h < P.Film && P.Evaporation > 0.f) { h = FMath::Max(0.f, h - P.Evaporation * Ds); }
+							if (P.Soak > 0.f) { h = FMath::Max(0.f, h - P.Soak * Ds); }
+							if (h < 1.e-5f) { h = 0.f; }
+							H[c] = h;
+							if (Foam) { if (bSleeping) { Foam[c] *= FoamK; } if (h <= 0.f) { Foam[c] = 0.f; } }
+							Vol += h;
+						}
+					}
+					TV[t] = (float)Vol;
+					Dt8[t] = 1;
 				}
 			}, Flags);
 		}
-		for (int32 j = CY0; j < CY1; ++j) { FMemory::Memcpy(U + j * UW + FI0, UnP + j * UW + FI0, (FI1 - FI0 + 1) * sizeof(float)); }
-		for (int32 j = FJ0; j <= FJ1; ++j) { FMemory::Memcpy(V + j * LNx + CX0, VnP + j * LNx + CX0, (CX1 - CX0) * sizeof(float)); }
 
-		// ---- a cell never gives more than it has
-		float* Sc = Scale.GetData();
-		ParallelFor(CY1 - CY0, [&](int32 Row)
-		{
-			const int32 j = CY0 + Row;
-			for (int32 i = CX0; i < CX1; ++i)
-			{
-				const int32 c = j * LNx + i;
-				const float Out = FMath::Max(0.f, Fx[j * UW + i + 1]) + FMath::Max(0.f, -Fx[j * UW + i]) + FMath::Max(0.f, Fy[(j + 1) * LNx + i]) + FMath::Max(0.f, -Fy[j * LNx + i]);
-				Sc[c] = Out > H[c] ? H[c] / Out : 1.f;
-			}
-		}, Flags);
-
-		// ---- mass (and the dye and the foam it carries)
-		float* Hn = Tmp.GetData(); float* Dn = Tmp2.GetData(); float* Fn = Tmp3.GetData();
-		float* Dye = Ly.Dye.Num() ? Ly.Dye.GetData() : nullptr;
-		float* Foam = Ly.Foam.Num() ? Ly.Foam.GetData() : nullptr;
-		const float FoamKeep = 1.f - dt * 1.1f;
-		ParallelFor(CY1 - CY0, [&](int32 Row)
-		{
-			const int32 j = CY0 + Row;
-			for (int32 i = CX0; i < CX1; ++i)
-			{
-				const int32 c = j * LNx + i;
-				const float fl = Fx[j * UW + i], fr = Fx[j * UW + i + 1], fd = Fy[j * LNx + i], fu = Fy[(j + 1) * LNx + i];
-				// flux through each face, scaled by the cell it leaves
-				const float Fl = fl * (fl > 0.f ? (i > 0 ? Sc[c - 1] : 1.f) : Sc[c]);
-				const float Fr = fr * (fr > 0.f ? Sc[c] : (i + 1 < LNx ? Sc[c + 1] : 1.f));
-				const float Fd = fd * (fd > 0.f ? (j > 0 ? Sc[c - LNx] : 1.f) : Sc[c]);
-				const float Fu = fu * (fu > 0.f ? Sc[c] : (j + 1 < LNy ? Sc[c + LNx] : 1.f));
-				float h = H[c] + Fl - Fr + Fd - Fu;
-				if (h < 0.f) { h = 0.f; }
-				if (Dye)
-				{
-					float m = H[c] * Dye[c];
-					m += Fl * ((Fl > 0.f && i > 0) ? Dye[c - 1] : Dye[c]);
-					m -= Fr * ((Fr > 0.f || i + 1 >= LNx) ? Dye[c] : Dye[c + 1]);
-					m += Fd * ((Fd > 0.f && j > 0) ? Dye[c - LNx] : Dye[c]);
-					m -= Fu * ((Fu > 0.f || j + 1 >= LNy) ? Dye[c] : Dye[c + LNx]);
-					Dn[c] = h > DryEps ? FMath::Clamp(m / h, 0.f, 1.f) : 0.f;
-				}
-				if (Foam)
-				{
-					const float uc = 0.5f * (U[j * UW + i] + U[j * UW + i + 1]), vc = 0.5f * (V[j * LNx + i] + V[(j + 1) * LNx + i]);
-					float f = Bil(Foam, LNx, LNy, (float)i - uc * k, (float)j - vc * k) * FoamKeep;
-					const float Sp2 = uc * uc + vc * vc;
-					// white water where it runs fast and shallow (supercritical) and where the flow piles up
-					const float Fr2 = Sp2 / (Gravity * FMath::Max(h, 0.5f));
-					if (Fr2 > 3.f && h > 2.f) { f += dt * 0.5f * FMath::Min(Fr2 - 3.f, 2.f); }
-					Fn[c] = h > DryEps ? FMath::Min(f, 1.f) : 0.f;
-				}
-				if (h < P.Film && P.Evaporation > 0.f) { h = FMath::Max(0.f, h - P.Evaporation * dt); }
-				if (P.Soak > 0.f && h > 0.f) { h = FMath::Max(0.f, h - P.Soak * dt); }
-				Hn[c] = h;
-			}
-		}, Flags);
-
-		// ---- commit, collect what fell over an edge, find the new box
-		int32 NX0 = Nx, NY0 = Ny, NX1 = 0, NY1 = 0;
+		// ---- the volume and the box of tiles that hold liquid
 		double Vol = 0.;
-		const float Cell2 = Dx * Dx;
-		for (int32 j = CY0; j < CY1; ++j)
+		int32 NX0 = TX, NY0 = TY, NX1 = -1, NY1 = -1;
+		for (int32 ty = TY0; ty < TY1; ++ty)
 		{
-			for (int32 i = CX0; i < CX1; ++i)
+			for (int32 tx = TX0; tx < TX1; ++tx)
 			{
-				const int32 c = j * Nx + i;
-				float h = Hn[c];
-				if (h > 0.f && K[c] == Void)
-				{
-					FSpill S; S.Cell = c; S.Layer = (uint8)L; S.Volume = h * Cell2; S.Dye = Dye ? Dn[c] : 0.f;
-					S.Vel = FVector2f(0.5f * (U[j * UW + i] + U[j * UW + i + 1]), 0.5f * (V[j * Nx + i] + V[(j + 1) * Nx + i]));
-					Spills.Add(S);
-					h = 0.f;
-				}
-				if (h < 1.e-5f) { h = 0.f; }
-				H[c] = h;
-				if (Dye) { Dye[c] = Dn[c]; }
-				if (Foam) { Foam[c] = Fn[c]; }
-				if (h > 0.f)
-				{
-					Vol += h;
-					NX0 = FMath::Min(NX0, i); NX1 = FMath::Max(NX1, i + 1); NY0 = FMath::Min(NY0, j); NY1 = FMath::Max(NY1, j + 1);
-				}
+				const float v = TV[ty * TX + tx];
+				if (v <= 0.f) { continue; }
+				Vol += v;
+				NX0 = FMath::Min(NX0, tx); NX1 = FMath::Max(NX1, tx); NY0 = FMath::Min(NY0, ty); NY1 = FMath::Max(NY1, ty);
 			}
 		}
 		Ly.Volume = Vol * Cell2;
-		if (NX1 > NX0) { Ly.X0 = NX0; Ly.X1 = NX1; Ly.Y0 = NY0; Ly.Y1 = NY1; }
+		if (NX1 >= NX0) { Ly.X0 = NX0 * TS; Ly.X1 = FMath::Min((NX1 + 1) * TS, Nx); Ly.Y0 = NY0 * TS; Ly.Y1 = FMath::Min((NY1 + 1) * TS, Ny); }
 		else { Ly.X0 = Ly.X1 = Ly.Y0 = Ly.Y1 = 0; }
 	}
 
 	// ---------------------------------------------------------------------------------------------
 	// Sources, sinks, pushes
 	// ---------------------------------------------------------------------------------------------
+
+	static void WakeDisc(FBasin& Bn, int32 L, float X, float Y, float Radius)
+	{
+		const int32 I0 = FMath::FloorToInt((X - Radius - Bn.OriginX) / Bn.Dx) - 1, J0 = FMath::FloorToInt((Y - Radius - Bn.OriginY) / Bn.Dx) - 1;
+		const int32 I1 = FMath::CeilToInt((X + Radius - Bn.OriginX) / Bn.Dx) + 2, J1 = FMath::CeilToInt((Y + Radius - Bn.OriginY) / Bn.Dx) + 2;
+		Bn.WakeRect(L, FMath::Clamp(I0, 0, Bn.Nx - 1), FMath::Clamp(J0, 0, Bn.Ny - 1), FMath::Clamp(I1, 1, Bn.Nx), FMath::Clamp(J1, 1, Bn.Ny));
+	}
 
 	template <typename F>
 	static void ForDisc(const FBasin& Bn, float X, float Y, float Radius, F&& Fn)
@@ -349,6 +524,7 @@ namespace AntFluid
 			I0 = FMath::Min(I0, i); I1 = FMath::Max(I1, i + 1); J0 = FMath::Min(J0, j); J1 = FMath::Max(J1, j + 1);
 		});
 		GrowBox(Ly, I0, J0, I1, J1);
+		WakeRect(L, I0, J0, I1, J1);
 		Ly.Volume += Volume;
 		return 0.f;
 	}
@@ -358,6 +534,7 @@ namespace AntFluid
 		if (!Contains(X, Y)) { return 0.f; }
 		FLayer& Ly = Layers[Layer];
 		float Taken = 0.f;
+		WakeDisc(*this, Layer, X, Y, Radius);
 		ForDisc(*this, X, Y, Radius, [&](int32 i, int32 j, float)
 		{
 			const int32 c = Idx(i, j);
@@ -377,6 +554,7 @@ namespace AntFluid
 		{
 			FLayer& Ly = Layers[L];
 			if (!Ly.Any()) { continue; }
+			WakeDisc(*this, L, X, Y, Radius);
 			ForDisc(*this, X, Y, Radius, [&](int32 i, int32 j, float)
 			{
 				if (Ly.H[Idx(i, j)] <= DryEps) { return; }
@@ -393,6 +571,7 @@ namespace AntFluid
 		const int32 UW = Nx + 1;
 		FLayer& Ly = Layers[LWater];
 		if (!Ly.Any()) { return; }
+		WakeDisc(*this, LWater, X, Y, Radius);
 		const float Inv = 1.f / FMath::Max(Radius, 1.f);
 		ForDisc(*this, X, Y, Radius, [&](int32 i, int32 j, float)
 		{
@@ -410,6 +589,7 @@ namespace AntFluid
 	{
 		if (!Contains(X, Y)) { return; }
 		FLayer& Ly = Layers[LWater];
+		WakeDisc(*this, LWater, X, Y, Radius);
 		ForDisc(*this, X, Y, Radius, [&](int32 i, int32 j, float) { const int32 c = Idx(i, j); if (Ly.H[c] > DryEps) { Ly.Foam[c] = FMath::Min(1.f, Ly.Foam[c] + Amount); } });
 	}
 
@@ -552,6 +732,7 @@ namespace AntFluid
 					for (int32 j = bj * C; j < FMath::Min((bj + 1) * C, Ny); ++j) { for (int32 i = bi * C; i < FMath::Min((bi + 1) * C, Nx); ++i) { if (Kind[Idx(i, j)] == Open) { ++N; Sum += Ly.H[Idx(i, j)]; } } }
 					if (N == 0) { continue; }
 					const float Diff = (SH - Sum / (float)N) * Blend;
+					if (FMath::Abs(Diff) > 0.02f) { WakeRect(L, bi * C, bj * C, FMath::Min((bi + 1) * C, Nx), FMath::Min((bj + 1) * C, Ny)); }   // what the correction moved runs again
 					const float SU = (bIn && Us.Num()) ? (float)Us[b] / 127.f * Umax : 0.f, SV = (bIn && Vs.Num()) ? (float)Vs[b] / 127.f * Umax : 0.f;
 					for (int32 j = bj * C; j < FMath::Min((bj + 1) * C, Ny); ++j)
 					{

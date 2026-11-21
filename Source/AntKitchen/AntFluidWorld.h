@@ -61,6 +61,42 @@ struct FAntDrop
 	int32 Id = 0;
 };
 
+/** A pour the server runs (a bottle, a hose, a puddle running out): every client runs the same one. */
+USTRUCT()
+struct FAntFluidPour
+{
+	GENERATED_BODY()
+	UPROPERTY() FVector_NetQuantize10 Pos = FVector::ZeroVector;
+	UPROPERTY() float Rate = 0.f;      // uu^3 per second
+	UPROPERTY() float Radius = 30.f;
+	UPROPERTY() uint8 Liquid = 0;
+	bool operator==(const FAntFluidPour& O) const { return Pos == O.Pos && Rate == O.Rate && Radius == O.Radius && Liquid == O.Liquid; }
+};
+
+/**
+ * The water over the network. Every machine runs the same deterministic flow from the same inputs (the tap, the pours, the big
+ * spills, the geysers); the server's state, coarsened and compressed, is sent round every second (one basin at a time) and pulls
+ * each client back where it drifted. A late joiner takes the first picture whole.
+ */
+UCLASS()
+class ANTKITCHEN_API AAntFluidNet : public AActor
+{
+	GENERATED_BODY()
+
+public:
+	AAntFluidNet();
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	UPROPERTY(Replicated) float TapRate = 0.f;   // uu^3/s while the faucet runs
+	UPROPERTY(Replicated) uint8 TapLiquid = 0;
+	UPROPERTY(Replicated) TArray<FAntFluidPour> Pours;
+
+	UFUNCTION(NetMulticast, Unreliable) void MulticastSnap(uint8 Basin, uint16 Seq, uint8 Part, uint8 Parts, const TArray<uint8>& Data);
+	UFUNCTION(NetMulticast, Reliable) void MulticastGeyser(FVector_NetQuantize At, float Seconds, uint8 Liquid);
+	UFUNCTION(NetMulticast, Reliable) void MulticastSpill(uint8 Liquid, FVector_NetQuantize At, float Volume, float Radius);
+	UFUNCTION(NetMulticast, Reliable) void MulticastDry();
+};
+
 /**
  * The liquid of the kitchen (docs/FEATURES.md, section 29). On by default since v12; -AntNoFluid turns it off.
  *
@@ -129,10 +165,19 @@ private:
 	void StepSim(float Dt);
 	void HandleSpills(int32 BasinIndex);
 	int32 BasinUnder(const FVector& P, int32 Skip = -1) const;
+	/** BasinUnder, or one a little to the side (P is moved there). */
+	int32 BasinUnderNear(FVector& P, int32 Skip = -1) const;
+	/** AddVolume; what lands on a wall cell runs to the nearest open one. Returns what still did not fit. */
+	float AddNear(AntFluid::FBasin& T, AntFluid::ELiquid Liquid, float X, float Y, float Radius, float Volume, const FVector2f& Vel = FVector2f::ZeroVector);
 	struct FSource { FName Id; FVector Pos; uint8 Liquid = 0; float Rate = 0.f; float Radius = 30.f; bool bOn = false; float Left = -1.f; };
 	TArray<FSource> Sources;
 	struct FFall { FVector From, To; float T = 0.f, Dur = 0.f; float Volume = 0.f; uint8 Liquid = 0; FVector2f Vel; int32 ToBasin = -1; };
 	TArray<FFall> Falls;
+	TMap<int64, FFall> Pending;   // falls being gathered over a few steps (one lump per landing spot)
+	struct FLandCache { int32 To = -1; float X = 0.f, Y = 0.f, Surface = 0.f; uint32 Step = 0; };
+	TMap<int64, FLandCache> LandCache;   // edge cell -> where its liquid lands
+	int32 PendingSteps = 0;
+	void FlushPending();
 	/** Where liquid is pouring over an edge or out of a tap right now (smoothed): the 3D layer is placed by these. */
 	struct FColumn { FVector Top, Bottom; float Rate = 0.f; float Seen = 0.f; uint8 Liquid = 0; FVector2f Vel; };
 	TArray<FColumn> Columns;
@@ -140,13 +185,30 @@ private:
 	double Accum = 0.;
 	int32 MaxSteps = 3;
 	bool bReady = false, bFrozen = false, bTriedBuild = false;
-	float SimMs = 0.f, ViewMs = 0.f, CoupleMs = 0.f, DropMs = 0.f;
+	float SimMs = 0.f, ViewMs = 0.f, CoupleMs = 0.f, DropMs = 0.f, PropsMs = 0.f, AntsMs = 0.f;
 	double LostVolume = 0.;
 	float StatAt = 0.f;
 	TWeakObjectPtr<class AKitchenFaucet> Faucet;
 
 	// ---- the game (server): the tap fixture, drains, the stains it washes, the Human's reaction, geysers
 	void TickGame(float Dt);
+	void TickGeysers(float Dt);
+	void WashStains(float Step);
+	// ---- network (AAntFluidNet)
+	TWeakObjectPtr<AAntFluidNet> Net;
+	void TickNetServer(float Dt);
+	void TickNetClient(float Dt);
+	float SnapClock = 0.f;
+	int32 SnapTurn = 0;
+	uint16 SnapSeq = 0;
+	struct FSnapIn { uint16 Seq = 0; int32 Parts = 0; int32 Got = 0; TArray<TArray<uint8>> Chunks; bool bHadFirst = false; };
+	TMap<uint8, FSnapIn> SnapIn;
+	int32 SnapsRead = 0;
+public:
+	/** Client: a piece of the server's picture arrived (AAntFluidNet). */
+	void ClientSnap(uint8 Basin, uint16 Seq, uint8 Part, uint8 Parts, const TArray<uint8>& Data);
+	AAntFluidNet* GetNet() const { return Net.Get(); }
+private:
 	struct FGeyserJet { FVector At; float Left = 0.f; float Acc = 0.f; uint8 Liquid = 1; int32 Seed = 0; };
 	TArray<FGeyserJet> Geysers;
 	float TapRate = 5.f;           // litres per second of the open tap
@@ -178,6 +240,10 @@ private:
 	void UpdateViews();
 	void UpdateLayerView(int32 BasinIndex, int32 L);
 	TArray<float> FieldA, FieldB;
+	TArray<uint8> ViewDirty;   // tiles of the basin being drawn that changed since the last frame
+	int32 UploadTiles = 0;     // stats: tiles written into the textures this frame
+	int32 CausticTod = -1;
+	bool bFlip = false;        // the 3D FLIP volumes (Niagara Fluids) at big splashes: off, they read as goo at this scale (-AntFluidFlip / fluid flip on)
 
 	// ---- layer B: 3D volumes
 	UPROPERTY() TArray<FAntFluidVolume> Volumes;
@@ -196,6 +262,7 @@ private:
 	void TickDrops(float Dt);
 	void DrawDrops();
 	UPROPERTY() UInstancedStaticMeshComponent* StreamMesh = nullptr;
+	UPROPERTY() UInstancedStaticMeshComponent* SprayMesh = nullptr;
 	void DrawStreams();
 	float TapDripAt = -1.f;
 	bool bDrip = false;

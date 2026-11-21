@@ -135,17 +135,49 @@ float2 uv = (W.xy - Org.xy) * Org.zw;
 float4 a = Texture2DSampleLevel(TexA, TexASampler, uv, 0);
 float4 b = Texture2DSampleLevel(TexB, TexBSampler, uv, 0);
 float sp = length(a.ba);
-float2 q = W.xy / 26.0 - a.ba * 0.05;
-float2 c = floor(q), fr = frac(q);
-float2 u = fr * fr * (3.0 - 2.0 * fr);
-float h00 = frac(sin(dot(c, float2(12.9898, 78.233))) * 43758.5453);
-float h10 = frac(sin(dot(c + float2(1, 0), float2(12.9898, 78.233))) * 43758.5453);
-float h01 = frac(sin(dot(c + float2(0, 1), float2(12.9898, 78.233))) * 43758.5453);
-float h11 = frac(sin(dot(c + float2(1, 1), float2(12.9898, 78.233))) * 43758.5453);
-float nz = lerp(lerp(h00, h10, u.x), lerp(h01, h11, u.x), u.y);
-// foam is patches of bubbles carried by the flow, not a haze: a little foam is a few specks, a lot is white water
-float foam = saturate(b.r * 1.5) * smoothstep(0.55, 0.75, nz * 0.7 + b.r * 0.6);
-return float4(foam, b.g, b.b, sp);
+// Foam is a lace of bubbles, not blots: the walls between cells of two cellular noises (bubbles of ~3 mm and ~7 mm at ant scale),
+// carried a little by the flow. A little foam shows as a sparse lace, a lot closes into white water.
+float amt = saturate(b.r);
+float lace = 0.0;
+for (int o = 0; o < 2; o++)
+{
+    float S = (o == 0) ? 5.5 : 13.0;
+    float2 q = W.xy / S - a.ba * 0.01;
+    float2 c = floor(q), f = frac(q);
+    float d1 = 8.0, d2 = 8.0;
+    for (int j = -1; j <= 1; j++)
+    for (int i = -1; i <= 1; i++)
+    {
+        float2 g = float2(i, j);
+        float2 h = frac(sin(float2(dot(c + g, float2(127.1, 311.7)), dot(c + g, float2(269.5, 183.3)))) * 43758.5453);
+        float d = length(g + h - f);
+        if (d < d1) { d2 = d1; d1 = d; } else if (d < d2) { d2 = d; }
+    }
+    float wall = 1.0 - smoothstep(0.03, 0.16, d2 - d1);
+    lace = max(lace, wall * ((o == 0) ? 1.0 : 0.75));
+}
+float foam = saturate(amt * 2.5) * lace * 0.85 + smoothstep(0.55, 1.0, amt) * 0.75;
+return float4(saturate(foam), b.g, b.b, sp);
+"""
+
+# Caustics: the light a moving surface focuses on the bed, seen through the water (an emissive pattern under the surface, by depth).
+CAUSTIC = r"""
+float2 uv = (W.xy - Org.xy) * Org.zw;
+float4 a = Texture2DSampleLevel(TexA, TexASampler, uv, 0);
+float depth = max(a.g, 0.0);
+float k = saturate(depth / 4.0) * saturate(1.0 - depth / 160.0);
+float t = Time * 0.7;
+float c = 0.0;
+for (int o = 0; o < 2; o++)
+{
+    float S = (o == 0) ? 34.0 : 15.0;
+    float2 p = W.xy / S - a.ba * Time * 0.004 * (o + 1);
+    float2 w = p + 0.55 * float2(sin(p.y * 1.7 + t * (1.0 + o)), cos(p.x * 1.3 - t * 0.8));
+    float r1 = 1.0 - abs(sin(w.x * 2.1 + sin(w.y * 1.1 + t)));
+    float r2 = 1.0 - abs(sin(w.y * 2.3 + cos(w.x * 0.9 - t * 1.1)));
+    c += (pow(saturate(r1), 7.0) + pow(saturate(r2), 7.0)) * ((o == 0) ? 1.0 : 0.5);
+}
+return c * k;
 """
 
 # Thin-film interference for the oil: the colour depends on the thickness of the film and on the viewing angle.
@@ -271,50 +303,28 @@ return float4(col, c);
     ior = MEL.create_material_expression(m, unreal.MaterialExpressionConstant, 400, -100); ior.set_editor_property("r", 1.333)
     MEL.connect_material_property(ior, "", unreal.MaterialProperty.MP_REFRACTION)
 
+    # caustics on the bed under clear water (none under foam or cola); the game sets "Caustic" by the time of day
+    caus = custom(m, CAUSTIC, unreal.CustomMaterialOutputType.CMOT_FLOAT1, ["TexA", "W", "Org", "Time"], -900, 700, "FluidCaustic")
+    wire(caus, [(texA, "TexA"), (wp, "W"), (org, "Org"), (tm, "Time")])
+    ccol = vparam(m, "Caustic", (0.09, 0.11, 0.12, 0), -1700, 2300)
+    CMIX = r"""
+return C * Col * (1.0 - saturate(Foam * 1.5)) * (1.0 - saturate(Dye * 1.5));
+"""
+    cmix = custom(m, CMIX, unreal.CustomMaterialOutputType.CMOT_FLOAT3, ["C", "Col", "Foam", "Dye"], -300, 700, "FluidCausticMix")
+    MEL.connect_material_expressions(caus, "", cmix, "C")
+    MEL.connect_material_expressions(rgb(ccol, -1400, 2300), "", cmix, "Col")
+    MEL.connect_material_expressions(foam, "", cmix, "Foam")
+    MEL.connect_material_expressions(dye, "", cmix, "Dye")
+    MEL.connect_material_property(cmix, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+
     MEL.layout_material_expressions(m)
     MEL.recompile_material(m)
     EAL.save_asset(DIR + "/M_AntLiquid")
     unreal.log("FLUIDPY M_AntLiquid saved")
 
-def build_drop():
-    m = fresh("M_AntDrop", unreal.Material, unreal.MaterialFactoryNew())
-    m.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_SINGLE_LAYER_WATER)
-    m.set_editor_property("blend_mode", unreal.BlendMode.BLEND_OPAQUE)
-    try:
-        m.set_editor_property("refraction_method", unreal.RefractionMode.RM_INDEX_OF_REFRACTION)
-    except Exception as e:
-        unreal.log_warning("FLUIDPY refraction_method: %s" % e)
-    absw = vparam(m, "Absorb", (0.012, 0.004, 0.003, 0), -700, 300)
-    sca = vparam(m, "Scatter", (0.0006, 0.0008, 0.0008, 0), -700, 500)
-    slw = MEL.create_material_expression(m, unreal.MaterialExpressionSingleLayerWaterMaterialOutput, 0, 400)
-    MEL.connect_material_expressions(sca, "", slw, "ScatteringCoefficients")
-    MEL.connect_material_expressions(absw, "", slw, "AbsorptionCoefficients")
-    pg = MEL.create_material_expression(m, unreal.MaterialExpressionConstant, -300, 700); pg.set_editor_property("r", 0.0)
-    MEL.connect_material_expressions(pg, "", slw, "PhaseG")
-    cs = MEL.create_material_expression(m, unreal.MaterialExpressionConstant, -300, 800); cs.set_editor_property("r", 1.0)
-    MEL.connect_material_expressions(cs, "", slw, "ColorScaleBehindWater")
-    r = sparam(m, "Roughness", 0.02, -700, 0)
-    MEL.connect_material_property(r, "", unreal.MaterialProperty.MP_ROUGHNESS)
-    sp = MEL.create_material_expression(m, unreal.MaterialExpressionConstant, -300, 100); sp.set_editor_property("r", 0.255)
-    MEL.connect_material_property(sp, "", unreal.MaterialProperty.MP_SPECULAR)
-    ior = MEL.create_material_expression(m, unreal.MaterialExpressionConstant, -300, 200); ior.set_editor_property("r", 1.333)
-    MEL.connect_material_property(ior, "", unreal.MaterialProperty.MP_REFRACTION)
-    bc = vparam(m, "TopColor", (1, 1, 1, 0), -700, -200)
-    MEL.connect_material_property(bc, "", unreal.MaterialProperty.MP_BASE_COLOR)
-    MEL.recompile_material(m)
-    EAL.save_asset(DIR + "/M_AntDrop")
-    unreal.log("FLUIDPY M_AntDrop saved")
-
-# A falling stream (the tap's jet, a pour off an edge): thin, clear, refracting, bright edges, ripples running down it.
-STREAM_N = r"""
-float v = UV.y * 6.0 - Time * 9.0;
-float a = sin(v * 6.2832 + sin(UV.x * 6.2832 * 3.0) * 0.6) * 0.22 + sin(v * 2.3 * 6.2832 + UV.x * 19.0) * 0.1;
-float b = sin(UV.x * 6.2832 * 2.0 + v * 3.1) * 0.12;
-return normalize(float3(b, a, 1.0));
-"""
-
-def build_stream():
-    m = fresh("M_AntStream", unreal.Material, unreal.MaterialFactoryNew())
+def glass(m, kind_from_instance, x0=-900):
+    """Clear liquid as a lit translucent surface: refraction, Fresnel (the rim reflects, the middle is seen through), a hint of
+    colour; per instance (custom data 0) 0 = water .. 0.5 = oil .. 1 = cola. Never black in shade: a little of the sky in it."""
     m.set_editor_property("blend_mode", unreal.BlendMode.BLEND_TRANSLUCENT)
     m.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_DEFAULT_LIT)
     try:
@@ -325,26 +335,78 @@ def build_stream():
         m.set_editor_property("refraction_method", unreal.RefractionMode.RM_INDEX_OF_REFRACTION)
     except Exception as e:
         unreal.log_warning("FLUIDPY refraction_method: %s" % e)
-    uv = MEL.create_material_expression(m, unreal.MaterialExpressionTextureCoordinate, -900, 0)
-    tm = MEL.create_material_expression(m, unreal.MaterialExpressionTime, -900, 100)
-    n = custom(m, STREAM_N, unreal.CustomMaterialOutputType.CMOT_FLOAT3, ["UV", "Time"], -600, 0, "StreamNormal")
+    k = None
+    if kind_from_instance:
+        k = MEL.create_material_expression(m, unreal.MaterialExpressionPerInstanceCustomData, x0, 600)
+        k.set_editor_property("data_index", 0)
+    LOOK = r"""
+float cola = saturate(K * 2.0 - 1.0), oil = 1.0 - abs(K * 2.0 - 1.0);
+float3 nn = normalize(N), vv = normalize(V);
+float fr = pow(1.0 - saturate(abs(dot(nn, vv))), 3.0);
+float3 col = lerp(float3(0.80, 0.90, 0.95), float3(0.16, 0.06, 0.02), cola);
+col = lerp(col, float3(0.95, 0.70, 0.25), oil);
+float op = lerp(lerp(0.10, 0.85, cola), 0.75, fr);
+return float4(col, op);
+"""
+    look = custom(m, LOOK, unreal.CustomMaterialOutputType.CMOT_FLOAT4, ["K", "N", "V"], x0 + 300, 300, "LiquidLook")
+    if k:
+        MEL.connect_material_expressions(k, "", look, "K")
+    nrm = MEL.create_material_expression(m, unreal.MaterialExpressionVertexNormalWS, x0, 300)
+    cam = MEL.create_material_expression(m, unreal.MaterialExpressionCameraVectorWS, x0, 400)
+    MEL.connect_material_expressions(nrm, "", look, "N")
+    MEL.connect_material_expressions(cam, "", look, "V")
+    def mask(r, g, b, a, y):
+        cm = MEL.create_material_expression(m, unreal.MaterialExpressionComponentMask, x0 + 600, y)
+        cm.set_editor_property("r", r); cm.set_editor_property("g", g); cm.set_editor_property("b", b); cm.set_editor_property("a", a)
+        MEL.connect_material_expressions(look, "", cm, "")
+        return cm
+    col = mask(True, True, True, False, 200)
+    op = mask(False, False, False, True, 400)
+    MEL.connect_material_property(col, "", unreal.MaterialProperty.MP_BASE_COLOR)
+    MEL.connect_material_property(op, "", unreal.MaterialProperty.MP_OPACITY)
+    em = MEL.create_material_expression(m, unreal.MaterialExpressionMultiply, x0 + 800, 100)
+    em.set_editor_property("const_b", 0.06)
+    MEL.connect_material_expressions(col, "", em, "A")
+    MEL.connect_material_property(em, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+    r = sparam(m, "Roughness", 0.02, x0 + 600, -100)
+    MEL.connect_material_property(r, "", unreal.MaterialProperty.MP_ROUGHNESS)
+    sp = MEL.create_material_expression(m, unreal.MaterialExpressionConstant, x0 + 600, 0); sp.set_editor_property("r", 0.6)
+    MEL.connect_material_property(sp, "", unreal.MaterialProperty.MP_SPECULAR)
+    ior = MEL.create_material_expression(m, unreal.MaterialExpressionConstant, x0 + 600, 500); ior.set_editor_property("r", 1.333)
+    MEL.connect_material_property(ior, "", unreal.MaterialProperty.MP_REFRACTION)
+    return look
+
+def build_drop():
+    m = fresh("M_AntDrop", unreal.Material, unreal.MaterialFactoryNew())
+    try:
+        m.set_editor_property("used_with_instanced_static_meshes", True)
+    except Exception as e:
+        unreal.log_warning("FLUIDPY ism usage: %s" % e)
+    glass(m, True)
+    MEL.recompile_material(m)
+    EAL.save_asset(DIR + "/M_AntDrop")
+    unreal.log("FLUIDPY M_AntDrop saved")
+
+# A falling stream (the tap's jet, a sheet off an edge): clear, refracting, bright rim, ripples running down it.
+STREAM_N = r"""
+float v = UV.y * 6.0 - Time * 9.0;
+float a = sin(v * 6.2832 + sin(UV.x * 6.2832 * 3.0) * 0.6) * 0.22 + sin(v * 2.3 * 6.2832 + UV.x * 19.0) * 0.1;
+float b = sin(UV.x * 6.2832 * 2.0 + v * 3.1) * 0.12;
+return normalize(float3(b, a, 1.0));
+"""
+
+def build_stream():
+    m = fresh("M_AntStream", unreal.Material, unreal.MaterialFactoryNew())
+    try:
+        m.set_editor_property("used_with_instanced_static_meshes", True)
+    except Exception as e:
+        unreal.log_warning("FLUIDPY ism usage: %s" % e)
+    glass(m, True)
+    uv = MEL.create_material_expression(m, unreal.MaterialExpressionTextureCoordinate, -1300, -300)
+    tm = MEL.create_material_expression(m, unreal.MaterialExpressionTime, -1300, -200)
+    n = custom(m, STREAM_N, unreal.CustomMaterialOutputType.CMOT_FLOAT3, ["UV", "Time"], -1000, -300, "StreamNormal")
     MEL.connect_material_expressions(uv, "", n, "UV"); MEL.connect_material_expressions(tm, "", n, "Time")
     MEL.connect_material_property(n, "", unreal.MaterialProperty.MP_NORMAL)
-    fr = MEL.create_material_expression(m, unreal.MaterialExpressionFresnel, -600, 300)
-    fr.set_editor_property("exponent", 3.0)
-    MEL.connect_material_expressions(n, "", fr, "Normal")
-    op = MEL.create_material_expression(m, unreal.MaterialExpressionLinearInterpolate, -300, 300)
-    op.set_editor_property("const_a", 0.18); op.set_editor_property("const_b", 0.85)
-    MEL.connect_material_expressions(fr, "", op, "Alpha")
-    MEL.connect_material_property(op, "", unreal.MaterialProperty.MP_OPACITY)
-    bc = vparam(m, "Color", (0.55, 0.75, 0.85, 0), -600, -300)
-    MEL.connect_material_property(bc, "", unreal.MaterialProperty.MP_BASE_COLOR)
-    r = sparam(m, "Roughness", 0.04, -600, -200)
-    MEL.connect_material_property(r, "", unreal.MaterialProperty.MP_ROUGHNESS)
-    sp = MEL.create_material_expression(m, unreal.MaterialExpressionConstant, -300, -100); sp.set_editor_property("r", 1.0)
-    MEL.connect_material_property(sp, "", unreal.MaterialProperty.MP_SPECULAR)
-    ior = MEL.create_material_expression(m, unreal.MaterialExpressionConstant, -300, 500); ior.set_editor_property("r", 1.333)
-    MEL.connect_material_property(ior, "", unreal.MaterialProperty.MP_REFRACTION)
     MEL.recompile_material(m)
     EAL.save_asset(DIR + "/M_AntStream")
     unreal.log("FLUIDPY M_AntStream saved")

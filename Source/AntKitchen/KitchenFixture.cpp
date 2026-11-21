@@ -895,10 +895,13 @@ void AKitchenFixture::Spill(AAntCharacter* By)
 	{
 		// The real liquid (AntFluidWorld): the open cola runs out for 20 s; a broken glass, jug or vase lets its water go at once.
 		if (Id == TEXT("cola")) { F->AddSource(AntFluid::Cola, At + FVector(-120.f, 0.f, 40.f), 0.12f, 20.f, 50.f); }
-		else if (State == Broken && (Id.Contains(TEXT("glass")) || Id.Contains(TEXT("jug")) || Id.Contains(TEXT("vase")) || Id.Contains(TEXT("kettle"))))
+		else if (Id.Contains(TEXT("glass")) || Id.Contains(TEXT("jug")) || Id.Contains(TEXT("vase")) || Id.Contains(TEXT("kettle")))
 		{
-			F->AddSource(AntFluid::Water, At + FVector(0.f, 0.f, 40.f), 1.5f, 1.f, 90.f);
+			// broken: it all goes at once; tipped over whole: it glugs out over a couple of seconds
+			if (State == Broken) { F->AddSource(AntFluid::Water, At + FVector(0.f, 0.f, 40.f), 1.5f, 1.f, 90.f); }
+			else { F->AddSource(AntFluid::Water, At + FVector(0.f, 0.f, 60.f), 0.6f, 2.5f, 50.f); }
 		}
+		else if (Id == TEXT("teapot") && State != Broken) { F->AddSource(AntFluid::Water, At + FVector(0.f, 0.f, 60.f), 0.35f, 3.f, 50.f); }   // tipped over: the tea runs out of the spout
 	}
 	if (Id == TEXT("jam_jar") && State == Broken)
 	{

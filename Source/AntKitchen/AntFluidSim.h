@@ -47,6 +47,11 @@ namespace AntFluid
 		TArray<float> Foam;          // water layer only: 0..1
 		int32 X0 = 0, Y0 = 0, X1 = 0, Y1 = 0;   // box of cells that may hold liquid: [X0, X1) x [Y0, Y1). Empty when X1 <= X0
 		double Volume = 0.;          // uu^3 (kept up to date by Step)
+		// Tiles of 16 x 16 cells: water that has settled sleeps and costs nothing; anything that touches it wakes it.
+		TArray<uint8> Wake;          // steps it stays awake without moving
+		TArray<uint8> Run;           // runs this step (awake or next to an awake tile)
+		TArray<uint8> Dirty;         // changed since the view last read it
+		TArray<float> TileVol;       // sum of depths in the tile
 		bool Any() const { return X1 > X0 && Y1 > Y0; }
 	};
 
@@ -93,6 +98,17 @@ namespace AntFluid
 		uint32 StepCount = 0;
 		bool bParallel = true;
 		int32 SnapCoarse = 2;                   // a snapshot stores averages over SnapCoarse x SnapCoarse cells
+		static constexpr int32 TileShift = 4;   // tiles of 16 x 16 cells
+		static constexpr uint8 WakeSteps = 12;
+		int32 TX = 0, TY = 0;
+		uint32 SlowEvery = 30;                  // sleeping water seeps and dries every this many steps
+		bool bSleep = true;                     // dev: false runs every tile every step (the A/B of the sleeping)
+		int32 RunTiles[LCount] = { 0, 0, 0 };   // last step
+		/** Something touched the liquid here (cells [I0, I1) x [J0, J1)): those tiles run again. */
+		void WakeRect(int32 L, int32 I0, int32 J0, int32 I1, int32 J1);
+		void WakeAll();
+		/** Everything dry and still. */
+		void Clear();
 
 		void Init(const FString& InName, float InOriginX, float InOriginY, int32 InNx, int32 InNy, float InDx, float InZ0);
 		/** After Bed and Kind are filled. */
