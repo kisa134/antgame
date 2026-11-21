@@ -19,6 +19,9 @@
 #include "Net/UnrealNetwork.h"
 #include "HAL/IConsoleManager.h"
 #include "Misc/ScopeExit.h"
+#include "Camera/CameraActor.h"
+#include "Camera/CameraComponent.h"
+#include "GameFramework/HUD.h"
 #include "DynamicRHI.h"
 
 // =====================================================================================================================
@@ -1646,6 +1649,50 @@ void AAntMess::SetMessHidden(bool bHide)
 
 void AAntMess::DevTick(float Dt, double TickMs)
 {
+	// -AntMessDo="t:cmd;..." works on ANY machine (a client has no game mode, so -AntDo does not run there):
+	// cam x y z tx ty tz [fov] | shot | info | hud 0|1 - to look at what a client sees (replication checks).
+	static TArray<TPair<float, FString>> Script;
+	static bool bParsed = false;
+	if (!bParsed)
+	{
+		bParsed = true;
+		FString S;
+		if (FParse::Value(FCommandLine::Get(), TEXT("AntMessDo="), S, false))
+		{
+			TArray<FString> Steps;
+			S.ParseIntoArray(Steps, TEXT(";"));
+			for (const FString& St : Steps)
+			{
+				FString At, Cmd;
+				if (St.Split(TEXT(":"), &At, &Cmd)) { Script.Add(TPair<float, FString>(FCString::Atof(*At), Cmd.TrimStartAndEnd())); }
+			}
+		}
+	}
+	const float Now = GetWorld()->GetTimeSeconds();
+	for (int32 i = 0; i < Script.Num(); )
+	{
+		if (Script[i].Key > Now) { ++i; continue; }
+		TArray<FString> A;
+		Script[i].Value.ParseIntoArrayWS(A);
+		Script.RemoveAt(i);
+		APlayerController* PC = GetWorld()->GetFirstPlayerController();
+		if (A.Num() == 0 || !PC) { continue; }
+		auto Num = [&A](int32 k, float Def = 0.f) { return A.IsValidIndex(k) ? FCString::Atof(*A[k]) : Def; };
+		UE_LOG(LogTemp, Display, TEXT("ANTMESS local do %.1f: %s"), Now, *FString::Join(A, TEXT(" ")));
+		if (A[0] == TEXT("cam"))
+		{
+			static TWeakObjectPtr<ACameraActor> Cam;
+			if (!Cam.IsValid()) { Cam = GetWorld()->SpawnActor<ACameraActor>(); }
+			const FVector From(Num(1), Num(2), Num(3)), To(Num(4), Num(5), Num(6));
+			Cam->SetActorLocationAndRotation(From, (To - From).Rotation());
+			Cam->GetCameraComponent()->SetFieldOfView(Num(7, 60.f));
+			Cam->GetCameraComponent()->bConstrainAspectRatio = false;
+			PC->SetViewTargetWithBlend(Cam.Get(), 0.f);
+		}
+		else if (A[0] == TEXT("shot")) { PC->ConsoleCommand(TEXT("Shot"), false); }
+		else if (A[0] == TEXT("hud") && PC->GetHUD()) { PC->GetHUD()->bShowHUD = Num(1) > 0.5f; }
+		else if (A[0] == TEXT("info")) { UE_LOG(LogTemp, Display, TEXT("ANTMESS info (%s): %s"), GetNetMode() == NM_Client ? TEXT("client") : TEXT("server"), *Describe()); }
+	}
 	if (AAntCharacter* Wk = GWalker.Get())
 	{
 		if (FVector::Dist2D(Wk->GetActorLocation(), GWalkTo) < 30.f || Wk->bDead)
