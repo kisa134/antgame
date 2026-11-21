@@ -1,6 +1,7 @@
 ﻿#include "AntWreckGeo.h"
 #include "KismetProceduralMeshLibrary.h"
 #include "Engine/StaticMesh.h"
+#include "StaticMeshResources.h"
 #include "PhysicsEngine/BodySetup.h"
 #include "Chaos/TriangleMeshImplicitObject.h"
 #include "Materials/Material.h"
@@ -44,6 +45,15 @@ namespace
 					T.Slot = (int32)TM->GetMaterialIndex(t);
 					Out.Add(T);
 				}
+			}
+		}
+		// The cooked collision keeps the render section of each triangle; the material slot is that section's (they are not always in slot order).
+		if (Out.Num() > 0 && M->GetRenderData() && M->GetRenderData()->LODResources.Num() > 0)
+		{
+			const FStaticMeshSectionArray& Secs = M->GetRenderData()->LODResources[0].Sections;
+			for (FTri& T : Out)
+			{
+				if (Secs.IsValidIndex(T.Slot)) { T.Slot = Secs[T.Slot].MaterialIndex; }
 			}
 		}
 		if (Out.Num() == 0 && M && M->bAllowCPUAccess && M->GetRenderData())
@@ -173,7 +183,9 @@ TSharedPtr<const FGeo> AntWreckGeo::Base(UStaticMesh* Mesh)
 		G->Sections.Add(S);
 		G->Slot.Add(0);
 	}
-	UE_LOG(LogTemp, Display, TEXT("ANTWRECK geo %s: %d triangles, %d slots"), *Mesh->GetName(), Tris.Num(), G->Sections.Num());
+	const int32 RenderTris = Mesh->GetNumLODs() > 0 ? Mesh->GetNumTriangles(0) : 0;
+	G->bProxy = Tris.Num() == 0 || (RenderTris > 0 && Tris.Num() < RenderTris / 2);
+	UE_LOG(LogTemp, Display, TEXT("ANTWRECK geo %s: %d collision triangles (drawn %d)%s, %d slots"), *Mesh->GetName(), Tris.Num(), RenderTris, G->bProxy ? TEXT(" - a stand-in, its chunks are not shown in place") : TEXT(""), G->Sections.Num());
 	GBase.Add(Key, G);
 	return G;
 }
@@ -292,7 +304,7 @@ const TArray<FBox>& AntWreckGeo::Hull(UStaticMesh* Mesh, const FVector& Scale)
 	int32 Nx = FMath::Clamp(FMath::RoundToInt(Size.X / 300.f), 1, 5);
 	int32 Ny = FMath::Clamp(FMath::RoundToInt(Size.Y / 300.f), 1, 5);
 	int32 Nz = FMath::Clamp(FMath::RoundToInt(Size.Z / 300.f), 1, 5);
-	for (int32 Try = 0; Try < 6; ++Try)
+	for (int32 Try = 0; Try < 14; ++Try)
 	{
 		Out.Reset();
 		const FVector Cell = B.GetSize() / FVector(Nx, Ny, Nz);
@@ -332,14 +344,14 @@ const TArray<FBox>& AntWreckGeo::Hull(UStaticMesh* Mesh, const FVector& Scale)
 			FVector Ext = U.GetExtent().ComponentMax(Min3);
 			Out.Add(FBox(U.GetCenter() - Ext * 0.97f, U.GetCenter() + Ext * 0.97f));
 		}
-		if (Out.Num() <= 12)
+		if (Out.Num() <= 24)
 		{
 			break;
 		}
 		// Too many boxes: coarser along the longest axis.
 		if (Nx >= Ny && Nx >= Nz && Nx > 1) { --Nx; } else if (Ny >= Nz && Ny > 1) { --Ny; } else if (Nz > 1) { --Nz; } else { break; }
 	}
-	if (Out.Num() == 0 || Out.Num() > 16)
+	if (Out.Num() == 0 || Out.Num() > 24)
 	{
 		Out.Reset();
 		Out.Add(B);

@@ -24,6 +24,7 @@
 #include "Net/UnrealNetwork.h"
 #include "UnrealClient.h"
 #include "Misc/Paths.h"
+#include "UObject/UObjectIterator.h"
 
 // =============================================================================================
 // Classes and the catalog
@@ -175,6 +176,7 @@ namespace
 		for (const AActor* A : Ignore) { Q.AddIgnoredActor(A); }
 		for (TActorIterator<AAntCharacter> It(W); It; ++It) { Q.AddIgnoredActor(*It); }
 		for (TActorIterator<AKitchenLoot> It(W); It; ++It) { Q.AddIgnoredActor(*It); }
+		for (TActorIterator<AAntWreckBody> It(W); It; ++It) { Q.AddIgnoredActor(*It); }
 		FHitResult H;
 		if (W->LineTraceSingleByChannel(H, P, P - FVector(0.f, 0.f, 8000.f), ECC_Visibility, Q))
 		{
@@ -410,6 +412,7 @@ void AAntWreckBody::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	DOREPLIFETIME(AAntWreckBody, RideOn);
 	DOREPLIFETIME(AAntWreckBody, RideRel);
 	DOREPLIFETIME(AAntWreckBody, PropMesh);
+	DOREPLIFETIME(AAntWreckBody, bClothGone);
 }
 
 float AAntWreckBody::NetNow() const
@@ -611,7 +614,8 @@ void AAntWreckBody::TakeHit(const FVector& Point, const FVector& Impulse, float 
 		{
 			// A loose part: the chunk nearest the blow comes off.
 			const TArray<TSharedPtr<const AntWreckGeo::FGeo>>& Cut = AntWreckGeo::Cut(this, Mesh->GetStaticMesh(), Seed, AntWreckGeo::ChunkCount((float)WorldBox().GetSize().GetMax()));
-			if (Cut.Num() > 2 && Mat != AntWreck::Appliance && Mat != AntWreck::Cloth && Mat != AntWreck::Metal && Mat != AntWreck::Paper)
+			const TSharedPtr<const AntWreckGeo::FGeo> B0 = AntWreckGeo::Base(Mesh->GetStaticMesh());
+			if (Cut.Num() > 2 && B0.IsValid() && !B0->bProxy && Mat != AntWreck::Appliance && Mat != AntWreck::Cloth && Mat != AntWreck::Metal && Mat != AntWreck::Paper)
 			{
 				const FTransform MT = Mesh->GetComponentTransform();
 				int32 Best = 0; float BestD = 1.e12f;
@@ -827,10 +831,10 @@ void AAntWreckBody::OnPhysHit(UPrimitiveComponent* HitComp, AActor* Other, UPrim
 	const FVector At = Hit.ImpactPoint;
 	const FVector Into = -NormalImpulse.GetSafeNormal();
 	// It hurts itself landing (glass and china from a height break) and what it lands on.
-	const float SelfDmg = (Mat == AntWreck::Glass || Mat == AntWreck::China) ? Dv * 6.f : FMath::Max(0.f, Dv - 3.f) * Mass * 0.15f;
+	const float SelfDmg = (Mat == AntWreck::Glass || Mat == AntWreck::China) ? Dv * 6.f : FMath::Max(0.f, Dv - 4.f) * Mass * 0.08f;
 	if (AAntWreckBody* B = Cast<AAntWreckBody>(Other))
 	{
-		B->TakeHit(At, Into * I * 0.7f, I * 0.9f, this);
+		if (Mass >= 0.25f * B->Mass) { B->TakeHit(At, Into * I * 0.7f, I * 0.9f, this); }   // (a book does not break the bookcase it fell out of)
 	}
 	else if (const int32* OtherInst = GCat.ByComp.Find(OtherComp))
 	{
@@ -856,13 +860,59 @@ void AAntWreckBody::KnockFixtures(const FVector& InDir, const TCHAR* Why)
 	{
 		AKitchenFixture* Fx = *It;
 		const FVector L = Fx->GetActorLocation();
+		if (Fx->FixId() == TEXT("tablecloth") && FCString::Strcmp(Why, TEXT("break")) == 0 && !Fx->IsHidden() && Fx->DistanceTo(Me.GetCenter()) < (float)Me.GetExtent().Size2D())
+		{
+			Fx->SetActorHiddenInGame(true);   // the cloth goes with the broken table
+			Fx->SetActorEnableCollision(false);
+			UE_LOG(LogTemp, Display, TEXT("ANTWRECK %s: the tablecloth goes with it"), *PieceName());
+			continue;
+		}
 		if (Fx->State != AKitchenFixture::Fixed || L.X < Me.Min.X || L.X > Me.Max.X || L.Y < Me.Min.Y || L.Y > Me.Max.Y || L.Z < Me.Min.Z - 100.f || L.Z > Me.Max.Z + 600.f)
 		{
 			continue;
 		}
 		Fx->PushDir = Dir;
-		Fx->Fall(Dir, nullptr, Why);
+		if (Fx->FixId() == TEXT("tablecloth"))
+		{
+			// The cloth over the table: it stays while the table only leans or slides; when the table breaks it goes with it
+			// (its own fall would drop the whole drape on the floor as a box).
+			if (FCString::Strcmp(Why, TEXT("break")) != 0) { continue; }
+			Fx->SetActorHiddenInGame(true);
+			Fx->SetActorEnableCollision(false);
+		}
+		else { Fx->Fall(Dir, nullptr, Why); }
 		UE_LOG(LogTemp, Display, TEXT("ANTWRECK %s takes the fixture %s with it (%s)"), *PieceName(), *Fx->FixId(), Why);
+	}
+	// Static cloth over it (a variant's long tablecloth to the floor): it slides off with it (hidden on every machine via the cloth flag).
+	if (!bClothGone)
+	{
+		bClothGone = true;
+		ClothOff();
+	}
+}
+
+void AAntWreckBody::OnRep_Cloth()
+{
+	if (bClothGone) { ClothOff(); }
+}
+
+void AAntWreckBody::ClothOff()
+{
+	const FBox Me = WorldBox().ExpandBy(60.f);
+	for (TObjectIterator<UStaticMeshComponent> It; It; ++It)
+	{
+		UStaticMeshComponent* C = *It;
+		if (!C || C->GetWorld() != GetWorld() || !C->IsVisible() || !C->GetStaticMesh() || !C->GetStaticMesh()->GetName().StartsWith(TEXT("SM_V3_TableclothLong")))
+		{
+			continue;
+		}
+		const FVector L = C->Bounds.Origin;
+		if (L.X > Me.Min.X && L.X < Me.Max.X && L.Y > Me.Min.Y && L.Y < Me.Max.Y)
+		{
+			C->SetVisibility(false);
+			C->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			UE_LOG(LogTemp, Display, TEXT("ANTWRECK %s: the long tablecloth slides off"), *PieceName());
+		}
 	}
 }
 
@@ -905,7 +955,8 @@ void AAntWreckBody::RebuildLook()
 	LookDents = Dents.Num();
 	if (IsBroken())
 	{
-		Mesh->SetVisibility(false);
+		const TSharedPtr<const AntWreckGeo::FGeo> B0 = AntWreckGeo::Base(Mesh->GetStaticMesh());
+		Mesh->SetVisibility(B0.IsValid() && B0->bProxy);   // a stand-in collapses whole (BreakApart) instead of flying apart
 		Chunks->SetVisibility(false);
 		return;
 	}
@@ -914,6 +965,15 @@ void AAntWreckBody::RebuildLook()
 		Mesh->SetVisibility(true);
 		Chunks->SetVisibility(false);
 		return;
+	}
+	{
+		const TSharedPtr<const AntWreckGeo::FGeo> B0 = AntWreckGeo::Base(Mesh->GetStaticMesh());
+		if (!B0.IsValid() || B0->bProxy)
+		{
+			Mesh->SetVisibility(true);   // (its collision is a stand-in: the drawn model stays, it only leans)
+			Chunks->SetVisibility(false);
+			return;
+		}
 	}
 	// The assembled chunks of its seeded cut: they part along the cracks as it gets worse, the dents pressed into them.
 	const TArray<TSharedPtr<const AntWreckGeo::FGeo>>& Cut = AntWreckGeo::Cut(this, Mesh->GetStaticMesh(), Seed, AntWreckGeo::ChunkCount((float)WorldBox().GetSize().GetMax()));
@@ -978,6 +1038,7 @@ void AAntWreckBody::DropChunk(int32 Chunk, const FVector& Dir)
 	if (Out.IsNearlyZero()) { Out = R.VRand().GetSafeNormal2D(); }
 	const FVector Land2 = Ctr + Out.GetSafeNormal2D() * R.FRandRange(120.f, 420.f);
 	TArray<const AActor*> Ign; Ign.Add(this);
+	for (TActorIterator<AAntWreckBody> It(GetWorld()); It; ++It) { if (It->RideOn == this || It->bAwake) { Ign.Add(*It); } }
 	const float FloorZ = FloorUnder(GetWorld(), FVector(Land2.X, Land2.Y, Ctr.Z + 50.f), Ign, (float)WorldBox().Min.Z);
 	// It lies on its broadest side (its thinnest axis up), a random yaw, a few degrees of tilt.
 	const FVector Ext = Cut[Chunk]->Box.GetExtent() * MT.GetScale3D().GetAbs();
@@ -1028,18 +1089,36 @@ void AAntWreckBody::BreakApart(const FVector& Dir)
 	{
 		return;
 	}
-	SpillRiders(Dir * 300.f + FVector(0.f, 0.f, 100.f));
 	KnockFixtures(Dir, TEXT("break"));
+	const TSharedPtr<const AntWreckGeo::FGeo> B0 = AntWreckGeo::Base(Mesh->GetStaticMesh());
+	const bool bCollapse = B0.IsValid() && B0->bProxy;
 	const TArray<TSharedPtr<const AntWreckGeo::FGeo>>& Cut = AntWreckGeo::Cut(this, Mesh->GetStaticMesh(), Seed, AntWreckGeo::ChunkCount((float)WorldBox().GetSize().GetMax()));
-	for (int32 c = 0; c < Cut.Num() && c < 16; ++c)
+	if (bCollapse)
 	{
-		DropChunk(c, Dir);
+		// Its legs give: it goes down by half its height and tips 10 degrees toward the blow (the legs end up under the floor).
+		FVector D2 = Dir.GetSafeNormal2D();
+		if (D2.IsNearlyZero()) { D2 = FVector::ForwardVector; }
+		const FBox Bx = WorldBox();
+		const FQuat Tilt(FVector::CrossProduct(FVector::UpVector, D2).GetSafeNormal(), FMath::DegreesToRadians(10.f));
+		FWreckDrop D;
+		D.Chunk = 255;
+		D.Start = NetNow();
+		D.From = GetActorTransform();
+		D.To = FTransform(Tilt * GetActorQuat(), GetActorLocation() - FVector(0.f, 0.f, Bx.GetSize().Z * 0.5f) + D2 * 120.f);
+		D.Time = 0.35f;
+		Drops.Add(D);
+		OnRep_Drops();
 	}
+	for (int32 c = 0; !bCollapse && c < Cut.Num() && c < 16; ++c)
+	{
+		DropChunk(c, Dir);   // (before the riders let go: the chunks land on the floor, not on a book still up in the shelf)
+	}
+	SpillRiders(Dir * 300.f + FVector(0.f, 0.f, 100.f));
 	if (bAwake) { bAwake = false; Root->SetSimulatePhysics(false); }
 	Stage = 4;
 	Root->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	for (UBoxComponent* Hb : Hull) { Hb->SetCollisionEnabled(ECollisionEnabled::NoCollision); }
-	Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	Mesh->SetCollisionEnabled(bCollapse ? ECollisionEnabled::QueryOnly : ECollisionEnabled::NoCollision);
 	OnRep_Look();
 	const FVector At = WorldBox().GetCenter();
 	AntSfx::Everyone(this, AntSfx::Crunch, At, 0.8f);

@@ -18,6 +18,8 @@ namespace AntWreckGeo
 		/** Per section: the mesh's material slot, -1 for a cut face. */
 		TArray<int32> Slot;
 		FBox Box = FBox(ForceInit);
+		/** The collision is a simplified stand-in, not the drawn model (a table whose cloth is a skirt to the floor for the ants): its chunks must not be shown in place. */
+		bool bProxy = false;
 		bool IsValid() const { return Sections.Num() > 0 && Box.IsValid != 0; }
 	};
 

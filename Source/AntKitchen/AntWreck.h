@@ -197,6 +197,12 @@ private:
 	void Crush(const FVector& At, float Radius, float Kg);
 	/** Server: level v3 fixtures lying or standing on it (the tablecloth, a jar) go over with it. */
 	void KnockFixtures(const FVector& Dir, const TCHAR* Why);
+	void ClothOff();
+public:
+	/** A static cloth over it went (replicated so every machine hides it). */
+	UPROPERTY(ReplicatedUsing = OnRep_Cloth) bool bClothGone = false;
+	UFUNCTION() void OnRep_Cloth();
+private:
 	void PushPose();
 	float NetNow() const;
 	UFUNCTION() void OnPhysHit(UPrimitiveComponent* HitComp, AActor* Other, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
