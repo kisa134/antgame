@@ -1,4 +1,7 @@
 ﻿#include "AntRun.h"
+#include "AntWreck.h"
+#include "AntWeapon.h"
+#include "AntVersus.h"
 #include "AntKitchenGameMode.h"
 #include "AntGameState.h"
 #include "AntPlayerState.h"
@@ -1537,6 +1540,10 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 	if (Raid && Raid->DevCommand(A))
 	{
 		return;   // raid ..., nest ... (AntRaid.cpp)
+	}
+	if (AntWreck::DevCommand(this, A) || AntWeapons::DevCommand(this, A) || AntVersus::DevCommand(this, A))
+	{
+		return;   // wreck ..., weapon ..., rage N, versus ... (AntWreck.cpp, AntWeapon.cpp, AntVersus.cpp)
 	}
 	if (AntBodyRules::DevCommand(this, A))
 	{

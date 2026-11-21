@@ -1,4 +1,5 @@
 ﻿#include "AntHUD.h"
+#include "AntVersus.h"
 #include "KitchenInteractables.h"
 #include "AntSwarm.h"
 #include "AntCharacter.h"
@@ -926,6 +927,16 @@ void AAntHUD::DrawHuman(AHumanCharacter* H, AAntGameState* GS)
 	const bool bSwatReady = ServerNow >= H->SwatReadyTime;
 	Txt(bSwatReady ? TEXT("Q — ГАЗЕТОЙ по прицелу (стены, столы): готово") : TEXT("Q — газета: замах..."), X, Y + 130.f * S, bSwatReady ? Green : Grey, Small, 1.2f * S);
 	Txt(H->Held ? TEXT("E — ШВЫРНУТЬ еду (разобьётся!)") : TEXT("E — схватить еду у прицела"), X, Y + 154.f * S, H->Held ? Gold : White, Small, 1.2f * S);
+	{
+		// The weapon in hand, and in versus his patience and the x-ray (AntVersus.h).
+		float Pat = -1.f;
+		Txt(AntVersus::HudLine(GetWorld(), H, Pat), X, Y + 178.f * S, Gold, Small, 1.2f * S);
+		if (Pat >= 0.f)
+		{
+			Txt(TEXT("Терпение"), X + 420.f * S, Y + 56.f * S, White, Small, 1.2f * S);
+			Bar(X + 420.f * S, Y + 82.f * S, 260.f * S, 14.f * S, Pat, FLinearColor(1.f, 0.55f, 0.2f));
+		}
+	}
 	// Where the slippers will land.
 	for (int32 Leg = 0; Leg < 2; ++Leg)
 	{
@@ -941,7 +952,7 @@ void AAntHUD::DrawHuman(AHumanCharacter* H, AAntGameState* GS)
 	for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
 	{
 		AAntCharacter* Ant = *It;
-		if (Ant && !Ant->bDead && Ant->IsCarrying() && FVector::Dist(Ant->GetActorLocation(), H->GetActorLocation()) < 7000.f)
+		if (Ant && !Ant->bDead && Ant->IsCarrying() && FVector::Dist(Ant->GetActorLocation(), H->GetActorLocation()) < 7000.f && AntVersus::XrayOn(GetWorld()))
 		{
 			Marker(Ant->GetActorLocation() + FVector(0.f, 0.f, 60.f), TEXT("сладкое!"), FLinearColor(1.f, 0.6f, 0.1f), false);
 		}

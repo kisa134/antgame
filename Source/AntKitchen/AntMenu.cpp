@@ -1,4 +1,5 @@
 ﻿#include "AntMenu.h"
+#include "AntVersus.h"
 #include "AntNest.h"
 #include "AntSession.h"
 #include "AntPlayerController.h"
@@ -131,6 +132,8 @@ void SAntMenu::Rebuild()
 	{
 		AddButton(TEXT("Играть одному"), [WeakPC, S]() { if (WeakPC.IsValid() && S) { S->PlaySolo(); } });
 		AddButton(TEXT("Создать игру (кооп)"), [WeakPC, S]() { if (WeakPC.IsValid() && S) { S->Host(); } });
+		// Versus (AntVersus.h): the host's next raid is «the Human against the ants»; the first friend who joins plays the Human.
+		AddButton(TEXT("Человек против муравьёв (кооп)"), [WeakPC, S]() { if (WeakPC.IsValid() && S) { AntVersus::Wanted() = true; S->Host(); } }, FLinearColor(1.f, 0.55f, 0.4f));
 		AddButton(S && S->bSearching ? TEXT("Ищу...") : TEXT("Найти игры друзей"), [WeakPC, S]() { if (WeakPC.IsValid() && S) { S->Find(); } });
 		if (S)
 		{

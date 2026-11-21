@@ -10,7 +10,7 @@ public class AntKitchen : ModuleRules
 
 		PublicDependencyModuleNames.AddRange(new string[]
 		{
-			"Core", "CoreUObject", "Engine", "InputCore", "AIModule", "NetCore", "PhysicsCore", "OnlineSubsystem", "OnlineSubsystemUtils", "Slate", "SlateCore", "ProceduralMeshComponent"
+			"Core", "CoreUObject", "Engine", "InputCore", "AIModule", "NetCore", "PhysicsCore", "OnlineSubsystem", "OnlineSubsystemUtils", "Slate", "SlateCore", "ProceduralMeshComponent", "Chaos"
 		});
 		DynamicallyLoadedModuleNames.Add("OnlineSubsystemSteam");
 	}

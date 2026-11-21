@@ -1,4 +1,5 @@
 ﻿#include "HumanAIController.h"
+#include "AntWeapon.h"
 #include "AntSquad.h"
 #include "HumanCharacter.h"
 #include "AntCharacter.h"
@@ -290,6 +291,17 @@ void AHumanAIController::Tick(float DeltaSeconds)
 		}
 	}
 
+	// Weapons (AntWeapon.h): at rage 2-3 he goes for something heavier, swings it at ants in reach, at rage 3 takes it out on the furniture.
+	{
+		FVector WGoal = FVector::ZeroVector, WFace = FVector::ZeroVector;
+		if (AntWeapons::AiTick(H, T, DeltaSeconds, WGoal, WFace))
+		{
+			H->SetSpraying(false);
+			if (!WFace.IsZero()) { DesiredRotation.Yaw = (float)(WFace - MyLoc).Rotation().Yaw; DesiredRotation.Pitch = -20.f; }
+			if (!WGoal.IsZero()) { MoveTowards(H, WGoal, 1.f); }
+			return;
+		}
+	}
 	// What he does instead of hunting: checking a noise, shutting a door left open. An ant carrying loot right
 	// in front of him is the one thing he will not walk away from.
 	const float TargetDist = T ? (float)FVector::Dist2D(T->GetActorLocation(), MyLoc) : 1.e9f;
