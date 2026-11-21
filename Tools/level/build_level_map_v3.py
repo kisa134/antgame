@@ -101,7 +101,7 @@ Rng.prototype.int=function(a,b){return a+Math.floor(this.next()*(b-a+1))};
 function compose(seed,threat){const C=D.seedcfg,r=new Rng(seed);const tw=C.tbt[String(threat)]||C.time;const ts=Object.keys(tw);let time=r.pick(ts,ts.map(k=>tw[k]));
  const home={human:true};['grandma','kid','dog','cat'].forEach(k=>home[k]=r.next()<C.home[k]);if(threat>=4)home.kid=true;
  if(['grandma','kid','dog','cat'].filter(k=>home[k]).length<2){home.dog=true;home.kid=true}
- const bt=(C.bt||{})[String(threat)];if(bt){time=bt.time;Object.keys(home).forEach(k=>delete home[k]);home.human=true;Object.assign(home,bt.home)}
+ const bt=(C.bt||{})[String(threat)];if(bt){time=bt.time||time;Object.keys(home).forEach(k=>delete home[k]);home.human=true;Object.assign(home,bt.home)}
  const variants={};D.order.forEach(d=>{const vs=C.vw[d];const ws=vs.map(v=>{let w=v.w;if(v.when&&v.when.indexOf(time)<0)w=0;if(d=='babushka'&&v.id=='B'&&!home.grandma)w=0;if(d=='play'&&!home.kid)w=(v.id=='C'?w*3:(v.id=='B'?0:w));return w});variants[d]=r.pick(vs.map(v=>v.id),ws)});
  const pool=C.doors.pool,doors={};const nd=r.int(C.doors.n[0],C.doors.n[1]);for(let i=0;i<nd;i++)doors[pool[Math.floor(r.next()*pool.length)]]=C.doors.state;
  const lp=C.loose.pool,ls=new Set();const nl=r.int(C.loose.n[0],C.loose.n[1]);for(let i=0;i<nl;i++)ls.add(lp[Math.floor(r.next()*lp.length)]);

@@ -39,6 +39,7 @@
 #include "KitchenSlick.h"
 #include "AntFilm.h"
 #include "Engine/OverlapResult.h"
+#include "NpcRoutine.h"
 
 namespace
 {
@@ -1533,6 +1534,10 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 	if (NpcWorld::DevCommand(this, A))
 	{
 		return;   // the pets and the family: cat ..., dog ..., gran ..., kid ..., npclevel N (CritterBrain.cpp)
+	}
+	if (NpcRoutine::DevCommand(this, A))
+	{
+		return;   // level v3, the residents' evening and their mess: routine plan|info|warp S|skip who|goto step|off|on, mess, react <fixture>
 	}
 	if (Raid && Raid->DevCommand(A))
 	{

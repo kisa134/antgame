@@ -1,4 +1,6 @@
 ﻿#include "AntKitchenGameMode.h"
+#include "HumanAIController.h"
+#include "NpcRoutine.h"
 #include "AntCharacter.h"
 #include "HumanCharacter.h"
 #include "AntPlayerController.h"
@@ -1855,6 +1857,14 @@ void AAntKitchenGameMode::SetHumanAwake(bool bAwake)
 		return;
 	}
 	AController* C = Human->GetController();
+	if (AHumanAIController* AI = Cast<AHumanAIController>(C); AI && C != HumanPlayer && NpcRoutine::Enabled())
+	{
+		// Level v3: asleep to the ants, awake to his evening (NpcRoutine.h): the routine runs from the first second.
+		AI->bQuiet = !bAwake;
+		C->SetActorTickEnabled(true);
+		if (!bAwake) { Human->SetSpraying(false); }
+		return;
+	}
 	if (C && C != HumanPlayer)
 	{
 		C->SetActorTickEnabled(bAwake);

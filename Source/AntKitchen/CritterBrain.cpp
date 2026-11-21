@@ -23,6 +23,8 @@
 #include "EngineUtils.h"
 #include "Engine/World.h"
 #include "KitchenSlick.h"
+#include "LevelV3.h"
+#include "NpcRoutine.h"
 
 // =============================================================================================
 // The pets' jointed bodies and their brains. Every number a player can feel is in this block
@@ -320,6 +322,22 @@ void ACritter::ResolveSpots()
 		Add(FVector(16700.f, -1500.f, 0.f), 2, 12.f, false);                                                                        // level v2: sitting by the east end of the sofa, begging
 		Add(FVector(-5500.f, 1800.f, 0.f), 1, 7.f, false);                                                                          // licking up the flour
 	}
+	if (NpcRoutine::Enabled())
+	{
+		// Level v3: the spots of its evening (docs/level/LEVEL_V3.md, section 7). The ones that follow somebody move with them.
+		const uint8 Who = Kind == 1 ? NpcRoutine::Cat : NpcRoutine::Dog;
+		const TConstArrayView<NpcRoutine::FStep> Steps = NpcRoutine::Steps();
+		for (int32 s = 0; s < Steps.Num(); ++s)
+		{
+			const NpcRoutine::FStep& St = Steps[s];
+			if (St.Who != Who) { continue; }
+			const uint8 Do = St.Pose == NpcRoutine::PRest ? St.Arg : 2;
+			const int32 Before = Rests.Num();
+			if (FMath::IsNearlyZero(St.X) && FMath::IsNearlyZero(St.Y)) { Rests.Add({ FVector::ZeroVector, Do, St.Secs, false, 1000.f }); }
+			else { Add(FVector(St.X, St.Y, St.Z), Do, St.Secs, St.Z > 200.f, St.Pose == NpcRoutine::PDoor ? 0.f : 1000.f); }
+			if (Rests.Num() > Before) { Rests.Last().Rt = s; }
+		}
+	}
 	if (Rests.Num() == 0)
 	{
 		Rests.Add({ GetActorLocation(), 0, 40.f, false });
@@ -346,7 +364,19 @@ bool ACritter::WalkTo(const FVector& Dest, float Pace, float Dt, float Arrive)
 	{
 		return true;
 	}
-	const FVector Way = AKitchenBuilder::Route(Me, FVector(Dest.X, Dest.Y, Me.Z));
+	FVector Way = AKitchenBuilder::Route(Me, FVector(Dest.X, Dest.Y, Me.Z));
+	if (NpcRoutine::Enabled() && FVector::Dist2D(Me, Dest) > 700.f && Me.Z < 250.f)
+	{
+		// Level v3: across the flat on the house grid (the Human's), round the furniture, not into it.
+		if (AAntKitchenGameMode* NavGM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
+		{
+			if (const FHumanNav* Nav = NavGM->HouseNav())
+			{
+				const FVector Next = NavFollow.Next(Nav, Me, FVector(Dest.X, Dest.Y, Me.Z), GetWorld()->GetTimeSeconds());
+				if (NavFollow.Path.Num() > 0) { Way = FVector(Next.X, Next.Y, Me.Z); }
+			}
+		}
+	}
 	const float Radius = Kind == 1 ? 95.f : 125.f;
 	const FVector Dir = NpcWorld::Steer(GetWorld(), this, Me, Way, Radius, Radius + 75.f, SteerSide, SteerUntil);
 	if (Dir.IsZero())
@@ -486,7 +516,25 @@ void ACritter::ArriveAtSpot(int32 Index)
 	LeapSpot = -1;
 	bSettling = true;
 	const FRestSpot& S = Rests[Index];
-	const float Time = S.Time * FMath::FRandRange(0.7f, 1.3f);
+	float Time = S.Time * FMath::FRandRange(0.7f, 1.3f);
+	if (S.Rt >= 0 && NpcRoutine::Enabled())
+	{
+		// Level v3: there for as long as the plan says (it gets up earlier if the plan moves on).
+		Time = S.Time;
+		Task.Phase = 2;
+		Task.Start = GetWorld()->GetTimeSeconds();
+		NpcRoutine::Log(GetWorld(), Kind == 1 ? NpcRoutine::Cat : NpcRoutine::Dog, TEXT("arrived, at it"), S.Rt, GetActorLocation());
+		const NpcRoutine::FStep& St = NpcRoutine::Steps()[S.Rt];
+		if (St.Pose == NpcRoutine::PBeg && Kind == 0)
+		{
+			// Sitting up at the table, eyes on the Dad's plate.
+			State = QuadMode::Sit;
+			Mood = QuadMood::Happy;
+			StartAct(QuadAct::Beg, (uint8)FMath::Clamp(FMath::RoundToInt(Time * 10.f), 20, 250), FVector(Task.Target) + FVector(0.f, 0.f, 900.f));
+			SetBrain(EBrain::Idle, Time);
+			return;
+		}
+	}
 	if (S.Do == 0)
 	{
 		State = QuadMode::Sleep;
@@ -512,8 +560,58 @@ void ACritter::GoToSpot(int32 Index)
 	SetBrain(EBrain::Go, 50.f);
 }
 
+bool ACritter::RoutineSpot()
+{
+	UWorld* W = GetWorld();
+	const uint8 Who = Kind == 1 ? NpcRoutine::Cat : NpcRoutine::Dog;
+	float Left = 0.f;
+	const int32 S = NpcRoutine::Current(W, Who, &Left);
+	RtStep = S;
+	if (S < 0)
+	{
+		Task.Step = 255;
+		Task.Phase = 0;
+		return false;
+	}
+	int32 Idx = INDEX_NONE;
+	for (int32 i = 0; i < Rests.Num(); ++i) { if (Rests[i].Rt == S) { Idx = i; } }
+	if (Idx == INDEX_NONE)
+	{
+		return false;
+	}
+	const NpcRoutine::FStep& St = NpcRoutine::Steps()[S];
+	FVector Target = FVector(St.X, St.Y, 0.f);
+	if (St.Pose == NpcRoutine::PBeg || St.Pose == NpcRoutine::PFollow)
+	{
+		// Whom it follows: the Dad (begging at the table, at the stove) or the kid.
+		AActor* Who2 = nullptr;
+		if (St.Pose == NpcRoutine::PFollow) { for (TActorIterator<AKidCharacter> It(W); It; ++It) { if (!It->IsHidden()) { Who2 = *It; } } }
+		else { for (TActorIterator<AHumanCharacter> It(W); It; ++It) { if (!It->IsA<AHouseFolk>() && !It->IsHidden()) { Who2 = *It; } } }
+		if (!Who2)
+		{
+			return false;
+		}
+		const FVector L = Who2->GetActorLocation();
+		Target = FVector(L.X, L.Y, 0.f);
+		const FVector Off = St.Pose == NpcRoutine::PFollow ? -Who2->GetActorForwardVector() * 650.f + Who2->GetActorRightVector() * 300.f : Who2->GetActorForwardVector() * 420.f - Who2->GetActorRightVector() * 520.f;
+		Rests[Idx].P = FVector(L.X + Off.X, L.Y + Off.Y, 0.f);
+	}
+	Rests[Idx].Time = FMath::Clamp(Left, 6.f, 120.f);
+	Task.Step = (uint8)S;
+	Task.Phase = 1;
+	Task.Start = W->GetTimeSeconds();
+	Task.Target = Target;
+	NpcRoutine::Log(W, Who, TEXT("goes to it"), S, GetActorLocation());
+	GoToSpot(Idx);
+	return true;
+}
+
 void ACritter::PickNextSpot()
 {
+	if (NpcRoutine::Enabled() && RoutineSpot())
+	{
+		return;
+	}
 	if (Rests.Num() < 2)
 	{
 		SetBrain(EBrain::Idle, 5.f);
@@ -554,6 +652,32 @@ void ACritter::BrainTick(float Dt)
 			DoSwipeHit();
 		}
 		return;
+	}
+	if (NpcRoutine::Enabled() && (Brain == EBrain::Rest || Brain == EBrain::Idle) && Now - BrainSince > 2.f && !ActBusy())
+	{
+		// Level v3: the plan has moved on (or the Dad sat down to eat, went out with the rubbish): up and off to the next spot.
+		const uint8 Who = Kind == 1 ? NpcRoutine::Cat : NpcRoutine::Dog;
+		const int32 S = NpcRoutine::Current(GetWorld(), Who);
+		bool bMove = S != RtStep || RtNudge != NpcRoutine::Nudge(Who);
+		if (!bMove && S >= 0 && NpcRoutine::Steps()[S].Pose == NpcRoutine::PFollow && Rests.IsValidIndex(RestIndex))
+		{
+			for (TActorIterator<AKidCharacter> It(GetWorld()); It; ++It) { bMove = bMove || FVector::Dist2D(It->GetActorLocation(), GetActorLocation()) > 1600.f; }
+		}
+		if (bMove)
+		{
+			RtNudge = NpcRoutine::Nudge(Who);
+			if (S >= 0)
+			{
+				State = QuadMode::Move;
+				PickNextSpot();
+			}
+			else
+			{
+				RtStep = -1;
+				Task.Step = 255;
+				Task.Phase = 0;
+			}
+		}
 	}
 	if (Kind == 1)
 	{
@@ -1778,7 +1902,7 @@ void ACritter::DogThink(float Dt, float Now)
 		else
 		{
 			State = QuadMode::Sit;
-			if (Do == 2 && Rests.IsValidIndex(RestIndex) && FVector::Dist2D(Me, Rests[RestIndex].P) < 300.f)
+			if (Do == 2 && Rests.IsValidIndex(RestIndex) && Rests[RestIndex].Rt < 0 && FVector::Dist2D(Me, Rests[RestIndex].P) < 300.f)
 			{
 				// By the sofa: begging from whoever sits on it with a snack.
 				const FVector Kid = ArtAt(TEXT("SM_L_Sofa_SeatCushion"), 1, FVector(13500.f, 370.f, 700.f)) + FVector(0.f, -200.f, 700.f);

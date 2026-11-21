@@ -25,6 +25,8 @@
 #include "Misc/Parse.h"
 #include "UObject/Package.h"
 #include "EngineUtils.h"
+#include "LevelV3.h"
+#include "NpcRoutine.h"
 
 #include "HumanBodyData.inl"
 #include "HumanGranData.inl"
@@ -230,6 +232,7 @@ void AHumanCharacter::BuildHeldThings()
 	{
 		return;
 	}
+	BuildRoutineProps();
 	const float K = 1.f / HumanBody::Scale;   // the hand is scaled 19: lengths in its space are mesh centimetres
 	const FVector Grip(10.f, -35.f, -150.f);  // the middle of the right fist, uu
 	if (Fig == HumanFig::Kid)
@@ -278,6 +281,54 @@ void AHumanCharacter::BuildHeldThings()
 		SprayArt->SetRelativeTransform(AntArt::Fit(Can, (Grip + FVector(70.f, 0.f, 0.f)) * K, 400.f * K, false));
 		SprayArt->SetVisibility(false);
 		SprayArt->SetCastShadow(true);
+	}
+}
+
+void AHumanCharacter::BuildRoutineProps()
+{
+	// Level v3: what the routine puts in the hands, out of plain shapes (local, every machine). Sizes in uu of the body.
+	if (!PropArt.IsEmpty() || !LevelV3::Enabled())
+	{
+		return;
+	}
+	const float K = 1.f / HumanBody::Scale;
+	const FVector Grip(10.f, -35.f, -150.f);
+	auto Add = [&](int32 Seg, EAntShape Shape, const FVector& At, const FVector& Size, const FLinearColor& Color, const FRotator& Rot)
+	{
+		UStaticMeshComponent* C = AntKit::AddPart(this, Segs[Seg], Shape, At * K, Size * (K / 100.f), Color, Rot, false, false);
+		C->SetCastShadow(true);
+		C->SetVisibility(false);
+		return C;
+	};
+	PropArt.Add(Add(HumanSeg::HandR, EAntShape::Sphere, Grip + FVector(0.f, 0.f, -480.f), FVector(560.f, 520.f, 760.f), FLinearColor(0.08f, 0.1f, 0.12f), FRotator::ZeroRotator));   // 0 the rubbish bag
+	PropArt.Add(Add(HumanSeg::HandR, EAntShape::Cylinder, Grip + FVector(0.f, 0.f, -330.f), FVector(28.f, 28.f, 700.f), FLinearColor(0.75f, 0.76f, 0.8f), FRotator::ZeroRotator));   // 1 the ladle
+	PropArt.Add(Add(HumanSeg::HandR, EAntShape::Cube, Grip + FVector(40.f, 60.f, 0.f), FVector(170.f, 90.f, 14.f), FLinearColor(0.05f, 0.05f, 0.06f), FRotator::ZeroRotator));   // 2 the phone
+	PropArt.Add(Add(HumanSeg::HandR, EAntShape::Cube, Grip + FVector(160.f, 0.f, -60.f), FVector(380.f, 220.f, 300.f), FLinearColor(0.2f, 0.55f, 0.3f), FRotator(-25.f, 0.f, 0.f)));   // 3 the watering can
+	PropArt.Add(Add(HumanSeg::HandL, EAntShape::Cube, FVector(30.f, 40.f, -260.f), FVector(380.f, 320.f, 20.f), FLinearColor(0.85f, 0.3f, 0.2f), FRotator::ZeroRotator));   // 4 the dustpan
+	PropArt.Add(Add(HumanSeg::HandR, EAntShape::Cylinder, Grip + FVector(0.f, 0.f, -60.f), FVector(20.f, 20.f, 160.f), FLinearColor(0.9f, 0.15f, 0.15f), FRotator::ZeroRotator));   // 5 the crayon
+}
+
+void AHumanCharacter::ShowRoutineProps()
+{
+	if (PropArt.Num() < 6)
+	{
+		return;
+	}
+	const bool bAct = ActTime() >= 0.f;
+	const bool bBusy = bAct && Act.Kind == HumanAct::Busy;
+	const bool bSat = Rig.SitW > 0.5f && Act.Kind == HumanAct::Sit;
+	const bool Want[6] =
+	{
+		bBusy && Act.Arg == HumanBusy::Bag,
+		bBusy && Act.Arg == HumanBusy::Stir,
+		bSat && Act.Arg == 4,
+		bBusy && Act.Arg == HumanBusy::Water,
+		Task.React == NpcRoutine::Shards + 1 && Task.Stage >= 3 && Fig == HumanFig::Dad,
+		bSat && Act.Arg == 6,
+	};
+	for (int32 i = 0; i < 6; ++i)
+	{
+		if (PropArt[i] && PropArt[i]->IsVisible() != Want[i]) { PropArt[i]->SetVisibility(Want[i]); }
 	}
 }
 
@@ -454,6 +505,7 @@ void AHumanCharacter::PoseBody(float Dt)
 	case HumanAct::Peer: ActDur = Act.Arg * 0.1f; break;
 	case HumanAct::Fall: ActDur = HumanAct::FallUp; break;
 	case HumanAct::Wipe: ActDur = Act.Arg * 0.1f; break;
+	case HumanAct::Busy: ActDur = 1.e9f; break;
 	default: break;
 	}
 	if (T < 0.f || T > ActDur || bStun || bKO)
@@ -1037,6 +1089,33 @@ void AHumanCharacter::PoseBody(float Dt)
 				H.Abs = Lap + FVector(40.f, SS * 150.f, 20.f);   // dozing: hands in the lap
 				H.Curl = 0.35f;
 			}
+			else if (How == 3)
+			{
+				// Eating (level v3): the left hand by the plate, the right goes from the plate to the mouth and back, every few seconds.
+				const float Cy = FMath::Fmod(C + 0.7f, 4.2f);
+				const float Up = Ease(Ramp(Cy, 1.2f, 1.9f)) * (1.f - Ease(Ramp(Cy, 2.4f, 3.1f)));
+				H.Abs = s == 0 ? Lap + FVector(560.f, -150.f, 420.f) : FMath::Lerp(Lap + FVector(600.f, 140.f, 430.f), R.SegPos[Head] + FVector(170.f, 30.f, 60.f), Up);
+				H.Curl = 0.7f;
+			}
+			else if (How == 4)
+			{
+				// The phone: both hands together in front of the chest, the thumbs going.
+				H.Abs = Lap + FVector(300.f, SS * 70.f, 560.f + 12.f * FMath::Sin(C * 9.f + s * 2.f));
+				H.Curl = 0.5f;
+			}
+			else if (How == 5)
+			{
+				// Watching TV: slumped back, the hands on the lap and the armrest.
+				H.Abs = Lap + FVector(80.f, SS * (s == 0 ? 220.f : 420.f), s == 0 ? 60.f : 140.f);
+				H.Curl = 0.3f;
+			}
+			else if (How == 6)
+			{
+				// Drawing on the floor: the left hand holds the sheet, the right scribbles.
+				H.Abs = s == 0 ? FVector(TargetB.X + 600.f, -190.f, 70.f) : FVector(TargetB.X + 650.f + 60.f * FMath::Sin(C * 9.f), 110.f + 50.f * FMath::Cos(C * 11.f), 75.f);
+				H.Curl = s == 0 ? 0.1f : 0.8f;
+				H.Pole = FVector(-0.2f, SS * 0.9f, 0.4f);
+			}
 			else
 			{
 				// Playing on the floor: patting it in front of him, one hand after the other.
@@ -1048,6 +1127,21 @@ void AHumanCharacter::PoseBody(float Dt)
 		if (How == 1 && Settled > 0.f)
 		{
 			HeadUpT = (-34.f + 5.f * FMath::Sin(C * 0.7f)) * Settled;   // nodding off
+		}
+		else if (How == 4 && Settled > 0.f)
+		{
+			HeadUpT = -30.f * Settled;   // eyes on the phone
+			bLook = false;
+		}
+		else if (How == 5 && Settled > 0.f)
+		{
+			LeanT += -10.f * Settled;   // slumped back
+			if (!bLook) { bLook = true; LookB = FVector(4000.f, 0.f, 900.f); }
+		}
+		else if ((How == 3 || How == 6) && Settled > 0.f)
+		{
+			BendT += (How == 6 ? 22.f : 8.f) * Settled;
+			if (!bLook) { bLook = true; LookB = How == 6 ? FVector(TargetB.X + 650.f, 0.f, 60.f) : Lap + FVector(600.f, 0.f, 420.f); }
 		}
 		else if (How == 0 && Settled > 0.f && !bLook && FVector(FolkLook).IsZero())
 		{
@@ -1121,6 +1215,88 @@ void AHumanCharacter::PoseBody(float Dt)
 		Rh.Pole = FVector(-0.2f, 0.9f, 0.2f);
 		bLook = true;
 		LookB = WipeC;
+	}
+	else if (A == HumanAct::Busy)
+	{
+		// Level v3, a chore of the routine (NpcRoutine.h): standing at it, the hands busy. Body space: X forward, Z up from the floor.
+		const float W = Ease(Ramp(T, 0.f, 0.7f));
+		const uint8 B = Act.Arg;
+		auto Hand = [&](int32 s, const FVector& P, float Curl)
+		{
+			FArmCtl& H = Arm[s];
+			H.W = W;
+			H.Abs = P;
+			H.AbsW = 1.f;
+			H.RotW = 0.f;
+			H.Curl = Curl;
+			H.bPole = true;
+			H.Pole = FVector(-0.2f, s == 0 ? -0.9f : 0.9f, -0.3f);
+		};
+		auto Hips = [&](int32 s) { return FVector(-30.f, (s == 0 ? -1.f : 1.f) * (HipY + 300.f), HipZ + 160.f); };
+		switch (B)
+		{
+		case HumanBusy::Stir:
+			BendT += 8.f * W;
+			Hand(1, FVector(560.f + 90.f * FMath::Cos(C * 3.2f), 140.f + 90.f * FMath::Sin(C * 3.2f), 1880.f), 0.9f);
+			Hand(0, FVector(520.f, -330.f, 1760.f), 0.2f);
+			bLook = true; LookB = FVector(700.f, 100.f, 1650.f);
+			break;
+		case HumanBusy::Wash:
+			BendT += 16.f * W;
+			for (int32 s = 0; s < 2; ++s) { Hand(s, FVector(620.f + 70.f * FMath::Sin(C * 5.f + s * PI), (s == 0 ? -1.f : 1.f) * (170.f + 40.f * FMath::Cos(C * 5.f + s)), 1640.f), 0.6f); }
+			bLook = true; LookB = FVector(700.f, 0.f, 1450.f);
+			break;
+		case HumanBusy::Window:
+		case HumanBusy::Look:
+			for (int32 s = 0; s < 2; ++s) { Hand(s, Hips(s), 0.4f); }
+			bLook = true;
+			LookB = B == HumanBusy::Look ? TargetB : FVector(3000.f, 0.f, 2600.f);
+			BendT += B == HumanBusy::Look ? 10.f * W : 0.f;
+			LeanT += B == HumanBusy::Window ? -3.f * W : 0.f;
+			break;
+		case HumanBusy::Water:
+			BendT += 6.f * W;
+			Hand(1, FVector(760.f, 200.f, 1750.f + 90.f * FMath::Sin(C * 1.4f)), 0.9f);
+			Hand(0, Hips(0), 0.4f);
+			bLook = true; LookB = FVector(950.f, 150.f, 1200.f);
+			break;
+		case HumanBusy::Rummage:
+			CrouchT += 380.f * W;
+			BendT += 40.f * W;
+			for (int32 s = 0; s < 2; ++s) { Hand(s, FVector(640.f, (s == 0 ? -1.f : 1.f) * 190.f, 480.f + 220.f * FMath::Max(0.f, FMath::Sin(C * 3.f + s * PI))), 0.5f); }
+			bLook = true; LookB = FVector(700.f, 0.f, 250.f);
+			break;
+		case HumanBusy::Tug:
+			Hand(0, FVector(260.f, -150.f, 3250.f + 160.f * FMath::Sin(C * 6.f)), 0.9f);
+			Hand(1, Hips(1), 0.4f);
+			HeadUpT = 25.f * W;
+			bLook = true; LookB = FVector(400.f, -100.f, 5000.f);
+			break;
+		case HumanBusy::Bag:
+			Hand(1, FVector(80.f, HipY + 330.f, 980.f), 1.f);
+			Arm[1].W = 0.9f * W;
+			break;
+		case HumanBusy::Fridge:
+			BendT += 6.f * W;
+			Hand(0, FVector(520.f, -430.f, 2100.f), 0.6f);
+			Hand(1, Hips(1), 0.4f);
+			bLook = true; LookB = FVector(900.f, 0.f, 1700.f);
+			break;
+		case HumanBusy::Kettle:
+			Hand(0, FVector(330.f, 170.f, 1950.f), 0.3f);
+			Hand(1, FVector(330.f, -170.f, 1990.f), 0.3f);
+			bLook = true; LookB = FVector(800.f, 0.f, 1800.f);
+			break;
+		case HumanBusy::Wind:
+			for (int32 s = 0; s < 2; ++s) { Hand(s, FVector(430.f + 90.f * FMath::Cos(C * 4.f + s * PI), (s == 0 ? -60.f : 60.f) + 90.f * FMath::Sin(C * 4.f + s * PI), 1750.f), 0.7f); }
+			bLook = true; LookB = FVector(600.f, 0.f, 1500.f);
+			break;
+		case HumanBusy::Fix:
+		default:
+			for (int32 s = 0; s < 2; ++s) { Hand(s, FVector(600.f, (s == 0 ? -1.f : 1.f) * 150.f + 30.f * FMath::Sin(C * 7.f + s), FMath::Clamp((float)TargetB.Z, 900.f, 3200.f)), 0.8f); }
+			bLook = true; LookB = TargetB;
+			break;
+		}
 	}
 	float FallHeadNod = 0.f;
 	if (bFall)
@@ -1591,13 +1767,15 @@ void AHumanCharacter::BodyEffects(float DeltaSeconds)
 	{
 		return;
 	}
+	ShowRoutineProps();
 	if (Fig != HumanFig::Dad)
 	{
 		// Grandma: the swatter while she is up and about, the broom while she sweeps, the needles while she knits.
 		const bool bSweep = Act.Kind == HumanAct::Sweep && ActTime() < 2.3f;
 		const bool bSat = Rig.SitW > 0.5f;
 		const bool bKnit = bSat && Act.Kind == HumanAct::Sit && Act.Arg == 0;
-		if (SwatterPivot && SwatterPivot->IsVisible() != (!bSweep && !bSat)) { SwatterPivot->SetVisibility(!bSweep && !bSat, true); }
+		const bool bSwatter = !bSweep && !bSat && Act.Kind != HumanAct::Busy && Act.Kind != HumanAct::Wipe;
+		if (SwatterPivot && SwatterPivot->IsVisible() != bSwatter) { SwatterPivot->SetVisibility(bSwatter, true); }
 		if (BroomPivot && BroomPivot->IsVisible() != bSweep) { BroomPivot->SetVisibility(bSweep, true); }
 		for (UStaticMeshComponent* N : NeedleArt)
 		{

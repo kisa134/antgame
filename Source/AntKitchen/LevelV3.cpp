@@ -57,8 +57,74 @@ TConstArrayView<FLevelV3Variant> Variants() { return TConstArrayView<FLevelV3Var
 int32 NumDistricts() { return UE_ARRAY_COUNT(GV3DistrictIds); }
 const TCHAR* DistrictId(int32 D) { return D >= 0 && D < NumDistricts() ? GV3DistrictIds[D] : TEXT(""); }
 const TCHAR* DistrictName(int32 D) { return D >= 0 && D < NumDistricts() ? GV3DistrictRu[D] : TEXT(""); }
-TConstArrayView<FLevelV3Fixture> Fixtures() { return TConstArrayView<FLevelV3Fixture>(GV3Fixtures, UE_ARRAY_COUNT(GV3Fixtures)); }
-TConstArrayView<FLevelV3FastenerDef> Fasteners() { return TConstArrayView<FLevelV3FastenerDef>(GV3Fasteners, UE_ARRAY_COUNT(GV3Fasteners)); }
+namespace
+{
+	// The design left two fixtures without fastener rows: the upper cabinet doors ("hinge x2 per door") and the toaster ("in the code").
+	// The code adds them: two doors of the cabinet over the toaster on two hinges each, and the toaster's crumb tray (its own work).
+	// Inst -2 - k: row k of GExtraRows (the hinge pieces); the tray is the toaster fixture's own work (Inst -1).
+	const FKitchenArtInst GExtraRows[] =
+	{
+		{ TEXT("SM_V3_Hinge"), 0, 0, -1, FVector3f(-6935.f, 4318.f, 4180.f), FVector3f(-1.f, 0.f, 0.f), FVector3f(0.f, -1.f, 0.f), FVector3f(0.f, 0.f, 1.f), FVector3f(1.f, 1.f, 1.f) },
+		{ TEXT("SM_V3_Hinge"), 0, 0, -1, FVector3f(-6935.f, 4318.f, 3240.f), FVector3f(-1.f, 0.f, 0.f), FVector3f(0.f, -1.f, 0.f), FVector3f(0.f, 0.f, 1.f), FVector3f(1.f, 1.f, 1.f) },
+		{ TEXT("SM_V3_Hinge"), 0, 0, -1, FVector3f(-5815.f, 4318.f, 4180.f), FVector3f(-1.f, 0.f, 0.f), FVector3f(0.f, -1.f, 0.f), FVector3f(0.f, 0.f, 1.f), FVector3f(1.f, 1.f, 1.f) },
+		{ TEXT("SM_V3_Hinge"), 0, 0, -1, FVector3f(-5815.f, 4318.f, 3240.f), FVector3f(-1.f, 0.f, 0.f), FVector3f(0.f, -1.f, 0.f), FVector3f(0.f, 0.f, 1.f), FVector3f(1.f, 1.f, 1.f) },
+	};
+	const TCHAR* const GExtraIds[] = { TEXT("v3_upd_r_top"), TEXT("v3_upd_r_bot"), TEXT("v3_upd_l_top"), TEXT("v3_upd_l_bot") };
+	const TCHAR* const GExtraDoor[] = { TEXT("SM_K_WallCab1250_DoorR"), TEXT("SM_K_WallCab1250_DoorR"), TEXT("SM_K_WallCab1250_DoorL"), TEXT("SM_K_WallCab1250_DoorL") };
+	TArray<FLevelV3Fixture> GFixAll;
+	TArray<FLevelV3FastenerDef> GFastAll;
+	int32 GFirstExtra = -1;
+
+	void BuildFixtureTables()
+	{
+		if (GFixAll.Num() > 0) { return; }
+		GFixAll.Append(GV3Fixtures, UE_ARRAY_COUNT(GV3Fixtures));
+		GFastAll.Append(GV3Fasteners, UE_ARRAY_COUNT(GV3Fasteners));
+		for (int32 f = 0; f < GFixAll.Num(); ++f)
+		{
+			if (FCString::Strcmp(GFixAll[f].Id, TEXT("upper_doors")) == 0)
+			{
+				GFixAll[f].FirstFastener = GFastAll.Num();
+				GFixAll[f].NumFasteners = UE_ARRAY_COUNT(GExtraRows);
+				GFirstExtra = GFastAll.Num();
+				for (int32 k = 0; k < (int32)UE_ARRAY_COUNT(GExtraRows); ++k) { GFastAll.Add({ GExtraIds[k], -2 - k, Hinge, f }); }
+			}
+			else if (FCString::Strcmp(GFixAll[f].Id, TEXT("toaster")) == 0)
+			{
+				GFixAll[f].FirstFastener = GFastAll.Num();
+				GFixAll[f].NumFasteners = 1;
+				GFastAll.Add({ TEXT("v3_toaster_tray"), -1, Code, f });
+			}
+		}
+	}
+}
+
+TConstArrayView<FLevelV3Fixture> Fixtures() { BuildFixtureTables(); return GFixAll; }
+TConstArrayView<FLevelV3FastenerDef> Fasteners() { BuildFixtureTables(); return GFastAll; }
+const FKitchenArtInst* ExtraFastenerRow(int32 Inst)
+{
+	const int32 k = -2 - Inst;
+	return k >= 0 && k < (int32)UE_ARRAY_COUNT(GExtraRows) ? &GExtraRows[k] : nullptr;
+}
+int32 UpperDoorMover(int32 FastenerDef, bool* bTop)
+{
+	BuildFixtureTables();
+	const int32 k = FastenerDef - GFirstExtra;
+	if (GFirstExtra < 0 || k < 0 || k >= (int32)UE_ARRAY_COUNT(GExtraRows)) { return INDEX_NONE; }
+	if (bTop) { *bTop = (k % 2) == 0; }
+	// the door of the cabinet over the toaster whose hinge side this is: the mover of that mesh nearest to the hinge
+	const TConstArrayView<FKitchenArtMover> M = BaseMovers();
+	const TConstArrayView<FKitchenArtInst> Rows = BaseArt();
+	int32 Best = INDEX_NONE;
+	float BestD = 1.e9f;
+	for (int32 i = 0; i < M.Num(); ++i)
+	{
+		if (!Rows.IsValidIndex(M[i].Inst) || FCString::Strcmp(Rows[M[i].Inst].Name, GExtraDoor[k]) != 0) { continue; }
+		const float D = FVector2f::Distance(FVector2f(Rows[M[i].Inst].Loc.X, Rows[M[i].Inst].Loc.Y), FVector2f(GExtraRows[k].Loc.X, GExtraRows[k].Loc.Y));
+		if (D < BestD) { BestD = D; Best = i; }
+	}
+	return Best;
+}
 void FixtureParts(int32 F, TArray<int32>& Out)
 {
 	Out.Reset();
@@ -84,7 +150,7 @@ void FixtureRows(TSet<int32>& Out)
 	{
 		if (FCString::Strcmp(F.Id, TEXT("toaster")) == 0 || FCString::Strcmp(F.Id, TEXT("upper_doors")) == 0)
 		{
-			Out.Remove(F.Inst);   // (not fixture actors: the toaster's gadget and the cabinet stay where they were)
+			Out.Remove(F.Inst);   // (the toaster's body and the cabinet stay the builder's: their fixtures are the crumb tray and the doors' hinges)
 			continue;
 		}
 		for (const TCHAR* E : ExtraParts(F.Id)) { const int32 R = FindBase(E); if (R >= 0) { Out.Add(R); } }
@@ -426,6 +492,25 @@ void AddCover(const FVector& C, float R, float H, const TCHAR* Name)
 {
 	EnsureInit();
 	GCover.Add({ (float)C.X - R, (float)C.Y - R, (float)C.Z - 10.f, (float)C.X + R, (float)C.Y + R, (float)C.Z + H, Name });
+}
+
+bool PlayZoneAt(int32 Kind, const FVector& P)
+{
+	for (const FLevelV2Zone& Z : GPlayZones)
+	{
+		if (Z.Kind == Kind && P.Z >= Z.Z0 && P.Z <= Z.Z1 && FVector2D::DistSquared(FVector2D(P), FVector2D((Z.X0 + Z.X1) * 0.5f, (Z.Y0 + Z.Y1) * 0.5f)) < Z.Radius * Z.Radius)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+void RemovePlayZones(const FVector& C, float Radius)
+{
+	const int32 Before = GPlayZones.Num();
+	GPlayZones.RemoveAll([&](const FLevelV2Zone& Z) { return FVector2D::Distance(FVector2D(C), FVector2D((Z.X0 + Z.X1) * 0.5f, (Z.Y0 + Z.Y1) * 0.5f)) < Radius; });
+	if (GPlayZones.Num() != Before) { RebuildZones(); }
 }
 
 bool ShardsAt(const FVector& P)

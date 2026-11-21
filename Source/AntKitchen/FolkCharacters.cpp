@@ -21,6 +21,8 @@
 #include "GameFramework/DamageType.h"
 #include "EngineUtils.h"
 #include "TimerManager.h"
+#include "LevelV3.h"
+#include "NpcRoutine.h"
 
 // Every number a player can feel (also in docs/FEATURES.md, section 18).
 namespace
@@ -123,6 +125,11 @@ bool AHouseFolk::WalkTowards(const FVector& Goal, float Scale, float Arrive)
 		if (StuckFor > 2.5f)
 		{
 			StuckFor = 0.f;
+			if (NpcRoutine::Enabled() && FVector::Dist2D(Me, Goal) > FMath::Max(900.f, Arrive * 2.f))
+			{
+				NavFollow.Reset();   // level v3: far from it, a new way (the routine needs him there, not wherever he got stuck)
+				return false;
+			}
 			return true;
 		}
 	}
@@ -231,6 +238,18 @@ void AHouseFolk::DevAct(const FString& What, const FVector& Target)
 	else if (What == TEXT("carry1") || What == TEXT("carry0")) { bCarryPose = What.EndsWith(TEXT("1")); }
 	else if (What == TEXT("panic")) { Panic(3.f); }
 	else { Super::DevAct(What, Target); }
+}
+
+void AHouseFolk::SetTask(int32 Step, uint8 Phase)
+{
+	const uint8 S = Step >= 0 ? (uint8)Step : 255;
+	if (Task.Step != S || Task.Phase != Phase)
+	{
+		Task.Step = S;
+		Task.Phase = Phase;
+		Task.Start = GetWorld()->GetTimeSeconds();
+		if (Step >= 0) { Task.Target = FVector(NpcRoutine::Steps()[Step].X, NpcRoutine::Steps()[Step].Y, 0.f); }
+	}
 }
 
 FString AHouseFolk::FolkDescribe() const
@@ -377,6 +396,45 @@ AKitchenLoot* AGrandmaCharacter::FindMess(float Range) const
 	return Best;
 }
 
+bool AGrandmaCharacter::TakeMess(float Now)
+{
+	if (!NpcRoutine::Enabled() || Now < NextMessCheck || MessId >= 0)
+	{
+		return false;
+	}
+	NextMessCheck = Now + 1.f;
+	UWorld* W = GetWorld();
+	NpcRoutine::FMess* J = NpcRoutine::FindJob(W, NpcRoutine::Gran, GetActorLocation(), 22000.f);
+	if (!J)
+	{
+		return false;
+	}
+	// She heard it (or saw it): "Ох, батюшки..." - and up she gets with her broom.
+	NpcRoutine::Claim(J->Id, NpcRoutine::Gran);
+	J->bSeen[NpcRoutine::Gran] = true;
+	MessId = J->Id;
+	MessStage = 0;
+	Task.React = J->Kind + 1;
+	Task.Stage = 1;
+	Task.Start = Now;
+	Task.Target = J->Loc;
+	NpcRoutine::Say(W, NpcRoutine::Gran, NpcRoutine::Mutter(NpcRoutine::Gran, J->Kind, J->Id));
+	UE_LOG(LogTemp, Display, TEXT("ANTRT t=%.1f gran takes on mess %d %s (%s)"), NpcRoutine::Clock(W), J->Id, NpcRoutine::MessName(J->Kind), *J->What);
+	FolkLook = J->Loc;
+	if (IsSeated())
+	{
+		GetUp();
+		SetMode(Rising, HumanAct::SitTime * HumanBody::Style(Fig).SitSlow + 0.1f);
+	}
+	else
+	{
+		EndBusy();
+		GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+		SetMode(Cleaning, 60.f);
+	}
+	return true;
+}
+
 void AGrandmaCharacter::DevAct(const FString& What, const FVector& Target)
 {
 	if (What == TEXT("sweep")) { NextSweep = 0.f; TrySweep(Target); }
@@ -459,9 +517,45 @@ void AGrandmaCharacter::Think(float Dt, float Now)
 		}
 	}
 
+	if (NpcRoutine::Enabled() && RtNudge != NpcRoutine::Nudge(NpcRoutine::Gran))
+	{
+		RtNudge = NpcRoutine::Nudge(NpcRoutine::Gran);
+		if (Mode == Routine) { EndBusy(); SetMode(Returning, 40.f); }
+	}
 	switch (Mode)
 	{
 	case Seated:
+		if (NpcRoutine::Enabled() && !Seen && !Q)
+		{
+			// Level v3: her evening (NpcRoutine.h). A mess that is hers first; then whatever the clock says.
+			if (TakeMess(Now))
+			{
+				break;
+			}
+			float Left = 0.f;
+			const int32 S = NpcRoutine::Current(W, NpcRoutine::Gran, &Left);
+			const TConstArrayView<NpcRoutine::FStep> Steps = NpcRoutine::Steps();
+			if (S >= 0 && Steps[S].Pose == NpcRoutine::PKnit)
+			{
+				if (RtStep != S) { NpcRoutine::Log(W, NpcRoutine::Gran, Steps[S].Arg == 1 ? TEXT("dozes in her armchair") : TEXT("knits in her armchair"), S, Me); }
+				RtStep = S;
+				SetSitHow(Steps[S].Arg);
+				NextKnit = Now + 30.f;   // (the clock decides knitting or dozing now)
+				SetTask(S, 2);
+				break;
+			}
+			if (S >= 0 && Left > 8.f)
+			{
+				RtStep = S;
+				bRtWant = true;
+				GetUp();
+				SetMode(Rising, HumanAct::SitTime * HumanBody::Style(Fig).SitSlow + 0.1f);
+				SetTask(S, 1);
+				NpcRoutine::Log(W, NpcRoutine::Gran, TEXT("gets up for it"), S, Me);
+				break;
+			}
+			if (S < 0 && RtStep >= 0) { RtStep = -1; SetTask(-1, 0); }
+		}
 		if (Now >= NextKnit && !Seen)
 		{
 			// Knitting, then nodding off, then knitting again.
@@ -492,9 +586,129 @@ void AGrandmaCharacter::Think(float Dt, float Now)
 		if (Now >= ModeUntil)
 		{
 			GetCharacterMovement()->SetMovementMode(MOVE_Walking);
-			SetMode(Q ? (uint8)Hunting : (uint8)Tidying, 40.f);
+			SetMode(Q ? (uint8)Hunting : MessId >= 0 ? (uint8)Cleaning : bRtWant ? (uint8)Routine : (uint8)Tidying, bRtWant ? 60.f : 40.f);
+			bRtWant = false;
 		}
 		break;
+
+	case Routine:
+	{
+		// At a chore of her evening: watering the plants, the kettle. An ant she has had her eye on, or a mess, comes first.
+		if (Q && Now - SeenSince >= GranNotice && Level >= 1)
+		{
+			EndBusy();
+			SetTask(RtStep, 0);
+			NpcRoutine::Log(W, NpcRoutine::Gran, TEXT("interrupted (an ant)"), FMath::Max(0, RtStep), Me);
+			SetMode(Hunting, 40.f);
+			break;
+		}
+		if (TakeMess(Now))
+		{
+			break;
+		}
+		float Left = 0.f;
+		const int32 S = NpcRoutine::Current(W, NpcRoutine::Gran, &Left);
+		const TConstArrayView<NpcRoutine::FStep> Steps = NpcRoutine::Steps();
+		if (S != RtStep || S < 0 || Steps[S].Pose == NpcRoutine::PKnit)
+		{
+			EndBusy();
+			SetTask(-1, 0);
+			SetMode(Returning, 40.f);
+			break;
+		}
+		const NpcRoutine::FStep& St = Steps[S];
+		const FVector Fwd = FRotator(0.f, St.Yaw, 0.f).Vector();
+		const FVector P = FloorPoint(FVector(St.X, St.Y, 0.f));
+		if (Act.Kind != HumanAct::Busy)
+		{
+			if (WalkTowards(P, 1.f, 220.f) || Now - ModeSince > 45.f)
+			{
+				GetCharacterMovement()->StopMovementImmediately();
+				SetActorRotation(FRotator(0.f, St.Yaw, 0.f));
+				PlayBusy(St.Arg, P + Fwd * 800.f + FVector(0.f, 0.f, 900.f));
+				SetTask(S, 2);
+				NpcRoutine::Log(W, NpcRoutine::Gran, TEXT("arrived, at it"), S, Me);
+			}
+		}
+		else
+		{
+			TurnTo(GetActorLocation() + Fwd * 500.f, Dt, 3.f);
+		}
+		break;
+	}
+
+	case Cleaning:
+	{
+		NpcRoutine::FMess* M = NpcRoutine::GetMess(MessId);
+		auto Done = [&](const TCHAR* Why)
+		{
+			UE_LOG(LogTemp, Display, TEXT("ANTRT t=%.1f gran done with mess %d (%s)"), NpcRoutine::Clock(W), MessId, Why);
+			MessId = -1;
+			Task.React = 0;
+			Task.Stage = 0;
+			EndBusy();
+			SetMode(Returning, 40.f);
+		};
+		if (!M || M->bDone)
+		{
+			Done(TEXT("gone"));
+			break;
+		}
+		if (Q && Now - SeenSince >= GranNotice && Level >= 1 && M->Kind != NpcRoutine::Yarn)
+		{
+			NpcRoutine::Release(MessId);
+			MessId = -1;
+			Task.React = 0;
+			EndBusy();
+			SetMode(Hunting, 40.f);   // (winding the yarn back she does not hunt: the design's window)
+			break;
+		}
+		const FVector L = M->Loc;
+		Task.React = M->Kind + 1;
+		if (MessStage == 0)
+		{
+			Task.Stage = 3;
+			if (WalkTowards(L, 1.f, M->Kind == NpcRoutine::Yarn ? 520.f : 950.f) || Now - ModeSince > 50.f)
+			{
+				GetCharacterMovement()->StopMovementImmediately();
+				MessStage = 1;
+				MessAt = Now;
+				Strokes = 0;
+				Task.Stage = 4;
+				Task.Start = Now;
+				Task.Target = L;
+				UE_LOG(LogTemp, Display, TEXT("ANTRT t=%.1f gran at mess %d %s: cleans it"), NpcRoutine::Clock(W), MessId, NpcRoutine::MessName(M->Kind));
+			}
+			break;
+		}
+		TurnTo(L, Dt);
+		if (M->Kind == NpcRoutine::Yarn)
+		{
+			// Winding it back onto the ball, stitch by stitch: 40 s with her eyes on the yarn.
+			PlayBusy(HumanBusy::Wind, L);
+			FolkLook = L;
+			if (Now - MessAt >= 40.f) { NpcRoutine::Finish(W, MessId, NpcRoutine::Gran); Done(TEXT("the yarn is wound back")); }
+		}
+		else if (M->Kind == NpcRoutine::Spill)
+		{
+			if (MessStage == 1) { PlayWipe(L, 8.f); MessStage = 2; MessAt = Now; }
+			else if (Now - MessAt > 8.3f) { NpcRoutine::Finish(W, MessId, NpcRoutine::Gran); Done(TEXT("wiped")); }
+		}
+		else
+		{
+			// Shards, soil: the broom, stroke after stroke (a broom stroke is still a broom stroke: ants in it fly).
+			if (Strokes < 6)
+			{
+				if (!IsBodyBusy() && Now >= NextSweep) { TrySweep(L); ++Strokes; }
+			}
+			else if (!IsBodyBusy())
+			{
+				NpcRoutine::Finish(W, MessId, NpcRoutine::Gran);
+				Done(TEXT("swept"));
+			}
+		}
+		break;
+	}
 
 	case Hunting:
 	{
@@ -627,6 +841,8 @@ void AGrandmaCharacter::Think(float Dt, float Now)
 			{
 				bHome = false;
 				SetActorLocation(StandPoint, false, nullptr, ETeleportType::TeleportPhysics);
+				RtStep = -1;
+				SetTask(-1, 0);
 				SitDown(SeatPoint, 0);
 				NextKnit = Now + FMath::FRandRange(20.f, 35.f);
 				SetMode(Seated);
@@ -855,7 +1071,35 @@ void AKidCharacter::Think(float Dt, float Now)
 	}
 
 	float D = 0.f;
-	AAntCharacter* Seen = (Mode == FloorPlay || Mode == Toddle) ? SeeAnt(KidSee[Level], &D, KidReachUp) : nullptr;
+	AAntCharacter* Seen = (Mode == FloorPlay || Mode == Toddle || Mode == Routine) ? SeeAnt(KidSee[Level], &D, KidReachUp) : nullptr;
+	if (NpcRoutine::Enabled())
+	{
+		if (RtNudge != NpcRoutine::Nudge(NpcRoutine::Kid))
+		{
+			RtNudge = NpcRoutine::Nudge(NpcRoutine::Kid);
+			RtStep = -2;   // look at the clock again
+		}
+		// His drawing came off the fridge: that is the most important thing in the world.
+		if (MessId < 0 && Now >= NextMessCheck && (Mode == FloorPlay || Mode == Toddle || Mode == Routine))
+		{
+			NextMessCheck = Now + 1.f;
+			if (NpcRoutine::FMess* J = NpcRoutine::FindJob(W, NpcRoutine::Kid, Me, 22000.f))
+			{
+				NpcRoutine::Claim(J->Id, NpcRoutine::Kid);
+				MessId = J->Id;
+				MessStage = 0;
+				Task.React = J->Kind + 1;
+				Task.Stage = 3;
+				Task.Start = Now;
+				Task.Target = J->Loc;
+				UE_LOG(LogTemp, Display, TEXT("ANTRT t=%.1f kid takes on mess %d %s"), NpcRoutine::Clock(W), J->Id, NpcRoutine::MessName(J->Kind));
+				if (IsSeated()) { GetUp(); }
+				EndBusy();
+				GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+				SetMode(Fetch, 60.f);
+			}
+		}
+	}
 	if (Seen)
 	{
 		FolkLook = Seen->GetActorLocation();   // he stares at it first
@@ -877,6 +1121,32 @@ void AKidCharacter::Think(float Dt, float Now)
 	switch (Mode)
 	{
 	case FloorPlay:
+		if (NpcRoutine::Enabled() && !(Level >= 1 && Q && Now - SeenSince > 1.f && Now >= NextGrab))
+		{
+			// Level v3: his evening (NpcRoutine.h): when the clock says something else, up he gets and off to it.
+			float Left = 0.f;
+			const int32 S = NpcRoutine::Current(W, NpcRoutine::Kid, &Left);
+			if (S != RtStep && S >= 0 && Left > 6.f)
+			{
+				RtStep = S;
+				GetUp();
+				SetMode(Toddle, 0.6f);
+				GoalPoint = FVector::ZeroVector;
+				SetTask(S, 1);
+				NpcRoutine::Log(W, NpcRoutine::Kid, TEXT("gets up for it"), S, Me);
+				break;
+			}
+			if (S >= 0 && S == RtStep)
+			{
+				NextUp = Now + 20.f;   // at it: he stays
+				if (NpcRoutine::Steps()[S].Arg == 3) { NextCrumb = FMath::Min(NextCrumb, Now + 9.f); }   // a snack: crumbs
+			}
+			else if (S < 0 && RtStep >= 0)
+			{
+				RtStep = -1;
+				SetTask(-1, 0);
+			}
+		}
 		// Level 0: he only watches. Bolder: an ant he has stared at for a second is the most interesting thing in the room.
 		if ((Level >= 1 && Q && Now - SeenSince > 1.f && Now >= NextGrab) || (Level >= 1 && Now >= NextUp))
 		{
@@ -897,6 +1167,53 @@ void AKidCharacter::Think(float Dt, float Now)
 		{
 			SetMode(Chase, 8.f);
 			break;
+		}
+		if (NpcRoutine::Enabled())
+		{
+			float Left = 0.f;
+			const int32 S = NpcRoutine::Current(W, NpcRoutine::Kid, &Left);
+			if (S >= 0 && Left > 3.f)
+			{
+				if (RtStep != S) { NpcRoutine::Log(W, NpcRoutine::Kid, TEXT("goes to it"), S, Me); }
+				RtStep = S;
+				SetTask(S, 1);
+				const NpcRoutine::FStep& St = NpcRoutine::Steps()[S];
+				const FVector P = FloorPoint(FVector(St.X, St.Y, 0.f));
+				const FVector Fwd = FRotator(0.f, St.Yaw, 0.f).Vector();
+				if (WalkTowards(P, 1.f, 230.f) || Now - ModeSince > 40.f)
+				{
+					GetCharacterMovement()->StopMovementImmediately();
+					SetActorRotation(FRotator(0.f, St.Yaw, 0.f));
+					if (Controller) { Controller->SetControlRotation(FRotator(0.f, St.Yaw, 0.f)); }
+					if (St.Pose == NpcRoutine::PSit && St.Arg == 3)
+					{
+						// The high chair: up onto its seat (from where the chair really stands).
+						const FKitchenArtInst* HC = KitchenArt::Enabled() ? KitchenArt::Find(TEXT("SM_K_HighChair"), 0) : nullptr;
+						FVector Seat = HC ? FVector(HC->Loc.X, HC->Loc.Y, 0.f) : FVector(St.SeatX, St.SeatY, 0.f);
+						Seat.Z = NpcWorld::SurfaceZ(W, FVector(Seat.X, Seat.Y, 1500.f), 100.f, 1500.f);
+						StandPoint = Me;
+						SitAt(Seat, St.Yaw, 3);
+						SetMode(FloorPlay);
+					}
+					else if (St.Pose == NpcRoutine::PSit)
+					{
+						StandPoint = Me;
+						SeatPoint = FVector(Me.X, Me.Y, FeetZ()) - Fwd * 190.f;
+						SitDown(SeatPoint, St.Arg);
+						SetMode(FloorPlay);
+					}
+					else
+					{
+						PlayBusy(St.Arg, P + Fwd * 600.f + FVector(0.f, 0.f, St.Arg == HumanBusy::Tug ? 2500.f : 300.f));
+						SetMode(Routine, 600.f);
+					}
+					NextUp = Now + 20.f;
+					SetTask(S, 2);
+					NpcRoutine::Log(W, NpcRoutine::Kid, TEXT("arrived, at it"), S, Me);
+				}
+				break;
+			}
+			RtStep = -1;
 		}
 		if (Now >= NextSwipe && !IsBodyBusy())
 		{
@@ -1090,6 +1407,78 @@ void AKidCharacter::Think(float Dt, float Now)
 			SetMode(Toddle, 4.f);
 		}
 		break;
+
+	case Routine:
+	{
+		// Standing at the toy box or under the balloons. An ant is still the most interesting thing in the room.
+		if (Level >= 1 && Q && Now - SeenSince > 1.f && Now >= NextGrab)
+		{
+			EndBusy();
+			SetTask(RtStep, 0);
+			NpcRoutine::Log(W, NpcRoutine::Kid, TEXT("interrupted (an ant)"), FMath::Max(0, RtStep), Me);
+			SetMode(Chase, 8.f);
+			break;
+		}
+		if (NpcRoutine::Current(W, NpcRoutine::Kid) != RtStep)
+		{
+			EndBusy();
+			RtStep = -2;
+			GoalPoint = FVector::ZeroVector;
+			SetMode(Toddle, 0.6f);
+		}
+		break;
+	}
+
+	case Fetch:
+	{
+		// His drawing on the floor: he runs to it, picks it up, takes it back to the fridge and sticks it on again.
+		NpcRoutine::FMess* M = NpcRoutine::GetMess(MessId);
+		if (!M || M->bDone)
+		{
+			MessId = -1;
+			Task.React = 0;
+			bCarryPose = false;
+			EndBusy();
+			SetMode(Toddle, 2.f);
+			break;
+		}
+		if (MessStage == 0)
+		{
+			if (WalkTowards(M->Loc, 1.f, 380.f) || Now - ModeSince > 40.f)
+			{
+				MessStage = 1;
+				MessAt = Now;
+				PlayReach(M->Loc);
+				NpcRoutine::Say(W, NpcRoutine::Kid, NpcRoutine::Mutter(NpcRoutine::Kid, M->Kind, M->Id));
+				Task.Stage = 4;
+			}
+		}
+		else if (MessStage == 1)
+		{
+			if (Now - MessAt > 1.1f) { MessStage = 2; bCarryPose = true; }
+		}
+		else if (MessStage == 2)
+		{
+			if (WalkTowards(FVector(3300.f, 2650.f, Me.Z), 1.f, 320.f) || Now - MessAt > 30.f)
+			{
+				MessStage = 3;
+				MessAt = Now;
+				SetActorRotation(FRotator(0.f, 90.f, 0.f));
+				PlayBusy(HumanBusy::Fix, FVector(3300.f, 3100.f, 1400.f));
+			}
+		}
+		else if (Now - MessAt > 3.f)
+		{
+			NpcRoutine::Finish(W, MessId, NpcRoutine::Kid);
+			MessId = -1;
+			Task.React = 0;
+			Task.Stage = 0;
+			bCarryPose = false;
+			EndBusy();
+			SetMode(Toddle, 3.f);
+		}
+		break;
+	}
 
 	case Scream:
 		// Running about, hands in the air.

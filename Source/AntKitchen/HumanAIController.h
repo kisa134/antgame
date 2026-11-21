@@ -23,6 +23,8 @@ class ANTKITCHEN_API AHumanAIController : public AAIController
 public:
 	AHumanAIController();
 	virtual void Tick(float DeltaSeconds) override;
+	/** Level v3: the raid's quiet start (he is not after the ants yet): only his routine and his mess (the phone on the sofa...). */
+	bool bQuiet = false;
 	virtual void UpdateControlRotation(float DeltaTime, bool bUpdatePawn = true) override;
 
 private:
@@ -79,4 +81,31 @@ private:
 	float PeerGiveUp = 0.f;
 	float PeerEnd = 0.f;
 	float NextPeerTime = 0.f;
+
+	// ---- Level v3: his evening (NpcRoutine.h) and what he does about the mess the ants make
+	/** The routine when he has nothing better to do. True while it has him (on the way, at it, out of the flat). */
+	bool TickRoutine(AHumanCharacter* H, float Dt);
+	/** A mess he has seen or heard: look, mutter, fetch the tool, clean up / put it back. True while busy with it. */
+	bool TickReact(AHumanCharacter* H, float Dt);
+	/** Sticky floor (cola, jam): slow, heavy steps. */
+	void TickSticky(AHumanCharacter* H, float Dt);
+	/** Stops whatever the routine has his body doing (gets up), for anything more urgent. */
+	void BreakRoutine(AHumanCharacter* H, const TCHAR* Why);
+	bool RoutineHolds(const AHumanCharacter* H) const { return RtPhase == 1 || RtPhase == 2 || RtPhase == 3; }
+	int32 RtStep = -1;
+	uint8 RtPhase = 0;          // 0 none, 1 going, 2 at it, 3 out of the flat, 4 done (waits for the next step)
+	float RtSince = 0.f;
+	float RtGiveUp = 0.f;
+	float RtStandUpAt = 0.f;    // up from a seat: steps back to where he stood once the rise is over
+	float GoneUntil = 0.f;
+	uint8 GoneStage = 0;
+	uint32 RtNudge = 0;
+	int32 ReactMess = -1;
+	uint8 ReactStage = 0;
+	float ReactAt = 0.f, ReactGiveUp = 0.f;
+	FVector ToolPoint = FVector::ZeroVector;
+	FString ToolName;
+	float NextMessScan = 0.f;
+	float StickyStepAt = 0.f;
+	bool bStickyTold = false;
 };

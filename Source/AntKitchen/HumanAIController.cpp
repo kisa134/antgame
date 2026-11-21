@@ -18,6 +18,11 @@
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "EngineUtils.h"
+#include "LevelV3.h"
+#include "NpcRoutine.h"
+#include "KitchenInteractables.h"
+#include "AntRun.h"
+#include "AntRaid.h"
 
 AHumanAIController::AHumanAIController()
 {
@@ -185,6 +190,25 @@ void AHumanAIController::Tick(float DeltaSeconds)
 	{
 		return;   // dev: a puppet for screenshots
 	}
+	if (H->IsAway())
+	{
+		TickRoutine(H, DeltaSeconds);   // out with the rubbish: nothing else until he is back
+		return;
+	}
+	if (bQuiet)
+	{
+		// The quiet start of the raid: he is not after the ants yet, he just lives his evening.
+		H->SetSpraying(false);
+		if (H->Act.Kind == HumanAct::Rise && H->IsBodyBusy())
+		{
+			return;
+		}
+		if (!TickReact(H, DeltaSeconds) && !TickRoutine(H, DeltaSeconds))
+		{
+			StopMovement();
+		}
+		return;
+	}
 	if (H->IsDown())
 	{
 		// On his back in a puddle: nothing else for now.
@@ -237,6 +261,15 @@ void AHumanAIController::Tick(float DeltaSeconds)
 	{
 		return;
 	}
+	TickSticky(H, DeltaSeconds);
+	if (H->Act.Kind == HumanAct::Rise)
+	{
+		if (H->IsBodyBusy())
+		{
+			H->SetSpraying(false);
+			return;   // getting up from the sofa / the chair
+		}
+	}
 
 	if (H->IsRooted())
 	{
@@ -265,6 +298,22 @@ void AHumanAIController::Tick(float DeltaSeconds)
 	{
 		T = nullptr;
 		Target = nullptr;
+	}
+	if (T && RoutineHolds(H))
+	{
+		// Busy with his routine (his back to the room at the stove or the sink, eyes on the phone or the TV): he notices only what is
+		// right by him, in front of him, or an ant with food close by. The routine's windows are real.
+		// On the way to a chore he looks where he goes (the higher the threat, the further he notices); at it, even less.
+		const FVector To = T->GetActorLocation() - MyLoc;
+		const float D = (float)To.Size2D();
+		const bool bFront = FVector::DotProduct(To.GetSafeNormal2D(), H->GetActorForwardVector()) > 0.35f;
+		const AAntRaid* RaidNow = AAntRaid::Get(GetWorld());
+		const int32 TierNow = RaidNow ? FMath::Clamp((int32)RaidNow->Tier, 1, 4) : 2;
+		const float Front = (RtPhase == 1 ? 1700.f : 1300.f) + 450.f * TierNow;
+		if (!(D < 900.f || (bFront && D < Front) || (T->IsCarrying() && D < 1200.f + 300.f * TierNow)))
+		{
+			T = nullptr;
+		}
 	}
 	if (T)
 	{
@@ -395,7 +444,7 @@ void AHumanAIController::Tick(float DeltaSeconds)
 			}
 		}
 	}
-	if (GM && !bBusy && (T || PeerLoc.IsZero()))
+	if (GM && !bBusy && (T || PeerLoc.IsZero()) && (T || ReactStage == 0) && (T || RtPhase == 0 || RtPhase == 4))
 	{
 		if (T)
 		{
@@ -439,6 +488,10 @@ void AHumanAIController::Tick(float DeltaSeconds)
 	else if (bBusy && !PeerLoc.IsZero() && PeerEnd <= 0.f)
 	{
 		PeerLoc = FVector::ZeroVector;   // something louder came up
+	}
+	if ((bBusy || T) && (RtPhase == 1 || RtPhase == 2 || ReactStage > 0))
+	{
+		BreakRoutine(H, T ? TEXT("an ant") : bInvestigating ? TEXT("a noise") : TEXT("a door"));
 	}
 
 	if (bBusy)
@@ -506,6 +559,10 @@ void AHumanAIController::Tick(float DeltaSeconds)
 				H->SetSpraying(FVector::Dist(Origin, TL) < H->GetSprayRange() - 100.f && YawErr < 15.f && H->SprayFuel > 10.f);
 			}
 		}
+	}
+	else if (TickReact(H, DeltaSeconds) || TickRoutine(H, DeltaSeconds))
+	{
+		// Level v3: his evening, and the mess he cleans up (NpcRoutine.h).
 	}
 	else if (AAntSwarm* Swarm = AAntSwarm::Get(GetWorld()); Swarm && Swarm->FindStompTarget(MyLoc, 7000.f, SwarmPoint) && AKitchenBuilder::Region(SwarmPoint) < 2)
 	{
@@ -649,6 +706,409 @@ void AHumanAIController::Tick(float DeltaSeconds)
 	{
 		StuckTimer = 0.f;
 	}
+}
+
+// ---------------------------------------------------------------------------------------------
+// Level v3: his evening (NpcRoutine.h)
+// ---------------------------------------------------------------------------------------------
+
+void AHumanAIController::BreakRoutine(AHumanCharacter* H, const TCHAR* Why)
+{
+	UWorld* W = GetWorld();
+	if (RtPhase == 1 || RtPhase == 2)
+	{
+		if (RtPhase == 2)
+		{
+			H->EndBusy();
+			NpcRoutine::Log(W, NpcRoutine::Dad, *FString::Printf(TEXT("interrupted (%s)"), Why), RtStep, H->GetActorLocation());
+		}
+		else if (H->IsBusyPose())
+		{
+			H->EndBusy();
+		}
+		RtPhase = 0;
+		H->Task.Phase = 0;
+	}
+	if (ReactStage > 0)
+	{
+		NpcRoutine::Release(ReactMess);
+		UE_LOG(LogTemp, Display, TEXT("ANTRT t=%.1f dad drops the mess %d for %s"), NpcRoutine::Clock(W), ReactMess, Why);
+		ReactStage = 0;
+		ReactMess = -1;
+		H->Task.React = 0;
+		H->Task.Stage = 0;
+		H->bTowel = false;
+		if (H->IsBusyPose() || H->Act.Kind == HumanAct::Wipe) { H->EndBusy(); }
+	}
+}
+
+void AHumanAIController::TickSticky(AHumanCharacter* H, float Dt)
+{
+	if (!LevelV3::Enabled())
+	{
+		return;
+	}
+	const float Now = GetWorld()->GetTimeSeconds();
+	const FVector Feet = H->GetActorLocation() - FVector(0.f, 0.f, H->GetCapsuleComponent()->GetScaledCapsuleHalfHeight() - 20.f);
+	const bool bSticky = LevelV3::PlayZoneAt(0, Feet);
+	H->StickyK = bSticky ? 0.4f : 1.f;
+	if (bSticky && H->GetVelocity().Size2D() > 25.f && Now >= StickyStepAt)
+	{
+		// Every step pulls out of the cola with a slurp: slow, and loud enough to hear across the kitchen.
+		StickyStepAt = Now + 0.8f;
+		AntSfx::Everyone(H, AntSfx::HumanStep, Feet, 0.7f);
+		if (!bStickyTold)
+		{
+			bStickyTold = true;
+			if (AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>()) { GM->Broadcast(TEXT("Человек вляпался в липкую лужу: ноги прилипают, он еле идёт!"), FLinearColor(1.f, 0.85f, 0.4f)); }
+			UE_LOG(LogTemp, Display, TEXT("ANTRT t=%.1f dad sticks in the sticky pool at %s: speed x0.4"), NpcRoutine::Clock(GetWorld()), *Feet.ToCompactString());
+		}
+	}
+	else if (!bSticky)
+	{
+		bStickyTold = false;
+	}
+}
+
+bool AHumanAIController::TickRoutine(AHumanCharacter* H, float Dt)
+{
+	using namespace NpcRoutine;
+	if (!NpcRoutine::Enabled() || !H->HasJointedBody())
+	{
+		return false;
+	}
+	UWorld* W = GetWorld();
+	const float Now = W->GetTimeSeconds();
+	AAntKitchenGameMode* GM = W->GetAuthGameMode<AAntKitchenGameMode>();
+	const FVector Me = H->GetActorLocation();
+	const TConstArrayView<FStep> Steps = NpcRoutine::Steps();
+	if (RtNudge != NpcRoutine::Nudge(Dad))
+	{
+		RtNudge = NpcRoutine::Nudge(Dad);
+		if (RtPhase == 3) { GoneUntil = FMath::Min(GoneUntil, Now + 2.f); }
+		else { BreakRoutine(H, TEXT("dev")); RtStep = -1; RtPhase = 0; }
+	}
+	if (RtPhase == 3 && Steps.IsValidIndex(RtStep))
+	{
+		// Out with the rubbish: the door opens, he goes through, it shuts behind him; 45 s later it opens again and he is back.
+		const FStep& St = Steps[RtStep];
+		const FVector Door(St.X, St.Y, Me.Z);
+		if (GoneStage == 0 && Now >= RtSince + 1.2f)
+		{
+			H->SetAway(true, Door);
+			GoneStage = 1;
+			Log(W, Dad, TEXT("gone out of the flat"), RtStep, Door);
+			if (GM) { GM->Broadcast(TEXT("Человек вынес мусор и закрыл за собой дверь — 45 секунд его нет дома!"), FLinearColor(0.6f, 1.f, 0.6f)); GM->MakeNoise(Door, 0.25f, AntNoise::Door, nullptr, nullptr); }
+		}
+		else if (GoneStage == 1 && Now >= RtSince + 2.8f)
+		{
+			H->Task.Door = 0;   // the door shuts behind him
+			GoneStage = 2;
+		}
+		else if (GoneStage == 2 && Now >= GoneUntil - 1.6f)
+		{
+			H->Task.Door = 1;
+			GoneStage = 3;
+		}
+		else if (GoneStage == 3 && Now >= GoneUntil)
+		{
+			H->SetAway(false, Door + FVector(-600.f, 0.f, 0.f));
+			H->EndBusy();
+			H->Task.Phase = 2;
+			GoneStage = 4;
+			RtSince = Now;
+			Log(W, Dad, TEXT("back in the flat"), RtStep, Door);
+			if (GM) { GM->Broadcast(TEXT("Человек вернулся домой"), FLinearColor(1.f, 0.6f, 0.5f)); }
+		}
+		else if (GoneStage == 4 && Now >= RtSince + 1.8f)
+		{
+			H->Task.Door = 0;
+			H->Task.Phase = 0;
+			RtPhase = 4;
+		}
+		if (GM && GoneStage >= 1 && GoneStage <= 3) { GM->SetHumanGoal(AntHumanGoal::Idle, TEXT("вынес мусор: его нет дома"), Door); }
+		return true;
+	}
+	float Left = 0.f;
+	const int32 S = Current(W, Dad, &Left);
+	if (S != RtStep)
+	{
+		if (RtPhase == 2 || H->IsBusyPose()) { H->EndBusy(); }
+		RtStep = S;
+		RtPhase = S >= 0 ? 1 : 0;
+		RtSince = Now;
+		RtGiveUp = Now + 50.f;
+		H->Task.Step = S >= 0 ? (uint8)S : 255;
+		H->Task.Phase = RtPhase;
+		H->Task.Start = Now;
+		H->Task.Target = S >= 0 ? FVector(Steps[S].X, Steps[S].Y, 0.f) : FVector::ZeroVector;
+		if (S >= 0) { Log(W, Dad, TEXT("goes to it"), S, Me); }
+	}
+	if (S < 0 || RtPhase == 4)
+	{
+		return false;
+	}
+	const FStep& St = Steps[S];
+	const FVector P(St.X, St.Y, Me.Z);
+	if (RtPhase == 0)
+	{
+		RtPhase = 1;   // back to it after whatever interrupted him
+		RtGiveUp = Now + 50.f;
+		H->Task.Phase = 1;
+		if (Now - RtSince > 8.f) { Log(W, Dad, TEXT("resumes"), S, Me); RtSince = Now; }
+	}
+	if (RtPhase == 1)
+	{
+		if (Left < 4.f && St.Pose != PGone)
+		{
+			RtPhase = 4;   // too late for it now: the next one
+			H->Task.Phase = 0;
+			return false;
+		}
+		if (GM) { GM->SetHumanGoal(AntHumanGoal::Idle, FString::Printf(TEXT("идёт: %s"), St.Ru), P); }
+		if (St.Pose == PGone && !H->IsBusyPose()) { H->PlayBusy(HumanBusy::Bag, P); }
+		if (FVector::Dist2D(Me, P) > (St.Pose == PGone ? 520.f : 330.f) && Now < RtGiveUp)
+		{
+			DesiredRotation.Pitch = -10.f;
+			MoveTowards(H, P, St.Pose == PGone ? 0.85f : 0.7f);
+			return true;
+		}
+		RtPhase = 2;
+		RtSince = Now;
+		H->Task.Phase = 2;
+		H->Task.Start = Now;
+		const FVector Fwd = FRotator(0.f, St.Yaw, 0.f).Vector();
+		if (St.Pose == PSit)
+		{
+			FVector Seat(St.SeatX, St.SeatY, 0.f);
+			float Yaw = St.Yaw;
+			if (FCString::Strcmp(St.Key, TEXT("h_eat")) == 0)
+			{
+				// His chair at the dinner table, facing the table (from where the furniture really stands).
+				const FKitchenArtInst* Chair = KitchenArt::Enabled() ? KitchenArt::Find(TEXT("SM_K_Chair"), 0) : nullptr;
+				const FKitchenArtInst* Table = KitchenArt::Enabled() ? KitchenArt::Find(TEXT("SM_K_Table"), 0) : nullptr;
+				if (Chair) { Seat = FVector(Chair->Loc.X, Chair->Loc.Y, 0.f); }
+				if (Chair && Table) { Yaw = (float)(FVector(Table->Loc) - FVector(Chair->Loc)).GetSafeNormal2D().Rotation().Yaw; }
+			}
+			if (FMath::IsNearlyZero(Seat.X) && FMath::IsNearlyZero(Seat.Y)) { Seat = Me - Fwd * 750.f; }
+			Seat.Z = NpcWorld::SurfaceZ(W, FVector(Seat.X, Seat.Y, 1300.f), 100.f, 1300.f);
+			H->SitAt(Seat, Yaw, St.Arg);
+			DesiredRotation.Yaw = Yaw;
+		}
+		else if (St.Pose == PBusy)
+		{
+			H->PlayBusy(St.Arg, Me + Fwd * 900.f + FVector(0.f, 0.f, 700.f));
+			DesiredRotation.Yaw = St.Yaw;
+			if (St.Arg == HumanBusy::Fridge)
+			{
+				for (TActorIterator<AKitchenDoor> It(W); It; ++It)
+				{
+					if (It->Kind == EKitchenDoorKind::Fridge) { It->SetOpen(true, St.Secs + 1.f); AntSfx::Everyone(H, AntSfx::FridgeDoor, It->GetActorLocation(), 1.f); }
+				}
+			}
+		}
+		else if (St.Pose == PGone)
+		{
+			RtPhase = 3;
+			GoneStage = 0;
+			GoneUntil = Now + 45.f + 1.2f;
+			H->Task.Door = 1;   // he opens the hall door and goes through it
+			H->Task.Phase = 3;
+			DesiredRotation.Yaw = 0.f;
+		}
+		Log(W, Dad, TEXT("arrived, at it"), S, Me);
+		return true;
+	}
+	// At it: the body keeps at the chore, facing where the chore is.
+	if (GM) { GM->SetHumanGoal(AntHumanGoal::Idle, St.Ru, P); }
+	if (St.Pose == PBusy)
+	{
+		DesiredRotation.Yaw = St.Yaw;
+		DesiredRotation.Pitch = -15.f;
+		if (!H->IsBusyPose()) { H->PlayBusy(St.Arg, Me + FRotator(0.f, St.Yaw, 0.f).Vector() * 900.f + FVector(0.f, 0.f, 700.f)); }
+	}
+	else if (St.Pose == PSit && H->Act.Kind != HumanAct::Sit)
+	{
+		RtPhase = 1;   // something stood him up: back onto the seat
+	}
+	return true;
+}
+
+bool AHumanAIController::TickReact(AHumanCharacter* H, float Dt)
+{
+	using namespace NpcRoutine;
+	if (!NpcRoutine::Enabled() || !H->HasJointedBody())
+	{
+		return false;
+	}
+	UWorld* W = GetWorld();
+	const float Now = W->GetTimeSeconds();
+	const FVector Me = H->GetActorLocation();
+	AAntKitchenGameMode* GM = W->GetAuthGameMode<AAntKitchenGameMode>();
+	FMess* M = ReactMess >= 0 ? GetMess(ReactMess) : nullptr;
+	auto EndReact = [&](const TCHAR* Why)
+	{
+		if (M && !M->bDone) { Release(M->Id); }
+		UE_LOG(LogTemp, Display, TEXT("ANTRT t=%.1f dad is done with the mess %d (%s)"), Clock(W), ReactMess, Why);
+		ReactStage = 0;
+		ReactMess = -1;
+		H->Task.React = 0;
+		H->Task.Stage = 0;
+		H->bTowel = false;
+		if (H->IsBusyPose()) { H->EndBusy(); }
+	};
+	if (ReactStage > 0 && (!M || M->bDone || Now > ReactGiveUp))
+	{
+		EndReact(!M || M->bDone ? TEXT("someone cleaned it") : TEXT("gave up"));
+		return false;
+	}
+	auto SetStage = [&](uint8 Stage)
+	{
+		ReactStage = Stage;
+		H->Task.React = M ? M->Kind + 1 : 0;
+		H->Task.Stage = Stage;
+		H->Task.Start = Now;
+		H->Task.Target = M ? M->Loc : FVector::ZeroVector;
+	};
+	if (ReactStage == 0)
+	{
+		if (Now < NextMessScan)
+		{
+			return false;
+		}
+		NextMessScan = Now + 0.5f;
+		const FVector Eyes = Me + FVector(0.f, 0.f, H->GetSimpleCollisionHalfHeight() * 0.8f);
+		FMess* Seen = FindUnseen(W, Dad, Me, 4500.f);
+		if (Seen && (FVector::Dist2D(Me, Seen->Loc) < 1600.f || NpcWorld::CanSee(W, Eyes, Seen->Loc + FVector(0.f, 0.f, 60.f))))
+		{
+			// He sees it: stops, looks at it, says something about it.
+			Seen->bSeen[Dad] = true;
+			BreakRoutine(H, TEXT("a mess"));
+			M = Seen;
+			ReactMess = Seen->Id;
+			ReactAt = Now + 2.6f;
+			ReactGiveUp = Now + 75.f;
+			SetStage(1);
+			H->PlayBusy(HumanBusy::Look, Seen->Loc);
+			Say(W, Dad, Mutter(Dad, Seen->Kind, Seen->Id));
+			UE_LOG(LogTemp, Display, TEXT("ANTRT t=%.1f dad sees mess %d %s (%s) at %.0f"), Clock(W), Seen->Id, MessName(Seen->Kind), *Seen->What, FVector::Dist2D(Me, Seen->Loc));
+			return true;
+		}
+		FMess* J = FindJob(W, Dad, Me, 14000.f);
+		if (J && (J->bSeen[Dad] || Now - J->Time < 20.f))
+		{
+			M = J;
+			ReactMess = J->Id;
+			ReactGiveUp = Now + 75.f;
+			Claim(J->Id, Dad);
+			BreakRoutine(H, TEXT("a job"));
+			ReactMess = J->Id;
+			ToolPoint = ToolFor(Dad, J->Kind, ToolName);
+			SetStage(2);
+			UE_LOG(LogTemp, Display, TEXT("ANTRT t=%.1f dad takes on mess %d %s: fetches %s"), Clock(W), J->Id, MessName(J->Kind), *ToolName);
+			return true;
+		}
+		return false;
+	}
+	const FVector Loc = M->Loc;
+	if (ReactStage == 1)
+	{
+		DesiredRotation.Yaw = (float)(Loc - Me).Rotation().Yaw;
+		DesiredRotation.Pitch = -25.f;
+		if (GM) { GM->SetHumanGoal(AntHumanGoal::Look, FString::Printf(TEXT("смотрит: %s"), *M->What), Loc); }
+		if (Now < ReactAt)
+		{
+			return true;
+		}
+		H->EndBusy();
+		if (IsJob(W, Dad, *M) && M->By < 0)
+		{
+			Claim(M->Id, Dad);
+			ToolPoint = ToolFor(Dad, M->Kind, ToolName);
+			SetStage(2);
+			UE_LOG(LogTemp, Display, TEXT("ANTRT t=%.1f dad takes on mess %d %s: fetches %s"), Clock(W), M->Id, MessName(M->Kind), *ToolName);
+			return true;
+		}
+		M = nullptr;   // not his job (grandma's, the kid's): he has looked, he goes on
+		EndReact(TEXT("not his job"));
+		return false;
+	}
+	if (ReactStage == 2)
+	{
+		if (GM) { GM->SetHumanGoal(AntHumanGoal::Shut, FString::Printf(TEXT("идёт за: %s"), *ToolName), ToolPoint); }
+		if (!ToolPoint.IsZero() && FVector::Dist2D(Me, ToolPoint) > 420.f)
+		{
+			MoveTowards(H, FVector(ToolPoint.X, ToolPoint.Y, Me.Z), 0.85f);
+			return true;
+		}
+		if (!ToolPoint.IsZero()) { H->PlayReach(ToolPoint + FVector(0.f, 0.f, 500.f)); }
+		H->bTowel = M->Kind == Spill;
+		ReactAt = Now + 0.9f;
+		SetStage(3);
+		UE_LOG(LogTemp, Display, TEXT("ANTRT t=%.1f dad has the %s, goes to mess %d"), Clock(W), *ToolName, M->Id);
+		return true;
+	}
+	if (ReactStage == 3)
+	{
+		if (GM) { GM->SetHumanGoal(AntHumanGoal::Shut, FString::Printf(TEXT("идёт убирать: %s"), *M->What), Loc); }
+		if (Now < ReactAt)
+		{
+			return true;
+		}
+		const FVector Out = FVector(Me - Loc).GetSafeNormal2D();
+		const FVector Stand = Loc + (Out.IsNearlyZero() ? FVector(1.f, 0.f, 0.f) : Out) * 680.f;
+		if (FVector::Dist2D(Me, Stand) > 260.f && FVector::Dist2D(Me, Loc) > 850.f)
+		{
+			MoveTowards(H, FVector(Stand.X, Stand.Y, Me.Z), 0.75f);
+			return true;
+		}
+		DesiredRotation.Yaw = (float)(Loc - Me).Rotation().Yaw;
+		if (FMath::Abs(FMath::FindDeltaAngleDegrees((float)H->GetActorRotation().Yaw, (float)DesiredRotation.Yaw)) > 20.f)
+		{
+			return true;
+		}
+		if (M->Kind == Fallen || M->Kind == Drawing)
+		{
+			const AActor* Src = M->Src.Get();
+			H->PlayBusy(HumanBusy::Fix, Src ? Src->GetActorLocation() + FVector(0.f, 0.f, 300.f) : Loc);
+			ReactAt = Now + 7.f;
+		}
+		else
+		{
+			H->PlayWipe(Loc, 5.5f);
+			ReactAt = Now + 5.8f;
+		}
+		SetStage(4);
+		UE_LOG(LogTemp, Display, TEXT("ANTRT t=%.1f dad cleans mess %d %s (%s)"), Clock(W), M->Id, MessName(M->Kind), *M->What);
+		return true;
+	}
+	// ReactStage 4: cleaning / putting it back
+	if (GM) { GM->SetHumanGoal(AntHumanGoal::Shut, FString::Printf(TEXT("убирает: %s"), *M->What), Loc); }
+	if (Now < ReactAt)
+	{
+		return true;
+	}
+	const uint8 Kind = M->Kind;
+	Finish(W, M->Id, Dad);
+	H->bTowel = false;
+	if (H->IsBusyPose()) { H->EndBusy(); }
+	if (H->Rage >= 2 && (Kind == Spill || Kind == Shards))
+	{
+		// Angry enough: a mouse trap where it happened, and the spray topped up.
+		Say(W, Dad, TEXT("Ну всё. Ставлю мышеловку, и дихлофос под рукой."));
+		H->SprayFuel = 100.f;
+		const FVector TrapAt(Loc.X + 350.f, Loc.Y, 0.f);
+		if (AKitchenTrap* Trap = W->SpawnActor<AKitchenTrap>(AKitchenTrap::StaticClass(), FTransform(TrapAt)))
+		{
+			UE_LOG(LogTemp, Display, TEXT("ANTRT t=%.1f dad sets a trap at %s (rage %d)"), Clock(W), *TrapAt.ToCompactString(), (int32)H->Rage);
+		}
+	}
+	M = nullptr;
+	ReactStage = 0;
+	ReactMess = -1;
+	H->Task.React = 0;
+	H->Task.Stage = 0;
+	return true;
 }
 
 bool AHumanAIController::TickChores(AHumanCharacter* H)

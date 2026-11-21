@@ -127,6 +127,14 @@ namespace LevelV3
 	ANTKITCHEN_API void ClearPlayZones();
 	/** Shards under P (the cutting zone of broken glass), else false. */
 	ANTKITCHEN_API bool ShardsAt(const FVector& P);
+	/** Is P in a zone of Kind made in play (0 sticky: jam, cola; 1 wet; 2 shards)? */
+	ANTKITCHEN_API bool PlayZoneAt(int32 Kind, const FVector& P);
+	/** Every machine: the zones made in play within Radius of C are gone (cleaned up). */
+	ANTKITCHEN_API void RemovePlayZones(const FVector& C, float Radius);
+	/** Fasteners the code adds to the design's table (the upper cabinet doors' hinges): Inst <= -2 in Fasteners(); the row to build it from. */
+	ANTKITCHEN_API const FKitchenArtInst* ExtraFastenerRow(int32 Inst);
+	/** The hinge fasteners of the upper doors (index into Fasteners()): which mover of the doors each one holds (KitchenArt::Movers()), and whether it is the top one. */
+	ANTKITCHEN_API int32 UpperDoorMover(int32 FastenerDef, bool* bTop = nullptr);
 	/** What the shards do to an ant standing in them, hp a second (the design: 10). */
 	inline float ShardDps() { return 10.f; }
 }

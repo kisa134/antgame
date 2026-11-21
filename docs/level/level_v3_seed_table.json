@@ -21571,9 +21571,9 @@
 {
 "seed": 1,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "CBCCCBBAAABCDB",
+"var": "CBCCCBBCAABCCB",
 "cake": 2,
 "doors": [
 12
@@ -21878,7 +21878,7 @@
 {
 "seed": 12,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
 "var": "BADAAAACCCAACA",
 "cake": 2,
@@ -21994,9 +21994,9 @@
 {
 "seed": 16,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "CCABCCCAACCADA",
+"var": "CCABCCCCACCACA",
 "cake": 1,
 "doors": [
 5,
@@ -22076,9 +22076,9 @@
 {
 "seed": 19,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "BAAAABBDBBCCBC",
+"var": "BAAAABBCBBCCAC",
 "cake": 3,
 "doors": [
 4
@@ -22407,9 +22407,9 @@
 {
 "seed": 31,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "CACBACAAABBACC",
+"var": "CACBACACABBABC",
 "cake": 1,
 "doors": [
 25
@@ -22433,7 +22433,7 @@
 {
 "seed": 32,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
 "var": "CCBACAACCAAABB",
 "cake": 1,
@@ -22518,9 +22518,9 @@
 {
 "seed": 35,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "CACACBCABCBCBC",
+"var": "CACACBCCBCBCAC",
 "cake": 1,
 "doors": [
 19
@@ -22599,10 +22599,10 @@
 {
 "seed": 38,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "ABDAABBCBBBCCB",
-"cake": 1,
+"var": "ABDAABBCBBBCBB",
+"cake": 0,
 "doors": [
 13
 ],
@@ -22622,16 +22622,16 @@
 ],
 "cover": 3.95,
 "cake_s": [
-126.9,
-129.4
+113.7,
+136.7
 ]
 },
 {
 "seed": 39,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "ABACCCBABAAABB",
+"var": "ABACCCBCBAAABB",
 "cake": 0,
 "doors": [],
 "loose": [
@@ -22653,9 +22653,9 @@
 {
 "seed": 40,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "ABCAACBDCBCACB",
+"var": "ABCAACBCCBCABB",
 "cake": 1,
 "doors": [
 15,
@@ -22795,10 +22795,10 @@
 {
 "seed": 45,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "ACABABBDBACCCC",
-"cake": 1,
+"var": "ACABABBCBACCBC",
+"cake": 0,
 "doors": [],
 "loose": [
 580,
@@ -22814,8 +22814,8 @@
 ],
 "cover": 3.95,
 "cake_s": [
-129.4,
-134.0
+113.7,
+143.8
 ]
 },
 {
@@ -23160,9 +23160,9 @@
 {
 "seed": 58,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "BCCBABCCCCCCBC",
+"var": "BCCBABCCCCCCAC",
 "cake": 1,
 "doors": [],
 "loose": [
@@ -23327,9 +23327,9 @@
 {
 "seed": 64,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "BCCCBBBDBCBABA",
+"var": "BCCCBBBCBCBABA",
 "cake": 0,
 "doors": [],
 "loose": [
@@ -23351,9 +23351,9 @@
 {
 "seed": 65,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "CADBCACDAABCBC",
+"var": "CADBCACCAABCBC",
 "cake": 0,
 "doors": [],
 "loose": [
@@ -23377,9 +23377,9 @@
 {
 "seed": 66,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "ABBCAACDBACADC",
+"var": "ABBCAACCBACACC",
 "cake": 2,
 "doors": [],
 "loose": [
@@ -23512,7 +23512,7 @@
 {
 "seed": 71,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
 "var": "CBCBBABCCBACBA",
 "cake": 1,
@@ -23598,9 +23598,9 @@
 {
 "seed": 74,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "CBBCAACACACAAA",
+"var": "CBBCAACCCACAAA",
 "cake": 1,
 "doors": [
 12,
@@ -23660,9 +23660,9 @@
 {
 "seed": 76,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "ABCBACCAABBADC",
+"var": "ABCBACCCABBACC",
 "cake": 3,
 "doors": [
 9,
@@ -23688,9 +23688,9 @@
 {
 "seed": 77,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "BACCACBAABACCB",
+"var": "BACCACBCABACBB",
 "cake": 2,
 "doors": [
 9,
@@ -23718,9 +23718,9 @@
 {
 "seed": 78,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "ACACCBCDCACADB",
+"var": "ACACCBCCCACACB",
 "cake": 0,
 "doors": [
 18,
@@ -23856,7 +23856,7 @@
 {
 "seed": 83,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
 "var": "CCCBBBCCBACCCC",
 "cake": 0,
@@ -23914,10 +23914,10 @@
 {
 "seed": 85,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "CBDCABCAABCCDC",
-"cake": 1,
+"var": "CBDCABCCABCCCC",
+"cake": 2,
 "doors": [],
 "loose": [
 517,
@@ -23933,8 +23933,8 @@
 ],
 "cover": 3.95,
 "cake_s": [
-126.9,
-129.4
+61.5,
+87.7
 ]
 },
 {
@@ -23968,10 +23968,10 @@
 {
 "seed": 87,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "ABBBCBBCBBCCDB",
-"cake": 0,
+"var": "ABBBCBBCBBCCCB",
+"cake": 1,
 "doors": [
 9,
 19
@@ -23990,8 +23990,8 @@
 ],
 "cover": 3.95,
 "cake_s": [
-113.7,
-136.7
+126.9,
+129.4
 ]
 },
 {
@@ -24021,10 +24021,10 @@
 {
 "seed": 89,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "CCBCCBCCAAAADB",
-"cake": 0,
+"var": "CCBCCBCCAAAACB",
+"cake": 1,
 "doors": [
 15,
 18
@@ -24045,16 +24045,16 @@
 ],
 "cover": 3.95,
 "cake_s": [
-113.7,
-143.8
+129.4,
+134.0
 ]
 },
 {
 "seed": 90,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "ABCACCCDACCAAB",
+"var": "ABCACCCCACCAAB",
 "cake": 0,
 "doors": [
 17
@@ -24110,9 +24110,9 @@
 {
 "seed": 92,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "BADBCAACBCACCB",
+"var": "BADBCAACBCACBB",
 "cake": 0,
 "doors": [
 4
@@ -24214,9 +24214,9 @@
 {
 "seed": 96,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "ACCCACBABBAACA",
+"var": "ACCCACBCBBAACA",
 "cake": 0,
 "doors": [
 5,
@@ -24246,7 +24246,7 @@
 {
 "seed": 97,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
 "var": "BABAABCCCACAAC",
 "cake": 3,
@@ -24441,9 +24441,9 @@
 {
 "seed": 104,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "CBDBBACABCCCBB",
+"var": "CBDBBACCBCCCBB",
 "cake": 2,
 "doors": [
 18
@@ -24501,9 +24501,9 @@
 {
 "seed": 106,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "AADACCBABABCCA",
+"var": "AADACCBCBABCBA",
 "cake": 0,
 "doors": [
 17,
@@ -24557,9 +24557,9 @@
 {
 "seed": 108,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "BADBCBBACBBCBB",
+"var": "BADBCBBCCBBCAB",
 "cake": 1,
 "doors": [],
 "loose": [
@@ -24585,9 +24585,9 @@
 {
 "seed": 109,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "AADCBABDAABCBA",
+"var": "AADCBABCAABCAA",
 "cake": 0,
 "doors": [
 11,
@@ -24612,9 +24612,9 @@
 {
 "seed": 110,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "BBACBAAABACCCB",
+"var": "BBACBAACBACCBB",
 "cake": 2,
 "doors": [],
 "loose": [
@@ -24638,10 +24638,10 @@
 {
 "seed": 111,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "ACABBAAABCAACB",
-"cake": 1,
+"var": "ACABBAACBCAABB",
+"cake": 0,
 "doors": [
 7,
 26
@@ -24658,8 +24658,8 @@
 ],
 "cover": 3.95,
 "cake_s": [
-129.4,
-134.0
+113.7,
+143.8
 ]
 },
 {
@@ -24691,7 +24691,7 @@
 {
 "seed": 113,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
 "var": "CBDABCACCBACAA",
 "cake": 2,
@@ -24807,10 +24807,10 @@
 {
 "seed": 117,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "ACCACAAACCCCDB",
-"cake": 0,
+"var": "ACCACAACCCCCCB",
+"cake": 1,
 "doors": [
 17
 ],
@@ -24826,8 +24826,8 @@
 ],
 "cover": 3.95,
 "cake_s": [
-113.7,
-143.8
+129.4,
+134.0
 ]
 },
 {
@@ -24951,9 +24951,9 @@
 {
 "seed": 122,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "CCCBCCAABACACA",
+"var": "CCCBCCACBACACA",
 "cake": 0,
 "doors": [],
 "loose": [
@@ -25003,9 +25003,9 @@
 {
 "seed": 124,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "CCBCCBBABBBADB",
+"var": "CCBCCBBCBBBACB",
 "cake": 0,
 "doors": [
 9,
@@ -25157,9 +25157,9 @@
 {
 "seed": 129,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "BCABBBBDBCACAB",
+"var": "BCABBBBCBCACAB",
 "cake": 1,
 "doors": [],
 "loose": [
@@ -25435,9 +25435,9 @@
 {
 "seed": 139,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "BACABBADCBCACB",
+"var": "BACABBACCBCABB",
 "cake": 1,
 "doors": [
 14,
@@ -25463,9 +25463,9 @@
 {
 "seed": 140,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "ABAAAACDCABCDA",
+"var": "ABAAAACCCABCCA",
 "cake": 2,
 "doors": [],
 "loose": [
@@ -25576,9 +25576,9 @@
 {
 "seed": 144,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "CBCCBCADBCCCAB",
+"var": "CBCCBCACBCCCAB",
 "cake": 2,
 "doors": [],
 "loose": [
@@ -25633,9 +25633,9 @@
 {
 "seed": 146,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "BCCCAABDBAACAB",
+"var": "BCCCAABCBAACAB",
 "cake": 1,
 "doors": [
 10
@@ -25742,9 +25742,9 @@
 {
 "seed": 150,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "ABCCBACACBCCCC",
+"var": "ABCCBACCCBCCCC",
 "cake": 1,
 "doors": [
 10,
@@ -25770,9 +25770,9 @@
 {
 "seed": 151,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "CBDCACCDABCACB",
+"var": "CBDCACCCABCABB",
 "cake": 2,
 "doors": [
 9,
@@ -25830,9 +25830,9 @@
 {
 "seed": 153,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "CCCBAACDAACCBB",
+"var": "CCCBAACCAACCAB",
 "cake": 0,
 "doors": [],
 "loose": [
@@ -25856,7 +25856,7 @@
 {
 "seed": 154,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
 "var": "BCAACBCCCACCBB",
 "cake": 0,
@@ -26281,10 +26281,10 @@
 {
 "seed": 169,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "BCACBAAAAAAACC",
-"cake": 2,
+"var": "BCACBAACAAAABC",
+"cake": 1,
 "doors": [
 5,
 9,
@@ -26302,8 +26302,8 @@
 ],
 "cover": 3.95,
 "cake_s": [
-61.5,
-87.7
+129.4,
+134.0
 ]
 },
 {
@@ -26338,9 +26338,9 @@
 {
 "seed": 171,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "ABDBABCAACCCCA",
+"var": "ABDBABCCACCCBA",
 "cake": 0,
 "doors": [],
 "loose": [
@@ -26734,9 +26734,9 @@
 {
 "seed": 185,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "BBCAABBAABBCCA",
+"var": "BBCAABBCABBCBA",
 "cake": 1,
 "doors": [
 10
@@ -26790,9 +26790,9 @@
 {
 "seed": 187,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "CBCCCCBCCABCCB",
+"var": "CBCCCCBCCABCBB",
 "cake": 0,
 "doors": [],
 "loose": [
@@ -26901,9 +26901,9 @@
 {
 "seed": 191,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "BABBCAADCCBCAC",
+"var": "BABBCAACCCBCAC",
 "cake": 1,
 "doors": [
 6,
@@ -26985,9 +26985,9 @@
 {
 "seed": 194,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "BCBAAACDCABCCC",
+"var": "BCBAAACCCABCBC",
 "cake": 0,
 "doors": [
 7,
@@ -27155,9 +27155,9 @@
 {
 "seed": 200,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "CCDBACCDABBABB",
+"var": "CCDBACCCABBAAB",
 "cake": 1,
 "doors": [
 4,
@@ -27270,10 +27270,10 @@
 {
 "seed": 204,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "BABBBBCDABCCCB",
-"cake": 1,
+"var": "BABBBBCCABCCBB",
+"cake": 0,
 "doors": [
 5,
 12,
@@ -27293,14 +27293,14 @@
 ],
 "cover": 3.95,
 "cake_s": [
-126.9,
-129.4
+113.7,
+136.7
 ]
 },
 {
 "seed": 205,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
 "var": "CAABBBCCCCCCBA",
 "cake": 2,
@@ -27328,9 +27328,9 @@
 {
 "seed": 206,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "AADBABCDBBCABC",
+"var": "AADBABCCBBCABC",
 "cake": 0,
 "doors": [
 4,
@@ -27671,9 +27671,9 @@
 {
 "seed": 218,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "BBCAAAADCCAABA",
+"var": "BBCAAAACCCAABA",
 "cake": 2,
 "doors": [
 7,
@@ -27726,9 +27726,9 @@
 {
 "seed": 220,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "BAACBBBDBBAABC",
+"var": "BAACBBBCBBAABC",
 "cake": 3,
 "doors": [],
 "loose": [
@@ -27780,9 +27780,9 @@
 {
 "seed": 222,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "BCDBCCADBAACBC",
+"var": "BCDBCCACBAACBC",
 "cake": 3,
 "doors": [],
 "loose": [
@@ -28036,10 +28036,10 @@
 {
 "seed": 231,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "CACBBABCBCCADA",
-"cake": 0,
+"var": "CACBBABCBCCACA",
+"cake": 1,
 "doors": [
 12,
 18
@@ -28060,8 +28060,8 @@
 ],
 "cover": 3.95,
 "cake_s": [
-113.7,
-136.7
+126.9,
+129.4
 ]
 },
 {
@@ -28254,10 +28254,10 @@
 {
 "seed": 239,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "ACDBCCCCCCCCDC",
-"cake": 0,
+"var": "ACDBCCCCCCCCCC",
+"cake": 1,
 "doors": [
 19
 ],
@@ -28273,8 +28273,8 @@
 ],
 "cover": 3.95,
 "cake_s": [
-113.7,
-143.8
+129.4,
+134.0
 ]
 },
 {
@@ -28387,7 +28387,7 @@
 {
 "seed": 244,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
 "var": "BBDBBCCCAAAABB",
 "cake": 1,
@@ -28445,7 +28445,7 @@
 {
 "seed": 246,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
 "var": "BCABCAACAAACCC",
 "cake": 2,
@@ -28556,9 +28556,9 @@
 {
 "seed": 250,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "CBDCBABDCABCBB",
+"var": "CBDCBABCCABCAB",
 "cake": 0,
 "doors": [
 4,
@@ -28613,9 +28613,9 @@
 {
 "seed": 252,
 "tier": 4,
-"time": 1,
+"time": 2,
 "home": 15,
-"var": "BADABCACBBCCDB",
+"var": "BADABCACBBCCCB",
 "cake": 0,
 "doors": [
 25

@@ -5,6 +5,7 @@
 #include "AntTypes.h"
 #include "NpcBody.h"
 #include "QuadBody.h"
+#include "HumanNav.h"
 #include "Critters.generated.h"
 
 class UStaticMeshComponent;
@@ -42,6 +43,8 @@ public:
 	UPROPERTY(Replicated) FNpcActState Act;
 	/** What it is looking at (zero: nothing in particular). The head and the ears turn to it before the body does. */
 	UPROPERTY(Replicated) FVector_NetQuantize LookAt;
+	/** Level v3: its routine step (NpcRoutine.h), replicated. */
+	UPROPERTY(Replicated) FNpcTask Task;
 	FString DisplayName() const { return Kind == 0 ? TEXT("Бадрик") : TEXT("Кошка"); }
 
 	float BodyLength() const { return Kind == 0 ? 950.f : 800.f; }
@@ -109,7 +112,14 @@ private:
 		Rest, Idle, Go, Notice, Stalk, Wiggle, Pounce, Pin, Watch, Swipe, Guard, Leap, Flee, Cower,
 		Track, Tell, Lick, Eat, Bark, Ball, Beg, Zoom, Sulk
 	};
-	struct FRestSpot { FVector P; uint8 Do; float Time; bool bHigh; float Yaw = 1000.f; };   // Do: 0 sleep, 1 sniff / eat, 2 sit. Yaw: which way it settles (1000: any)
+	struct FRestSpot { FVector P; uint8 Do; float Time; bool bHigh; float Yaw = 1000.f; int32 Rt = -1; };   // Do: 0 sleep, 1 sniff / eat, 2 sit. Yaw: which way it settles (1000: any). Rt: level v3 routine step
+	/** Level v3: the spot of its routine step now (NpcRoutine.h); false: none (or not reachable): the old random choice. */
+	bool RoutineSpot();
+	/** Level v3: its way round the furniture on the house grid (the routine sends it across both rooms). */
+	FHumanNavFollower NavFollow;
+	int32 RtStep = -1;
+	uint32 RtNudge = 0;
+	uint8 LoggedStep = 254;
 	void BrainBegin();
 	void BrainTick(float Dt);
 	void CatThink(float Dt, float Now);

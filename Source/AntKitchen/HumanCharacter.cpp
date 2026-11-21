@@ -32,6 +32,8 @@
 #include "Critters.h"
 #include "AntFilm.h"
 #include "GameFramework/GameStateBase.h"
+#include "LevelV3.h"
+#include "NpcRoutine.h"
 
 namespace HumanLook
 {
@@ -157,6 +159,82 @@ void AHumanCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME(AHumanCharacter, bCarryPose);
 	DOREPLIFETIME(AHumanCharacter, BackAcheUntil);
 	DOREPLIFETIME(AHumanCharacter, bTowel);
+	DOREPLIFETIME(AHumanCharacter, Task);
+}
+
+void AHumanCharacter::PlayBusy(uint8 Busy, const FVector& Target)
+{
+	if (!HasAuthority() || !bNewBody)
+	{
+		return;
+	}
+	if (Act.Kind == HumanAct::Busy && Act.Arg == Busy && ActTime() >= 0.f)
+	{
+		return;
+	}
+	StartAct(HumanAct::Busy, Busy, Target);
+}
+
+void AHumanCharacter::EndBusy()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+	if (Act.Kind == HumanAct::Sit)
+	{
+		StartAct(HumanAct::Rise, Act.Arg, FVector(Act.Target));
+		GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+	}
+	else if (Act.Kind == HumanAct::Busy)
+	{
+		StartAct(HumanAct::None, 0, FVector::ZeroVector);
+	}
+}
+
+void AHumanCharacter::SitAt(const FVector& Seat, float Yaw, uint8 How)
+{
+	if (!HasAuthority() || !bNewBody)
+	{
+		return;
+	}
+	// The feet go in front of the seat (as grandma's in front of her armchair), facing away from it; the pelvis goes back onto it.
+	const FVector Fwd = FRotator(0.f, Yaw, 0.f).Vector();
+	const float Off = (How == 2 || How == 5 || How == 6) && Seat.Z < FeetZ() + 120.f ? 190.f * FigScale / 0.88f : 660.f * FigScale / 0.88f;
+	SitFrom = GetActorLocation();
+	const FVector Stand(Seat.X + Fwd.X * Off, Seat.Y + Fwd.Y * Off, GetActorLocation().Z);
+	GetCharacterMovement()->StopMovementImmediately();
+	GetCharacterMovement()->DisableMovement();
+	SetActorLocationAndRotation(Stand, FRotator(0.f, Yaw, 0.f), false, nullptr, ETeleportType::TeleportPhysics);
+	if (Controller) { Controller->SetControlRotation(FRotator(0.f, Yaw, 0.f)); }
+	StartAct(HumanAct::Sit, How, Seat);
+}
+
+void AHumanCharacter::SetAway(bool bInAway, const FVector& At)
+{
+	if (!HasAuthority() || bInAway == bAway)
+	{
+		return;
+	}
+	bAway = bInAway;
+	if (bAway)
+	{
+		TryShakeOff();   // whoever rides him falls off at the door
+		AwayFrom = At;
+		GetCharacterMovement()->StopMovementImmediately();
+		GetCharacterMovement()->DisableMovement();
+		SetActorHiddenInGame(true);
+		SetActorEnableCollision(false);
+		SetActorLocation(FVector(23000.f, At.Y, GetActorLocation().Z), false, nullptr, ETeleportType::TeleportPhysics);   // out in the corridor behind the door
+	}
+	else
+	{
+		SetActorLocation(FVector(At.X, At.Y, GetActorLocation().Z), false, nullptr, ETeleportType::TeleportPhysics);
+		SetActorHiddenInGame(false);
+		SetActorEnableCollision(true);
+		GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+	}
+	UE_LOG(LogTemp, Display, TEXT("ANTRT dad %s at %s"), bAway ? TEXT("leaves the flat") : TEXT("is back"), *At.ToCompactString());
 }
 
 FVector AHumanCharacter::GetSoleLocation(int32 Leg) const
@@ -1011,6 +1089,10 @@ void AHumanCharacter::ResetHuman(const FVector& Location)
 	BackAcheUntil = -100.f;
 	bTowel = false;
 	SlippedOn = nullptr;
+	if (bAway) { SetAway(false, Location); }
+	Task = FNpcTask();
+	StickyK = 1.f;
+	GetCharacterMovement()->SetMovementMode(MOVE_Walking);
 	Act = FHumanActState();
 	OnRep_KnockedOut();
 	SetActorLocation(Location, false, nullptr, ETeleportType::TeleportPhysics);
@@ -1106,7 +1188,42 @@ void AHumanCharacter::Tick(float DeltaSeconds)
 
 	if (bNewBody && Fig == HumanFig::Dad)
 	{
-		GetCharacterMovement()->MaxWalkSpeed = GetWalkSpeed();   // down after a slip: he does not move; his back hurts after: slow
+		GetCharacterMovement()->MaxWalkSpeed = GetWalkSpeed() * StickyK;   // down after a slip: he does not move; his back hurts after: slow; in cola: stuck
+	}
+	if (HasAuthority() && !SitFrom.IsZero() && Act.Kind == HumanAct::Rise && !IsBodyBusy())
+	{
+		// Up from a seat the routine teleported him onto: if the feet stand in the furniture, a step back to where he came from.
+		const UCapsuleComponent* Cap = GetCapsuleComponent();
+		FCollisionQueryParams Q(SCENE_QUERY_STAT(HumanStandUp), false, this);
+		if (GetWorld()->OverlapBlockingTestByChannel(GetActorLocation(), FQuat::Identity, ECC_Pawn, FCollisionShape::MakeCapsule(Cap->GetScaledCapsuleRadius() * 0.9f, Cap->GetScaledCapsuleHalfHeight() * 0.9f), Q)
+			&& FVector::Dist2D(SitFrom, GetActorLocation()) < 1800.f)
+		{
+			SetActorLocation(FVector(SitFrom.X, SitFrom.Y, GetActorLocation().Z), false, nullptr, ETeleportType::TeleportPhysics);
+		}
+		SitFrom = FVector::ZeroVector;
+	}
+	if (LevelV3::Enabled())
+	{
+		// Level v3: the routine state, as this machine sees it (the client's log proves it replicated); the Dad holds the hall door.
+		if (Task.Step != LoggedStep || Task.Phase != LoggedPhase || Task.React != LoggedReact)
+		{
+			LoggedStep = Task.Step; LoggedPhase = Task.Phase; LoggedReact = Task.React;
+			if (GetNetMode() == NM_Client)
+			{
+				const TConstArrayView<NpcRoutine::FStep> St = NpcRoutine::Steps();
+				UE_LOG(LogTemp, Display, TEXT("ANTRT client sees %s: step %s phase %d react %d stage %d act %d/%d"), Fig == HumanFig::Dad ? TEXT("dad") : Fig == HumanFig::Grandma ? TEXT("gran") : TEXT("kid"),
+					St.IsValidIndex(Task.Step) ? St[Task.Step].Key : TEXT("-"), (int32)Task.Phase, (int32)Task.React, (int32)Task.Stage, (int32)Act.Kind, (int32)Act.Arg);
+			}
+		}
+		if (Fig == HumanFig::Dad)
+		{
+			const float Want = Task.Door ? 1.f : 0.f;
+			if (!FMath::IsNearlyEqual(HallDoorK, Want))
+			{
+				HallDoorK = FMath::FInterpConstantTo(HallDoorK, Want, DeltaSeconds, 0.8f);
+				NpcRoutine::SetHallDoor(GetWorld(), HallDoorK);
+			}
+		}
 	}
 	if (bDevPuppet && HasAuthority() && !DevWalk.IsZero() && !IsDown() && !IsRooted())
 	{

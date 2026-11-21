@@ -34,6 +34,28 @@ struct FNpcActState
 	UPROPERTY() FVector_NetQuantize From;
 };
 
+/** Level v3: what a resident is up to in its evening (NpcRoutine.h) - the routine step and the reaction to a mess. Replicated: the
+ *  HUD, the logs of every machine and the hall door read it; the body itself shows it through its action (Act). */
+USTRUCT()
+struct FNpcTask
+{
+	GENERATED_BODY()
+
+	/** NpcRoutine::Steps() index, 255 none. */
+	UPROPERTY() uint8 Step = 255;
+	/** 0 free, 1 on the way to it, 2 doing it, 3 out of the flat (the Dad with the rubbish). */
+	UPROPERTY() uint8 Phase = 0;
+	/** A mess being dealt with: NpcRoutine::EMess + 1 (0 none). */
+	UPROPERTY() uint8 React = 0;
+	/** 1 stopped and looking, 2 going for the tool, 3 going to it, 4 cleaning / putting it back. */
+	UPROPERTY() uint8 Stage = 0;
+	/** The hall door: the Dad holds it open (every machine turns the leaf). */
+	UPROPERTY() uint8 Door = 0;
+	/** Server world time this step / stage started, and where. */
+	UPROPERTY() float Start = -100.f;
+	UPROPERTY() FVector_NetQuantize Target;
+};
+
 /** One rigid segment: its mesh, its parent segment, its joint in the bind pose (body frame, uu). */
 struct FNpcSegDef
 {

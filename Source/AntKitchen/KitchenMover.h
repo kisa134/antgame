@@ -47,6 +47,12 @@ public:
 	UPROPERTY(Replicated) bool bOpen = false;
 	/** Level v3: shut, but standing this far open (0..1 of its travel): a cabinet door the seed left ajar, the room door at 100 degrees. */
 	UPROPERTY(Replicated) float Ajar = 0.f;
+	/** Level v3, an upper cabinet door off its hinges (KitchenFixture "upper_doors"): 1 hangs crooked on one hinge, ajar for good
+	 *  (nobody can shut it); 2 fell onto the worktop and lies leaning on the wall (a ramp). 0 whole. */
+	UPROPERTY(ReplicatedUsing = OnRep_Broken) uint8 Broken = 0;
+	/** Server. */
+	void SetBroken(uint8 InBroken);
+	UFUNCTION() void OnRep_Broken();
 
 private:
 	void Build();
@@ -60,4 +66,6 @@ private:
 	float Alpha = 0.f;
 	float AutoCloseAt = -1.f;
 	float ServerCheck = 0.f;
+	FTransform BodyRel0;
+	bool bBodyRel = false;
 };

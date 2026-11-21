@@ -81,7 +81,10 @@ public:
 	/** Index into LevelV3::Fasteners(). */
 	UPROPERTY(Replicated) int32 Def = -1;
 	/** Server world time it came off (< 0: holding). Every machine drops it from there. */
-	UPROPERTY(Replicated) float OffAt = -1.f;
+	UPROPERTY(ReplicatedUsing = OnRep_Off) float OffAt = -1.f;
+	UFUNCTION() void OnRep_Off();
+	/** Server: back in its place (the Human screwed it back in). */
+	void Refasten();
 
 	static FString KindName(int32 Kind);
 
@@ -127,8 +130,14 @@ public:
 	/** Where it broke (the after-mesh lies there) and which way it was going. */
 	UPROPERTY(ReplicatedUsing = OnRep_State) FVector_NetQuantize BreakAt;
 	UPROPERTY(Replicated) float BreakYaw = 0.f;
+	/** Level v3, the residents: 1 cleaned up (the shards, the puddle, the heap are gone), 2 put back where it was (fixed again). */
+	UPROPERTY(ReplicatedUsing = OnRep_State) uint8 Tidied = 0;
 
 	UFUNCTION() void OnRep_State();
+	/** Server: the residents' mess (NpcRoutine.h) for what this is now: shards and a puddle, a thing on the floor, the yarn, the drawing. */
+	void ReportMess();
+	/** Server: cleaned up (bPutBack false) or put back up and fastened again (where that makes sense: not the broken, not the cloth). */
+	void Tidy(bool bPutBack);
 
 	FString FixId() const;
 	/** Level v3: switches the builder's climb stand-ins of the kitchen curtain on (hung) or off (torn down). */
@@ -175,6 +184,12 @@ public:
 	FVector PushDir = FVector::ZeroVector;
 private:
 	void Spill(AAntCharacter* By);
+	/** The fixture's own held work as the design has it (pushing over the edge, the zip, the tray...). */
+	void ResetWork();
+	void PutBack();
+	/** The upper cabinet doors: a hinge of a door is out (KitchenMover::Broken). */
+	void UpperDoorHinge(int32 FastenerDef, AAntCharacter* By);
+	FVector BodyScale0 = FVector::OneVector;
 
 	UPROPERTY() UStaticMeshComponent* Body = nullptr;
 	UPROPERTY() TArray<UStaticMeshComponent*> Parts;

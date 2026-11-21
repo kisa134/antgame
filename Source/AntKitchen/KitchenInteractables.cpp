@@ -15,6 +15,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/PointLightComponent.h"
+#include "LevelV3.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Components/AudioComponent.h"
 #include "Sound/SoundBase.h"
@@ -474,6 +475,13 @@ void AKitchenDoor::ApplyAlpha()
 	if (InnerLight && (Kind == EKitchenDoorKind::Fridge || Kind == EKitchenDoorKind::Dishwasher || Kind == EKitchenDoorKind::Microwave))
 	{
 		InnerLight->SetVisibility(Alpha > 0.05f);
+		if (Kind == EKitchenDoorKind::Fridge && LevelV3::Enabled())
+		{
+			// Level v3: at night the open fridge is the brightest thing in the kitchen - a cold wedge of light across the floor.
+			const bool bNight = LevelV3::TimeOfDay() == LevelV3::Night;
+			InnerLight->SetIntensity(bNight ? 22.f : 6.f);
+			InnerLight->SetAttenuationRadius(bNight ? 5200.f : 2600.f);
+		}
 	}
 }
 

@@ -64,6 +64,16 @@ protected:
 	float LastNoise = 0.f;
 	float NextOuch = 0.f;
 	float StuckFor = 0.f;
+	// ---- level v3: the routine (NpcRoutine.h) and the mess they deal with
+	void SetTask(int32 Step, uint8 Phase);
+	int32 RtStep = -1;
+	uint32 RtNudge = 0;
+	int32 MessId = -1;
+	uint8 MessStage = 0;
+	float MessAt = 0.f;
+	int32 Strokes = 0;
+	bool bRtWant = false;
+	float NextMessCheck = 0.f;
 };
 
 UCLASS()
@@ -85,7 +95,9 @@ protected:
 	virtual void OnFolkHurt(float Damage, AController* By) override;
 
 private:
-	enum EMode : uint8 { Seated, Rising, Hunting, Tidying, Stowing, Shutting, Returning };
+	enum EMode : uint8 { Seated, Rising, Hunting, Tidying, Stowing, Shutting, Returning, Routine, Cleaning };
+	/** Level v3: a mess that is hers (spills, broken things, the yarn): up she gets. True if she took it on. */
+	bool TakeMess(float Now);
 	void DoSweep(const FVector& Point);
 	/** Food lying about within Range that she would put away: what the ants dropped and the kid's crumbs. */
 	AKitchenLoot* FindMess(float Range) const;
@@ -120,7 +132,7 @@ protected:
 	virtual void OnFolkHurt(float Damage, AController* By) override;
 
 private:
-	enum EMode : uint8 { FloorPlay, Toddle, Chase, Pinching, Carry, Poking, Stomping, Scream, Cupping };
+	enum EMode : uint8 { FloorPlay, Toddle, Chase, Pinching, Carry, Poking, Stomping, Scream, Cupping, Routine, Fetch };
 	void DropAnt(bool bCup);
 	void DropCrumb();
 	void WatchCups(float Now);

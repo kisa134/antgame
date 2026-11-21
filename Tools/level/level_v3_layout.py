@@ -748,7 +748,7 @@ SEED = {
     'fixed': ['стены, окна, двери-проёмы, щели и лазы', 'гнездо и южный вход', 'большие ориентиры: холодильник, плита, мойка, шкафы, стол, диван, ТВ и тумба, книжный шкаф, кресло, ведро, батареи, кровать Бадрика',
               'красный холм, дерево, бак', 'граф маршрутов (узлы), районы и их имена'],
     'time': {'day': 0.4, 'evening': 0.45, 'night': 0.15},
-    'time_by_threat': {4: {'evening': 1.0}},       # День рождения — всегда вечер
+    'time_by_threat': {4: {'evening': 0.75, 'night': 0.25}},       # День рождения — вечер; каждый четвёртый (по кубику) — ночь, 23:00, гости ушли
     # v3.1 (owner's decision, 2026-11-21): who is home and the time of day follow the threat tier instead of the dice.
     # The draws are still made (the variant dice after them stay where they were), then replaced by the tier's.
     'by_threat': {1: {'time': 'day', 'home': {'grandma': True, 'kid': False, 'dog': True, 'cat': True},
@@ -757,8 +757,8 @@ SEED = {
                       'ru': 'Выходной: день, дома все'},
                   3: {'time': 'evening', 'home': {'grandma': False, 'kid': True, 'dog': True, 'cat': True},
                       'ru': 'Большая уборка: вечер, бабушка уехала к подруге, папа убирает один'},
-                  4: {'time': 'evening', 'home': {'grandma': True, 'kid': True, 'dog': True, 'cat': True},
-                      'ru': 'День рождения: вечер, дома все'}},
+                  4: {'time': None, 'home': {'grandma': True, 'kid': True, 'dog': True, 'cat': True},
+                      'ru': 'День рождения: вечер (каждый четвёртый рейд — ночь после праздника), дома все'}},
     'home': {'grandma': 0.75, 'kid': 0.85, 'dog': 0.9, 'cat': 0.85},
     'home_rules': ['Человек дома всегда', 'дома минимум двое из четырёх (бабушка, малыш, Бадрик, кошка)', 'на 4-й угрозе (День рождения) малыш дома всегда',
                    'бабушки нет -> район «Бабушкин угол» не берёт вариант B (стремянка у окна — её рутина)', 'малыша нет -> «Игровая» берёт C (прибрано) с весом x3, шалаша (B) не бывает'],
@@ -838,7 +838,7 @@ def compose(seed, threat=1, force=None):
         home['dog'] = True; home['kid'] = True
     bt = SEED.get('by_threat', {}).get(threat)
     if bt:   # v3.1: the tier decides (the draws above are kept so the dice below stay in step)
-        time = bt['time']; home = dict({'human': True}, **bt['home'])
+        time = bt['time'] or time; home = dict({'human': True}, **bt['home'])   # (time None: the dice of time_by_threat decide - night only at the top tier)
     variants = {}
     for d in DISTRICT_ORDER:
         vs = VARIANTS[d]

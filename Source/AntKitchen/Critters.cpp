@@ -80,6 +80,7 @@ void ACritter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetime
 	DOREPLIFETIME(ACritter, Mood);
 	DOREPLIFETIME(ACritter, Act);
 	DOREPLIFETIME(ACritter, LookAt);
+	DOREPLIFETIME(ACritter, Task);
 }
 
 void ACritter::BeginPlay()
@@ -459,6 +460,14 @@ void ACritter::ServerHurtAnts(float Dt)
 void ACritter::Tick(float Dt)
 {
 	Super::Tick(Dt);
+	if (Task.Step != LoggedStep)
+	{
+		LoggedStep = Task.Step;
+		if (GetNetMode() == NM_Client)
+		{
+			UE_LOG(LogTemp, Display, TEXT("ANTRT client sees %s: step %d phase %d at %s"), Kind == 1 ? TEXT("cat") : TEXT("dog"), (int32)Task.Step, (int32)Task.Phase, *GetActorLocation().ToCompactString());
+		}
+	}
 	if (bNewBody)
 	{
 		if (HasAuthority())

@@ -45,11 +45,12 @@ namespace HumanAct
 		Shake,    // hopping and flailing: shaking ants off
 		Peer,     // crouching to look under furniture at Target; Arg: seconds * 10
 		// the family
-		Sit,      // down onto the seat at Target and stays there. Arg: 0 knitting, 1 dozing, 2 playing on the floor
+		Sit,      // down onto the seat at Target and stays there. Arg: 0 knitting, 1 dozing, 2 playing on the floor, 3 eating, 4 the phone, 5 watching TV, 6 drawing on the floor
 		Rise,     // up from the seat at Target
 		Sweep,    // grandma's broom: drawn back (the warning), then one long stroke across the floor through Target
 		Fall,     // slipped in a puddle: the feet go out, he lands flat on his back, lies, sits up, gets up. Arg: the slipping leg
 		Wipe,     // down on his haunches, wiping the floor at Target with a towel. Arg: seconds * 10
+		Busy,     // level v3, a chore of the routine (NpcRoutine.h): standing at it, the hands busy. Arg: HumanBusy, Target: what at
 	};
 	/** The fall (HumanAct::Fall), seconds from the slip: the arms flail (the tell), the back hits the floor, he sits up, he stands. */
 	constexpr float FallHit = 0.92f;

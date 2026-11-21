@@ -90,6 +90,25 @@ public:
 	UPROPERTY(Replicated) float BackAcheUntil = -100.f;
 	/** A towel in the left hand (he is about to wipe a puddle). */
 	UPROPERTY(Replicated) bool bTowel = false;
+	/** Level v3: the routine step and the reaction to a mess (NpcRoutine.h), replicated. */
+	UPROPERTY(Replicated) FNpcTask Task;
+	/** Server: stands at a chore with the hands busy (HumanBusy) facing Target. */
+	void PlayBusy(uint8 Busy, const FVector& Target);
+	/** Server: whatever the body is doing for the routine stops (up from a seat, hands down). */
+	void EndBusy();
+	bool IsBusyPose() const { return Act.Kind == HumanAct::Busy; }
+	/** Server: sit down onto Seat (world, the seat's top) facing Yaw: the feet go in front of it (teleported: the capsule may stand in the furniture while seated). */
+	void SitAt(const FVector& Seat, float Yaw, uint8 How);
+	/** Server, level v3: in a sticky pool (cola, jam): slow and loud steps. */
+	float StickyK = 1.f;
+	/** Server: out of the flat (the rubbish), hidden with no collision; false puts him back at At. */
+	void SetAway(bool bAway, const FVector& At);
+	bool IsAway() const { return bAway; }
+	/** Where he stood before he sat down (the AI steps back there once he is up). */
+	FVector SitFrom = FVector::ZeroVector;
+	/** Local: the hall door's leaf, eased (the Dad only); the last routine state logged on this machine. */
+	float HallDoorK = 0.f;
+	uint8 LoggedStep = 254, LoggedPhase = 254, LoggedReact = 254;
 	/** Server: the puddle he slipped in (the AI goes and wipes it). */
 	TWeakObjectPtr<class AKitchenSlick> SlippedOn;
 	/** Server: not before this world time again (45 s after he is up). */
@@ -180,6 +199,12 @@ protected:
 	UPROPERTY() USceneComponent* SwatterPivot = nullptr;
 	UPROPERTY() USceneComponent* BroomPivot = nullptr;
 	UPROPERTY() TArray<UStaticMeshComponent*> NeedleArt;
+	/** Level v3, the routine's things in the hands (local): 0 the rubbish bag, 1 a ladle, 2 a phone, 3 a watering can, 4 a dustpan, 5 a plate, 6 a crayon. */
+	UPROPERTY() TArray<UStaticMeshComponent*> PropArt;
+	void BuildRoutineProps();
+	void ShowRoutineProps();
+	bool bAway = false;
+	FVector AwayFrom = FVector::ZeroVector;
 
 	void MoveForward(float Value);
 	void MoveRight(float Value);

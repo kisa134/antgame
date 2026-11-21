@@ -27,6 +27,53 @@ void AKitchenMover::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	DOREPLIFETIME(AKitchenMover, PartIndex);
 	DOREPLIFETIME(AKitchenMover, bOpen);
 	DOREPLIFETIME(AKitchenMover, Ajar);
+	DOREPLIFETIME(AKitchenMover, Broken);
+}
+
+void AKitchenMover::SetBroken(uint8 InBroken)
+{
+	if (!HasAuthority() || Broken == InBroken)
+	{
+		return;
+	}
+	Broken = InBroken;
+	if (Broken == 1) { bOpen = false; Ajar = 0.32f; }
+	else if (Broken == 2) { bOpen = false; Ajar = 0.f; }
+	else { Ajar = 0.f; bOpen = false; }
+	OnRep_Broken();
+	ForceNetUpdate();
+}
+
+void AKitchenMover::OnRep_Broken()
+{
+	if (!Body || !Hinge)
+	{
+		return;
+	}
+	if (!bBodyRel)
+	{
+		BodyRel0 = Body->GetRelativeTransform();
+		bBodyRel = true;
+	}
+	if (Broken == 2)
+	{
+		// Off both hinges: down onto the worktop, its foot at the front edge of the wall under the cabinet, its top leaning back on the wall.
+		Hinge->SetRelativeRotation(FQuat::Identity);
+		Body->SetRelativeTransform(BodyRel0);
+		const FTransform T0 = Body->GetComponentTransform();
+		const FBox B = Body->Bounds.GetBox();
+		const FVector Pivot(B.GetCenter().X, B.GetCenter().Y, B.Min.Z);
+		const FVector NewPivot(B.GetCenter().X, 3930.f, 1714.f);
+		const FQuat Q(FVector(1.f, 0.f, 0.f), FMath::DegreesToRadians(-55.f));
+		Body->SetWorldTransform(FTransform(Q * T0.GetRotation(), NewPivot + Q.RotateVector(T0.GetLocation() - Pivot), T0.GetScale3D()));
+		UE_LOG(LogTemp, Display, TEXT("ANTFIX door %d lies on the worktop at %s"), PartIndex, *Body->GetComponentLocation().ToCompactString());
+	}
+	else
+	{
+		Body->SetRelativeTransform(BodyRel0);
+		Alpha = bOpen ? 1.f : Ajar;
+		ApplyAlpha();
+	}
 }
 
 void AKitchenMover::BeginPlay()
@@ -99,10 +146,16 @@ void AKitchenMover::ApplyAlpha()
 		return;
 	}
 	const FKitchenArtMover& M = All[PartIndex];
+	if (Broken == 2)
+	{
+		return;   // lying on the worktop (OnRep_Broken placed it)
+	}
 	const float K = FMath::InterpEaseInOut(0.f, 1.f, Alpha, 2.f);
 	if (M.Type == 0)
 	{
-		Hinge->SetRelativeRotation(FQuat(FVector(M.Axis).GetSafeNormal(), FMath::DegreesToRadians(M.Angle * K)));
+		// (on one hinge it sags: the free corner drops)
+		const FQuat Sag = Broken == 1 ? FQuat(FVector(0.f, 1.f, 0.f), FMath::DegreesToRadians(M.Angle > 0.f ? 6.f : -6.f)) : FQuat::Identity;
+		Hinge->SetRelativeRotation(FQuat(FVector(M.Axis).GetSafeNormal(), FMath::DegreesToRadians(M.Angle * K)) * Sag);
 	}
 	else
 	{
@@ -264,9 +317,9 @@ FString AKitchenMover::DoorNoun() const
 bool AKitchenMover::HumanShuts() const
 {
 	const TConstArrayView<FKitchenArtMover> All = KitchenArt::Movers();
-	if (!All.IsValidIndex(PartIndex))
+	if (!All.IsValidIndex(PartIndex) || Broken)
 	{
-		return false;
+		return false;   // (a door off its hinge does not shut)
 	}
 	const FKitchenArtMover& M = All[PartIndex];
 	// Not what stands open by design (the sink door, the gate, the yard bin), not the door between the rooms, not the cat flap
@@ -312,6 +365,11 @@ void AKitchenMover::SetDoorOpen(bool bInOpen)
 
 void AKitchenMover::SetOpen(bool bInOpen, float AutoClose)
 {
+	if (Broken == 2 || (Broken == 1 && !bInOpen))
+	{
+		if (Broken == 1) { bOpen = false; Ajar = 0.32f; }   // on one hinge: it swings back to where it hangs, never shut
+		return;
+	}
 	if (!bInOpen && bOpen && IsHeldOpen())
 	{
 		AutoCloseAt = AutoCloseAt > 0.f ? Now() + 1.f : AutoCloseAt;   // a squad holds it open: it falls shut only when they let go

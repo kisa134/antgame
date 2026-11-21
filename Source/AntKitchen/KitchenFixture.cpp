@@ -18,6 +18,7 @@
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "Net/UnrealNetwork.h"
+#include "NpcRoutine.h"
 
 // =============================================================================================
 // The held work: [E] together, strength sums (AKitchenInteractable's door rule), progress over time.
@@ -245,9 +246,10 @@ void AKitchenFastener::Build()
 	Need = Rule(F.Kind).Need;
 	Seconds = Rule(F.Kind).Seconds;
 	const TConstArrayView<FKitchenArtInst> Rows = LevelV3::BaseArt();
-	if (Rows.IsValidIndex(F.Inst))
+	const FKitchenArtInst* Row = Rows.IsValidIndex(F.Inst) ? &Rows[F.Inst] : LevelV3::ExtraFastenerRow(F.Inst);
+	if (Row)
 	{
-		Mesh = AddRow(this, Root, Rows[F.Inst], TEXT("FastenerMesh"));
+		Mesh = AddRow(this, Root, *Row, TEXT("FastenerMesh"));
 		if (Mesh)
 		{
 			LetBigThrough(Mesh);   // an ant stands on the screw head; nobody else notices it
@@ -298,6 +300,29 @@ void AKitchenFastener::OnDone()
 			if (It->Fix == All[Def].Fixture) { It->OnFastenerOff(Def, DoneBy.Get()); }
 		}
 	}
+}
+
+void AKitchenFastener::Refasten()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+	bDone = false;
+	Progress = 0.f;
+	OffAt = -1.f;
+	OnRep_Off();
+}
+
+void AKitchenFastener::OnRep_Off()
+{
+	if (OffAt < 0.f && Mesh)
+	{
+		Mesh->SetWorldTransform(Home);
+		Mesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		bOffLogged = false;
+	}
+	SetActorTickEnabled(true);
 }
 
 void AKitchenFastener::Tick(float DeltaSeconds)
@@ -351,6 +376,7 @@ void AKitchenFixture::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME(AKitchenFixture, HangPose);
 	DOREPLIFETIME(AKitchenFixture, BreakAt);
 	DOREPLIFETIME(AKitchenFixture, BreakYaw);
+	DOREPLIFETIME(AKitchenFixture, Tidied);
 }
 
 void AKitchenFixture::SetCurtainClimb(bool bOn)
@@ -418,7 +444,17 @@ void AKitchenFixture::Build()
 	const FString Id = F.Id;
 	const TConstArrayView<FKitchenArtInst> Rows = LevelV3::BaseArt();
 	const TConstArrayView<FKitchenArtInst> VarRows = LevelV3::VarArt();
-	if (Var >= 0 && VarRows.IsValidIndex(Var))
+	if (Id == TEXT("toaster"))
+	{
+		// The toaster's crumb tray (the toaster itself is the builder's piece and its catapult gadget): slid out, it goes over the edge.
+		Body = AntKit::AddPart(this, Root, EAntShape::Cube, FVector(0.f, -360.f, 22.f), FVector(5.4f, 3.4f, 0.3f), FLinearColor(0.72f, 0.72f, 0.75f), FRotator::ZeroRotator, true, false);
+		if (Body) { Body->SetCollisionObjectType(ECC_WorldDynamic); }
+	}
+	else if (Id == TEXT("upper_doors"))
+	{
+		Body = nullptr;   // the doors are their movers (AKitchenMover::Broken); this actor only keeps their hinges
+	}
+	else if (Var >= 0 && VarRows.IsValidIndex(Var))
 	{
 		Body = AddRow(this, Root, VarRows[Var], TEXT("FixBody"));
 		KitchenArt::ApplyTint(Body, LevelV3::VarTint(Var));
@@ -465,19 +501,33 @@ void AKitchenFixture::Build()
 		SetCurtainClimb(true);
 	}
 	Home = GetActorTransform();
+	if (Body) { BodyScale0 = Body->GetRelativeScale3D(); }
+	ResetWork();
+}
+
+void AKitchenFixture::ResetWork()
+{
+	const TConstArrayView<FLevelV3Fixture> All = LevelV3::Fixtures();
+	if (!All.IsValidIndex(Fix))
+	{
+		return;
+	}
+	const FLevelV3Fixture& F = All[Fix];
+	const FString Id = F.Id;
 	// The held work of the fixture itself: pushing it over its edge (friction), or a fastener the design keeps in the code.
 	int32 Own = 0;
 	for (int32 k = 0; k < F.NumFasteners; ++k)
 	{
 		const FLevelV3FastenerDef& D = LevelV3::Fasteners()[F.FirstFastener + k];
-		if (D.Inst < 0) { Own = D.Kind == LevelV3::Friction ? 1 : 2; }
+		if (D.Inst == -1) { Own = D.Kind == LevelV3::Friction ? 1 : 2; }
 	}
 	bHeldWork = Own != 0;
 	Need = LevelV3::PushNeed(*Id);
 	Seconds = Own == 1 ? 1.f : 5.f;
 	if (Id == TEXT("tablecloth")) { Need = 40.f; Seconds = 3.f; }   // four ants at the edge, like a heavy door
 	if (Id == TEXT("cola")) { bHeldWork = false; }                  // first the cap
-	if (Id == TEXT("toaster") || Id == TEXT("upper_doors")) { bHeldWork = false; }   // the toaster is a gadget already; the hinges of the upper doors: not yet
+	if (Id == TEXT("toaster")) { Need = 14.f; Seconds = 4.f; }       // the crumb tray: one ant pulls it out in 4 s
+	if (Id == TEXT("upper_doors")) { bHeldWork = false; }           // the hinges are the work
 }
 
 float AKitchenFixture::DistanceTo(const FVector& P) const
@@ -505,6 +555,7 @@ FString AKitchenFixture::GetPrompt(const AAntCharacter* Ant) const
 	}
 	const FString Id = All[Fix].Id;
 	const TCHAR* Verb = Id == TEXT("tablecloth") ? TEXT("Тянуть скатерть") : Id == TEXT("gift") ? TEXT("Перегрызать ленту") : Id == TEXT("trolley") ? TEXT("Открывать молнию")
+		: Id == TEXT("toaster") ? TEXT("Выдвигать поддон для крошек")
 		: Id == TEXT("outlets") ? TEXT("Откручивать винт рамки") : TEXT("Толкать к краю");
 	return FString::Printf(TEXT("%s: %s — держать [E] вместе%s"), Verb, All[Fix].Name, Progress > 0.f ? *FString::Printf(TEXT(" · %d%%"), FMath::RoundToInt(Progress * 100.f)) : TEXT(""));
 }
@@ -519,6 +570,10 @@ void AKitchenFixture::OnDone()
 	if (PushDir.IsNearlyZero() && Id != TEXT("tablecloth"))
 	{
 		Dir = NearestEdgeDir(Dir);   // the ants push it towards the nearest edge on their far side (not into the wall)
+	}
+	if (Id == TEXT("toaster") && PushDir.IsNearlyZero())
+	{
+		Dir = FVector(0.f, -1.f, 0.f);   // the tray slides out of the front of the toaster and on over the worktop's edge
 	}
 	UE_LOG(LogTemp, Display, TEXT("ANTFIX %s: work done by %s"), *Id, By ? *By->GetDisplayName() : TEXT("-"));
 	if (Id == TEXT("gift") || Id == TEXT("trolley") || Id == TEXT("toybox"))
@@ -590,8 +645,14 @@ void AKitchenFixture::OnFastenerOff(int32 FastenerDef, AAntCharacter* By)
 	else if (Id == TEXT("knitting"))
 	{
 		State = Open;   // a needle out: the stitches run, the scarf comes undone
+		Tidied = 0;
 		OnRep_State();
 		if (AAntKitchenGameMode* GM = GMOf(GetWorld())) { GM->OnV3Fixture(this, TEXT("knitting"), By); }
+		ReportMess();
+	}
+	else if (Id == TEXT("upper_doors"))
+	{
+		UpperDoorHinge(FastenerDef, By);
 	}
 	else
 	{
@@ -630,6 +691,7 @@ void AKitchenFixture::Fall(const FVector& InDir, AAntCharacter* By, const TCHAR*
 	LastBy = By ? By : LastBy.Get();
 	bDone = true;
 	bHeldWork = false;
+	Tidied = 0;
 	const FString Id = FixId();
 	const FTransform From = GetActorTransform();
 	FVector Dir = InDir.GetSafeNormal2D();
@@ -765,6 +827,7 @@ void AKitchenFixture::Land()
 	UE_LOG(LogTemp, Display, TEXT("ANTFIX %s landed whole (drop %.0f, %s)"), *Id, Drop, IsBreakable() ? TEXT("too low to break") : TEXT("does not break"));
 	Spill(By);
 	OnRep_State();
+	ReportMess();
 	if (Id == TEXT("shelf") || Id == TEXT("curtain_rod"))
 	{
 		if (AAntKitchenGameMode* GM = GMOf(GetWorld())) { GM->OnV3Break(this, By); }   // torn off the wall: as bad as a break to him
@@ -802,6 +865,7 @@ void AKitchenFixture::Break()
 	{
 		GM->OnV3Break(this, By);
 	}
+	ReportMess();
 }
 
 void AKitchenFixture::Spill(AAntCharacter* By)
@@ -847,6 +911,11 @@ void AKitchenFixture::Spill(AAntCharacter* By)
 	{
 		Food(TEXT("Картошка"), 18, 12, FLinearColor(0.7f, 0.55f, 0.32f), EAntShape::Sphere, 0.35f, GetActorLocation() + FVector(0.f, 200.f, 80.f));
 		Food(TEXT("Лук"), 14, 8, FLinearColor(0.85f, 0.7f, 0.45f), EAntShape::Sphere, 0.3f, GetActorLocation() + FVector(150.f, 200.f, 80.f));
+	}
+	else if (Id == TEXT("toaster"))
+	{
+		// The crumb tray hits the floor: a shower of toast crumbs (small food, lots of it) where it lands.
+		for (int32 i = 0; i < 12; ++i) { Food(TEXT("Крошки тоста"), 3, 1, FLinearColor(0.78f, 0.55f, 0.28f), EAntShape::Cube, 0.1f, Around(450.f)); }
 	}
 	else if (Id == TEXT("toybox"))
 	{
@@ -895,7 +964,7 @@ void AKitchenFixture::OnRep_State()
 		}
 		ShowAfter();
 	}
-	if (State == Open)
+	if (State == Open && Tidied != 2)
 	{
 		const FString Id = FixId();
 		for (UStaticMeshComponent* P : Parts)
@@ -908,8 +977,153 @@ void AKitchenFixture::OnRep_State()
 		}
 		if (Id == TEXT("knitting"))
 		{
-			Body->SetRelativeScale3D(Body->GetRelativeScale3D() * FVector(1.f, 0.55f, 1.f));   // half of the scarf is gone: a long thread instead
+			Body->SetRelativeScale3D(BodyScale0 * FVector(1.f, 0.55f, 1.f));   // half of the scarf is gone: a long thread instead
 		}
+	}
+	if (Tidied == 1 && State != Fixed)
+	{
+		// Cleaned up: the shards, the jam, the soil, the pool are swept / wiped away (the zones with them).
+		for (UStaticMeshComponent* A : After) { if (A) { A->SetVisibility(false); A->SetCollisionEnabled(ECollisionEnabled::NoCollision); } }
+		if (Pool) { Pool->SetVisibility(false); }
+		PoolStart = -1.f;
+		LevelV3::RemovePlayZones(FVector(BreakAt), 1000.f);
+	}
+	if (Tidied == 2 && State == Fixed)
+	{
+		// Put back where it was (and fastened again): whole and in place, the mess with it gone.
+		SetActorTransform(Home);
+		LevelV3::RemovePlayZones(FVector(BreakAt), 1000.f);
+		Body->SetVisibility(true, false);
+		Body->SetCollisionEnabled(FixId().StartsWith(TEXT("curtain_k")) ? ECollisionEnabled::NoCollision : ECollisionEnabled::QueryAndPhysics);
+		Body->SetRelativeScale3D(BodyScale0);
+		for (UStaticMeshComponent* P : Parts) { if (P) { P->SetVisibility(true); P->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics); } }
+		for (UStaticMeshComponent* A : After) { if (A) { A->DestroyComponent(); } }
+		After.Reset();
+		if (Pool) { Pool->DestroyComponent(); Pool = nullptr; }
+		PoolStart = -1.f;
+		bAfterShown = false;
+		SetCurtainClimb(true);
+	}
+}
+
+void AKitchenFixture::ReportMess()
+{
+	using namespace NpcRoutine;
+	UWorld* W = GetWorld();
+	if (!HasAuthority() || !W)
+	{
+		return;
+	}
+	const FString Id = FixId();
+	const FString Name = DoorNoun();
+	const FVector At = (State == Broken || State == Lying) ? FVector(BreakAt) : GetActorLocation();
+	if (Id == TEXT("knitting") && State == Open) { AddMess(W, Yarn, GetActorLocation(), this, TEXT("вязание распущено")); }
+	else if (Id == TEXT("fridge_art") && State == Lying) { AddMess(W, Drawing, At, this, TEXT("рисунок малыша на полу")); }
+	else if (State == Broken)
+	{
+		AddMess(W, Shards, At, this, FString::Printf(TEXT("осколки (%s)"), *Name));
+		if (Id == TEXT("jam_jar") || Id == TEXT("pickles") || Id == TEXT("teapot")) { AddMess(W, NpcRoutine::Spill, At, this, FString::Printf(TEXT("лужа (%s)"), *Name)); }
+	}
+	else if (State == Lying && Id == TEXT("cola")) { AddMess(W, NpcRoutine::Spill, At, this, TEXT("липкая лужа колы")); }
+	else if (State == Lying && Id != TEXT("tablecloth") && !Id.StartsWith(TEXT("curtain_k")) && Id != TEXT("balloons")) { AddMess(W, Fallen, At, this, FString::Printf(TEXT("%s на полу"), *Name)); }
+	else if (Id == TEXT("upper_doors")) { AddMess(W, Fallen, GetActorLocation(), this, TEXT("дверца шкафа")); }
+}
+
+void AKitchenFixture::Tidy(bool bPutBack)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+	const FString Id = FixId();
+	if (Id == TEXT("upper_doors"))
+	{
+		// The Human screws the hinges back on: the doors hang straight and shut again.
+		for (TActorIterator<AKitchenMover> It(GetWorld()); It; ++It) { if (It->Broken) { It->SetBroken(0); } }
+		for (TActorIterator<AKitchenFastener> It(GetWorld()); It; ++It)
+		{
+			if (LevelV3::Fasteners().IsValidIndex(It->Def) && LevelV3::Fasteners()[It->Def].Fixture == Fix) { It->Refasten(); }
+		}
+		Undone.Reset();
+		UE_LOG(LogTemp, Display, TEXT("ANTFIX upper_doors: put back on their hinges"));
+		return;
+	}
+	const bool bCan = bPutBack && State != Broken && State != Fixed && Id != TEXT("tablecloth") && !Id.StartsWith(TEXT("curtain_k")) && Id != TEXT("balloons");
+	if (bCan)
+	{
+		PutBack();
+	}
+	else
+	{
+		Tidied = 1;
+		OnRep_State();
+		for (TActorIterator<AKitchenSlick> It(GetWorld()); It; ++It)
+		{
+			if (FVector::Dist2D(It->GetActorLocation(), FVector(BreakAt)) < 1000.f) { It->StartWipe(1.f); }   // the brine, the tea
+		}
+	}
+	UE_LOG(LogTemp, Display, TEXT("ANTFIX %s %s"), *Id, bCan ? TEXT("put back in its place") : TEXT("cleaned up"));
+}
+
+void AKitchenFixture::PutBack()
+{
+	State = Fixed;
+	bDone = false;
+	Progress = 0.f;
+	Undone.Reset();
+	FallStart = -1.f;
+	bLanded = false;
+	for (TActorIterator<AKitchenFastener> It(GetWorld()); It; ++It)
+	{
+		if (LevelV3::Fasteners().IsValidIndex(It->Def) && LevelV3::Fasteners()[It->Def].Fixture == Fix) { It->Refasten(); }
+	}
+	ResetWork();
+	if (FixId() == TEXT("cola")) { bHeldWork = true; Need = LevelV3::PushNeed(TEXT("cola")); Seconds = 1.f; }   // stood up again, its cap still off
+	Tidied = 2;
+	OnRep_State();
+}
+
+void AKitchenFixture::UpperDoorHinge(int32 FastenerDef, AAntCharacter* By)
+{
+	// Two hinges a door: the top one out -> the door hangs crooked on the bottom one, ajar for good (the Human cannot shut it);
+	// both out -> it comes down onto the worktop with a crash and lies there leaning on the wall: a ramp.
+	const TConstArrayView<FLevelV3Fixture> All = LevelV3::Fixtures();
+	if (!All.IsValidIndex(Fix))
+	{
+		return;
+	}
+	const int32 k = FastenerDef - All[Fix].FirstFastener;
+	const int32 Pair = k / 2;
+	const bool bTopOff = Undone.Contains(Pair * 2), bBotOff = Undone.Contains(Pair * 2 + 1);
+	const int32 MoverIdx = LevelV3::UpperDoorMover(FastenerDef);
+	AKitchenMover* Door = nullptr;
+	for (TActorIterator<AKitchenMover> It(GetWorld()); It; ++It) { if (It->PartIndex == MoverIdx) { Door = *It; } }
+	if (!Door)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ANTFIX upper_doors: no door for mover %d"), MoverIdx);
+		return;
+	}
+	if (bTopOff && bBotOff)
+	{
+		Door->SetBroken(2);
+		if (AAntKitchenGameMode* GM = GMOf(GetWorld()))
+		{
+			GM->MakeNoise(Door->GetActorLocation() - FVector(0.f, 400.f, 1200.f), 0.9f, AntNoise::Crash, this, By);
+			GM->Broadcast(TEXT("Дверца верхнего шкафа рухнула на столешницу!"), FLinearColor(1.f, 0.8f, 0.3f));
+		}
+		AntSfx::Everyone(this, AntSfx::Crunch, Door->GetActorLocation() - FVector(0.f, 400.f, 1200.f), 0.7f);
+		UE_LOG(LogTemp, Display, TEXT("ANTFIX upper_doors: door %d off both hinges: it falls onto the worktop"), MoverIdx);
+		ReportMess();
+	}
+	else if (bTopOff)
+	{
+		Door->SetBroken(1);
+		if (AAntKitchenGameMode* GM = GMOf(GetWorld())) { GM->MakeNoise(Door->GetActorLocation(), 0.4f, AntNoise::Crash, this, By); GM->Broadcast(TEXT("Дверца шкафа повисла на одной петле — её теперь не закрыть"), FLinearColor(1.f, 0.8f, 0.3f)); }
+		UE_LOG(LogTemp, Display, TEXT("ANTFIX upper_doors: door %d hangs on its bottom hinge, ajar for good"), MoverIdx);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Display, TEXT("ANTFIX upper_doors: door %d lost its bottom hinge (still held by the top one)"), MoverIdx);
 	}
 }
 
@@ -1104,6 +1318,7 @@ void AKitchenFixture::ResetAll(UWorld* World)
 	}
 	for (TActorIterator<AKitchenFixture> It(World); It; ++It) { It->Destroy(); }
 	for (TActorIterator<AKitchenFastener> It(World); It; ++It) { It->Destroy(); }
+	for (TActorIterator<AKitchenMover> It(World); It; ++It) { if (It->Broken) { It->SetBroken(0); } }   // the upper doors back on their hinges
 	LevelV3::ClearPlayZones();
 	const TConstArrayView<FLevelV3Fixture> Fix = LevelV3::Fixtures();
 	const TConstArrayView<FKitchenArtInst> Rows = LevelV3::BaseArt();
@@ -1123,10 +1338,6 @@ void AKitchenFixture::ResetAll(UWorld* World)
 			if (VarRow < 0) { continue; }
 			Loc = FVector(LevelV3::VarArt()[VarRow].Loc);
 		}
-		if (FCString::Strcmp(F.Id, TEXT("toaster")) == 0 || FCString::Strcmp(F.Id, TEXT("upper_doors")) == 0)
-		{
-			continue;   // the toaster is its own gadget; the upper doors' hinges have no fastener rows yet
-		}
 		AKitchenFixture* A = World->SpawnActorDeferred<AKitchenFixture>(AKitchenFixture::StaticClass(), FTransform(Loc), nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 		if (!A) { continue; }
 		A->Fix = f;
@@ -1137,12 +1348,13 @@ void AKitchenFixture::ResetAll(UWorld* World)
 		{
 			const int32 D = F.FirstFastener + k;
 			const FLevelV3FastenerDef& FD = LevelV3::Fasteners()[D];
-			if (!Rows.IsValidIndex(FD.Inst)) { continue; }   // (friction and code: the fixture's own work)
-			AKitchenFastener* S = World->SpawnActorDeferred<AKitchenFastener>(AKitchenFastener::StaticClass(), FTransform(FVector(Rows[FD.Inst].Loc)), nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+			const FKitchenArtInst* Row = Rows.IsValidIndex(FD.Inst) ? &Rows[FD.Inst] : LevelV3::ExtraFastenerRow(FD.Inst);
+			if (!Row) { continue; }   // (friction and code: the fixture's own work)
+			AKitchenFastener* S = World->SpawnActorDeferred<AKitchenFastener>(AKitchenFastener::StaticClass(), FTransform(FVector(Row->Loc)), nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 			if (!S) { continue; }
 			S->Def = D;
 			S->bLoose = LevelV3::IsLoose(FD.Inst);
-			S->FinishSpawning(FTransform(FVector(Rows[FD.Inst].Loc)));
+			S->FinishSpawning(FTransform(FVector(Row->Loc)));
 			++NFast;
 		}
 	}

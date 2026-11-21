@@ -1768,6 +1768,72 @@ AKitchenBuilder::FTimeOfDay AKitchenBuilder::TimeOfDay(int32 Index)
 		T.FxTint = FLinearColor(0.8f, 0.88f, 1.f);
 		break;
 	}
+	if (LevelV3::Enabled())
+	{
+		// Level v3 (docs/level/LEVEL_V3.md, v3.time_of_day): three clearly different evenings of the same flat.
+		switch (Index)
+		{
+		default:   // day, 14:00: a high, white sun from the south, a bright sky in the windows; the ceiling lamps off
+			T.SunRot = FRotator(-50.f, 96.f, 0.f);
+			T.SunColor = FLinearColor(1.f, 0.97f, 0.9f);
+			T.SunLux = 10.f;
+			T.SunShafts = 18.f;
+			T.Sky = 1.5f;
+			T.Lamps = 0.f;
+			T.Practicals = 0.12f;
+			T.Amb = 0.42f;
+			T.AmbColor = FLinearColor(0.96f, 0.97f, 1.f);
+			T.Bounce = 0.34f;
+			T.BounceColor = FLinearColor(1.f, 0.95f, 0.88f);
+			T.WindowColor = FLinearColor(0.86f, 0.93f, 1.f);
+			T.Window = 3.f;
+			T.ExposureBias = -0.25f;
+			T.WhiteTemp = 6400.f;
+			T.FxAmbient = 1.f;
+			T.FxTint = FLinearColor(1.f, 0.99f, 0.96f);
+			break;
+		case 1:    // evening, 19:30: the sun nearly down, deep orange shafts low across the floor; the lamps are on and warm
+			T.SunRot = FRotator(-9.f, 40.f, 0.f);
+			T.SunColor = FLinearColor(1.f, 0.52f, 0.22f);
+			T.SunLux = 8.f;
+			T.SunShafts = 42.f;
+			T.Sky = 0.55f;
+			T.Lamps = 0.9f;
+			T.Practicals = 1.f;
+			T.Amb = 0.3f;
+			T.AmbColor = FLinearColor(1.f, 0.66f, 0.4f);
+			T.Bounce = 0.3f;
+			T.BounceColor = FLinearColor(1.f, 0.58f, 0.32f);
+			T.WindowColor = FLinearColor(1.f, 0.48f, 0.26f);
+			T.Window = 2.2f;
+			T.FogDensity = 0.006f;
+			T.ExposureBias = -0.3f;
+			T.WhiteTemp = 8300.f;
+			T.FxAmbient = 0.8f;
+			T.FxTint = FLinearColor(1.f, 0.8f, 0.6f);
+			break;
+		case 2:    // night, 23:00: blue moonlight through the window, the ceiling lamps off; the hood light, the TV and an open fridge carry the room
+			T.SunRot = FRotator(-34.f, 112.f, 0.f);
+			T.SunColor = FLinearColor(0.48f, 0.6f, 1.f);
+			T.SunLux = 0.8f;
+			T.SunShafts = 60.f;
+			T.Sky = 0.16f;
+			T.Lamps = 0.f;
+			T.Practicals = 0.45f;
+			T.Amb = 0.2f;
+			T.AmbColor = FLinearColor(0.34f, 0.44f, 1.f);
+			T.Bounce = 0.1f;
+			T.BounceColor = FLinearColor(0.5f, 0.58f, 1.f);
+			T.WindowColor = FLinearColor(0.34f, 0.46f, 1.f);
+			T.Window = 1.2f;
+			T.FogDensity = 0.003f;
+			T.ExposureBias = -1.f;
+			T.WhiteTemp = 5600.f;
+			T.FxAmbient = 0.3f;
+			T.FxTint = FLinearColor(0.7f, 0.8f, 1.f);
+			break;
+		}
+	}
 	return T;
 }
 
@@ -1801,6 +1867,10 @@ void AKitchenBuilder::UpdateTimeOfDay(float Dt)
 	if (ForcedTod >= 0)
 	{
 		Want = ForcedTod;
+	}
+	else if (LevelV3::Enabled() && LevelV3::Current())
+	{
+		Want = FMath::Clamp(LevelV3::TimeOfDay(), 0, 2);   // level v3: the raid seed's time of day (day 14:00, evening 19:30, night 23:00)
 	}
 	else if (const AAntGameState* GS = GetWorld()->GetGameState<AAntGameState>())
 	{

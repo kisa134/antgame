@@ -31,6 +31,7 @@
 #include "EngineUtils.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
+#include "NpcRoutine.h"
 
 namespace
 {
@@ -524,6 +525,12 @@ void AAntRaid::OnWorldReset()
 	ClanAlive = 0;
 	Result = FAntRaidResult();
 	RaidStartedAt = GetWorld()->GetTimeSeconds();
+	if (NpcRoutine::Enabled())
+	{
+		// Level v3: the residents' evening for this seed, tier and time of day; no mess yet.
+		NpcRoutine::ResetRaid();
+		NpcRoutine::Rebuild(GetWorld());
+	}
 	GM->SetHumanAwake(false);
 	for (TActorIterator<AAntPlayerState> It(GetWorld()); It; ++It)
 	{
