@@ -25,15 +25,15 @@ namespace
 	const FStep GSteps[] =
 	{
 		// key           who  ru                                              X        Y       Z      yaw    secs  when          pose     arg              seat X, Y
-		{ TEXT("h_phone"),  Dad, TEXT("сидит на диване в телефоне"),          11300.f,  -900.f,    0.f,  -90.f, 150.f, WAll,          PSit,  4,                11300.f,     0.f },
+		{ TEXT("h_phone"),  Dad, TEXT("сидит на диване в телефоне"),          11300.f,  -900.f,    0.f,  -90.f, 150.f, WAll,          PSit,  4,                11300.f,   250.f },
 		{ TEXT("h_fridge"), Dad, TEXT("открыл холодильник и смотрит"),         3300.f,  2000.f,    0.f,   90.f,   8.f, WAll,          PBusy, HumanBusy::Fridge,    0.f,     0.f },
 		{ TEXT("h_cook"),   Dad, TEXT("греет суп у плиты, спиной к кухне"),    -750.f,  2200.f,    0.f,   90.f,  40.f, WEve,          PBusy, HumanBusy::Stir,      0.f,     0.f },
 		{ TEXT("h_eat"),    Dad, TEXT("ужинает за столом"),                       0.f, -3600.f,    0.f,   90.f,  60.f, WEve,          PSit,  3,                    0.f, -2750.f },
 		{ TEXT("h_wash"),   Dad, TEXT("моет посуду, спиной к кухне"),         -3500.f,  2250.f,    0.f,   90.f,  45.f, WDay | WEve,   PBusy, HumanBusy::Wash,      0.f,     0.f },
 		{ TEXT("h_bin"),    Dad, TEXT("достаёт мешок из ведра"),               6000.f, -3000.f,    0.f,   90.f,  10.f, WEve | WNight, PBusy, HumanBusy::Rummage,   0.f,     0.f },
 		{ TEXT("h_trash"),  Dad, TEXT("выносит мусор (его нет дома)"),        19000.f, -1000.f,    0.f,    0.f,  45.f, WEve,          PGone, 0,                    0.f,     0.f },
-		{ TEXT("h_tv"),     Dad, TEXT("смотрит телевизор с дивана"),          13500.f, -1100.f,    0.f,  -90.f, 120.f, WEve | WNight, PSit,  5,                13500.f,     0.f },
-		{ TEXT("h_nap"),    Dad, TEXT("дремлет на диване"),                   12300.f, -1100.f,    0.f,  -90.f,  90.f, WNight,        PSit,  1,                12300.f,     0.f },
+		{ TEXT("h_tv"),     Dad, TEXT("смотрит телевизор с дивана"),          13500.f, -1100.f,    0.f,  -90.f, 120.f, WEve | WNight, PSit,  5,                13500.f,   250.f },
+		{ TEXT("h_nap"),    Dad, TEXT("дремлет на диване"),                   12300.f, -1100.f,    0.f,  -90.f,  90.f, WNight,        PSit,  1,                12300.f,   250.f },
 		{ TEXT("h_window"), Dad, TEXT("проветривает: стоит у окна"),              0.f, -4100.f,    0.f,  -90.f,  15.f, WDay,          PBusy, HumanBusy::Window,    0.f,     0.f },
 		{ TEXT("g_knit"),   Gran, TEXT("вяжет в кресле"),                    10250.f, -5800.f,    0.f,    0.f, 120.f, WDay | WEve,   PKnit, 0,                    0.f,     0.f },
 		{ TEXT("g_water_l"), Gran, TEXT("поливает цветы в гостиной"),         17000.f, -8000.f,    0.f,  -90.f,  20.f, WDay,          PBusy, HumanBusy::Water,     0.f,     0.f },
