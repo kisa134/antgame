@@ -948,10 +948,42 @@ void AAntHUD::DrawHuman(AHumanCharacter* H, AAntGameState* GS)
 	const bool bStompReady = ServerNow >= H->StompReadyTime;
 	// The giant's keys (HumanPhys.cpp).
 	const bool bSwatReady = ServerNow >= H->SwatReadyTime;
+	if (!AntUi::Classic())
+	{
+		// The front end's style (docs/UI_STYLE.md): a glass card of keys on the right, teal for the Human's moves, greyed while it winds up.
+		const bool bKickReady = ServerNow >= H->KickReadyTime;
+		struct FRow { const TCHAR* Key; FString What; bool bReady; };
+		const FRow Rows[] =
+		{
+			{ TEXT("ЛКМ"), H->bCharging ? FString(TEXT("ЗАМАХ... отпусти — сильный удар")) : FString(TEXT("удар · держать — сильный · в ритм — серия")), bSwatReady || H->bCharging },
+			{ TEXT("ПРОБЕЛ"), FString(TEXT("топнуть · держать — прыжок двумя ногами")), bStompReady },
+			{ TEXT("CTRL / C"), FString(TEXT("пинок")), bKickReady },
+			{ TEXT("Q"), FString(H->Held ? TEXT("швырнуть еду") : TEXT("бросить оружие")), true },
+			{ TEXT("E"), FString(TEXT("взять еду / оружие")), true },
+			{ TEXT("SHIFT"), H->SprintRamp > 0.05f ? FString::Printf(TEXT("бег %d%%"), FMath::RoundToInt(H->SprintRamp * 100.f)) : FString(TEXT("бег")), true },
+			{ TEXT("ПКМ"), FString(TEXT("дихлофос")), true },
+			{ TEXT("F"), FString(TEXT("стряхнуть муравьёв")), true },
+		};
+		const int32 N = UE_ARRAY_COUNT(Rows);
+		const float RowH = 26.f * S, PW = 500.f * S, PH = RowH * N + 52.f * S;
+		const float PX = W - PW - 28.f * S, PY = Hh - PH - 120.f * S;
+		AntUiCanvas::Glass(Canvas, PX, PY, PW, PH, 0.72f);
+		AntUiCanvas::Text(Canvas, TEXT("ТЯЖЁЛОЕ ТЕЛО"), PX + 16.f * S, PY + 10.f * S, AntUi::EFont::Display, 17.f * S, AntUi::C::Amber);
+		for (int32 i = 0; i < N; ++i)
+		{
+			const float RY = PY + 42.f * S + i * RowH;
+			const FLinearColor KeyC = Rows[i].bReady ? AntUi::C::Teal : AntUi::C::Muted;
+			AntUiCanvas::Text(Canvas, Rows[i].Key, PX + 16.f * S, RY, AntUi::EFont::Bold, 14.f * S, KeyC);
+			AntUiCanvas::TextFit(Canvas, Rows[i].What, PX + 130.f * S, RY, PW - 146.f * S, AntUi::EFont::Body, 14.f * S, Rows[i].bReady ? AntUi::C::Sugar : AntUi::C::Muted);
+		}
+	}
+	else
+	{
 	Txt(H->bCharging ? TEXT("ЛКМ — ЗАМАХ... отпусти: СИЛЬНЫЙ УДАР") : bSwatReady ? TEXT("ЛКМ — удар (держать — сильный, в ритм — серия из 3)") : TEXT("ЛКМ — удар: замах..."), X, Y + 106.f * S,
 		H->bCharging ? Gold : bSwatReady ? Green : Grey, Small, 1.2f * S);
 	Txt(bStompReady ? TEXT("ПРОБЕЛ — топнуть (держать — прыжок двумя ногами)  ·  CTRL/C — пинок") : TEXT("ПРОБЕЛ — топнуть: замах...  ·  CTRL/C — пинок"), X, Y + 130.f * S, bStompReady ? Green : Grey, Small, 1.2f * S);
 	Txt(H->Held ? TEXT("Q / E — ШВЫРНУТЬ еду (разобьётся!)  ·  SHIFT — бег") : TEXT("E — взять еду / оружие  ·  Q — бросить оружие  ·  SHIFT — бег  ·  F — стряхнуть"), X, Y + 154.f * S, H->Held ? Gold : White, Small, 1.2f * S);
+	}
 	{
 		// The weapon in hand, and in versus his patience and the x-ray (AntVersus.h).
 		float Pat = -1.f;
