@@ -1234,7 +1234,7 @@ void AntCarry::ClientTick(AKitchenLoot* L, float Dt)
 	// (Saved/Screenshots/carry/client_NN.png) - to see the replicated load on a client.
 	static TArray<float> ShotAt = [] { TArray<float> Out; FString V; if (FParse::Value(FCommandLine::Get(), TEXT("AntCarryClientShots="), V, false)) { TArray<FString> P; V.ParseIntoArray(P, TEXT(",")); for (const FString& X : P) { Out.Add(FCString::Atof(*X)); } } return Out; }();
 	static uint64 ShotFrame = 0;
-	if (ShotAt.Num() > 0 && ShotFrame != GFrameCounter)
+	if (ShotAt.Num() > 0 && ShotFrame != GFrameCounter && Net.Grips.Num() > 1)   // (the first load with several carriers this frame)
 	{
 		ShotFrame = GFrameCounter;
 		static TWeakObjectPtr<ACameraActor> Cam;
