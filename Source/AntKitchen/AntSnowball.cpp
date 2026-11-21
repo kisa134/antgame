@@ -36,9 +36,9 @@ namespace AntPick
 	struct FDef { const TCHAR* Name; const TCHAR* Text; uint8 Pool; uint8 Card; };
 	static const FDef Defs[Count] =
 	{
-		{ TEXT("Новобранцы"),         TEXT("+2 умных муравья в твой отряд"), PSquad, 255 },
-		{ TEXT("Подкрепление"),       TEXT("+3 умных муравья в твой отряд"), PSquad, 255 },
-		{ TEXT("Ветеран"),            TEXT("+1 солдат и +1 фуражир в отряд"), PSquad, 255 },
+		{ TEXT("Новобранцы"),         TEXT("+3 умных муравья в твой отряд"), PSquad, 255 },
+		{ TEXT("Подкрепление"),       TEXT("+4 умных муравья в твой отряд"), PSquad, 255 },
+		{ TEXT("Ветеран"),            TEXT("+1 солдат и +2 фуражира в отряд"), PSquad, 255 },
 		{ TEXT("Рабочие"),            TEXT("+12 рабочих на твои тропы"), PWorkers, 255 },
 		{ TEXT("Выводок рабочих"),    TEXT("+25 рабочих на твои тропы"), PWorkers, 255 },
 		{ TEXT("Длинная тропа"),      TEXT("Тропа может быть на 50 % длиннее"), PTrail, 255 },
@@ -172,13 +172,15 @@ float AAntSnowball::RaidClock() const
 
 int32 AAntSnowball::Threshold(int32 Index) const
 {
-	// Cumulative mass for pick #Index+1 (v12, a snappier start): 12 (two crumbs), then 35, 70, 115, 170, 235, 310, 395, 490, 595 ...
-	// (one player; +60 % per extra player). Was 10, 57, 110, 177, 260 ...: the second pick came at minute 3-4.
+	// Cumulative mass for pick #Index+1 (v12, a snappier start): 12 (two crumbs), then 45, 94, 157, 234, 325, 430, 549, 682, 829 ...
+	// (one player; +60 % per extra player). Was 10, 57, 110, 177, 260 ...: the second pick came at minute 3-4. -AntSnowOld: the old ones.
 	int32 Humans = 0;
 	for (const FAntSnowPlayer& P : Players) { Humans += P.PS ? 1 : 0; }
 	const float K = 1.f + 0.6f * FMath::Max(0, Humans - 1);
 	const float I = (float)Index;
-	return FMath::RoundToInt((Index == 0 ? 12.f : 10.f + 20.f * I + 5.f * I * I) * K);
+	static const bool bOld = FParse::Param(FCommandLine::Get(), TEXT("AntSnowOld"));
+	if (bOld) { return FMath::RoundToInt((Index == 0 ? 10.f : 20.f + 30.f * I + 7.5f * I * I) * K); }
+	return FMath::RoundToInt((Index == 0 ? 12.f : 10.f + 28.f * I + 7.f * I * I) * K);
 }
 
 int32 AAntSnowball::SquadCap() const
@@ -230,7 +232,7 @@ void AAntSnowball::Begin(AAntRaid* Raid)
 		AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>();
 		const FVector Nest = AKitchenBuilder::NestLocation(0);
 		int32 Crumbs = 0;
-		for (int32 k = 0; GM && k < 60 && Crumbs < 16; ++k)
+		for (int32 k = 0; GM && k < 60 && Crumbs < 12; ++k)
 		{
 			const float Ang = Rng.FRandRange(0.f, 2.f * PI), R = Rng.FRandRange(1300.f, 3600.f);
 			const FVector P = Nest + FVector(FMath::Cos(Ang) * R, FMath::Sin(Ang) * R, 0.f);
@@ -475,7 +477,15 @@ void AAntSnowball::Second()
 	// Players who joined after the start.
 	for (TActorIterator<AAntPlayerState> It(GetWorld()); It; ++It)
 	{
-		if (It->Team == 0 && !It->bIsHuman && !It->IsABot() && !Find(*It)) { For(*It); }
+		if (It->Team == 0 && !It->bIsHuman && !It->IsABot() && !Find(*It))
+		{
+			FAntSnowPlayer* NewP = For(*It);
+			if (NewP && !FParse::Param(FCommandLine::Get(), TEXT("AntSnowOld")))
+			{
+				NewP->Workers = FMath::Max(NewP->Workers, 10);   // v12: a late joiner gets the start kit too
+				AntSnowball::StarterTrail(*It, false);
+			}
+		}
 	}
 	for (FAntSnowPlayer& P : Players)
 	{
@@ -521,8 +531,8 @@ void AAntSnowball::Second()
 	if (CrumbEvery < 0.f) { CrumbEvery = bOld ? 6.f : 3.5f; FParse::Value(FCommandLine::Get(), TEXT("AntCrumbEvery="), CrumbEvery); }
 	if (CrumbEvery > 0.f && Now >= NextCrumb)
 	{
-		// v12: more often in the first four minutes (every 2.5 s), then every 3.5 s.
-		NextCrumb = Now + (bOld ? CrumbEvery : RaidClock() < 240.f ? FMath::Min(CrumbEvery, 2.5f) : CrumbEvery);
+		// v12: more often in the first four minutes (every 3 s), then every 3.5 s.
+		NextCrumb = Now + (bOld ? CrumbEvery : RaidClock() < 240.f ? FMath::Min(CrumbEvery, 3.f) : CrumbEvery);
 		if (AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
 		{
 			// Half of them fall near the far end of somebody's trail (people drop crumbs where they eat; that is why ants lay trails there).
@@ -655,21 +665,32 @@ namespace AntSnowball
 		{
 			const FVector P = It->GetActorLocation();
 			const float D = (float)FVector::Dist2D(P, Nest);
-			if (!It->bIsGear && !It->bMain && !It->bBody && !It->IsCarried() && !It->bHeld && It->Weight <= 8 && P.Z < 150.f && D > 1500.f && D < 6000.f
+			if (!It->bIsGear && !It->bMain && !It->bBody && !It->IsCarried() && !It->bHeld && It->Weight <= 8 && P.Z < 150.f && D > 1500.f && D < 4500.f
 				&& KitchenContainers::SealedAt(W, P) < 0) { Foods.Add(P); }
 		}
+		// Score: pieces within 700, minus one per 1200 uu of distance (a short trail pays sooner than a rich far one).
 		int32 Best = -1, BestN = 0;
+		float BestScore = -1.e9f;
 		for (int32 i = 0; i < Foods.Num(); ++i)
 		{
 			int32 N = 0;
 			for (const FVector& Q : Foods) { N += FVector::Dist2D(Q, Foods[i]) < 700.f ? 1 : 0; }
-			if (N > BestN || (N == BestN && Best >= 0 && FVector::Dist2D(Foods[i], Nest) < FVector::Dist2D(Foods[Best], Nest))) { BestN = N; Best = i; }
+			const float Score = (float)N - (float)FVector::Dist2D(Foods[i], Nest) / 1200.f;
+			if (Score > BestScore) { BestScore = Score; BestN = N; Best = i; }
 		}
 		FVector Target = Best >= 0 ? Foods[Best] : Nest + FVector(3000.f, 0.f, 0.f);
 		TArray<FVector> Way;
 		if (!AntRoutes::PathPoints(Nest, Target, false, Way, nullptr, AntRoutes::FloorOnly) || Way.Num() < 1)
 		{
 			Way.Reset();
+		}
+		{
+			// A route that wanders far round (the graph's long way) is worse than the straight floor line: workers are only drawn.
+			float Len = 0.f;
+			FVector Prev = Nest;
+			for (const FVector& Q : Way) { Len += (float)FVector::Dist2D(Prev, Q); Prev = Q; }
+			Len += (float)FVector::Dist2D(Prev, Target);
+			if (Len > 1.6f * (float)FVector::Dist2D(Nest, Target) + 600.f) { Way.Reset(); }
 		}
 		Way.Insert(Nest, 0);
 		Way.Add(Target);

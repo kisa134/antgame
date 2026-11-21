@@ -537,12 +537,15 @@ namespace AntRts
 
 	static AKitchenLoot* LoadNear(UWorld* W, const FVector& At, float R)
 	{
+		// v12: measured from the load's edge, not its centre (the cake is wide: aimed at its side it was "nothing to haul"),
+		// and the cake wins when the aim is anywhere on or near it.
 		AKitchenLoot* Best = nullptr;
-		float BestD = R * R;
+		float BestD = R;
 		for (TActorIterator<AKitchenLoot> It(W); It; ++It)
 		{
 			if (!AntHaul::CanHaul(*It) || It->bIsGear) { continue; }
-			const float D = (float)FVector::DistSquared(It->GetActorLocation(), At);
+			const float D = FMath::Max(0.f, (float)FVector::Dist(It->GetActorLocation(), At) - It->GetRadius());
+			if (It->bMain && D < R * 2.f) { return *It; }
 			if (D < BestD) { BestD = D; Best = *It; }
 		}
 		return Best;

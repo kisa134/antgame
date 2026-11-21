@@ -1295,7 +1295,7 @@ void AntAdmin::DrawHud(AHUD* Hud, UCanvas* Canvas, AAntPlayerController* PC)
 		{
 			Line += TEXT(" ·");
 			if (Me->AdminFlags & 1) { Line += TEXT(" бессмертие"); }
-			if (Me->AdminFlags & 2) { Line += TEXT(" ∞кислота"); }
+			if (Me->AdminFlags & 2) { Line += TEXT(" кислота"); }
 			if (Me->AdminFlags & 4) { Line += TEXT(" полёт"); }
 			if (Me->AdminFlags & 8) { Line += TEXT(" сила"); }
 		}
@@ -1330,7 +1330,7 @@ void AntAdmin::DrawHud(AHUD* Hud, UCanvas* Canvas, AAntPlayerController* PC)
 		if (bBehind) { S.X = Canvas->ClipX - S.X; S.Y = Canvas->ClipY - 20.f; }
 		S.X = FMath::Clamp(S.X, 20.f, Canvas->ClipX - 140.f);
 		S.Y = FMath::Clamp(S.Y, 40.f, Canvas->ClipY - 30.f);
-		const FString Txt = FString::Printf(TEXT("◆ %s %.0fм"), *Label, FVector::Dist(P, CamLoc) / 1000.f);
+		const FString Txt = FString::Printf(TEXT("» %s %.0fм"), *Label, FVector::Dist(P, CamLoc) / 1000.f);
 		FCanvasTextItem T(FVector2D(S.X, S.Y), FText::FromString(Txt), F, C);
 		T.Scale = FVector2D(Sc * 0.85f, Sc * 0.85f);
 		T.EnableShadow(FLinearColor::Black);

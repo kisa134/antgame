@@ -1,6 +1,7 @@
 ﻿#include "AntTypes.h"
 #include "Engine/StaticMesh.h"
 #include "Sound/SoundBase.h"
+#include "Misc/PackageName.h"
 #include "Sound/SoundAttenuation.h"
 #include "Kismet/GameplayStatics.h"
 #include "AntGameState.h"
@@ -528,6 +529,10 @@ USoundBase* Get(uint8 Id)
 		auto Load = [Id](const FString& N)
 		{
 			const FString Path = FString::Printf(TEXT("/Game/SoundsReal/%s.%s"), *N, *N);
+			if (!FPackageName::DoesPackageExist(FString::Printf(TEXT("/Game/SoundsReal/%s"), *N)))
+			{
+				return;   // (v12) a variant that was never made: no "SkipPackage" warning in the cooked log for every probe
+			}
 			USoundBase* S = LoadObject<USoundBase>(nullptr, *Path, nullptr, LOAD_NoWarn | LOAD_Quiet);
 			if (S && !S->IsRooted()) { S->AddToRoot(); }   // the cache below survives map travel, the sound must too
 			if (S)

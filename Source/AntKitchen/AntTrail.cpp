@@ -1,4 +1,6 @@
 ﻿#include "AntTrail.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 #include "AntSnowball.h"
 #include "AntRaid.h"
 #include "AntClan.h"
@@ -34,6 +36,13 @@ namespace TrailLook
 	constexpr float DotStep = 34.f;
 	const FLinearColor Msg(0.6f, 1.f, 0.7f);
 	const FLinearColor Bad(1.f, 0.45f, 0.35f);
+}
+
+// v12: trail workers walk 1.5x faster (a crumb home in seconds, not a minute); -AntSnowOld: as before.
+static float TrailPace()
+{
+	static const float K = FParse::Param(FCommandLine::Get(), TEXT("AntSnowOld")) ? 1.f : 1.5f;
+	return K;
 }
 
 AAntTrailNet::AAntTrailNet()
@@ -327,7 +336,7 @@ void AAntTrailNet::Rebuild()
 		}
 		// The workers, two-way traffic (as in AntSwarm.cpp).
 		const int32 Lv = Snow ? Snow->LvOf(L.Owner, AntBoost::WorkerSpeed) : 0;
-		const float Speed0 = BaseSpeed * (1.f + 0.35f * Lv);
+		const float Speed0 = BaseSpeed * TrailPace() * (1.f + 0.35f * Lv);
 		TArray<float> SegLen;
 		float Total = 0.f;
 		for (int32 i = 0; i + 1 < NP; ++i)
@@ -800,11 +809,11 @@ void AAntTrailNet::Forage(FAntTrailLine& L, float Dt)
 	const AAntRaid* Raid = AAntRaid::Get(GetWorld());
 	const int32 Carry = 6 + 4 * (S ? S->LvOf(L.Owner, AntBoost::WorkerCarry) : 0) + (Raid ? Raid->Nest.Tier_(AntUp::Carriers) : 0);
 	const float Reach = 300.f + 500.f * (S ? S->LvOf(L.Owner, AntBoost::Forage) : 0);
-	const float Speed = BaseSpeed * (1.f + 0.35f * (S ? S->LvOf(L.Owner, AntBoost::WorkerSpeed) : 0));
+	const float Speed = BaseSpeed * TrailPace() * (1.f + 0.35f * (S ? S->LvOf(L.Owner, AntBoost::WorkerSpeed) : 0));
 	int32 Busy = 0;
 	for (const FAntFerry& F : Ferries) { Busy += F.Trail == L.Id ? 1 : 0; }
 	for (const FPickup& P : Pickups) { Busy += P.Trail == L.Id ? 1 : 0; }
-	const int32 Room = FMath::Max(1, L.Workers / 3) - Busy;
+	const int32 Room = (TrailPace() > 1.f ? FMath::Max(2, L.Workers / 2) : FMath::Max(1, L.Workers / 3)) - Busy;   // v12: more of them out at once
 	if (Room <= 0)
 	{
 		return;
@@ -880,7 +889,7 @@ void AAntTrailNet::ArriveFerries()
 		Fy.Trail = Pk.Trail;
 		Fy.Start = Now;
 		Fy.From = Pk.From;
-		Fy.Speed = BaseSpeed * (1.f + 0.35f * (S ? S->LvOf(L->Owner, AntBoost::WorkerSpeed) : 0));
+		Fy.Speed = BaseSpeed * TrailPace() * (1.f + 0.35f * (S ? S->LvOf(L->Owner, AntBoost::WorkerSpeed) : 0));
 		Fy.Color = F->Color.ToFColor(true);
 		Fy.Size = (uint8)FMath::Clamp(FMath::RoundToInt(4.f + F->Weight * 1.2f), 4, 18);
 		Fy.Load = F;
