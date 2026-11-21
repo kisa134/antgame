@@ -659,6 +659,10 @@ void UAntFluidWorld::UpdateViews()
 		// Only the tiles the simulation changed are written again (still water costs no upload); a layer's picture also depends on
 		// the layers under and over it, so the union of all three.
 		FBasin& B = *Basins[b];
+		// a whole room of moving water: its picture is written every other frame (the flow is smooth enough at 30 Hz to the eye)
+		int32 NDirty = 0;
+		for (int32 L = 0; L < LCount; ++L) { for (uint8 D : B.Layers[L].Dirty) { NDirty += D; } }
+		if (NDirty > 160 && ((GFrameCounter + b) & 1)) { continue; }
 		ViewDirty.Init(0, B.TX * B.TY);
 		for (int32 L = 0; L < LCount; ++L)
 		{
@@ -845,8 +849,13 @@ void UAntFluidWorld::CoupleProps(float Dt)
 			Wet.Add(FBox2f(FVector2f(Bp->OriginX + (Ly.X0 - 2) * Bp->Dx, Bp->OriginY + (Ly.Y0 - 2) * Bp->Dx), FVector2f(Bp->OriginX + (Ly.X1 + 2) * Bp->Dx, Bp->OriginY + (Ly.Y1 + 2) * Bp->Dx)));
 		}
 	}
-	for (const TWeakObjectPtr<AActor>& Wk : Bodies)
+	// Half the bodies a frame, each with twice the force: the same push on average at half the cost (it is a physics force
+	// integrated over the frame, and 30 Hz is far faster than anything floating in a kitchen flood responds).
+	const float Rate = 2.f;
+	for (int32 BodyIdx = 0; BodyIdx < Bodies.Num(); ++BodyIdx)
 	{
+		if (((uint32)BodyIdx + (uint32)GFrameCounter) & 1u) { continue; }
+		const TWeakObjectPtr<AActor>& Wk = Bodies[BodyIdx];
 		AActor* A = Wk.Get();
 		UPrimitiveComponent* Body = A ? Cast<UPrimitiveComponent>(A->GetRootComponent()) : nullptr;
 		if (!Body || !Body->IsSimulatingPhysics()) { continue; }
@@ -900,12 +909,12 @@ void UAntFluidWorld::CoupleProps(float Dt)
 			FSample Sq;
 			B.Sample((float)Q.X, (float)Q.Y, Sq);
 			const float SubQ = FMath::Clamp((Sq.Surface - ((float)Q.Z - R)) / (2.f * R), 0.f, 1.f);
-			Body->AddForceAtLocation(FVector(0.f, 0.f, Lift * SubQ / 3.f), Q);
+			Body->AddForceAtLocation(FVector(0.f, 0.f, Lift * SubQ / 3.f) * Rate, Q);
 		}
 		// the current carries it; the liquid brakes what moves through it
 		const FVector Rel = FVector(S.Vel.X, S.Vel.Y, 0.f) - V;
-		Body->AddForce(FVector(Rel.X, Rel.Y, 0.f) * Mass * 3.5f * Sub * Thick + FVector(0.f, 0.f, bCarried ? 0.f : -V.Z * Mass * 4.f * Sub * Thick));
-		Body->AddTorqueInRadians(-Body->GetPhysicsAngularVelocityInRadians() * Mass * R * R * 1.5f * Sub * Thick);
+		Body->AddForce((FVector(Rel.X, Rel.Y, 0.f) * Mass * 3.5f * Sub * Thick + FVector(0.f, 0.f, bCarried ? 0.f : -V.Z * Mass * 4.f * Sub * Thick)) * Rate);
+		Body->AddTorqueInRadians(-Body->GetPhysicsAngularVelocityInRadians() * Mass * R * R * 1.5f * Sub * Thick * Rate);
 		Body->WakeAllRigidBodies();
 		// and it pushes the liquid back
 		B.Push((float)P.X, (float)P.Y, RXY, FVector2f((float)V.X, (float)V.Y), FMath::Min(0.5f, 3.f * Dt) * Sub);
@@ -2071,7 +2080,7 @@ AAntFluidNet::AAntFluidNet()
 	bReplicates = true;
 	bAlwaysRelevant = true;
 	PrimaryActorTick.bCanEverTick = false;
-	SetNetUpdateFrequency(5.f);
+	SetNetUpdateFrequency(60.f);   // the snapshot's pieces leave a couple per update
 	SetRootComponent(CreateDefaultSubobject<USceneComponent>(TEXT("Root")));
 }
 
@@ -2133,6 +2142,15 @@ void UAntFluidWorld::TickNetServer(float Dt)
 		P.Add(Q);
 	}
 	if (P != N->Pours) { N->Pours = P; }
+	// the pieces go out one a frame: an actor sends only a couple of unreliable calls per net update (net.MaxRPCPerNetUpdate),
+	// the rest would be dropped (a snapshot of the flooded floor is ~16 pieces: a quarter of a second)
+	for (int32 n = 0; n < 1 && SendQueue.Num() > 0; ++n)
+	{
+		const FSnapOut& P0 = SendQueue[0];
+		N->MulticastSnap(P0.Basin, P0.Seq, P0.Part, P0.Parts, P0.Data);
+		SendQueue.RemoveAt(0);
+	}
+	if (SendQueue.Num() > 0) { N->ForceNetUpdate(); return; }
 	// the server's picture, one basin a second, coarse (4 x 4 cells), cut into pieces an unreliable message carries
 	SnapClock += Dt;
 	if (SnapClock < 1.f || Basins.Num() == 0) { return; }
@@ -2152,9 +2170,9 @@ void UAntFluidWorld::TickNetServer(float Dt)
 	++SnapSeq;
 	for (int32 p = 0; p < Parts; ++p)
 	{
-		TArray<uint8> Chunk;
-		Chunk.Append(Data.GetData() + p * Piece, FMath::Min(Piece, Data.Num() - p * Piece));
-		N->MulticastSnap((uint8)b, SnapSeq, (uint8)p, (uint8)Parts, Chunk);
+		FSnapOut& O = SendQueue.AddDefaulted_GetRef();
+		O.Basin = (uint8)b; O.Seq = SnapSeq; O.Part = (uint8)p; O.Parts = (uint8)Parts;
+		O.Data.Append(Data.GetData() + p * Piece, FMath::Min(Piece, Data.Num() - p * Piece));
 	}
 	if (LogOn()) { UE_LOG(LogTemp, Display, TEXT("ANTFLUID net: sent %s, %d bytes in %d pieces (seq %d)"), *B.Name, Data.Num(), Parts, SnapSeq); }
 }
