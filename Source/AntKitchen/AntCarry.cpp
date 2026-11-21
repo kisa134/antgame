@@ -84,6 +84,7 @@ struct FAntCarryState
 		FVector LastPos = FVector::ZeroVector;   // ants: where it was last tick (its real velocity: input is not motion when the load holds it)
 		FVector RealV = FVector::ZeroVector;
 		bool bDragged = false, bAtLimit = false;
+		float JoinedAt = 0.f;                     // a fresh grip settles for a moment before any yank counts
 		bool IsWorker() const { return Worker >= 0; }
 	};
 	TArray<FMate> Mates;
@@ -560,6 +561,7 @@ namespace
 				FAntCarryState::FMate M;
 				M.Ant = A;
 				M.Phase = FMath::FRand();
+				M.JoinedAt = L->GetWorld()->GetTimeSeconds();
 				S.Mates.Add(M);
 				bChanged = true;
 			}
@@ -810,7 +812,7 @@ void FAntCarrySolver::Yanks(AKitchenLoot* L, FAntCarryState& S, float Dt, const 
 		}
 		const float Y = (float)M.Vrel.Size();
 		M.Over = M.bAtLimit && M.Strain > 1.45f ? M.Over + Dt : FMath::Max(0.f, M.Over - Dt * 2.f);
-		if (Now < M.NextYank)
+		if (Now < M.NextYank || Now - M.JoinedAt < 1.2f)
 		{
 			continue;
 		}
