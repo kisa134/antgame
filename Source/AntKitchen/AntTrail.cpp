@@ -139,7 +139,7 @@ void AAntTrailNet::BeginPlay()
 		if (bHasMaterial)
 		{
 			// The swarm's GPU material (it is made for instances): a flat glowing disc that does not move (speed 0).
-			UInstancedStaticMeshComponent* D = MakeWorkerPart(Name, FVector::ZeroVector, FVector(4.5f, 4.5f, 0.8f), 0.f, Color * 0.4f, AntKit::ShapeMesh(EAntShape::Sphere), nullptr);
+			UInstancedStaticMeshComponent* D = MakeWorkerPart(Name, FVector::ZeroVector, FVector(6.5f, 6.5f, 1.2f), 0.f, Color, AntKit::ShapeMesh(EAntShape::Sphere), nullptr);
 			if (MIDs.Num() > 0) { MIDs.Last()->SetVectorParameterValue(TEXT("Glow"), Color); }
 			return D;
 		}
@@ -1035,7 +1035,17 @@ void AAntTrailNet::Dangers()
 	for (TActorIterator<AHumanCharacter> It(W); It; ++It)
 	{
 		AHumanCharacter* H = *It;
-		if (!H || H->IsHidden() || H->GetVelocity().Size2D() < 60.f)
+		if (!H || H->IsHidden())
+		{
+			continue;
+		}
+		// Moving? (by where he was half a second ago: puppets and the AI do not always move through the velocity)
+		const TWeakObjectPtr<AActor> Key(H);
+		if (!HumanWas.Contains(Key)) { HumanWas.Add(Key, H->GetActorLocation()); continue; }
+		FVector& Was = HumanWas[Key];
+		const bool bMoving = FVector::Dist2D(Was, H->GetActorLocation()) > 25.f || H->GetVelocity().Size2D() > 60.f;
+		Was = H->GetActorLocation();
+		if (!bMoving)
 		{
 			continue;
 		}
@@ -1047,7 +1057,7 @@ void AAntTrailNet::Dangers()
 			const FAntTrailLine& L = Lines[li];
 			for (const FVector_NetQuantize& P : L.Points)
 			{
-				if (FMath::Abs(P.Z - Feet.Z) < 120.f && FVector::DistSquared2D(FVector(P), Feet) < FMath::Square(230.f))
+				if (P.Z < Feet.Z + 200.f && P.Z > Feet.Z - 200.f && FVector::DistSquared2D(FVector(P), Feet) < FMath::Square(230.f))
 				{
 					Cut(FVector(P), 90.f, H->Fig == HumanFig::Grandma ? TEXT("шаг бабушки") : H->Fig == HumanFig::Kid ? TEXT("шаг малыша") : TEXT("шаг Человека"));
 					break;

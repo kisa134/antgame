@@ -43,6 +43,10 @@ public:
 private:
 	void ThinkRts(AAntCharacter* Ant, float Dt);
 	bool HaulThink(AAntCharacter* Ant, AKitchenLoot* L, uint8 TaskIdx);
+	/** Every frame while it carries for its group: push towards HaulGoal, keep under its grip. */
+	bool HaulMove(AAntCharacter* Ant);
+	FVector HaulGoal = FVector::ZeroVector;
+	bool bHauling = false;
 	AAntCharacter* OwnerAnt() const;
 	float ThinkEvery = 0.5f;
 };
@@ -67,6 +71,8 @@ public:
 
 	bool bRtsMode = false;
 	bool bDragging = false;
+	/** Dev: the RTS view stays on without Caps Lock (scripted shots). */
+	bool bDevHold = false;
 	FVector2D DragFrom = FVector2D::ZeroVector;
 	FVector2D Mouse = FVector2D::ZeroVector;
 	TArray<TWeakObjectPtr<AAntCharacter>> Selection;

@@ -98,7 +98,10 @@ void AAntSquadBot::Tick(float DeltaSeconds)
 		ThinkTimer = ThinkEvery;
 		ThinkRts(Ant, ThinkEvery);
 	}
-	if (bCarryWithPlayer && CarryFollow(Ant))
+	if (bHauling && HaulMove(Ant))
+	{
+	}
+	else if (bCarryWithPlayer && CarryFollow(Ant))
 	{
 	}
 	else if (bHasGoal)
@@ -128,6 +131,7 @@ void AAntSquadBot::ThinkRts(AAntCharacter* Ant, float Dt)
 		ShootTarget = PickShootTarget(Ant);
 	}
 	bCarryWithPlayer = false;
+	bHauling = false;
 	const int32 N = FMath::Max(1, P->Squad.Num());
 	auto Ring = [this, N](const FVector& C, float R0)
 	{
@@ -241,21 +245,20 @@ bool AAntSquadBot::HaulThink(AAntCharacter* Ant, AKitchenLoot* L, uint8 TaskIdx)
 	const FVector LP = L->GetActorLocation();
 	if (AntHaul::IsCarrying(Ant, L))
 	{
-		// The first of us holding it leads (or the owner himself, if he holds it too).
+		// If the owner holds it too, he leads (the old "carry with a player" rule).
 		TArray<AAntCharacter*> Cs;
 		AntHaul::GetCarriers(L, Cs);
-		AAntCharacter* Leader = nullptr;
 		for (AAntCharacter* C : Cs)
 		{
-			if (C && !C->bDead && C->Team == 0 && (C->IsPlayerControlled() || Cast<AAntSquadBot>(C->GetController()))) { Leader = C; break; }
+			if (C && C != Ant && !C->bDead && C->IsPlayerControlled() && C->Team == 0)
+			{
+				bCarryWithPlayer = true;
+				CarryLeader = C;
+				return true;
+			}
 		}
-		if (Leader && Leader != Ant)
-		{
-			bCarryWithPlayer = true;
-			CarryLeader = Leader;
-			return true;
-		}
-		// Leader: the route graph home, keeping to the floor (a column with a load does not go through the vents).
+		// Every squad carrier walks the same way home (the route graph, on the floor), each keeping under its own grip: the
+		// load goes where they all push it. (One leader with the others trailing it tore the grips apart.)
 		if (WayFor.Get() != L || Way.Num() == 0)
 		{
 			Way.Reset();
@@ -269,21 +272,22 @@ bool AAntSquadBot::HaulThink(AAntCharacter* Ant, AKitchenLoot* L, uint8 TaskIdx)
 			Way.Add(Home);
 			StuckFor = 0.f;
 			LastHaulPos = LP;
-			UE_LOG(LogTemp, Display, TEXT("ANTRTS haul «%s»: leader %s, %d waypoints home, carriers %d, ratio %.2f"), *L->LootName, *Ant->GetDisplayName(), Way.Num(), Cs.Num(), AntHaul::Ratio(L));
+			if (Cs.Num() > 0 && Cs[0] == Ant)
+			{
+				UE_LOG(LogTemp, Display, TEXT("ANTRTS haul «%s» (weight %d): %d waypoints home, carriers %d, ratio %.2f"), *L->LootName, L->Weight, Way.Num(), Cs.Num(), AntHaul::Ratio(L));
+			}
 		}
-		while (WayAt < Way.Num() - 1 && FVector::Dist2D(Way[WayAt], Ant->GetActorLocation()) < 170.f) { ++WayAt; }
-		Goal = Way[FMath::Clamp(WayAt, 0, Way.Num() - 1)] + FVector(0.f, 0.f, 30.f);
-		bHasGoal = true;
-		AntHaul::SetDesiredDirection(L, (Goal - LP).GetSafeNormal2D());
-		// Stuck long with a load that can move: the next waypoint (or back to the nearest node).
+		while (WayAt < Way.Num() - 1 && FVector::Dist2D(Way[WayAt], LP) < 200.f) { ++WayAt; }
+		HaulGoal = Way[FMath::Clamp(WayAt, 0, Way.Num() - 1)];
+		bHauling = true;
+		bHasGoal = false;
+		AntHaul::SetDesiredDirection(L, (HaulGoal - LP).GetSafeNormal2D());
 		StuckFor = FVector::Dist(LP, LastHaulPos) < 25.f ? StuckFor + ThinkEvery : 0.f;
 		LastHaulPos = LP;
 		if (StuckFor > 6.f && AntHaul::Ratio(L) >= 0.5f)
 		{
 			StuckFor = 0.f;
-			WayAt = FMath::Min(WayAt + 1, Way.Num() - 1);
-			UnstickTime = 1.f;
-			UnstickDir = FVector::CrossProduct(FVector::UpVector, (Goal - Ant->GetActorLocation()).GetSafeNormal2D()) * (FMath::RandBool() ? 1.f : -1.f);
+			WayAt = FMath::Min(WayAt + 1, Way.Num() - 1);   // a corner it cannot turn: aim for the next point
 		}
 		return true;
 	}
@@ -311,6 +315,31 @@ bool AAntSquadBot::HaulThink(AAntCharacter* Ant, AKitchenLoot* L, uint8 TaskIdx)
 	}
 	Goal = LP;
 	bHasGoal = true;
+	return true;
+}
+
+bool AAntSquadBot::HaulMove(AAntCharacter* Ant)
+{
+	AKitchenLoot* L = Ant->Carrying;
+	FVector Bite;
+	if (!L || !L->GrabPointOf(Ant, Bite))
+	{
+		return false;
+	}
+	// The way the load must go, plus staying under its own grip (so the grips are not torn apart).
+	const FVector Dir = (HaulGoal - L->GetActorLocation()).GetSafeNormal2D();
+	const FVector Want = Dir * 110.f + (Bite - Ant->GetHoldPoint()) * 1.5f;
+	FVector To = FVector::VectorPlaneProject(Want, Ant->GetVisualUp());
+	if (Ant->GetVisualUp().Z < 0.6f && (Want | Ant->GetVisualUp()) < -8.f)
+	{
+		const FVector UpOnWall = FVector::UpVector - Ant->GetVisualUp() * Ant->GetVisualUp().Z;
+		To += UpOnWall.GetSafeNormal() * (float)Want.Size();
+	}
+	if (To.Size() > 8.f)
+	{
+		Ant->AddMovementInput(To.GetSafeNormal(), FMath::Clamp((float)To.Size() / 60.f, 0.3f, 1.f));
+	}
+	Desired = FRotator(0.f, (float)(Bite - Ant->GetActorLocation()).Rotation().Yaw, 0.f);
 	return true;
 }
 
@@ -734,7 +763,7 @@ void UAntRtsInput::TickComponent(float DeltaTime, ELevelTick TickType, FActorCom
 	{
 		float X, Y;
 		if (C->GetMousePosition(X, Y)) { Mouse = FVector2D(X, Y); }
-		if (!C->IsInputKeyDown(EKeys::CapsLock) && Script.Num() == 0 && ScriptStart < 0.f) { LeaveRts(); }
+		if (!C->IsInputKeyDown(EKeys::CapsLock) && !bDevHold) { LeaveRts(); }
 	}
 	// Squad ants that died drop out of the selection.
 	Selection.RemoveAll([](const TWeakObjectPtr<AAntCharacter>& A) { return !A.IsValid() || A->bDead; });
@@ -979,12 +1008,13 @@ bool UAntRtsInput::Dev(const TArray<FString>& A)
 		// rts box x0 y0 x1 y1 (fractions of the screen): drawn as a drag for a moment, then selected.
 		const FVector2D P0(Num(2) * Screen.X, Num(3) * Screen.Y), P1(Num(4) * Screen.X, Num(5) * Screen.Y);
 		bRtsMode = true;
+		bDevHold = true;
 		bDragging = true;
 		DragFrom = P0;
 		Mouse = P1;
 		SelectBox(P0, P1, false);
 	}
-	else if (Op == TEXT("drop")) { bDragging = false; }
+	else if (Op == TEXT("drop")) { bDragging = false; bDevHold = false; bRtsMode = false; }
 	else if (Op == TEXT("near"))
 	{
 		TArray<AAntCharacter*> All = MySquad();

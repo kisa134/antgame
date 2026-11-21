@@ -122,6 +122,7 @@ private:
 	float SlowClock = 0.f;
 	float AmbushAt = 0.f;
 	float LastCutMsg = 0.f;
+	TMap<TWeakObjectPtr<AActor>, FVector> HumanWas;
 
 	UPROPERTY() TArray<UInstancedStaticMeshComponent*> WorkerParts;
 	UPROPERTY() UInstancedStaticMeshComponent* Dots = nullptr;
