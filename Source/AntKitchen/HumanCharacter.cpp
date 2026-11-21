@@ -1,4 +1,6 @@
 ﻿#include "HumanCharacter.h"
+#include "AntWeapon.h"
+#include "AntVersus.h"
 #include "AntFx.h"
 #include "KitchenLoot.h"
 #include "InputCoreTypes.h"
@@ -274,6 +276,7 @@ bool AHumanCharacter::Stun(float Seconds, AAntCharacter* By, const FString& What
 	OnRep_KnockedOut();
 	AntSfx::Everyone(this, AntSfx::HumanPanic, GetActorLocation() + FVector(0.f, 0.f, 600.f), 1.3f);
 	UE_LOG(LogTemp, Display, TEXT("ANTSTUN the Human is stunned for %.1f s by %s"), Seconds, *What);
+	AntWeapons::Drop(this, TEXT("оглушён"));
 	if (AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>(); GM && Fig == HumanFig::Dad)
 	{
 		GM->OnHumanStunned(By, What);
@@ -577,14 +580,20 @@ void AHumanCharacter::TrySwat(const FVector& InPoint, int32 Force)
 	{
 		return;
 	}
+	if (!AntVersus::Spend(this, AntVersus::SwingCost(this)))
+	{
+		return;   // versus: a player Human out of patience (AntVersus.h)
+	}
 	// Out of reach: slap as far as the arm goes.
 	FVector Point = InPoint;
 	const FVector Chest = GetActorLocation() + FVector(0.f, 0.f, 600.f);
 	// The jointed body: a low target gets the bare left hand (he has to crouch for it), anything higher the rolled newspaper.
 	// Both land only where the arm really gets to.
 	const FHumanStyle& St = HumanBody::Style(Fig);
-	const float SwatR = St.SwatRadius;
-	const bool bSlap = bNewBody && Fig == HumanFig::Dad && (Force >= 0 ? Force == 0 : Point.Z - FeetZ() < 260.f);   // (grandma swats the floor with her swatter too)
+	const AntWeapons::FDef* Wd = Fig == HumanFig::Dad ? AntWeapons::Held(this) : nullptr;   // a weapon in the fist (AntWeapon.h): its wind-up, reach, radius
+	const float SwatR = Wd ? Wd->Radius * (1.f + 0.15f * Rage) : St.SwatRadius;
+	const float AntDmg = Wd ? Wd->AntDamage : 150.f;
+	const bool bSlap = !Wd && bNewBody && Fig == HumanFig::Dad && (Force >= 0 ? Force == 0 : Point.Z - FeetZ() < 260.f);   // (grandma swats the floor with her swatter too)
 	float Delay = 0.28f;
 	if (bSlap)
 	{
@@ -599,24 +608,25 @@ void AHumanCharacter::TrySwat(const FVector& InPoint, int32 Force)
 	else if (bNewBody)
 	{
 		const FVector Shoulder = GetActorLocation() + FVector(0.f, 0.f, 960.f * FigScale);
-		if (FVector::Dist(Point, Shoulder) > 2500.f * FigScale)
+		const float Arm = (2500.f + (Wd ? Wd->Reach : 0.f)) * FigScale;
+		if (FVector::Dist(Point, Shoulder) > Arm)
 		{
-			Point = Shoulder + (Point - Shoulder).GetSafeNormal() * (2500.f * FigScale);
+			Point = Shoulder + (Point - Shoulder).GetSafeNormal() * Arm;
 		}
-		Delay = St.SwatHit;
+		Delay = Wd ? FMath::Max(0.4f, Wd->Windup) : St.SwatHit;
 	}
 	else if (FVector::Dist(Point, Chest) > SwatRange)
 	{
 		Point = Chest + (Point - Chest).GetSafeNormal() * SwatRange;
 	}
-	SwatReadyTime = Now + St.SwatEvery * (1.f - 0.15f * Rage);
+	SwatReadyTime = Now + (Wd ? Wd->Every : St.SwatEvery) * (1.f - 0.15f * Rage);
 	MulticastSwat(Point);
 	if (bNewBody)
 	{
 		StartAct(bSlap ? HumanAct::Slap : HumanAct::Swat, 0, Point);
 	}
 	FTimerHandle H;
-	GetWorldTimerManager().SetTimer(H, FTimerDelegate::CreateWeakLambda(this, [this, Point, SwatR]()
+	GetWorldTimerManager().SetTimer(H, FTimerDelegate::CreateWeakLambda(this, [this, Point, SwatR, AntDmg]()
 	{
 		AntSfx::Everyone(this, AntSfx::Swat, Point, FMath::FRandRange(0.9f, 1.05f));
 		if (AAntSwarm* Swarm = AAntSwarm::Get(GetWorld()))
@@ -634,7 +644,7 @@ void AHumanCharacter::TrySwat(const FVector& InPoint, int32 Force)
 					UE_LOG(LogTemp, Display, TEXT("ANTV2 cover: %s is under cover, the swat at %s did nothing"), *Ant->GetDisplayName(), *Point.ToCompactString());
 					continue;
 				}
-				UGameplayStatics::ApplyDamage(Ant, 150.f, GetController(), this, UDamageType::StaticClass());
+				if (AntDmg > 0.f) { UGameplayStatics::ApplyDamage(Ant, AntDmg, GetController(), this, UDamageType::StaticClass()); }
 			}
 		}
 		for (TActorIterator<AKitchenLoot> It(GetWorld()); It; ++It)
@@ -644,6 +654,10 @@ void AHumanCharacter::TrySwat(const FVector& InPoint, int32 Force)
 			{
 				It->Kick(To.GetSafeNormal() * 500.f + FVector(0.f, 0.f, 300.f), It->GetActorLocation());
 			}
+		}
+		if (Fig == HumanFig::Dad)
+		{
+			AntWeapons::OnSwingLanded(this, Point);   // the world part: furniture, fixtures, food (AntWreck.h)
 		}
 	}), Delay, false);
 }
@@ -657,6 +671,10 @@ void AHumanCharacter::GrabOrThrow(const FVector& Point, const FVector& Dir)
 	if (IsBodyBusy() || GetWorldTimerManager().IsTimerActive(GrabTimer) || GetWorldTimerManager().IsTimerActive(ThrowTimer))
 	{
 		return;   // the hand is on its way already
+	}
+	if (!Held && Fig == HumanFig::Dad && AntWeapons::TryPickOrDrop(this, Point))
+	{
+		return;   // aimed at a weapon lying about: it goes into the right fist (AntWeapon.h)
 	}
 	if (Held)
 	{
@@ -746,7 +764,7 @@ bool AHumanCharacter::IsBodyBusy() const
 	switch (Act.Kind)
 	{
 	case HumanAct::Stomp: return T < HumanAct::StompHit;
-	case HumanAct::Swat: return T < HumanBody::Style(Fig).SwatHit;
+	case HumanAct::Swat: return T < AntWeapons::SwingWindup(this, HumanBody::Style(Fig).SwatHit);
 	case HumanAct::Rise: return T < HumanAct::SitTime * HumanBody::Style(Fig).SitSlow;
 	case HumanAct::Sweep: return T < HumanAct::SweepHit + 0.5f;
 	case HumanAct::Slap: return T < HumanAct::SlapHit + 0.3f;
@@ -852,7 +870,7 @@ void AHumanCharacter::TryStomp(int32 Leg)
 		return;
 	}
 	const float Now = GetWorld()->GetTimeSeconds();
-	if (Now < StompReadyTime)
+	if (Now < StompReadyTime || !AntVersus::Spend(this, AntVersus::StompCost))
 	{
 		return;
 	}
@@ -1038,6 +1056,10 @@ float AHumanCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damage
 	}
 	Health = FMath::Max(0.f, Health - Actual);
 	LastHurtTime = GetWorld()->GetTimeSeconds();
+	if (DamageCauser && FVector::Dist(DamageCauser->GetActorLocation(), GetPalmLocation(1)) < 450.f && FMath::FRand() < 0.35f)
+	{
+		AntWeapons::Drop(this, TEXT("укусили за руку"));
+	}
 	if (Health <= 0.f)
 	{
 		KnockOut(EventInstigator);
@@ -1484,6 +1506,7 @@ bool AHumanCharacter::TrySlip(const FVector& At, float Chance, bool bForce, AAct
 		Held = nullptr;
 		if (IsValid(L) && L->bHeld) { L->Throw(Fwd * 900.f + FVector(0.f, 0.f, 1500.f)); }
 	}
+	AntWeapons::Drop(this, TEXT("поскользнулся"));
 	SlippedOn = AKitchenSlick::At(W, At, 250.f);
 	// From now on he knows the puddles: he walks round them.
 	for (TActorIterator<AKitchenSlick> It(W); It; ++It) { It->bKnown = true; }

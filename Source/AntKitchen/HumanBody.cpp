@@ -1,4 +1,5 @@
 ﻿#include "HumanBody.h"
+#include "AntWeapon.h"
 #include "HumanCharacter.h"
 #include "AntCharacter.h"
 #include "AntFx.h"
@@ -494,7 +495,7 @@ void AHumanCharacter::PoseBody(float Dt)
 	switch (A)
 	{
 	case HumanAct::Stomp: ActDur = 1.15f; break;
-	case HumanAct::Swat: ActDur = St.SwatHit + 0.85f; break;
+	case HumanAct::Swat: ActDur = AntWeapons::SwingWindup(this, St.SwatHit) + 0.85f; break;
 	case HumanAct::Sit: ActDur = 1.e9f; break;
 	case HumanAct::Rise: ActDur = HumanAct::SitTime * St.SitSlow + 0.05f; break;
 	case HumanAct::Sweep: ActDur = 2.3f; break;
@@ -931,7 +932,7 @@ void AHumanCharacter::PoseBody(float Dt)
 		const bool bSlap = A == HumanAct::Slap;
 		const int32 s = bSlap ? 0 : 1;
 		const float Sgn = s == 0 ? -1.f : 1.f;
-		const float Ti = bSlap ? HumanAct::SlapHit : St.SwatHit;
+		const float Ti = bSlap ? HumanAct::SlapHit : AntWeapons::SwingWindup(this, St.SwatHit);   // a heavy weapon: a longer wind-up (AntWeapon.h)
 		const float Tw = TwistTo(TargetB, s);
 		const FVector WristHit = TargetB - FlatDir * 150.f + FVector(0.f, 0.f, 50.f);
 		const float K = bSlap ? NeedReach(s, WristHit, ArmReach * 0.97f, Tw) : NeedReach(s, TargetB, ArmReach * 0.9f + PaperReach, Tw);
@@ -1819,7 +1820,7 @@ void AHumanCharacter::BodyEffects(float DeltaSeconds)
 	const bool bCan = Rig.SprayW >= 0.35f;
 	// (level v3: the newspaper is put down while his hands are busy with the routine: the phone, the plate, the ladle, the bag)
 	const bool bChore = (Act.Kind == HumanAct::Sit || (Act.Kind == HumanAct::Busy && Act.Arg != HumanBusy::Look)) && ActTime() >= 0.f;
-	const bool bPaper = !bCan && !bChore;
+	const bool bPaper = !bCan && !bChore && !AntWeapons::Held(this);   // a weapon takes the newspaper's place (AntWeapon.h)
 	if (PaperArt && PaperArt->IsVisible() != bPaper)
 	{
 		PaperArt->SetVisibility(bPaper);

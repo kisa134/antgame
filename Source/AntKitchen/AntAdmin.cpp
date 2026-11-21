@@ -555,6 +555,20 @@ void AAntKitchenGameMode::AdminCommand(AAntPlayerController* By, const FString& 
 		DevCommand(TEXT("mess clean 0 0 0 200000"));
 		Done = TEXT("Вся грязь убрана");
 	}
+	else if (Op == TEXT("rampage") && Human)
+	{
+		// The wreck branch's rampage: rage 3 and a heavy weapon; with no ant near him he takes it out on the furniture (AntWeapon.cpp).
+		Human->bDevPuppet = false;
+		Human->SetRage(3);
+		if (GS) { GS->HumanRage = 3; }
+		DevCommand(TEXT("weapon give bat"));
+		Done = TEXT("Погром: ярость 3, бита в руке — громит мебель, если муравьёв рядом нет");
+	}
+	else if (Op == TEXT("weapon") && A.Num() >= 3 && A[1] == TEXT("give"))
+	{
+		DevCommand(Cmd);
+		Done = FString::Printf(TEXT("Человеку дали: %s"), *A[2]);
+	}
 	else if (Op == TEXT("noiseaim") && A.Num() >= 4)
 	{
 		MakeNoise(Vec(1), 1.f, AntNoise::Crash, nullptr, Me);
@@ -713,6 +727,11 @@ const TArray<FString>& AntAdmin::Help()
 			TEXT("stainaim вид x y z [размер] — пятно (jam honey cola oil cream crumbs mud chocolate juice sugar water)"),
 			TEXT("mess info|clean x y z r|dust 0|1|break вид x y z — грязь"),
 			TEXT("cleanall — убрать всю грязь"),
+			TEXT("wreck at x y z радиус импульс урон / wreck info|hit|tip|drop — разрушаемая мебель"),
+			TEXT("weapon give none|slipper|ladle|spatula|book|pin|pan|broom|bat|sausage — оружие Человека"),
+			TEXT("weapon swap sausage — подменить оружие колбасой"),
+			TEXT("rampage — погром: ярость 3 и бита"),
+			TEXT("versus start client|host|ai — режим «Против»"),
 			TEXT("noiseaim x y z — грохот: Человек идёт проверить"),
 			TEXT("mass N — масса снежного кома +N"),
 			TEXT("picknow — сразу выбор карточки"),
@@ -1119,6 +1138,12 @@ void SAntAdminPanel::Rebuild()
 		Section(TEXT("Ярость Человека"));
 		for (int32 i = 0; i <= 3; ++i) { Btn(FString::Printf(TEXT("Ярость %d"), i), R(FString::Printf(TEXT("rage %d"), i)), i == 3 ? Danger : FLinearColor(0.85f, 0.85f, 0.85f)); }
 		Btn(TEXT("Вселиться в Человека / выйти"), R(TEXT("hplay")), Blue);
+		Btn(TEXT("Погром"), R(TEXT("rampage")), Danger);
+		Section(TEXT("Оружие Человека"));
+		static const TCHAR* Weapons[][2] = { { TEXT("none"), TEXT("Газета") }, { TEXT("slipper"), TEXT("Тапок") }, { TEXT("ladle"), TEXT("Половник") }, { TEXT("spatula"), TEXT("Лопатка") },
+			{ TEXT("book"), TEXT("Книга") }, { TEXT("pin"), TEXT("Скалка") }, { TEXT("pan"), TEXT("Сковорода") }, { TEXT("broom"), TEXT("Веник") }, { TEXT("bat"), TEXT("Бита") }, { TEXT("sausage"), TEXT("Колбаса") } };
+		for (const auto& Wp : Weapons) { Btn(Wp[1], R(FString(TEXT("weapon give ")) + Wp[0])); }
+		Btn(TEXT("Выбить оружие (подменить колбасой)"), R(TEXT("weapon swap sausage")), On);
 		Btn(TEXT("Грохот у прицела"), RA(TEXT("noiseaim")));
 		for (const TCHAR* Who : { TEXT("human"), TEXT("cat"), TEXT("dog"), TEXT("gran"), TEXT("kid") })
 		{
@@ -1170,8 +1195,12 @@ void SAntAdminPanel::Rebuild()
 		];
 		Btn(TEXT("Применить сид"), [this]() { if (SeedBox.IsValid() && !SeedBox->GetText().IsEmpty()) { Run(TEXT("seed ") + SeedBox->GetText().ToString().TrimStartAndEnd()); } });
 		Section(TEXT("У прицела"));
-		Btn(TEXT("Сломать предмет"), RA(TEXT("breakaim")), Danger);
+		Btn(TEXT("Сломать предмет (крепёж v3)"), RA(TEXT("breakaim")), Danger);
 		Btn(TEXT("Открутить все крепежи"), RA(TEXT("unfastenaim")), Danger);
+		Btn(TEXT("Сломать мебель (удар, стадия+)"), [this]() { Run(TEXT("wreck at ") + Aim() + TEXT(" 220 40 400")); }, Danger);
+		Btn(TEXT("Разбудить физику"), [this]() { Run(TEXT("wreck at ") + Aim() + TEXT(" 320 6 0")); });
+		Btn(TEXT("Устроить погром (Человек)"), R(TEXT("rampage")), Danger);
+		Btn(TEXT("Разруха: инфо (в лог)"), R(TEXT("wreck info")));
 		Section(TEXT("Пятно у прицела"));
 		static const TCHAR* Kinds[][2] = { { TEXT("jam"), TEXT("Варенье") }, { TEXT("honey"), TEXT("Мёд") }, { TEXT("cola"), TEXT("Кола") }, { TEXT("oil"), TEXT("Масло") },
 			{ TEXT("cream"), TEXT("Крем") }, { TEXT("chocolate"), TEXT("Шоколад") }, { TEXT("juice"), TEXT("Сок") }, { TEXT("crumbs"), TEXT("Крошки") },
@@ -1207,6 +1236,10 @@ void SAntAdminPanel::Rebuild()
 		Btn(TEXT("Эвакуация (уйти)"), R(TEXT("evac")), Blue);
 		Btn(TEXT("Поражение"), R(TEXT("lose")), Danger);
 		Btn(TEXT("Начать рейд"), R(TEXT("raid start")));
+		Section(TEXT("Режим «Против» (один играет Человеком)"));
+		Btn(TEXT("Против: Человек — клиент"), R(TEXT("versus start client")), Blue);
+		Btn(TEXT("Против: Человек — я (хост)"), R(TEXT("versus start host")), Blue);
+		Btn(TEXT("Против: Человек — ИИ"), R(TEXT("versus start ai")), Blue);
 		Section(TEXT("Разведка"));
 		BtnL([this]() { const AAntAdminState* St = PC.IsValid() ? AAntAdminState::Get(PC->GetWorld()) : nullptr; return (St && St->bReveal) ? FString(TEXT("Показать всех: ВКЛ")) : FString(TEXT("Показать всех: выкл")); }, R(TEXT("reveal")), On);
 		Btn(TEXT("Рейд: инфо (в лог)"), R(TEXT("raid info")));

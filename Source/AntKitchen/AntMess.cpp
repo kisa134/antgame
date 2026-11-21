@@ -23,6 +23,17 @@
 #include "Camera/CameraComponent.h"
 #include "GameFramework/HUD.h"
 #include "DynamicRHI.h"
+#include "AntWreck.h"
+
+namespace
+{
+	/** v12: the wreck's broken furniture leaves its mess (AntMess::OnWreck). Bound once, at module load. */
+	struct FAntWreckMessLink
+	{
+		FAntWreckMessLink() { AntWreck::OnMess().AddStatic(&AntMess::OnWreck); }
+	};
+	FAntWreckMessLink GAntWreckMessLink;
+}
 
 // =====================================================================================================================
 // The look of every kind of mess. Thick / thin colour, roughness wet / dry / extra at the thin edge, relief, edge width,
@@ -1422,6 +1433,44 @@ void OnFixtureSpill(AActor* Fixture, const FString& Id, const FVector& At, bool 
 	else if (Id == TEXT("cereal"))
 	{
 		M->AddStain(MessKind::Crumbs, MessShape::Crumbs, P + FVector(-250.f, 0.f, 0.f), N, 900.f, Seed, -1.f, 1.f, 0.f, FLinearColor(0.9f, 0.68f, 0.3f).ToFColor(true));
+	}
+}
+
+void OnWreck(UWorld* World, const FVector& At, float Size, uint8 Mat)
+{
+	// v12: furniture and dishes broken by the wreck (AntWreck::OnMess): shards, splinters, crumbs or juice by material.
+	AAntMess* M = World ? AAntMess::Get(World) : nullptr;
+	if (!M || !M->HasAuthority())
+	{
+		return;
+	}
+	const int32 Seed = (int32)(At.X * 11.f + At.Y * 5.f);
+	FVector P = At, N = FVector::UpVector;
+	FloorUnder(World, At + FVector(0.f, 0.f, 60.f), 600.f, nullptr, P, N);
+	const float S = FMath::Clamp(Size * 1.2f, 220.f, 1300.f);
+	switch (Mat)
+	{
+	case AntWreck::Glass:
+	case AntWreck::China:
+		M->AddStain(MessKind::Scratch, MessShape::Scratch, P, N, S, Seed);
+		M->MulticastBurst(MessKind::Sugar, P, N, (uint16)FMath::Clamp(S * 0.4f, 60.f, 400.f), FColor::White, (uint8)Seed);   // glints of shards
+		break;
+	case AntWreck::Wood:
+	case AntWreck::Board:
+		M->AddStain(MessKind::Crumbs, MessShape::Crumbs, P, N, S * 0.8f, Seed, -1.f, 1.f, 0.f, FLinearColor(0.72f, 0.55f, 0.36f).ToFColor(true));   // splinters, sawdust
+		M->MulticastBurst(MessKind::Crumbs, P, N, (uint16)FMath::Clamp(S * 0.35f, 60.f, 400.f), FLinearColor(0.6f, 0.45f, 0.28f).ToFColor(true), (uint8)Seed);
+		break;
+	case AntWreck::Food:
+		M->AddStain(MessKind::Juice, MessShape::Splat, P, N, S, Seed);
+		M->MulticastBurst(MessKind::Jam, P, N, (uint16)FMath::Clamp(S * 0.35f, 60.f, 400.f), FColor::White, (uint8)Seed);
+		break;
+	case AntWreck::Metal:
+	case AntWreck::Appliance:
+	case AntWreck::Plastic:
+		M->AddStain(MessKind::Scratch, MessShape::Scratch, P, N, S * 0.7f, Seed);
+		break;
+	default:
+		break;   // cloth, paper: no mess worth drawing
 	}
 }
 

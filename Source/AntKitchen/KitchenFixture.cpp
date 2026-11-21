@@ -1,5 +1,7 @@
 ﻿#include "KitchenFixture.h"
 #include "AntMess.h"
+#include "AntWreck.h"
+#include "AntWeapon.h"
 #include "KitchenArt.h"
 #include "KitchenLoot.h"
 #include "KitchenMover.h"
@@ -1314,6 +1316,8 @@ void AKitchenFixture::KnockRiders(const FVector& Dir, AAntCharacter* By)
 
 void AKitchenFixture::ResetAll(UWorld* World)
 {
+	AntWreck::ResetAll(World);   // the wrecked furniture comes back with the fixtures (AntWreck.h)
+	AntWeapons::SpawnAll(World);   // and the Human's weapons lie in their places again (AntWeapon.h)
 	if (!World || !LevelV3::Enabled() || !LevelV3::FixturesOn())
 	{
 		return;

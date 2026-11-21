@@ -247,6 +247,8 @@ namespace AntMess
 	ANTKITCHEN_API void OnFoodBreak(AKitchenLoot* Food, const FVector& At, int32 Seed);
 	/** Server: a v3 fixture broke or spilled (KitchenFixture::Spill). */
 	ANTKITCHEN_API void OnFixtureSpill(AActor* Fixture, const FString& Id, const FVector& At, bool bBroken, int32 Mat);
+	/** Server: a wrecked piece of furniture broke (AntWreck::OnMess, bound in AntMess.cpp): shards / splinters / crumbs / juice by AntWreck::EMat. */
+	ANTKITCHEN_API void OnWreck(UWorld* World, const FVector& At, float Size, uint8 Mat);
 	/** Every machine: food tick (KitchenLoot::Tick). */
 	ANTKITCHEN_API void FoodTick(AKitchenLoot* Loot, float Dt, USceneComponent* Visual);
 	/** Every machine: a foot of the Human / the family came down. */
