@@ -2,17 +2,22 @@
 #include "AntCharacter.h"
 #include "KitchenLoot.h"
 
-// MERGE NOTES (code/ANT-swarm + code/ANT-carry)
-// ---------------------------------------------
-// Every squad order that carries something goes through these functions (AntRts.cpp, AntTrail.cpp). After the merge:
-//  * AddCarrier / RemoveCarrier / GetCarriers -> the new AKitchenLoot API of the same names (grip points, shared load);
-//    today: AAntCharacter::GrabLoot / LetGo and AKitchenLoot::Carriers.
-//  * MaxCarriers -> the new limit (more carriers above the weight give more speed); today 8 (AKitchenLoot::TryGrab).
-//  * SetDesiredDirection -> the new desired direction input; LoadSteersItself() -> true. Then the squad's haul leader stops
-//    walking the route itself (AntRts.cpp, HaulTick: "if (!AntHaul::LoadSteersItself())") and only feeds the direction.
-//  * OnDelivered -> bind the new delivered event and call NotifyDelivered from it (or forward it); remove the call in
-//    AAntKitchenGameMode::OnFoodDelivered (AntSnowball::OnDelivered calls NotifyDelivered).
-//  * Ratio -> the new strength / weight of the load.
+// MERGE NOTES (code/ANT-swarm + code/ANT-carry, API as of code/ANT-carry 8119858 "AntCarry.h")
+// ----------------------------------------------------------------------------------------------
+// Every squad order that carries something goes through these functions (AntRts.cpp). After the merge, only this file changes:
+//  * AddCarrier(L, Ant)      -> AntCarry::AddCarrier(L, Ant)   (ants still enter through GrabLoot inside it; keep the MaxCarriers check)
+//  * RemoveCarrier(L, Ant)   -> AntCarry::RemoveCarrier(L, Ant)
+//  * GetCarriers(L, Out)     -> AntCarry::GetCarriers(L, Infos), keep the entries with Worker == -1 and Cast<AAntCharacter>(Who)
+//  * NumCarriers(L)          -> the size of that list (workers of an army count too: Infos.Num())
+//  * MaxCarriers(L)          -> AntCarry::MaxCarriers(L)       (today 8, AKitchenLoot::TryGrab)
+//  * SetDesiredDirection(L, Dir) -> for every carrier of the squad on it: AntCarry::SetDesired(L, Ant, -1, Dir * <pace>);
+//    LoadSteersItself() -> true: then AAntSquadBot::HaulThink lets the leader feed the route direction and lets the carry code
+//    walk the load (the other squad carriers already only keep their grip through CarryFollow / the new tether).
+//  * OnDelivered             -> bind AntCarry::Events() and forward AntCarryEvent::Delivered to NotifyDelivered; then delete the
+//    AntHaul::NotifyDelivered call in AntSnowball::OnDelivered (it would fire twice).
+//  * Ratio(L)                -> unchanged (AKitchenLoot::CarryRatio still exists on the carry branch).
+// Conflicts to expect when merging the branches (both touched them): AntRaid.cpp, AntRun.cpp, AntSquad.cpp, AntHUD.cpp,
+// AntArmy.cpp, AntCharacter.cpp, docs/FEATURES.md (their section 23 is "carrying", ours is 24). All our edits there are one-liners.
 
 namespace
 {
