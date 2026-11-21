@@ -45,6 +45,8 @@ public:
 	/** Which part: index into KitchenArt::Movers(). */
 	UPROPERTY(Replicated) int32 PartIndex = -1;
 	UPROPERTY(Replicated) bool bOpen = false;
+	/** Level v3: shut, but standing this far open (0..1 of its travel): a cabinet door the seed left ajar, the room door at 100 degrees. */
+	UPROPERTY(Replicated) float Ajar = 0.f;
 
 private:
 	void Build();

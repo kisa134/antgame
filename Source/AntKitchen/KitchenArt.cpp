@@ -17,6 +17,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 
 #include "KitchenArtData.inl"
+#include "LevelV3.h"
 
 // ---------------------------------------------------------------------------------------------
 // The look table: material slot name -> one of the game's own surfaces.
@@ -148,9 +149,45 @@ namespace
 		{ TEXT("LampShade"),    Driven, nullptr, 0.f, 0.98f, 0.94f, 0.82f, 0.6f,  0.f, nullptr },   // lit by the light switch (its own material per lamp)
 	};
 
+	// Level v3 (-AntLevelV3): the new slots of its meshes and the calmer palette (PALETTE_V3 in Tools/level/level_v3_layout.py):
+	// the kitchen rug gets its own terracotta instead of sharing Red with every red thing, the living-room carpet a dusty rose,
+	// the sofa a darker teal. Looked up before the table above, only with v3 on.
+	const FLook GLooksV3[] =
+	{
+		{ TEXT("SM_K_Rug/Red"),    Textured, TEXT("T_Fabric_Grey"),   300.f,  1.32f, 0.79f, 0.57f,     0.95f, 0.f, Cloth },
+		{ TEXT("SM_K_Rug/Paper"),  Textured, TEXT("T_Fabric_Grey"),   300.f,  1.94f, 1.8f, 1.54f,      0.95f, 0.f, Cloth },
+		{ TEXT("SM_L_Carpet/Carpet"), Textured, TEXT("T_Fabric_Grey"), 300.f, 1.23f, 0.73f, 0.66f,     0.95f, 0.f, Cloth },
+		{ TEXT("Carpet"),          Textured, TEXT("T_Fabric_Grey"),   300.f,  1.23f, 0.73f, 0.66f,     0.95f, 0.f, Cloth },
+		{ TEXT("CarpetTrim"),      Textured, TEXT("T_Fabric_Grey"),   300.f,  1.76f, 1.58f, 1.28f,     0.95f, 0.f, Cloth },
+		{ TEXT("SofaFabric"),      Textured, TEXT("T_Fabric_Grey"),   300.f,  0.2f, 0.62f, 0.66f,      0.95f, 0.f, Cloth },
+		{ TEXT("ClothCheck"),      Textured, TEXT("T_Fabric_Grey"),   200.f,  1.76f, 0.48f, 0.44f,     0.9f,  0.f, Cloth },
+		{ TEXT("Curtain"),         Textured, TEXT("T_Fabric_Grey"),   300.f,  1.89f, 1.72f, 1.32f,     0.9f,  0.f, Cloth },
+		{ TEXT("Cola"),            Flat, nullptr, 0.f, 0.16f, 0.05f, 0.02f,   0.08f, 0.f, nullptr },
+		{ TEXT("PetClear"),        Flat, nullptr, 0.f, 0.82f, 0.9f, 0.88f,    0.05f, 0.f, nullptr },
+		{ TEXT("GiftWrap"),        Flat, nullptr, 0.f, 0.2f, 0.32f, 0.7f,     0.5f,  0.f, Cloth },
+		{ TEXT("Photo"),           Flat, nullptr, 0.f, 0.55f, 0.62f, 0.7f,    0.3f,  0.f, nullptr },
+		{ TEXT("Brine"),           Flat, nullptr, 0.f, 0.7f, 0.78f, 0.45f,    0.1f,  0.f, nullptr },
+		{ TEXT("Latex"),           Flat, nullptr, 0.f, 0.85f, 0.12f, 0.15f,   0.25f, 0.f, nullptr },
+		{ TEXT("Plaster"),         Flat, nullptr, 0.f, 0.93f, 0.92f, 0.88f,   0.85f, 0.f, nullptr },
+		{ TEXT("Potato"),          Flat, nullptr, 0.f, 0.7f, 0.55f, 0.32f,    0.9f,  0.f, nullptr },
+		// the sheets on the line in the yard (tinted instances of the curtain mesh: KitchenArt::ApplyLook's Tint)
+		{ TEXT("Tint/Enamel"),     Textured, TEXT("T_Fabric_Grey"),   300.f,  2.05f, 2.f, 1.9f,       0.9f,  0.f, Cloth },
+		{ TEXT("Tint/Teal"),       Textured, TEXT("T_Fabric_Grey"),   300.f,  0.3f, 1.1f, 1.15f,      0.9f,  0.f, Cloth },
+	};
+
 	const FLook* FindLook(const TCHAR* Name, int32 Index, const FString& Slot)
 	{
 		const FString Keys[3] = { FString::Printf(TEXT("%s#%d/%s"), Name, Index, *Slot), FString::Printf(TEXT("%s/%s"), Name, *Slot), Slot };
+		if (LevelV3::Enabled())
+		{
+			for (const FString& K : Keys)
+			{
+				for (const FLook& L : GLooksV3)
+				{
+					if (K.Equals(L.Key, ESearchCase::IgnoreCase)) { return &L; }
+				}
+			}
+		}
 		for (const FString& K : Keys)
 		{
 			for (const FLook& L : GLooks)
@@ -207,8 +244,9 @@ namespace
 namespace KitchenArt
 {
 
-TConstArrayView<FKitchenArtInst> Instances() { return TConstArrayView<FKitchenArtInst>(GKitchenArt, UE_ARRAY_COUNT(GKitchenArt)); }
-TConstArrayView<FKitchenArtMover> Movers() { return TConstArrayView<FKitchenArtMover>(GKitchenMovers, UE_ARRAY_COUNT(GKitchenMovers)); }
+// Level v3 (-AntLevelV3) swaps in its own base table (LevelV3Art.inl): the same format, the movers keep v2's order (+ the toy box lid).
+TConstArrayView<FKitchenArtInst> Instances() { return LevelV3::Enabled() ? LevelV3::BaseArt() : TConstArrayView<FKitchenArtInst>(GKitchenArt, UE_ARRAY_COUNT(GKitchenArt)); }
+TConstArrayView<FKitchenArtMover> Movers() { return LevelV3::Enabled() ? LevelV3::BaseMovers() : TConstArrayView<FKitchenArtMover>(GKitchenMovers, UE_ARRAY_COUNT(GKitchenMovers)); }
 
 UStaticMesh* Mesh(const TCHAR* Name)
 {
@@ -218,7 +256,7 @@ UStaticMesh* Mesh(const TCHAR* Name)
 	{
 		return *Found;
 	}
-	const TCHAR* Dir = N.StartsWith(TEXT("SM_K_")) ? TEXT("Kitchen") : TEXT("Living");
+	const TCHAR* Dir = N.StartsWith(TEXT("SM_V3")) ? TEXT("LevelV3") : N.StartsWith(TEXT("SM_K_")) ? TEXT("Kitchen") : TEXT("Living");
 	UStaticMesh* M = LoadObject<UStaticMesh>(nullptr, *FString::Printf(TEXT("/Game/%s/%s/%s.%s"), Dir, *N, *N, *N), nullptr, LOAD_NoWarn | LOAD_Quiet);
 	if (M)
 	{
@@ -244,7 +282,7 @@ bool Enabled()
 
 const FKitchenArtInst* Find(const TCHAR* Name, int32 Index)
 {
-	for (const FKitchenArtInst& I : GKitchenArt)
+	for (const FKitchenArtInst& I : Instances())
 	{
 		if (I.Index == Index && FCString::Strcmp(I.Name, Name) == 0)
 		{
@@ -259,6 +297,18 @@ FTransform WorldTransform(const FKitchenArtInst& I)
 	FQuat Q = FRotationMatrix::MakeFromXY(FVector(I.AX), FVector(I.AY)).ToQuat();   // orthonormal whatever the rounding in the table
 	Q.Normalize();
 	return FTransform(Q, FVector(I.Loc), FVector(I.Scale) * ImportScale);
+}
+
+void ApplyTint(UStaticMeshComponent* C, const TCHAR* Tint)
+{
+	if (!C || !Tint || !*Tint)
+	{
+		return;
+	}
+	if (const FLook* L = FindLook(TEXT("Tint"), 0, FString(Tint)))
+	{
+		if (UMaterialInstanceDynamic* Mat = SharedMaterial(*L)) { C->SetMaterial(0, Mat); }
+	}
 }
 
 void ApplyLook(UStaticMeshComponent* C, const TCHAR* Name, int32 Index)

@@ -3,6 +3,7 @@
 #include "AntNest.h"
 #include "AntRun.h"
 #include "AntGameState.h"
+#include "LevelV3.h"
 #include "AntPlayerState.h"
 #include "AntPlayerController.h"
 #include "Engine/Canvas.h"
@@ -334,6 +335,16 @@ void AAntHUD::DrawNest(AAntRaid* Raid, AAntGameState* GS)
 		}
 		const AntTier::FDef& T = Raid->TierDef();
 		Txt(FString::Printf(TEXT("%s. «%s»"), RomanN(Raid->Tier), T.Name), PX(1328.f), PY(162.f), NText, Small, 1.3f * Fs);
+		if (LevelV3::Enabled() && GS && GS->LevelSeed() >= 0)
+		{
+			// Level v3: the seed of the next raid. The host can step through the validated seeds or roll a new one ("play seed N").
+			const int32 Seed = GS->LevelSeed();
+			const FString Tip = FString::Printf(TEXT("%s. Квартира раскладывается по сиду: те же предметы, двери и торт у всех игроков"), *LevelV3::ShortText());
+			Txt(FString::Printf(TEXT("Сид %d"), Seed), PX(1640.f), PY(164.f), NGold, Small, 1.2f * Fs);
+			if (NestBtn(TEXT("<"), PX(1740.f), PY(158.f), 40.f * U, 34.f * U, bHost && Seed > 0, Tip, false, 1.2f)) { Send(AntRaidCmd::Seed, Seed - 1, 0); }
+			if (NestBtn(TEXT(">"), PX(1784.f), PY(158.f), 40.f * U, 34.f * U, bHost, Tip, false, 1.2f)) { Send(AntRaidCmd::Seed, Seed + 1, 0); }
+			if (NestBtn(TEXT("?"), PX(1828.f), PY(158.f), 40.f * U, 34.f * U, bHost, FString(TEXT("Новый случайный сид. ")) + Tip, false, 1.2f)) { Send(AntRaidCmd::Seed, -1, 0); }
+		}
 		const float Used = WrapTxt(T.Text, PX(1328.f), PY(194.f), 546.f * U, NDim, Small, 1.05f * Fs, 2);
 		const int32 Reds = T.Scouts + T.Haulers + T.Escorts + T.Ambushers;
 		float Y = 194.f + Used / U + 6.f;
@@ -344,6 +355,11 @@ void AAntHUD::DrawNest(AAntRaid* Raid, AAntGameState* GS)
 		{
 			Y += 25.f;
 			Txt(FString::Printf(TEXT("До угрозы %s: торт домой на %s, ещё %d"), RomanN(N.MaxTier + 1), RomanN(N.MaxTier), FMath::Max(1, AntTier::CakesToUnlock(N.MaxTier) - N.CakesAtMax)), PX(1328.f), PY(Y), NDim, Small, 1.0f * Fs);
+		}
+		if (LevelV3::Enabled() && LevelV3::Current())
+		{
+			Y += 25.f;
+			Txt(LevelV3::ShortText(), PX(1328.f), PY(Y), NGold, Small, 1.0f * Fs);
 		}
 	}
 

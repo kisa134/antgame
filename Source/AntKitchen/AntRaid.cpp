@@ -13,6 +13,7 @@
 #include "KitchenBuilder.h"
 #include "KitchenArt.h"
 #include "LevelV2.h"
+#include "LevelV3.h"
 #include "NpcBody.h"
 #include "AntClan.h"
 #include "AntSquad.h"
@@ -20,6 +21,9 @@
 #include "AntRoutes.h"
 #include "AntHUD.h"
 #include "Critters.h"
+#include "FolkCharacters.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "AIController.h"
 #include "Net/UnrealNetwork.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
@@ -273,6 +277,7 @@ void AAntRaid::EnterNest(bool bFirst)
 	}
 	if (GM) { GM->SetHumanAwake(false); }
 	PickContracts();
+	PickLevelSeed(-1);
 	for (TActorIterator<AAntPlayerState> It(GetWorld()); It; ++It)
 	{
 		It->bNestReady = false;
@@ -306,6 +311,72 @@ void AAntRaid::EnterNest(bool bFirst)
 		Nest.Food, Nest.Jelly, Nest.Larvae, Nest.Workers, Nest.Mood);
 }
 
+void AAntRaid::PickLevelSeed(int32 Want)
+{
+	AAntGameState* S = GS();
+	if (!LevelV3::Enabled() || !S)
+	{
+		return;
+	}
+	int32 Dev = -1;
+	if (Want < 0 && FParse::Value(FCommandLine::Get(), TEXT("AntSeed="), Dev) && Dev >= 0)
+	{
+		Want = Dev;   // -AntSeed=N: every raid of this session on seed N (of its tier)
+	}
+	const int32 T = FMath::Clamp((int32)Tier, 1, AntTier::Max);
+	if (Want < 0)
+	{
+		FRandomStream R(FPlatformTime::Cycles() ^ (uint32)(RaidNo * 7919));
+		const FLevelV3Seed* P = LevelV3::PickSeed(T, R);
+		Want = P ? P->Seed : 0;
+	}
+	S->SetLevelSeed(Want, T);
+	if (GM) { GM->ApplyV3Doors(); }
+	ApplyWhoIsHome();
+}
+
+void AAntRaid::ApplyWhoIsHome()
+{
+	if (!LevelV3::Enabled())
+	{
+		return;
+	}
+	auto SetAway = [this](AActor* A, bool bAway)
+	{
+		if (!A) { return; }
+		const bool bWasAway = AwaySpots.Contains(A);
+		if (bAway == bWasAway) { return; }
+		ACharacter* C = Cast<ACharacter>(A);
+		if (bAway)
+		{
+			AwaySpots.Add(A, A->GetActorTransform());
+			A->SetActorHiddenInGame(true);
+			A->SetActorEnableCollision(false);
+			A->SetActorTickEnabled(false);
+			if (C && C->GetCharacterMovement()) { C->GetCharacterMovement()->StopMovementImmediately(); C->GetCharacterMovement()->SetComponentTickEnabled(false); }
+			if (C && C->GetController()) { C->GetController()->SetActorTickEnabled(false); }
+			A->SetActorLocation(FVector(0.f, 30000.f + 2000.f * AwaySpots.Num(), -20000.f), false, nullptr, ETeleportType::TeleportPhysics);   // out of the flat: no ear, no paw reaches the game
+		}
+		else
+		{
+			const FTransform T = AwaySpots.FindAndRemoveChecked(A);
+			A->SetActorTransform(T, false, nullptr, ETeleportType::TeleportPhysics);
+			A->SetActorHiddenInGame(false);
+			A->SetActorEnableCollision(true);
+			A->SetActorTickEnabled(true);
+			if (C && C->GetCharacterMovement()) { C->GetCharacterMovement()->SetComponentTickEnabled(true); }
+			if (C && C->GetController()) { C->GetController()->SetActorTickEnabled(true); }
+		}
+	};
+	FString Out;
+	for (TActorIterator<AGrandmaCharacter> It(GetWorld()); It; ++It) { SetAway(*It, !LevelV3::IsHome(LevelV3::Grandma)); }
+	for (TActorIterator<AKidCharacter> It(GetWorld()); It; ++It) { SetAway(*It, !LevelV3::IsHome(LevelV3::Kid)); }
+	for (TActorIterator<AHouseholdNpc> It(GetWorld()); It; ++It) { SetAway(*It, !LevelV3::IsHome(It->Kind == 0 ? LevelV3::Kid : LevelV3::Grandma)); }
+	for (TActorIterator<ACritter> It(GetWorld()); It; ++It) { if (It->Kind <= 1) { SetAway(*It, !LevelV3::IsHome(It->Kind == 0 ? LevelV3::Dog : LevelV3::Cat)); } }
+	for (const TPair<TWeakObjectPtr<AActor>, FTransform>& KV : AwaySpots) { if (KV.Key.IsValid()) { Out += KV.Key->GetClass()->GetName() + TEXT(" "); } }
+	UE_LOG(LogTemp, Display, TEXT("ANTSEED who is home: away %s"), Out.IsEmpty() ? TEXT("nobody") : *Out);
+}
+
 void AAntRaid::StartRaid()
 {
 	if (InRaid() || !GM)
@@ -328,6 +399,10 @@ void AAntRaid::StartRaid()
 	Tier = (uint8)FMath::Clamp(Nest.Tier, 1, Nest.MaxTier);
 	RaidNo = Nest.Raids + 1;
 	StartEnds = 0.f;
+	if (LevelV3::Enabled() && GS() && GS()->LevelSeedKey % 8 != Tier)
+	{
+		GS()->SetLevelSeed(GS()->LevelSeed(), Tier);   // the tier changed since the seed was drawn: the same number, the tier's own row
+	}
 	// What the team takes along is paid for at the door, out of the stores (and is at risk from now on).
 	int32 Paid = 0;
 	for (uint8 i = 0; i < AntMod::Count; ++i)
@@ -427,6 +502,8 @@ void AAntRaid::OnWorldReset()
 			if (D < Best) { Best = D; CakeHint = M.Where; }
 		}
 	}
+	ApplyWhoIsHome();
+	if (LevelV3::Enabled()) { GM->ApplyV3Doors(); UE_LOG(LogTemp, Display, TEXT("%s"), *LevelV3::Describe()); }
 	RaidJelly = 0;
 	ExitEnds = 0.f;
 	ExitBy = FString();
@@ -1107,6 +1184,7 @@ void AAntRaid::BuildResult(uint8 How)
 	FAntRaidResult R;
 	R.End = How;
 	R.RaidNo = RaidNo;
+	if (LevelV3::Enabled() && GS()) { R.Seed = GS()->LevelSeed(); R.SeedText = LevelV3::ShortText(); }
 	R.Tier = Tier;
 	R.Banked = S->TeamScore;
 	const bool bWiped = How == AntRaidEnd::Wiped;
@@ -1285,6 +1363,18 @@ void AAntRaid::PlayerCommand(AAntPlayerController* PC, uint8 Cmd, int32 A, int32
 		break;
 	case AntRaidCmd::Buy:
 	case AntRaidCmd::Mod:
+	case AntRaidCmd::Seed:
+		// Level v3, the host in the nest: "play seed N" (A >= 0) or a new random one (A < 0).
+		if (Phase == AntRaidPhase::Nest && bHost && LevelV3::Enabled())
+		{
+			PickLevelSeed(A);
+			Say(FString::Printf(TEXT("Квартира на этот рейд: %s"), *LevelV3::ShortText()), RaidInfo);
+		}
+		else if (!bHost)
+		{
+			PC->ClientToast(TEXT("Сид выбирает хост"));
+		}
+		break;
 	case AntRaidCmd::Tier:
 	case AntRaidCmd::Contract:
 	case AntRaidCmd::Larva:
@@ -1322,7 +1412,7 @@ void AAntRaid::PlayerCommand(AAntPlayerController* PC, uint8 Cmd, int32 A, int32
 		}
 		else if (Cmd == AntRaidCmd::Tier)
 		{
-			if (A >= 1 && A <= Nest.MaxTier) { Nest.Tier = A; Tier = (uint8)A; SaveNest(); }
+			if (A >= 1 && A <= Nest.MaxTier) { Nest.Tier = A; Tier = (uint8)A; SaveNest(); PickLevelSeed(S->LevelSeed()); }
 			else { PC->ClientToast(TEXT("Эта угроза ещё закрыта: принесите торт домой на предыдущей")); }
 		}
 		else if (Cmd == AntRaidCmd::Contract)
@@ -1451,6 +1541,13 @@ bool AAntRaid::DevCommand(const TArray<FString>& A)
 	AAntGameState* S = GS();
 	AAntPlayerController* PC = Cast<AAntPlayerController>(GetWorld()->GetFirstPlayerController());
 	AAntCharacter* Me = PC ? Cast<AAntCharacter>(PC->GetPawn()) : nullptr;
+	if (Op == TEXT("seed"))
+	{
+		// level v3: seed N | seed random | seed info. A new seed in the middle of a raid re-lays the flat at once (doors, things); loot follows at the next reset.
+		if (Sub == TEXT("info")) { UE_LOG(LogTemp, Display, TEXT("%s | %s"), *LevelV3::Describe(), *LevelV3::ShortText()); }
+		else { PickLevelSeed(Sub == TEXT("random") ? -1 : FCString::Atoi(*Sub)); }
+		return true;
+	}
 	if (Op == TEXT("raid"))
 	{
 		if (Sub == TEXT("start")) { StartRaid(); }

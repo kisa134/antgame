@@ -6,6 +6,7 @@
 #include "AntGameState.h"
 #include "AntHUD.h"
 #include "KitchenLoot.h"
+#include "LevelV3.h"
 #include "KitchenBuilder.h"
 #include "KitchenInteractables.h"
 #include "AntSwarm.h"
@@ -1368,7 +1369,12 @@ void AAntKitchenGameMode::ResetMatch()
 	{
 		It->Destroy();
 	}
+	if (LevelV3::Enabled())
+	{
+		AKitchenBuilder::LootSpots(SpotLocations, SpotTiers);   // level v3: the seed may lift some spots (loot_z)
+	}
 	SpawnInitialLoot();
+	SpawnV3Scatter();
 
 	if (AAntGameState* GS = GetGameState<AAntGameState>())
 	{

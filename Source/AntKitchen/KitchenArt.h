@@ -61,6 +61,8 @@ namespace KitchenArt
 
 	/** The game's own materials on the mesh, one shared material per slot name (see the look table in KitchenArt.cpp). */
 	ANTKITCHEN_API void ApplyLook(UStaticMeshComponent* C, const TCHAR* Name, int32 Index = 0);
+	/** Level v3: an instance tint (the sheets on the line): the look "Tint/<Tint>" on the first slot. */
+	ANTKITCHEN_API void ApplyTint(UStaticMeshComponent* C, const TCHAR* Tint);
 
 	/** Adds a piece under Parent with a relative transform. StableName: set for parts ants ride over the network. */
 	ANTKITCHEN_API UStaticMeshComponent* Add(AActor* Owner, USceneComponent* Parent, const TCHAR* Name, int32 Index, const FTransform& Relative,

@@ -27,7 +27,7 @@ namespace AntRaidEnd { enum : uint8 { None, Left, Timeout, Wiped }; }
 /** What a player asks of the raid (AAntPlayerController::ServerRaid). */
 namespace AntRaidCmd
 {
-	enum : uint8 { Leave, Ready, Start, Buy, Squad, Tool, Mod, Tier, Contract, Larva, Workers, NewColony, UseTool, SquadOrder, Skip };
+	enum : uint8 { Leave, Ready, Start, Buy, Squad, Tool, Mod, Tier, Contract, Larva, Workers, NewColony, UseTool, SquadOrder, Skip, Seed };
 }
 
 /** Values of AAntGameState::Phase the raid adds (0 is "playing"; 1-3 are the old ends of a round). */
@@ -59,6 +59,8 @@ struct FAntRaidResult
 	UPROPERTY() int32 QueenAte = 0;
 	UPROPERTY() int32 LarvaeLeft = 0;
 	UPROPERTY() int32 NewTier = 0;        // threat tier this raid unlocked, 0 = none
+	UPROPERTY() int32 Seed = -1;          // level v3: the raid seed (-1: level v2)
+	UPROPERTY() FString SeedText;
 	UPROPERTY() TArray<FString> Story;
 };
 
@@ -187,6 +189,11 @@ private:
 	void CancelExit(const FString& Why);
 	void BuildResult(uint8 How);
 	void PickContracts();
+	/** Level v3, server: the seed of the next raid: Want (>= 0: that number, its tier's validated row), else -AntSeed=N, else random. */
+	void PickLevelSeed(int32 Want);
+	/** Level v3, server: whoever the seed (the tier) says is out is taken out of the flat for this raid; the others are put back. */
+	void ApplyWhoIsHome();
+	TMap<TWeakObjectPtr<AActor>, FTransform> AwaySpots;
 	int32 LivingPlayers(int32* OutHome = nullptr, FString* OutAway = nullptr) const;
 	void Say(const FString& Text, const FLinearColor& Color) const;
 	AAntGameState* GS() const;

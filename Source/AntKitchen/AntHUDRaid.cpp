@@ -565,6 +565,7 @@ void AAntHUD::DrawRaidResults(AAntRaid* Raid, AAntGameState* GS)
 	}
 	if (R.QueenAte > 0) { Row(TEXT("Королева в ярости"), FString::Printf(TEXT("съела %d из кладовой"), R.QueenAte), QRed, 1.1f); }
 	if (R.NewTier > 0) { Row(TEXT("НОВАЯ УГРОЗА ОТКРЫТА"), FString::Printf(TEXT("%s «%s»"), Roman(R.NewTier), AntTier::Def(R.NewTier).Name), QGold, 1.1f); }
+	if (R.Seed >= 0) { Row(TEXT("Сид квартиры"), R.SeedText.IsEmpty() ? FString::Printf(TEXT("%d"), R.Seed) : R.SeedText, QGrey, 1.1f); }
 
 	// --- Right: the story of the raid, then the awards ---
 	const float RX = PX + PW * 0.52f;

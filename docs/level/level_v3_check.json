@@ -1,0 +1,9190 @@
+{
+ "what": "level v3 seed validation (Tools/level/check_level_v3.py)",
+ "rules": {
+  "cake_routes": 2,
+  "cake_route_max_s": [
+   200.0,
+   330.0
+  ],
+  "cover_max_s": 4.0,
+  "cover_tolerance_s": 0.0,
+  "human_capsule": [
+   340,
+   250
+  ],
+  "routine_reach_uu": 450,
+  "scatter_spacing_uu": 300
+ },
+ "method": "numpy grid 100 uu as audit_level.py: capsule clearance 390 from solids painted by box (sloped HUMAN_STEP_RAMPS only above the 250 step, hanging cloth skipped), flood from his spawn; cover = hidden boxes + cells farther than the slap reach (1250) from where he stands + yard/street/walls; 16-direction geodesic to cover; cake: min-cost 2-flow on the route graph, carried at 0.7 walk speed",
+ "v2_calibration": {
+  "cover": {
+   "kitchen": {
+    "cover_pct": 17.4,
+    "worst_s": 4.0,
+    "worst_at": [
+     -750,
+     -2750
+    ],
+    "over4s_cells": 1,
+    "mean_s": 1.42
+   },
+   "living": {
+    "cover_pct": 18.7,
+    "worst_s": 3.88,
+    "worst_at": [
+     18150,
+     -350
+    ],
+    "over4s_cells": 0,
+    "mean_s": 1.36
+   }
+  },
+  "audit_v2_said": {
+   "kitchen_worst_s": 4.0,
+   "living_worst_s": 3.9,
+   "kitchen_cover_pct": 17.8,
+   "living_cover_pct": 18.9
+  }
+ },
+ "base": {
+  "ok": true,
+  "fails": [],
+  "cover": {
+   "kitchen": {
+    "cover_pct": 16.5,
+    "worst_s": 3.95,
+    "worst_at": [
+     -6350,
+     2950
+    ],
+    "over4s_cells": 0,
+    "mean_s": 1.54
+   },
+   "living": {
+    "cover_pct": 21.5,
+    "worst_s": 3.72,
+    "worst_at": [
+     17550,
+     -6250
+    ],
+    "over4s_cells": 0,
+    "mean_s": 1.34
+   }
+  },
+  "cake": {
+   "spot": "M1",
+   "node": "kover",
+   "routes": [
+    [
+     "kover",
+     "porog",
+     "podstol",
+     "crack",
+     "nest"
+    ],
+    [
+     "kover",
+     "babu",
+     "flap",
+     "dvor_e",
+     "gryadka",
+     "wcrack",
+     "corner",
+     "nest"
+    ]
+   ],
+   "times_s": [
+    113.7,
+    136.7
+   ]
+  },
+  "scatter_dropped": 4,
+  "stand_cells": 11850
+ },
+ "skeleton": {
+  "ok": false,
+  "fails": [
+   "cover: kitchen 4.32 s at [-2750, 250] (15 cells over)"
+  ],
+  "cover": {
+   "kitchen": {
+    "cover_pct": 16.3,
+    "worst_s": 4.32,
+    "worst_at": [
+     -2750,
+     250
+    ],
+    "over4s_cells": 15,
+    "mean_s": 1.6
+   },
+   "living": {
+    "cover_pct": 21.5,
+    "worst_s": 3.72,
+    "worst_at": [
+     17550,
+     -6250
+    ],
+    "over4s_cells": 0,
+    "mean_s": 1.34
+   }
+  },
+  "cake": {
+   "spot": "M2",
+   "node": "tv",
+   "routes": [
+    [
+     "tv",
+     "flap",
+     "dvor_e",
+     "gryadka",
+     "wcrack",
+     "corner",
+     "nest"
+    ],
+    [
+     "tv",
+     "kover",
+     "babu",
+     "porog",
+     "podstol",
+     "crack",
+     "nest"
+    ]
+   ],
+   "times_s": [
+    126.9,
+    129.4
+   ]
+  },
+  "scatter_dropped": 0,
+  "stand_cells": 11750,
+  "note": "BASE alone, without any district variant: never played (every seed applies one variant per district); informative only"
+ },
+ "variants": [
+  {
+   "district": "palisad",
+   "variant": "A",
+   "ru": "Тихий вечер",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.5,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.54
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11850
+  },
+  {
+   "district": "palisad",
+   "variant": "B",
+   "ru": "Мешки у калитки",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.5,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.54
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11850
+  },
+  {
+   "district": "palisad",
+   "variant": "C",
+   "ru": "После дождя",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.5,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.54
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11850
+  },
+  {
+   "district": "reddvor",
+   "variant": "A",
+   "ru": "Полив",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.5,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.54
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11850
+  },
+  {
+   "district": "reddvor",
+   "variant": "B",
+   "ru": "Бельё сушится",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.5,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.54
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11850
+  },
+  {
+   "district": "reddvor",
+   "variant": "C",
+   "ru": "Газон стригут",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.5,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.54
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     143.8
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11850
+  },
+  {
+   "district": "plintus",
+   "variant": "A",
+   "ru": "Чисто",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.5,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.54
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11850
+  },
+  {
+   "district": "plintus",
+   "variant": "B",
+   "ru": "Бабушка с рынка",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.7,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.52
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11768
+  },
+  {
+   "district": "plintus",
+   "variant": "C",
+   "ru": "Газеты на сдачу",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.6,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.51
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11741
+  },
+  {
+   "district": "plintus",
+   "variant": "D",
+   "ru": "Миски у двери",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.5,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.56
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 1,
+   "stand_cells": 11881
+  },
+  {
+   "district": "kladovye",
+   "variant": "A",
+   "ru": "Всё закрыто",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.5,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.54
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11850
+  },
+  {
+   "district": "kladovye",
+   "variant": "B",
+   "ru": "Ящики лесенкой",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.5,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.54
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11632
+  },
+  {
+   "district": "kladovye",
+   "variant": "C",
+   "ru": "Шкаф открыт",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.5,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.54
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11807
+  },
+  {
+   "district": "moika",
+   "variant": "A",
+   "ru": "Посуда помыта",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.5,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.54
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11850
+  },
+  {
+   "district": "moika",
+   "variant": "B",
+   "ru": "Гора посуды",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.5,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.54
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11850
+  },
+  {
+   "district": "moika",
+   "variant": "C",
+   "ru": "Дверца закрыта",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.5,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.54
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11890
+  },
+  {
+   "district": "plita",
+   "variant": "A",
+   "ru": "Суп на плите",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.5,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.54
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11850
+  },
+  {
+   "district": "plita",
+   "variant": "B",
+   "ru": "Пирог в духовке",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.5,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.54
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11850
+  },
+  {
+   "district": "plita",
+   "variant": "C",
+   "ru": "Полотенце сохнет",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.4,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.54
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11861
+  },
+  {
+   "district": "lednik",
+   "variant": "A",
+   "ru": "Рисунки",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.5,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.54
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11850
+  },
+  {
+   "district": "lednik",
+   "variant": "B",
+   "ru": "Посудомойка открыта",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.5,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.54
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11850
+  },
+  {
+   "district": "lednik",
+   "variant": "C",
+   "ru": "Холодильник приоткрыт",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 17.3,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.54
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11687
+  },
+  {
+   "district": "plato",
+   "variant": "A",
+   "ru": "Ужин накрыт",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.5,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.54
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11850
+  },
+  {
+   "district": "plato",
+   "variant": "B",
+   "ru": "Малыш завтракал",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.8,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.52
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11750
+  },
+  {
+   "district": "plato",
+   "variant": "C",
+   "ru": "Стулья придвинуты",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.8,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.52
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11820
+  },
+  {
+   "district": "plato",
+   "variant": "D",
+   "ru": "Длинная скатерть",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.5,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.45
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11838
+  },
+  {
+   "district": "svalka",
+   "variant": "A",
+   "ru": "Полное ведро",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.5,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.54
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11850
+  },
+  {
+   "district": "svalka",
+   "variant": "B",
+   "ru": "Бутылки сдали",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.0,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.58
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11633
+  },
+  {
+   "district": "svalka",
+   "variant": "C",
+   "ru": "Коробку сложили",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 17.4,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.53
+    },
+    "living": {
+     "cover_pct": 21.4,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 12135
+  },
+  {
+   "district": "zastenye",
+   "variant": "A",
+   "ru": "Сухо",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.5,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.54
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11850
+  },
+  {
+   "district": "zastenye",
+   "variant": "B",
+   "ru": "Протечка",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.5,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.54
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11850
+  },
+  {
+   "district": "zastenye",
+   "variant": "C",
+   "ru": "Завал",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.5,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.54
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11850
+  },
+  {
+   "district": "porog",
+   "variant": "A",
+   "ru": "Дверь настежь",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.5,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.54
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11850
+  },
+  {
+   "district": "porog",
+   "variant": "B",
+   "ru": "Дверь не до конца",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.4,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.54
+    },
+    "living": {
+     "cover_pct": 21.2,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.33
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11804
+  },
+  {
+   "district": "porog",
+   "variant": "C",
+   "ru": "Обувь у порога",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.6,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.5
+    },
+    "living": {
+     "cover_pct": 21.8,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.33
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11850
+  },
+  {
+   "district": "babushka",
+   "variant": "A",
+   "ru": "Вяжет",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.5,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.54
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11850
+  },
+  {
+   "district": "babushka",
+   "variant": "B",
+   "ru": "Поливала цветы",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.5,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.54
+    },
+    "living": {
+     "cover_pct": 22.2,
+     "worst_s": 3.61,
+     "worst_at": [
+      17350,
+      -2250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.31
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11540
+  },
+  {
+   "district": "babushka",
+   "variant": "C",
+   "ru": "Дверца подпёрта",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.5,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.54
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11850
+  },
+  {
+   "district": "play",
+   "variant": "A",
+   "ru": "Железная дорога",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.5,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.54
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11850
+  },
+  {
+   "district": "play",
+   "variant": "B",
+   "ru": "Шалаш",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.5,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.54
+    },
+    "living": {
+     "cover_pct": 25.2,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.28
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11381
+  },
+  {
+   "district": "play",
+   "variant": "C",
+   "ru": "Прибрано",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.5,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.54
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11907
+  },
+  {
+   "district": "play",
+   "variant": "D",
+   "ru": "Праздник",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.5,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.54
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11850
+  },
+  {
+   "district": "stenka",
+   "variant": "A",
+   "ru": "Телевизор выключен",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.5,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.54
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11850
+  },
+  {
+   "district": "stenka",
+   "variant": "B",
+   "ru": "Мультики",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.5,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.54
+    },
+    "living": {
+     "cover_pct": 21.5,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11850
+  },
+  {
+   "district": "stenka",
+   "variant": "C",
+   "ru": "Подарки за шторой",
+   "ok": true,
+   "fails": [],
+   "cover": {
+    "kitchen": {
+     "cover_pct": 16.5,
+     "worst_s": 3.95,
+     "worst_at": [
+      -6350,
+      2950
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.54
+    },
+    "living": {
+     "cover_pct": 21.7,
+     "worst_s": 3.72,
+     "worst_at": [
+      17550,
+      -6250
+     ],
+     "over4s_cells": 0,
+     "mean_s": 1.34
+    }
+   },
+   "cake": {
+    "spot": "M1",
+    "node": "kover",
+    "routes": [
+     [
+      "kover",
+      "porog",
+      "podstol",
+      "crack",
+      "nest"
+     ],
+     [
+      "kover",
+      "babu",
+      "flap",
+      "dvor_e",
+      "gryadka",
+      "wcrack",
+      "corner",
+      "nest"
+     ]
+    ],
+    "times_s": [
+     113.7,
+     136.7
+    ]
+   },
+   "scatter_dropped": 4,
+   "stand_cells": 11771
+  }
+ ],
+ "pairs": {
+  "checked": 939,
+  "failed": []
+ },
+ "loot_covered": {
+  "hollow_ok": [
+   {
+    "state": "default",
+    "loot": "L71",
+    "p": [
+     1200.0,
+     1650.0,
+     880.0
+    ],
+    "in": "art79",
+    "mesh": "SM_K_Chair",
+    "ok": true
+   },
+   {
+    "state": "default",
+    "loot": "L88",
+    "p": [
+     -5500.0,
+     900.0,
+     20.0
+    ],
+    "in": "art109",
+    "mesh": "SM_K_CerealBox",
+    "ok": true
+   },
+   {
+    "state": "default",
+    "loot": "L89",
+    "p": [
+     -5150.0,
+     1120.0,
+     20.0
+    ],
+    "in": "art109",
+    "mesh": "SM_K_CerealBox",
+    "ok": true
+   },
+   {
+    "state": "default",
+    "loot": "L324",
+    "p": [
+     19600.0,
+     -500.0,
+     5.0
+    ],
+    "in": "new5",
+    "mesh": "SM_K_Slipper",
+    "ok": true
+   },
+   {
+    "state": "default",
+    "loot": "L210",
+    "p": [
+     -1050.0,
+     -1150.0,
+     1470.0
+    ],
+    "in": "new24",
+    "mesh": "SM_K_FruitBowl",
+    "ok": true
+   },
+   {
+    "state": "default",
+    "loot": "L303",
+    "p": [
+     -3200.0,
+     -2200.0,
+     20.0
+    ],
+    "in": "v3_backpack",
+    "mesh": "SM_V3_Backpack",
+    "ok": true
+   },
+   {
+    "state": "default",
+    "loot": "L137",
+    "p": [
+     19700.0,
+     -3500.0,
+     4660.0
+    ],
+    "in": "v3_gift0",
+    "mesh": "SM_V3_GiftBox",
+    "ok": true
+   },
+   {
+    "state": "moikaB",
+    "loot": "L57",
+    "p": [
+     -3500.0,
+     3900.0,
+     1150.0
+    ],
+    "in": "v3_dishes",
+    "mesh": "SM_V3_DirtyDishStack",
+    "ok": true
+   },
+   {
+    "state": "platoB",
+    "loot": "L13",
+    "p": [
+     -2764.9,
+     988.0,
+     0.0
+    ],
+    "in": "new80",
+    "mesh": "SM_L_ToyArch",
+    "ok": true
+   },
+   {
+    "state": "platoB",
+    "loot": "L181",
+    "p": [
+     -5350.0,
+     -300.0,
+     20.0
+    ],
+    "in": "new85",
+    "mesh": "SM_L_ToyCar",
+    "ok": true
+   },
+   {
+    "state": "platoC",
+    "loot": "L70",
+    "p": [
+     0.0,
+     -2750.0,
+     880.0
+    ],
+    "in": "art78",
+    "mesh": "SM_K_Chair",
+    "ok": true
+   },
+   {
+    "state": "babushkaB",
+    "loot": "L108",
+    "p": [
+     16681.8,
+     -7506.1,
+     0.0
+    ],
+    "in": "v3_stool_l",
+    "mesh": "SM_V3_StepStool",
+    "ok": true
+   }
+  ],
+  "problems": []
+ },
+ "seeds": {
+  "n": 300,
+  "passed": 300,
+  "pass_rate": 100.0,
+  "fail_reasons": {},
+  "cover_worst_s_max": 3.95,
+  "cake_best_s_max": 162.4,
+  "cake_second_s_max": 165.1,
+  "scatter_dropped_total": 989,
+  "variants_seen": {
+   "palisad": "ABC",
+   "reddvor": "ABC",
+   "plintus": "ABCD",
+   "kladovye": "ABC",
+   "moika": "ABC",
+   "plita": "ABC",
+   "lednik": "ABC",
+   "plato": "ABCD",
+   "svalka": "ABC",
+   "zastenye": "ABC",
+   "porog": "ABC",
+   "babushka": "ABC",
+   "play": "ABCD",
+   "stenka": "ABC"
+  },
+  "district_order": [
+   "palisad",
+   "reddvor",
+   "plintus",
+   "kladovye",
+   "moika",
+   "plita",
+   "lednik",
+   "plato",
+   "svalka",
+   "zastenye",
+   "porog",
+   "babushka",
+   "play",
+   "stenka"
+  ],
+  "list": [
+   {
+    "seed": 0,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "AABBBBACBAAACA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 1,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CBCCCBBBAABCCA",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 2,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ABCBCBCAACACAB",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 3,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CABABCACBCCACB",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 4,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "AAABABACABABCC",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 5,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CBBABBBBAABAAC",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 6,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "AADBBBCDCBACAB",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 7,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CACBACCDCAACBB",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 8,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCCBACBBCABAAA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 9,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCBBABACABABAC",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 10,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BCAABCACBCACBA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 11,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "AADBACADBCACBA",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 12,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "BADAAAACCCAACA",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 13,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ACDBACCCCCABBC",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 14,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CADBACCABCAAAC",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 15,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCAACBCDABAAAA",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 16,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCABCCCBACCACA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     129.4,
+     134.0
+    ]
+   },
+   {
+    "seed": 17,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BADACCCCAABCAA",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 18,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ACBCBAADBCACCB",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 19,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BAAAABBDBBCCBC",
+    "cake": "M4",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     157.9,
+     162.4
+    ]
+   },
+   {
+    "seed": 20,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "BCDABBABBAABAA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 21,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BAACAAACCCABAC",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 22,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBCCBACCAACABB",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 23,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BAABBBCCCCCAAB",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 24,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBBBBCABCABAAA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 25,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ACAABBCCCAAABA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     129.4,
+     134.0
+    ]
+   },
+   {
+    "seed": 26,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ABCABAACCBCCAA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 27,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ABDACBACAABABB",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 28,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBBCABABBBBCCC",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 29,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBBABCACBACCCA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 30,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CBDBCABCCACCAA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 31,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CACBACAAABBACC",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 32,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCBACAACCAAACA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     129.4,
+     134.0
+    ]
+   },
+   {
+    "seed": 33,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BCBCBCBBAACCBA",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 34,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BABBBAACBCCCDC",
+    "cake": "M4",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     157.9,
+     162.4
+    ]
+   },
+   {
+    "seed": 35,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CACACBCABCBCBC",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 36,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "CBBCBBABBBCCCC",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 37,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCBACBABCBCCCA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 38,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ABDAABBCBBBCCB",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 39,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ABACCCBABAAABB",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 40,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "ABCAACBCCBCACC",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 41,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBDBAACBCCBBCC",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 42,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CBACABAABBBCCC",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 43,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BAACABACBABACC",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 44,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBDCCCCBBBAACA",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 45,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ACABABBCBACCBC",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 46,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCBACAACACAABA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 47,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "AAAABBADBBBADA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 48,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "AAACBACCACBCAA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 49,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ABCBAACCABACAC",
+    "cake": "M4",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     157.9,
+     162.4
+    ]
+   },
+   {
+    "seed": 50,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CADAABACACAAAC",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 51,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CBBCCAADAABCDA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 52,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBBACCCBBCCCAC",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 53,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BCDBCBBBBBCCCA",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 54,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BADCCCBDCABCAA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 55,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ABCABAAABBAADC",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 56,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "BADBBCBBACABCA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 57,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BCAACABBABBACA",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 58,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BCCBABCCCCCCBC",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     129.4,
+     134.0
+    ]
+   },
+   {
+    "seed": 59,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCCBBBADAABAAB",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     129.4,
+     134.0
+    ]
+   },
+   {
+    "seed": 60,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "ACDBABBCABCACA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     129.4,
+     134.0
+    ]
+   },
+   {
+    "seed": 61,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCBACCCCCAABBC",
+    "cake": "M4",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     162.4,
+     165.1
+    ]
+   },
+   {
+    "seed": 62,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "AABBAABDBAAADB",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 63,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CBDCCCBDCCAACA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 64,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "BCCCBBBCBCBACA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 65,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CADBCACCAABCBC",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 66,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ABBCAACDBACADC",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 67,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "AAABCCADAAAAAA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 68,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "BCDCCACCAACBCA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     129.4,
+     134.0
+    ]
+   },
+   {
+    "seed": 69,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CBBCBBBCCBBACA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 70,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BABAAAACBACCCA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 71,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CBCBBABCCBACBA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 72,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBCCAAABCCCBAC",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 73,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBDCCCBBCAABBA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 74,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CBBCAACACACAAA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 75,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BADBABAABABCAC",
+    "cake": "M4",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     157.9,
+     162.4
+    ]
+   },
+   {
+    "seed": 76,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "ABCBACCBABBBCC",
+    "cake": "M4",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     157.9,
+     162.4
+    ]
+   },
+   {
+    "seed": 77,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BACCACBBABABBA",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 78,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ACACCBCDCACADB",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 79,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CBDBACCDBABABA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 80,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "ACBAACACABBBCA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     129.4,
+     134.0
+    ]
+   },
+   {
+    "seed": 81,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ABCCAAABBACCBA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 82,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ACABBABAAACCDA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     129.4,
+     134.0
+    ]
+   },
+   {
+    "seed": 83,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCCBBBCCBACCCC",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 84,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "AABAAABCCCBCCA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 85,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CBDCABCBABCBCC",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 86,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCBCCBCCCCCAAA",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 87,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ABBBCBBCBBCCDB",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 88,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "BCBCACABBCAAAC",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 89,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCBCCBCCAAABCA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     129.4,
+     134.0
+    ]
+   },
+   {
+    "seed": 90,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ABCACCCDACCAAB",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 91,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBBCBABDCBCADC",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 92,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "BADBCAABBCACCC",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 93,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CACBCAABCAACCC",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 94,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBBBAABCBACACA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 95,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ABABBBADBABACC",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 96,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "ACCCACBBBBABCA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 97,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BABAABCBCACAAC",
+    "cake": "M4",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     157.9,
+     162.4
+    ]
+   },
+   {
+    "seed": 98,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "AACABBCDCACADC",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 99,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ABDCCACDAACCCB",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 100,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBBBAABCABBBCA",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 101,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "AADCACCBCBBAAC",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 102,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BCBCCAAAACCABC",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 103,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ACAAAACACCAACA",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 104,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "CBDBBACBBCCCCA",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 105,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCCCBCBBACABBA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 106,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "AADACCBABABCCA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 107,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBCACBADCCCCBA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 108,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "BADBCBBBCBBCCA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 109,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "AADCBABCAABBAA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 110,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBACBAAABACCCB",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 111,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ACABBAAABCAACB",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     129.4,
+     134.0
+    ]
+   },
+   {
+    "seed": 112,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "CBACCACCCCCBCA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 113,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CBDABCACCBACAA",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 114,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CBABCCBACAACCB",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 115,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBABACAACCBABC",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 116,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "BACABBCCCBBBAC",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 117,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ACCACAABCCCCCA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     129.4,
+     134.0
+    ]
+   },
+   {
+    "seed": 118,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCCBAAACCAACAC",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 119,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBABACCABCBACA",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 120,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "CBDACACCABCBAA",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 121,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ACACBCBCBBAACC",
+    "cake": "M4",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     162.4,
+     165.1
+    ]
+   },
+   {
+    "seed": 122,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCCBCCAABACACA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 123,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBDAAAADBCCCDB",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 124,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCBCCBBBBBBACA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 125,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ABAACBABACBBAC",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 126,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BAACCBBDBBBACC",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 127,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCDAABCDCAACCC",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 128,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "CBCCABACABCACA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 129,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BCABBBBCBCACAA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     129.4,
+     134.0
+    ]
+   },
+   {
+    "seed": 130,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCCCABCDCBCCAB",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 131,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BCBBBBADBABCDA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 132,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCACCBBCBCCACA",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 133,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CBCCCBCBCCBACC",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 134,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ABBACCAACAACDA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 135,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BABAABBDCCAADC",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 136,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCBCACACBABACA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     129.4,
+     134.0
+    ]
+   },
+   {
+    "seed": 137,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCCBBCABCBCAAC",
+    "cake": "M4",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     162.4,
+     165.1
+    ]
+   },
+   {
+    "seed": 138,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBCCBBCCCBCABB",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 139,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BACABBADCBCACB",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 140,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "ABAAAACCCABBCA",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 141,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CBBBABCCCCBBBC",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 142,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBCCCCCABCACDA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 143,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ABDAAACDAAACCC",
+    "cake": "M4",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     157.9,
+     162.4
+    ]
+   },
+   {
+    "seed": 144,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "CBCCBCACBCCCAA",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 145,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBDCCBCBABBCBC",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 146,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BCCCAABDBAACAB",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     129.4,
+     134.0
+    ]
+   },
+   {
+    "seed": 147,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CBCAABACBCCCBA",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 148,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "ABABAABBCAACCA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 149,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ACDCCCCBABACCA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     129.4,
+     134.0
+    ]
+   },
+   {
+    "seed": 150,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ABCCBACACBCCCC",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 151,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CBDCACCDABCACB",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 152,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCCACCBCAACACC",
+    "cake": "M4",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     162.4,
+     165.1
+    ]
+   },
+   {
+    "seed": 153,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCCBAACCAACCAC",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 154,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BCAACBCCCACCBB",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 155,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "AAAACAAABBBADC",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 156,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "CBBACBBBABBAAA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 157,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBACCBCBBBBACC",
+    "cake": "M4",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     157.9,
+     162.4
+    ]
+   },
+   {
+    "seed": 158,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ABCACAAABABCBC",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 159,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BCDABBCDCABADB",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 160,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBBBBCABCACCCC",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 161,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "AACAACBBCBBACC",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 162,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CBACBAACACBCDB",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 163,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BCCBCABCABCCAB",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     129.4,
+     134.0
+    ]
+   },
+   {
+    "seed": 164,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "BCACCBBBAABCCC",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     129.4,
+     134.0
+    ]
+   },
+   {
+    "seed": 165,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBBBAAACBCBCCA",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 166,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCCBCACDBCCCDC",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 167,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ACACACCDCBCCBA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 168,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "BABBBBABBCCBCA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 169,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BCACBAABAAAABC",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     129.4,
+     134.0
+    ]
+   },
+   {
+    "seed": 170,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCDBBACCCAAADA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     129.4,
+     134.0
+    ]
+   },
+   {
+    "seed": 171,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ABDBABCAACCCCA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 172,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "ACAAAACCBCACCC",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 173,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBDABCACABCACA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 174,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BADABACCCCACDB",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 175,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCACCCCCBABAAA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     129.4,
+     134.0
+    ]
+   },
+   {
+    "seed": 176,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "BACBBBABACBCCC",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 177,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ABAABBABCCCAAA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 178,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BABCCBBDCCACAA",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 179,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ACDACBBCCCBADA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 180,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "CACCBABBCAABCA",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 181,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ACDABCBBABBABA",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 182,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BAACCCBCBBACCA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 183,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BADBBCCCCBCCAB",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 184,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "AAABBCBCBBCBCC",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 185,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBCAABBBABBBBA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 186,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "AADBCBBDCCCABB",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 187,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CBCCCCBCCABCCB",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 188,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBABCACCAACCCA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 189,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ACCBBACBBCCCAA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 190,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ABACBCBACBCCDC",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 191,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BABBCAADCCBCAC",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 192,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBACBCCCCBCBAA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 193,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCCBAACCCAACAA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 194,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BCBAAACDCABCCC",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 195,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CBBCABBCBAACCC",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 196,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "ABABAABCCABBCC",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 197,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BCCACBCBCBBCAA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 198,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CAAACBCCCCCADC",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 199,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCCCABBDCBBCCA",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 200,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCDBACCCABBBCA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     129.4,
+     134.0
+    ]
+   },
+   {
+    "seed": 201,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CABBBBBCBAABCC",
+    "cake": "M4",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     157.9,
+     162.4
+    ]
+   },
+   {
+    "seed": 202,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CBABCCBAABBAAC",
+    "cake": "M4",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     157.9,
+     162.4
+    ]
+   },
+   {
+    "seed": 203,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BCBBAACDBCCADB",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     129.4,
+     134.0
+    ]
+   },
+   {
+    "seed": 204,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "BABBBBCCABCBCC",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 205,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CAABBBCBCCCBBA",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 206,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "AADBABCDBBCABC",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 207,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CABBAABAABCCAA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 208,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "BADACABCCBBCCA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 209,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CBABBBCCBBCBAA",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 210,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ACCCBABCCABADB",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     129.4,
+     134.0
+    ]
+   },
+   {
+    "seed": 211,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ABDACCBCACCACA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 212,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBDBCABCBCCCCC",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 213,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CACBABBBCBBBAC",
+    "cake": "M4",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     157.9,
+     162.4
+    ]
+   },
+   {
+    "seed": 214,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CAABCBBCBCBCBB",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 215,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "AADCBBACBACCCA",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 216,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBBBCBACCBBBAC",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 217,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "AACCACBBCAAABC",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 218,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBCAAAADCCAABA",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 219,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BACABCBDBAACCA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 220,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "BAACBBBCBBAACC",
+    "cake": "M4",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     157.9,
+     162.4
+    ]
+   },
+   {
+    "seed": 221,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ACBBBBBCABCBCC",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 222,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BCDBCCADBAACBC",
+    "cake": "M4",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     162.4,
+     165.1
+    ]
+   },
+   {
+    "seed": 223,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ACBACBCDACBACC",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 224,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBCBBCBCCBABCA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 225,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CAABBBCBBACBBC",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 226,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CAABCAAAAABAAA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 227,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBACCCADCBBCDA",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 228,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "CBBCCCABBCCACC",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 229,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CBDAACACCBCBCC",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 230,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BCDCABACBAAACA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     129.4,
+     134.0
+    ]
+   },
+   {
+    "seed": 231,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CACBBABCBCCADA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 232,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "ABCAABABABCACC",
+    "cake": "M4",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     157.9,
+     162.4
+    ]
+   },
+   {
+    "seed": 233,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ACCBCABCBAACCC",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 234,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BAACBAACCABCDA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 235,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "AADACCBCBCCCAA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 236,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBDACBACCBBBCC",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 237,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCDCABABCBCABC",
+    "cake": "M4",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     162.4,
+     165.1
+    ]
+   },
+   {
+    "seed": 238,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "AABABCACBACACC",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 239,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ACDBCCCCCCCCDC",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 240,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "ABBAABABBCCCCC",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 241,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CBDBBCCCABCCCC",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 242,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BADBBBCCACAABB",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 243,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCCBAAACCBAACC",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     129.4,
+     134.0
+    ]
+   },
+   {
+    "seed": 244,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBDBBCCBAAABCC",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 245,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCCBBCBCCCCAAC",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 246,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BCABCAACAAACCC",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 247,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ACCABABAACCADB",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     129.4,
+     134.0
+    ]
+   },
+   {
+    "seed": 248,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCDCCCABCCACCA",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 249,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCBBCBACCBACBA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     129.4,
+     134.0
+    ]
+   },
+   {
+    "seed": 250,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CBDCBABDCABCBB",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 251,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "AABABCACABACAC",
+    "cake": "M4",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     157.9,
+     162.4
+    ]
+   },
+   {
+    "seed": 252,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "BADABCACBBCCCC",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 253,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "AABCACABBBAABC",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 254,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BCCCBABDCAAADB",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 255,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BCACCBBCABBCBB",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 256,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "BCAABBCCABBBAC",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 257,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCDBBCCCCCCAAA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 258,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CABAAACCCBBACB",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 259,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBBCCCACCBACBC",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 260,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "BCDBABBBCABCAC",
+    "cake": "M4",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     162.4,
+     165.1
+    ]
+   },
+   {
+    "seed": 261,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ACCCACCCABCACC",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     129.4,
+     134.0
+    ]
+   },
+   {
+    "seed": 262,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ACCBABAABCAAAB",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     129.4,
+     134.0
+    ]
+   },
+   {
+    "seed": 263,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBACBBCABBBCCC",
+    "cake": "M4",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     157.9,
+     162.4
+    ]
+   },
+   {
+    "seed": 264,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "ACDBCBBBAAACAA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 265,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBACCACBBBBBAA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 266,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CBABCBCCBABCAC",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 267,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BACACCBDCAACDB",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 268,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "ACCBABCBCBACAC",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 269,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBCCBCBBCCBCCA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 270,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "AADCBCBDBACCDB",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 271,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BACBBABDACACCB",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 272,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "CACBBCBBCCACCC",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 273,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCDBBBACBACBCC",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 274,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BADBBACCACCACC",
+    "cake": "M4",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     157.9,
+     162.4
+    ]
+   },
+   {
+    "seed": 275,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BABBACCDABBABC",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 276,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "ACACCCABACBCCA",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 277,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ACABCCBCBBCBBA",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 278,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CBCACBCACBBAAB",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 279,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ABDBAABDAACCDB",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 280,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "BAABACBBCBABCC",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 281,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ACCBCBACBAABCA",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 282,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCACACCAACACCC",
+    "cake": "M4",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     162.4,
+     165.1
+    ]
+   },
+   {
+    "seed": 283,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "AACBBAACCBBADA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 284,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "BCAACBBCCABACC",
+    "cake": "M4",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     162.4,
+     165.1
+    ]
+   },
+   {
+    "seed": 285,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ACCACACBCCBCBC",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 286,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BAABAACABBAADC",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 287,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "AABCABCCBBACCC",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 288,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "ABCABAACCBCBCA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 289,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCBBBCBBACBABA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 290,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBABCCCDBCCCBA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 291,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "ABBBACBDCCBABB",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 292,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "BCCBACCCBCBACA",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     143.8
+    ]
+   },
+   {
+    "seed": 293,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CBAAABCCCCBBCC",
+    "cake": "M4",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     157.9,
+     162.4
+    ]
+   },
+   {
+    "seed": 294,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CAAABCCACBBACC",
+    "cake": "M1",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     113.7,
+     136.7
+    ]
+   },
+   {
+    "seed": 295,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCCBBACDBACCBA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     129.4,
+     134.0
+    ]
+   },
+   {
+    "seed": 296,
+    "threat": 1,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "dog",
+     "cat"
+    ],
+    "variants": "BADBBAACCCCACC",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 297,
+    "threat": 2,
+    "time": "day",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "BBDCBBCBBAACBA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     126.9,
+     129.4
+    ]
+   },
+   {
+    "seed": 298,
+    "threat": 3,
+    "time": "evening",
+    "home": [
+     "human",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CADCBABACBAABC",
+    "cake": "M3",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     61.5,
+     87.7
+    ]
+   },
+   {
+    "seed": 299,
+    "threat": 4,
+    "time": "evening",
+    "home": [
+     "human",
+     "grandma",
+     "kid",
+     "dog",
+     "cat"
+    ],
+    "variants": "CCBBCAACCACCBA",
+    "cake": "M2",
+    "ok": true,
+    "fails": [],
+    "cover_worst_s": 3.95,
+    "cake_s": [
+     129.4,
+     134.0
+    ]
+   }
+  ]
+ },
+ "fix_log": [
+  {
+   "rule": "cover",
+   "found": "Убрали игрушки, носок, бутылки и тапки с пола кухни — укрытие хуже 4 с на 868 клетках кухни и 670 гостиной (худшее 6,4 с)",
+   "fixed": "вернули укрытия, но со смыслом: рюкзак папы у стола, ящик с картошкой у двери, коврик у мойки (щель под ним), мешок корма у мисок, батарея под окном; в гостиной — две напольные подушки у ТВ; грузовик у дороги оставили"
+  },
+  {
+   "rule": "nav",
+   "found": "Ужин и дрёма Человека стояли внутри стула и в пледе",
+   "fixed": "точки рутины перенесены туда, где стоит его капсула (у стула — на 750 южнее; дрёма — западная часть дивана, запасная — восточная)"
+  },
+  {
+   "rule": "overlap",
+   "found": "Мешок корма в плинтусе, дверь в коридор сквозь плинтус, ящик для игрушек в диване на 2 uu",
+   "fixed": "мешок на 40 от стены; плинтус восточной стены разрезан на два отрезка; ящик на 20 западнее"
+  },
+  {
+   "rule": "nav",
+   "found": "Кладовые B (ящики выдвинуты) закрывали точку патруля №2 у кладовых",
+   "fixed": "точка патруля №2 перенесена на (-3700, 1300) — данные LevelV2Data, не код"
+  },
+  {
+   "rule": "nav",
+   "found": "Плато B (трасса) + приоткрытая дверца шкафа: Человек не мог дойти до мойки и плиты (полоса между северным стулом и шкафами 736 < 780 капсулы)",
+   "fixed": "северный стул задвинут под стол во всей v3 (порядок в начале рейда); трассу Человек перешагивает там, где она ниже ступени 250 (как FHumanNav)"
+  },
+  {
+   "rule": "nav",
+   "found": "Плато B + Ледник B (корзины посудомойки выдвинуты) отрезали мойку и плиту",
+   "fixed": "в Леднике B только дверца посудомойки лежит рампой, корзины внутри"
+  },
+  {
+   "rule": "overlap",
+   "found": "Подарки за шторой стояли на кубиковой лесенке у тумбы; ботинки у порога — в кресле; лейка — на подушке; мешки у калитки — друг в друге",
+   "fixed": "переставлены (подарки — под восточную штору, ботинки — к двери, лейка — к лежанке)"
+  },
+  {
+   "rule": "float",
+   "found": "Полотенце на спинке стула висело в воздухе, когда Плато C отодвигало стул",
+   "fixed": "полотенце в Плите C сушится на батарее кухни (её никто не двигает)"
+  },
+  {
+   "rule": "nav",
+   "found": "Дверь гостиной на 60° (Порог B) закрывала проход: щель 793 при капсуле 780",
+   "fixed": "Порог B: дверь на 100°; щель под створкой — новое укрытие на месте старого"
+  },
+  {
+   "rule": "cover",
+   "found": "Свалка B (бутылки сдали): 4,75 с у ведра",
+   "fixed": "два мешка на сдачу — у ведра и у коробки"
+  },
+  {
+   "rule": "cover",
+   "found": "Плато C без трассы: 4,21 с у западного торца стола",
+   "fixed": "в Плато C трасса малыша остаётся"
+  },
+  {
+   "rule": "cover",
+   "found": "Плато B и C (трасса на месте, табурета нет): 4,1 с у северо-западного угла стола",
+   "fixed": "где малыш играл на кухне (B, C), его грузовик и арка возвращаются к трассе — игрушки на кухне только там, где есть история"
+  },
+  {
+   "rule": "nav",
+   "found": "Длинная скатерть (Плато D) по габариту закрывала малышу стульчик",
+   "fixed": "ткань не препятствие для капсулы (её проходят насквозь, стол под ней уже препятствие); шалаш — препятствие"
+  }
+ ],
+ "seconds": 594.7
+}

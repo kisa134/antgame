@@ -168,6 +168,10 @@ private:
 	void SpawnSwarm();
 	void KitchenLifeEvent();
 	void SpawnInitialLoot();
+	/** Level v3, server: the doors and drawers of the seed (variant states, 0-3 cabinet doors ajar) and its scatter of crumbs. */
+	void ApplyV3Doors();
+	void SpawnV3Scatter();
+	TSet<uint8> V3GadgetsOpened;
 	void RefillLoot();
 	void MatchTick();
 	/** 1 colony won, 2 Human won, 3 fire ants won. */

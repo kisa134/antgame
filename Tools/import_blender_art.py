@@ -22,6 +22,9 @@ SETS = [
     ("human", os.path.join(PROJ, "SourceArt", "Blender", "human"), "/Game/Human", "human_manifest.json"),   # the Human's segments (Tools/import_human.py)
     # level v2: the folder is picked by the name, the way KitchenArt::Mesh looks a mesh up (SM_K_* -> /Game/Kitchen, the rest -> /Game/Living)
     ("level_v2", os.path.join(PROJ, "SourceArt", "Blender", "level_v2"), None, "level_v2_new_pieces.json"),
+    # level v3: every SM_V3_* piece in its own folder (KitchenArt::Mesh looks SM_V3_* up under /Game/LevelV3)
+    ("level_v3", os.path.join(PROJ, "SourceArt", "Blender", "level_v3"), "/Game/LevelV3", "level_v3_new_pieces.json"),
+    ("level_v31", os.path.join(PROJ, "SourceArt", "Blender", "level_v31"), "/Game/LevelV3", "level_v31_new_pieces.json"),
 ]
 EAL = unreal.EditorAssetLibrary
 AT = unreal.AssetToolsHelpers.get_asset_tools()

@@ -102,6 +102,14 @@ public:
 
 	bool HasCard(uint8 Id) const { return Cards.Contains(Id); }
 
+	/** Level v3: the raid seed, seed * 8 + tier (-1: none yet). The host sets it (SetLevelSeed); every machine applies the same validated
+	 *  table row (LevelV3::FindSeed) to its own world. */
+	UPROPERTY(ReplicatedUsing = OnRep_LevelSeed) int32 LevelSeedKey = -1;
+	UFUNCTION() void OnRep_LevelSeed();
+	/** Server: use this validated seed of this tier from now on (and on this machine at once). */
+	void SetLevelSeed(int32 Seed, int32 Tier);
+	int32 LevelSeed() const { return LevelSeedKey < 0 ? -1 : LevelSeedKey / 8; }
+
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastPing(FVector_NetQuantize Loc, uint8 Kind, uint8 Team, const FString& Who);
 	/** The run is over: every machine keeps its own best run (shown in the main menu). */

@@ -31,6 +31,7 @@
 #include "Components/CapsuleComponent.h"
 #include "AntMovementComponent.h"
 #include "LevelV2.h"
+#include "LevelV3.h"
 #include "KitchenBuilder.h"
 #include "HumanCharacter.h"
 #include "AntRaid.h"
@@ -488,6 +489,10 @@ void AAntKitchenGameMode::SpawnMainObject(int32 ForceSpot)
 	{
 		int32 DevSpot = 0;
 		if (FParse::Value(FCommandLine::Get(), TEXT("AntCakeSpot="), DevSpot)) { Pick = DevSpot - 1; }   // dev: -AntCakeSpot=1..3
+	}
+	if (!Spots.IsValidIndex(Pick) && LevelV3::Enabled() && LevelV3::Current())
+	{
+		Pick = LevelV3::Current()->Cake;   // level v3: the seed put it there (M1..M4)
 	}
 	if (!Spots.IsValidIndex(Pick))
 	{
@@ -2168,3 +2173,106 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 		UE_LOG(LogTemp, Warning, TEXT("ANTDEV unknown or impossible right now: %s"), *Cmd);
 	}
 }
+
+// ---------------------------------------------------------------------------------------------
+// Level v3: what the raid seed decides that lives on the server (doors, crumbs); the meshes are KitchenBuilder::ApplyV3Layout.
+// ---------------------------------------------------------------------------------------------
+
+void AAntKitchenGameMode::ApplyV3Doors()
+{
+	if (!LevelV3::Enabled())
+	{
+		return;
+	}
+	const TConstArrayView<FKitchenArtMover> Parts = KitchenArt::Movers();
+	TMap<int32, float> Want;   // mover -> -1 shut, 1 open, 0..1 ajar
+	if (const FLevelV3Seed* S = LevelV3::Current())
+	{
+		for (int32 i = 0; i < 3; ++i)
+		{
+			if (Parts.IsValidIndex(S->Doors[i])) { Want.Add(S->Doors[i], 25.f / FMath::Max(25.f, FMath::Abs(Parts[S->Doors[i]].Angle))); }   // "ajar:25"
+		}
+	}
+	TMap<FString, bool> Gadgets;
+	for (int32 D = 0; D < LevelV3::NumDistricts(); ++D)
+	{
+		const int32 V = LevelV3::CurrentVariant(D);
+		if (V == INDEX_NONE) { continue; }
+		const FLevelV3Variant& Vr = LevelV3::Variants()[V];
+		for (int32 k = 0; k < Vr.NumOps; ++k)
+		{
+			const FLevelV3Op& O = LevelV3::Ops()[Vr.FirstOp + k];
+			if (O.Kind == LevelV3::Mover && Parts.IsValidIndex(O.A))
+			{
+				Want.Add(O.A, O.B == 0 ? -1.f : O.B == 1 ? 1.f : O.F[0] / FMath::Max(1.f, FMath::Abs(Parts[O.A].Angle)));
+			}
+			else if (O.Kind == LevelV3::Gadget)
+			{
+				Gadgets.Add(O.Text, O.B != 0);
+			}
+		}
+	}
+	int32 Set = 0;
+	for (TActorIterator<AKitchenMover> It(GetWorld()); It; ++It)
+	{
+		if (!Parts.IsValidIndex(It->PartIndex)) { continue; }
+		const bool bStartsOpen = (Parts[It->PartIndex].Flags & KitchenArt::StartsOpen) != 0;
+		const float* W = Want.Find(It->PartIndex);
+		const bool bOpen = W ? *W >= 1.f : bStartsOpen;
+		It->SetOpen(bOpen);
+		It->Ajar = (W && *W > 0.f && *W < 1.f) ? FMath::Clamp(*W, 0.f, 1.f) : 0.f;
+		Set += W ? 1 : 0;
+	}
+	static const TCHAR* const Names[] = { TEXT("FRIDGE"), TEXT("OVEN"), TEXT("DRAWER"), TEXT("DISHWASHER") };
+	static const EKitchenDoorKind Kinds[] = { EKitchenDoorKind::Fridge, EKitchenDoorKind::Oven, EKitchenDoorKind::Drawer, EKitchenDoorKind::Dishwasher };
+	for (int32 g = 0; g < 4; ++g)
+	{
+		const bool* Open = Gadgets.Find(Names[g]);
+		if (!Open && !V3GadgetsOpened.Contains((uint8)g)) { continue; }   // (not ours to touch)
+		for (TActorIterator<AKitchenDoor> It(GetWorld()); It; ++It)
+		{
+			if (It->Kind == Kinds[g]) { It->SetDoorOpen(Open && *Open); }
+		}
+		if (Open && *Open) { V3GadgetsOpened.Add((uint8)g); } else { V3GadgetsOpened.Remove((uint8)g); }
+	}
+	UE_LOG(LogTemp, Display, TEXT("ANTSEED doors: %d movers set by the seed, gadgets %d"), Set, Gadgets.Num());
+}
+
+void AAntKitchenGameMode::SpawnV3Scatter()
+{
+	const FLevelV3Seed* S = LevelV3::Enabled() ? LevelV3::Current() : nullptr;
+	if (!S)
+	{
+		return;
+	}
+	const TConstArrayView<FLevelV3Scatter> Sc = LevelV3::Scatter();
+	int32 N = 0;
+	for (int32 i = 0; i < S->ScatterNum; ++i)
+	{
+		if (!Sc.IsValidIndex(S->ScatterFirst + i)) { break; }
+		const FLevelV3Scatter& R = Sc[S->ScatterFirst + i];
+		const FString Item = LevelV3::ScatterName(R.Item);
+		if (!R.HasPos || Item.StartsWith(TEXT("SM_")) || Item == TEXT("клубочек"))
+		{
+			continue;   // things, not food (KitchenBuilder::ApplyV3Layout)
+		}
+		// Crumbs: the smallest food there is, worth a little, carried by one ant.
+		FAntFoodDef D;
+		D.Name = Item;
+		D.Value = Item.Contains(TEXT("печень")) || Item.Contains(TEXT("попкорн")) ? 6 : 4;
+		D.Weight = 1;
+		D.Shape = Item.Contains(TEXT("хлопья")) || Item.Contains(TEXT("чипс")) ? EAntShape::Cube : EAntShape::Sphere;
+		D.Color = Item.Contains(TEXT("корм")) ? FLinearColor(0.42f, 0.24f, 0.1f) : Item.Contains(TEXT("горош")) ? FLinearColor(0.3f, 0.65f, 0.2f)
+			: Item.Contains(TEXT("изюм")) ? FLinearColor(0.25f, 0.1f, 0.12f) : FLinearColor(0.85f, 0.65f, 0.35f);
+		D.Scale = FVector(D.Shape == EAntShape::Cube ? 0.16f : 0.13f, 0.13f, D.Shape == EAntShape::Cube ? 0.05f : 0.11f);
+		const FVector Where(R.X, R.Y, R.Z + 25.f);
+		if (AKitchenLoot* L = GetWorld()->SpawnActorDeferred<AKitchenLoot>(AKitchenLoot::StaticClass(), FTransform(FRotator(0.f, R.Yaw, 0.f), Where), nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn))
+		{
+			L->InitFood(D);
+			L->FinishSpawning(FTransform(FRotator(0.f, R.Yaw, 0.f), Where));
+			++N;
+		}
+	}
+	UE_LOG(LogTemp, Display, TEXT("ANTSEED scatter: %d crumbs of seed %d"), N, S->Seed);
+}
+

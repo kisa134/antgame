@@ -4,6 +4,7 @@
 #include "KitchenInteractables.h"
 #include "KitchenArt.h"
 #include "LevelV2.h"
+#include "LevelV3.h"
 #include "GameFramework/Character.h"
 #include "Components/CapsuleComponent.h"
 #include "Engine/StaticMesh.h"
@@ -949,9 +950,12 @@ void AKitchenBuilder::Build()
 	// The lamp over the dinner table: a warm pool of light on the table, real shadows under it. Follows the switch.
 	{
 		const FVector P(500.f, -500.f, 3500.f);
-		Cyl(FVector(P.X, P.Y, P.Z + 280.f), 9.f, 5400.f - P.Z - 280.f, Black, false);                                             // cord
-		Part(EAntShape::Cone, FVector(P.X, P.Y, P.Z + 150.f), FVector(950.f, 950.f, 300.f), FRotator::ZeroRotator, Hex(200, 110, 55), false);   // shade
-		PendantBulb = AntFx::MakeGlow(Part(EAntShape::Sphere, FVector(P.X, P.Y, P.Z - 30.f), FVector(170.f, 170.f, 200.f), FRotator::ZeroRotator, White, false), FLinearColor(6.f, 4.4f, 2.2f));
+		if (!LevelV3::Enabled())   // (level v3: the modelled pendant lamp, SM_V3_PendantLamp, hangs there instead of the box-built one)
+		{
+			Cyl(FVector(P.X, P.Y, P.Z + 280.f), 9.f, 5400.f - P.Z - 280.f, Black, false);                                             // cord
+			Part(EAntShape::Cone, FVector(P.X, P.Y, P.Z + 150.f), FVector(950.f, 950.f, 300.f), FRotator::ZeroRotator, Hex(200, 110, 55), false);   // shade
+			PendantBulb = AntFx::MakeGlow(Part(EAntShape::Sphere, FVector(P.X, P.Y, P.Z - 30.f), FVector(170.f, 170.f, 200.f), FRotator::ZeroRotator, White, false), FLinearColor(6.f, 4.4f, 2.2f));
+		}
 		Pendant = NewObject<USpotLightComponent>(this);
 		Pendant->SetMobility(EComponentMobility::Movable);
 		Pendant->SetupAttachment(Root);
@@ -1054,6 +1058,7 @@ void AKitchenBuilder::Build()
 	bMainOn = AKitchenSwitch::AreLightsOn(GetWorld());
 	UpdateTimeOfDay(0.f);
 	bBuilt = true;
+	ApplyV3Layout();   // level v3: the districts of the seed known so far (a client may have it before it is built)
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1144,13 +1149,32 @@ UPrimitiveComponent* AKitchenBuilder::FindArt(const UWorld* World, const TCHAR* 
 
 void AKitchenBuilder::BuildArt()
 {
-	for (const FKitchenArtInst& I : KitchenArt::Instances())
+	const TConstArrayView<FKitchenArtInst> All = KitchenArt::Instances();
+	const bool bV3 = LevelV3::Enabled();
+	ArtByInst.Init(nullptr, All.Num());
+	TSet<int32> Fixtured;
+	if (bV3)
 	{
-		if (I.Role != KitchenArt::Static)
+		LevelV3::FixtureRows(Fixtured);   // the shelf, the jars, the curtains...: their actors build them (KitchenFixture)
+	}
+	for (int32 n = 0; n < All.Num(); ++n)
+	{
+		const FKitchenArtInst& I = All[n];
+		if (I.Role != KitchenArt::Static || Fixtured.Contains(n))
 		{
 			continue;
 		}
-		UStaticMeshComponent* C = KitchenArt::Add(this, Root, I.Name, I.Index, KitchenArt::WorldTransform(I), KitchenArt::ESolid::Static, true);
+		// (level v3: what a district variant may move or hide is movable, the rest is static)
+		UStaticMeshComponent* C = KitchenArt::Add(this, Root, I.Name, I.Index, KitchenArt::WorldTransform(I), KitchenArt::ESolid::Static, !(bV3 && LevelV3::IsVariantRow(n)));
+		ArtByInst[n] = C;
+		if (C && bV3 && (LevelV3::BaseFlags(n) & 1))
+		{
+			MakeAntsOnly(C);
+		}
+		if (C && bV3)
+		{
+			KitchenArt::ApplyTint(C, LevelV3::BaseTint(n));
+		}
 		if (C && FString(I.Name).EndsWith(TEXT("_CeilingLamp")))
 		{
 			LampShades.Add(C);   // its shade (material 0) glows with the light switch like the old cylinders did
@@ -1167,6 +1191,10 @@ void AKitchenBuilder::BuildArt()
 				AntsOnlyParts.Add(C);
 			}
 		}
+	}
+	if (bV3)
+	{
+		UE_LOG(LogTemp, Display, TEXT("ANTSEED level v3 base built: %d rows, %d of them held by fixtures"), All.Num(), Fixtured.Num());
 	}
 	// The pavement slabs have open joints: a bed under them, so nobody drops through a joint into the void.
 	Box(FVector(-11000.f, -5200.f, -260.f), FVector(-9400.f, 5800.f, -200.f), Hex(110, 108, 102));
@@ -1605,6 +1633,8 @@ void AKitchenBuilder::EnvironmentFor(const AAntCharacter* Ant, FAntEnv& Env)
 		const int32 Zone = LevelV2::ZoneAt(P);
 		if (Zone == 0) { Env.Flags |= AntStatus::Sticky; }
 		else if (Zone == 1) { Env.Flags |= AntStatus::Wet; }
+		// Level v3: the shards of a broken jar, cup or picture frame cut (10 a second, "порезан").
+		if (LevelV3::Enabled() && LevelV3::ShardsAt(P)) { Env.Hurt(LevelV3::ShardDps(), TEXT("порезан осколками")); }
 		// The yard sprinkler: every 26 s it waters a circle of the lawn for 9 s. Wet and cold: slow going, like the tap's stream.
 		if (P.Z < 400.f && P.Y < -5200.f && FVector::DistSquared2D(P, LevelV2::Sprinkler()) < FMath::Square(LevelV2::SprinklerRadius()))
 		{
@@ -2177,5 +2207,170 @@ void AKitchenBuilder::BuildYard()
 	if (!bArt || !ScatterTufts(Xf, 4242))   // modelled: tufts of several blades instead of single strips
 	{
 		Blades->AddInstances(Xf, false, true);
+	}
+}
+
+// ---------------------------------------------------------------------------------------------
+// Level v3: the districts of the raid seed (LevelV3::Current), applied on every machine from the same table rows:
+// what a variant adds is spawned here, what it removes is hidden (and stops colliding), what it moves is put at its new place.
+// Applying again first undoes the last seed. Loot, doors and the cake are the server's (AAntKitchenGameMode, AAntRaid).
+// ---------------------------------------------------------------------------------------------
+
+void AKitchenBuilder::MakeAntsOnly(UStaticMeshComponent* C)
+{
+	if (!C)
+	{
+		return;
+	}
+	C->ComponentTags.AddUnique(TEXT("AntsOnly"));
+	C->SetCollisionResponseToChannel(ECC_PhysicsBody, ECR_Ignore);
+	C->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
+	AntsOnlyParts.Add(C);
+	// Whoever already took the "ants only" list in (LetThrough) learns about this one too.
+	for (TActorIterator<ACharacter> It(GetWorld()); It; ++It)
+	{
+		if (!It->IsA<AAntCharacter>() && It->GetCapsuleComponent())
+		{
+			It->GetCapsuleComponent()->IgnoreComponentWhenMoving(C, true);
+		}
+	}
+}
+
+UStaticMeshComponent* AKitchenBuilder::AddV3Piece(const FKitchenArtInst& I, uint8 Flags, const TCHAR* Tint)
+{
+	UStaticMeshComponent* C = KitchenArt::Add(this, Root, I.Name, I.Index, KitchenArt::WorldTransform(I), KitchenArt::ESolid::Static, false);
+	if (C)
+	{
+		if (Flags & 1)
+		{
+			MakeAntsOnly(C);
+		}
+		KitchenArt::ApplyTint(C, Tint);
+		V3Extra.Add(C);
+	}
+	return C;
+}
+
+void AKitchenBuilder::SetArtShown(int32 Inst, bool bShown)
+{
+	UStaticMeshComponent* C = ArtByInst.IsValidIndex(Inst) ? ArtByInst[Inst] : nullptr;
+	if (!C)
+	{
+		return;
+	}
+	C->SetVisibility(bShown, true);
+	C->SetCollisionEnabled(bShown ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
+}
+
+void AKitchenBuilder::ApplyV3Layout()
+{
+	if (!bBuilt || !LevelV3::Enabled())
+	{
+		return;
+	}
+	// ---- undo the last seed
+	for (UStaticMeshComponent* C : V3Extra)
+	{
+		if (C)
+		{
+			AntsOnlyParts.Remove(C);
+			C->DestroyComponent();
+		}
+	}
+	V3Extra.Reset();
+	for (int32 Inst : V3Hidden)
+	{
+		SetArtShown(Inst, true);
+	}
+	V3Hidden.Reset();
+	for (const TPair<int32, FTransform>& KV : V3Moved)
+	{
+		if (ArtByInst.IsValidIndex(KV.Key) && ArtByInst[KV.Key])
+		{
+			ArtByInst[KV.Key]->SetWorldTransform(KV.Value);
+		}
+	}
+	V3Moved.Reset();
+
+	// ---- the variants of the current seed
+	const TConstArrayView<FLevelV3Op> Ops = LevelV3::Ops();
+	const TConstArrayView<FKitchenArtInst> Var = LevelV3::VarArt();
+	int32 Added = 0, Hidden = 0, Moved = 0;
+	for (int32 D = 0; D < LevelV3::NumDistricts(); ++D)
+	{
+		const int32 V = LevelV3::CurrentVariant(D);
+		if (V == INDEX_NONE)
+		{
+			continue;
+		}
+		const FLevelV3Variant& Vr = LevelV3::Variants()[V];
+		for (int32 k = 0; k < Vr.NumOps; ++k)
+		{
+			const FLevelV3Op& O = Ops[Vr.FirstOp + k];
+			if (O.Kind == LevelV3::Add && Var.IsValidIndex(O.A))
+			{
+				Added += AddV3Piece(Var[O.A], LevelV3::VarFlags(O.A), LevelV3::VarTint(O.A)) ? 1 : 0;
+			}
+			else if (O.Kind == LevelV3::Remove && ArtByInst.IsValidIndex(O.A))
+			{
+				SetArtShown(O.A, false);
+				V3Hidden.Add(O.A);
+				++Hidden;
+			}
+			else if (O.Kind == LevelV3::Move && ArtByInst.IsValidIndex(O.A) && ArtByInst[O.A] && Var.IsValidIndex(O.B))
+			{
+				V3Moved.Add(O.A, ArtByInst[O.A]->GetComponentTransform());
+				ArtByInst[O.A]->SetWorldTransform(KitchenArt::WorldTransform(Var[O.B]));
+				++Moved;
+			}
+		}
+	}
+
+	// ---- the scatter that is a thing and not food: the kid's toys, a ball of yarn, the v2 mess (sugar, jam) brought back by the seed
+	int32 Things = 0;
+	if (const FLevelV3Seed* S = LevelV3::Current())
+	{
+		const TConstArrayView<FLevelV3Scatter> Sc = LevelV3::Scatter();
+		for (int32 i = 0; i < S->ScatterNum; ++i)
+		{
+			if (!Sc.IsValidIndex(S->ScatterFirst + i))
+			{
+				break;
+			}
+			const FLevelV3Scatter& R = Sc[S->ScatterFirst + i];
+			const FString Item = LevelV3::ScatterName(R.Item);
+			FString Mesh;
+			FVector P(R.X, R.Y, R.Z);
+			float Yaw = R.Yaw;
+			if (Item.StartsWith(TEXT("SM_"))) { Mesh = Item; }
+			else if (Item == TEXT("клубочек")) { Mesh = TEXT("SM_L_YarnBall"); }
+			else if (Item == TEXT("new38")) { Mesh = TEXT("SM_K_SugarSpill"); P = FVector(1250.f, -2450.f, 0.f); Yaw = 20.f; }
+			else if (Item == TEXT("new39")) { Mesh = TEXT("SM_K_JamPuddle"); P = FVector(3450.f, -1500.f, 0.f); Yaw = 0.f; }
+			if (Mesh.IsEmpty() || !KitchenArt::Mesh(*Mesh))
+			{
+				continue;   // crumbs, kibble, crisps: food (the server spawns it with the loot)
+			}
+			const float Scale = Mesh == TEXT("SM_L_YarnBall") ? 0.5f : 1.f;   // (a little ball, not grandma's big one)
+			const FTransform T(FRotator(0.f, Yaw, 0.f), P, FVector(Scale * KitchenArt::ImportScale));
+			if (UStaticMeshComponent* C = KitchenArt::Add(this, Root, *Mesh, 0, T, KitchenArt::ESolid::Static, false))
+			{
+				if (!Mesh.StartsWith(TEXT("SM_L_Toy")))
+				{
+					MakeAntsOnly(C);   // a puddle, a smear, a ball of yarn: the Human walks through
+				}
+				V3Extra.Add(C);
+				++Things;
+			}
+		}
+	}
+	UE_LOG(LogTemp, Display, TEXT("ANTSEED applied on %s: added %d, hidden %d, moved %d, scatter things %d | %s"),
+		GetNetMode() == NM_Client ? TEXT("client") : TEXT("server"), Added, Hidden, Moved, Things, *LevelV3::Describe());
+}
+
+void AKitchenBuilder::ApplyLevelV3(UWorld* World)
+{
+	for (TActorIterator<AKitchenBuilder> It(World); It; ++It)
+	{
+		It->ApplyV3Layout();
 	}
 }

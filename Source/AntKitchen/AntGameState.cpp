@@ -1,5 +1,6 @@
 ﻿#include "AntGameState.h"
 #include "KitchenBuilder.h"
+#include "LevelV3.h"
 #include "KitchenLoot.h"
 #include "AntCharacter.h"
 #include "AntTypes.h"
@@ -23,6 +24,7 @@ void AAntGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(AAntGameState, TeamScore);
+	DOREPLIFETIME(AAntGameState, LevelSeedKey);
 	DOREPLIFETIME(AAntGameState, RivalScore);
 	DOREPLIFETIME(AAntGameState, HumanRage);
 	DOREPLIFETIME(AAntGameState, RivalWorkers);
@@ -210,3 +212,38 @@ void AAntGameState::MulticastMessage_Implementation(const FString& Text, FLinear
 		Feed.RemoveAt(0);
 	}
 }
+
+void AAntGameState::OnRep_LevelSeed()
+{
+	if (!LevelV3::Enabled() || LevelSeedKey < 0)
+	{
+		return;
+	}
+	const FLevelV3Seed* S = LevelV3::FindSeed(LevelSeedKey / 8, LevelSeedKey % 8);
+	LevelV3::SetCurrent(S);
+	UE_LOG(LogTemp, Display, TEXT("ANTSEED client got seed %d tier %d"), LevelSeedKey / 8, LevelSeedKey % 8);
+	AKitchenBuilder::ApplyLevelV3(GetWorld());
+}
+
+void AAntGameState::SetLevelSeed(int32 Seed, int32 Tier)
+{
+	if (!HasAuthority() || !LevelV3::Enabled())
+	{
+		return;
+	}
+	const FLevelV3Seed* S = LevelV3::FindSeed(Seed, Tier);
+	if (!S)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ANTSEED no validated seed for tier %d: the default layout"), Tier);
+	}
+	LevelSeedKey = S ? S->Seed * 8 + S->Tier : -1;
+	LevelV3::SetCurrent(S);
+	LevelV3::ApplyDevVariants();
+	if (S && S->Seed != Seed)
+	{
+		UE_LOG(LogTemp, Display, TEXT("ANTSEED seed %d of tier %d is not in the validated table: the next validated one, %d"), Seed, Tier, S->Seed);
+	}
+	UE_LOG(LogTemp, Display, TEXT("%s"), *LevelV3::Describe());
+	AKitchenBuilder::ApplyLevelV3(GetWorld());
+}
+

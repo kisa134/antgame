@@ -26,6 +26,7 @@ void AKitchenMover::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(AKitchenMover, PartIndex);
 	DOREPLIFETIME(AKitchenMover, bOpen);
+	DOREPLIFETIME(AKitchenMover, Ajar);
 }
 
 void AKitchenMover::BeginPlay()
@@ -36,7 +37,7 @@ void AKitchenMover::BeginPlay()
 		bOpen = true;
 	}
 	Build();
-	Alpha = bOpen ? 1.f : 0.f;
+	Alpha = bOpen ? 1.f : Ajar;
 	ApplyAlpha();
 }
 
@@ -138,11 +139,11 @@ void AKitchenMover::Tick(float DeltaSeconds)
 
 	PullTick(DeltaSeconds);
 	const float Strain = StrainNow(DeltaSeconds);
-	const float Target = bOpen ? 1.f : 0.f;
+	const float Target = bOpen ? 1.f : Ajar;
 	if (!bOpen && Strain > 0.f)
 	{
 		// Not enough ants on it: it gives a crack and falls back (the travel is eased, so undo the ease).
-		Alpha = FMath::Sqrt(Strain * 0.5f);
+		Alpha = FMath::Max(Ajar, FMath::Sqrt(Strain * 0.5f));
 		ApplyAlpha();
 	}
 	else if (!FMath::IsNearlyEqual(Alpha, Target))
@@ -321,6 +322,7 @@ void AKitchenMover::SetOpen(bool bInOpen, float AutoClose)
 		OpenedAt = Now();
 	}
 	bOpen = bInOpen;
+	if (!bInOpen) { Ajar = 0.f; }   // (shut by someone: shut for good, not back to the seed's crack)
 	AutoCloseAt = (bInOpen && AutoClose > 0.f) ? Now() + AutoClose : -1.f;
 	ServerCheck = 0.6f;
 }

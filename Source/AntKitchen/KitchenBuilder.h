@@ -7,6 +7,7 @@
 #include "KitchenBuilder.generated.h"
 
 class UStaticMeshComponent;
+struct FKitchenArtInst;
 class UPointLightComponent;
 class UDirectionalLightComponent;
 class USpotLightComponent;
@@ -75,6 +76,11 @@ public:
 	static bool LetThrough(class ACharacter* Big);
 	/** The first placed piece of the modelled flat with this mesh (its component), or null. */
 	static UPrimitiveComponent* FindArt(const UWorld* World, const TCHAR* MeshName);
+	/** Level v3: puts the districts of the current seed (LevelV3::Current) into the world, on this machine. */
+	static void ApplyLevelV3(UWorld* World);
+	void ApplyV3Layout();
+	/** Level v3: the component of base row Inst (null if a fixture builds it, or it is not a static piece). */
+	UStaticMeshComponent* ArtComponent(int32 Inst) const { return ArtByInst.IsValidIndex(Inst) ? ArtByInst[Inst] : nullptr; }
 
 	/** Ceiling lamps on/off (light switch). */
 	void SetMainLights(bool bOn);
@@ -113,6 +119,14 @@ private:
 	bool bArt = false;
 	bool bBuilt = false;
 	UPROPERTY() TArray<UPrimitiveComponent*> AntsOnlyParts;
+	// level v3
+	void MakeAntsOnly(UStaticMeshComponent* C);
+	UStaticMeshComponent* AddV3Piece(const FKitchenArtInst& I, uint8 Flags, const TCHAR* Tint);
+	void SetArtShown(int32 Inst, bool bShown);
+	UPROPERTY() TArray<UStaticMeshComponent*> ArtByInst;
+	UPROPERTY() TArray<UStaticMeshComponent*> V3Extra;
+	TArray<int32> V3Hidden;
+	TMap<int32, FTransform> V3Moved;
 
 	/** Air moving through a duct: ants inside are carried along. */
 	struct FDuctWind { FBox Box; FVector Dir; };
