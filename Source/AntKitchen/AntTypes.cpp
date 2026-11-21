@@ -1,4 +1,5 @@
 ﻿#include "AntTypes.h"
+#include "AntAudio.h"
 #include "Engine/StaticMesh.h"
 #include "Sound/SoundBase.h"
 #include "Sound/SoundAttenuation.h"
@@ -482,12 +483,7 @@ const TCHAR* FoodArtName(const FString& LootName)
 
 namespace AntSfx
 {
-static const TCHAR* Names[Count] = { TEXT("S_Spit"), TEXT("S_Splat"), TEXT("S_Hit"), TEXT("S_Crit"), TEXT("S_Kill"), TEXT("S_Grab"), TEXT("S_Drop"),
-	TEXT("S_Deliver"), TEXT("S_Crunch"), TEXT("S_Stomp"), TEXT("S_Spray"), TEXT("S_Squish"), TEXT("S_Jump"), TEXT("S_Zap"), TEXT("S_Sizzle"),
-	TEXT("S_Splash"), TEXT("S_Rage"), TEXT("S_Bite"), TEXT("S_Buzz"), TEXT("S_Web"), TEXT("S_Hiss"), TEXT("S_Step"), TEXT("S_Ambience"),
-	TEXT("S_Swat"), TEXT("S_HumanStep"), TEXT("S_Faucet"), TEXT("S_FridgeDoor"), TEXT("S_Toaster"), TEXT("S_ArmyMarch"), TEXT("S_ArmyCharge"),
-	TEXT("S_Pickup_Gear"), TEXT("S_Legendary"), TEXT("S_SpiderStep"), TEXT("S_HumanPanic"),
-	TEXT("S_Step_Wood"), TEXT("S_Step_Metal"), TEXT("S_Step_Fabric"), TEXT("S_Step_Soil"), TEXT("S_Step_Grass") };
+// The sounds themselves (files, variations, falloff, mix, voice limits) live in AntAudio.cpp; these are the old entry points.
 
 uint8 StepFor(const UPrimitiveComponent* Surface)
 {
@@ -509,89 +505,19 @@ uint8 StepFor(const UPrimitiveComponent* Surface)
 
 USoundBase* Get(uint8 Id)
 {
-	// Each id can have variants: S_Name, S_Name_1 .. S_Name_4 (a random one plays every time).
-	static TArray<TArray<TWeakObjectPtr<USoundBase>>> Cache;
-	static TArray<bool> Tried;
-	if (Id >= Count)
-	{
-		return nullptr;
-	}
-	if (Cache.Num() == 0)
-	{
-		Cache.SetNum(Count);
-		Tried.SetNumZeroed(Count);
-	}
-	if (!Tried[Id])
-	{
-		Tried[Id] = true;
-		// Only real (generated/recorded) sounds live in /Game/SoundsReal; the old synth placeholders are ignored.
-		auto Load = [Id](const FString& N)
-		{
-			const FString Path = FString::Printf(TEXT("/Game/SoundsReal/%s.%s"), *N, *N);
-			USoundBase* S = LoadObject<USoundBase>(nullptr, *Path, nullptr, LOAD_NoWarn | LOAD_Quiet);
-			if (S && !S->IsRooted()) { S->AddToRoot(); }   // the cache below survives map travel, the sound must too
-			if (S)
-			{
-				S->AddToRoot();
-				Cache[Id].Add(S);
-			}
-		};
-		Load(Names[Id]);
-		for (int32 V = 1; V <= 4; ++V)
-		{
-			Load(FString::Printf(TEXT("%s_%d"), Names[Id], V));
-		}
-	}
-	const TArray<TWeakObjectPtr<USoundBase>>& L = Cache[Id];
-	if (L.Num() == 0 && Id >= StepWood && Id <= StepGrass)
-	{
-		return Get(Step);   // no recording for this surface yet: the plain tick
-	}
-	return L.Num() > 0 ? L[FMath::RandRange(0, L.Num() - 1)].Get() : nullptr;
+	return AntAudio::Get(Id);
 }
 
-static USoundAttenuation* Falloff()
-{
-	static USoundAttenuation* A = nullptr;
-	if (!A)
-	{
-		A = NewObject<USoundAttenuation>(GetTransientPackage(), TEXT("AntSfxFalloff"));
-		A->AddToRoot();
-		A->Attenuation.bAttenuate = true;
-		A->Attenuation.bSpatialize = true;
-		A->Attenuation.AttenuationShape = EAttenuationShape::Sphere;
-		A->Attenuation.AttenuationShapeExtents = FVector(500.f);
-		A->Attenuation.FalloffDistance = 6500.f;
-	}
-	return A;
-}
-
-USoundAttenuation* Attenuation() { return Falloff(); }
+USoundAttenuation* Attenuation() { return AntAudio::AttenuationFor((uint8)EAntSfx::Faucet); }
 
 void Play(const UObject* Ctx, uint8 Id, const FVector& Location, float Volume, float Pitch)
 {
-	UWorld* W = Ctx ? Ctx->GetWorld() : nullptr;
-	if (!W || W->GetNetMode() == NM_DedicatedServer)
-	{
-		return;
-	}
-	if (USoundBase* S = Get(Id))
-	{
-		UGameplayStatics::PlaySoundAtLocation(W, S, Location, Volume, Pitch * FMath::FRandRange(0.93f, 1.07f), 0.f, Falloff());
-	}
+	AntAudio::PlayRaw(Ctx, Id, Location, Volume, Pitch, false);
 }
 
 void Play2D(const UObject* Ctx, uint8 Id, float Volume, float Pitch)
 {
-	UWorld* W = Ctx ? Ctx->GetWorld() : nullptr;
-	if (!W || W->GetNetMode() == NM_DedicatedServer)
-	{
-		return;
-	}
-	if (USoundBase* S = Get(Id))
-	{
-		UGameplayStatics::PlaySound2D(W, S, Volume, Pitch);
-	}
+	AntAudio::PlayRaw(Ctx, Id, FVector::ZeroVector, Volume, Pitch, true);
 }
 
 void Everyone(const UObject* Ctx, uint8 Id, const FVector& Location, float Pitch)
