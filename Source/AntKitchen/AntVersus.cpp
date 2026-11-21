@@ -12,6 +12,8 @@
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "Net/UnrealNetwork.h"
+#include "UnrealClient.h"
+#include "Misc/Paths.h"
 
 namespace
 {
@@ -94,7 +96,30 @@ AAntVersus* AAntVersus::Start(UWorld* World, AAntPlayerController* HumanPC)
 void AAntVersus::Tick(float Dt)
 {
 	Super::Tick(Dt);
-	if (!HasAuthority() || !bActive)
+	if (!HasAuthority())
+	{
+		// Client: what this machine sees of the mode (the log of a two-copy test; -AntClientShots: a picture every 10 s).
+		static float NextLog = 0.f, NextShot = 20.f;
+		static int32 ShotN = 0;
+		const float Now = GetWorld()->GetTimeSeconds();
+		APlayerController* PC = GetWorld()->GetFirstPlayerController();
+		if (bActive && Now >= NextLog)
+		{
+			NextLog = Now + 3.f;
+			const AHumanCharacter* Me = PC ? Cast<AHumanCharacter>(PC->GetPawn()) : nullptr;
+			const AntWeapons::FDef* D = Me ? AntWeapons::Held(Me) : nullptr;
+			UE_LOG(LogTemp, Display, TEXT("ANTVERSUS client: I play %s, patience %.0f, x-ray %d, weapon %s, winner %d"), Me ? TEXT("the Human") : TEXT("an ant"), Patience, AntVersus::XrayOn(GetWorld()) ? 1 : 0,
+				D ? D->Name : TEXT("газета"), (int32)Winner);
+		}
+		static const bool bShots = FParse::Param(FCommandLine::Get(), TEXT("AntClientShots"));
+		if (bShots && Now >= NextShot)
+		{
+			NextShot = Now + 10.f;
+			FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir() / TEXT("Screenshots") / TEXT("wreck") / FString::Printf(TEXT("client_%02d.png"), ShotN++), true, false);
+		}
+		return;
+	}
+	if (!bActive)
 	{
 		return;
 	}

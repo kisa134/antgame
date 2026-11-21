@@ -34,7 +34,7 @@ namespace AntWreck
 	struct FClassDef
 	{
 		const TCHAR* Name;
-		float Density;      // kg per m^3 of its bounding box
+		float Density;      // kg per m^2 of its bounding box's surface (furniture is shells and boards, not solid blocks)
 		float WakeK;        // impulse (kg m/s) per kg it takes to tip it
 		float HpPerKg;
 		float MinHp;

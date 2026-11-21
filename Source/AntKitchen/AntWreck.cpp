@@ -35,17 +35,17 @@ namespace
 
 	const FClassDef GClasses[] =
 	{
-		//  name        density wakeK hp/kg  minHp breaks noise
-		{ TEXT("дерево"),     70.f, 0.55f, 6.f,  40.f, true,  0.7f },
-		{ TEXT("ДСП"),        90.f, 0.55f, 4.f,  30.f, true,  0.7f },
-		{ TEXT("металл"),    150.f, 0.6f, 15.f,  60.f, false, 0.9f },
-		{ TEXT("стекло"),    300.f, 0.4f,  3.f,   8.f, true,  0.9f },
-		{ TEXT("керамика"),  300.f, 0.4f,  3.f,   8.f, true,  0.8f },
-		{ TEXT("пластик"),    60.f, 0.4f,  6.f,  15.f, true,  0.4f },
-		{ TEXT("ткань"),      25.f, 0.35f, 30.f, 60.f, false, 0.1f },
-		{ TEXT("бумага"),    150.f, 0.4f, 10.f,  15.f, false, 0.3f },
-		{ TEXT("техника"),   150.f, 2.2f,  8.f, 200.f, false, 1.0f },
-		{ TEXT("еда"),       300.f, 0.3f,  4.f,   5.f, true,  0.3f },
+		//  name        kg/m2 wakeK hp/kg  minHp breaks noise
+		{ TEXT("дерево"),      4.f, 0.55f, 6.f,  40.f, true,  0.7f },
+		{ TEXT("ДСП"),         4.f, 0.55f, 4.f,  30.f, true,  0.7f },
+		{ TEXT("металл"),      6.f, 0.6f, 15.f,  60.f, false, 0.9f },
+		{ TEXT("стекло"),      3.f, 0.4f,  3.f,   8.f, true,  0.9f },
+		{ TEXT("керамика"),    3.f, 0.4f,  3.f,   8.f, true,  0.8f },
+		{ TEXT("пластик"),     2.f, 0.4f,  6.f,  15.f, true,  0.4f },
+		{ TEXT("ткань"),      3.5f, 0.35f, 30.f, 60.f, false, 0.1f },
+		{ TEXT("бумага"),      5.f, 0.4f, 10.f,  15.f, false, 0.3f },
+		{ TEXT("техника"),    10.f, 2.2f,  8.f, 200.f, false, 1.0f },
+		{ TEXT("еда"),         4.f, 0.3f,  4.f,   5.f, true,  0.3f },
 	};
 
 	bool Has(const FString& N, std::initializer_list<const TCHAR*> Keys)
@@ -70,6 +70,7 @@ namespace
 		{
 			return -1;
 		}
+		if (Has(N, { TEXT("bookshelf"), TEXT("tvstand"), TEXT("shoerack"), TEXT("wallshelf"), TEXT("spiceshelf") })) { return Board; }
 		if (Has(N, { TEXT("_base"), TEXT("dishwasher"), TEXT("_range"), TEXT("_sink"), TEXT("radiator") })) { bFixed = true; return N.Contains(TEXT("radiator")) ? Metal : Board; }
 		if (Has(N, { TEXT("wallcab") })) { WakeMul = 3.f; return Board; }
 		if (Has(N, { TEXT("fridge") })) { return Appliance; }
@@ -144,7 +145,8 @@ namespace
 			P.bFixed = bFixed;
 			P.Box = C->Bounds.GetBox();
 			const FVector Sz = P.Box.GetSize() / UuPerM;
-			P.Mass = FMath::Clamp((float)(Sz.X * Sz.Y * Sz.Z) * Class(M).Density * WakeMul, 0.05f, 400.f);
+			const float Area = 2.f * (float)(Sz.X * Sz.Y + Sz.Y * Sz.Z + Sz.X * Sz.Z);
+			P.Mass = FMath::Clamp(Area * Class(M).Density * WakeMul, 0.05f, 300.f);
 			P.Hp = FMath::Max(Class(M).MinHp, P.Mass * Class(M).HpPerKg);
 			GCat.ByInst.Add(i, GCat.Pieces.Num());
 			GCat.ByComp.Add(C, i);
@@ -223,6 +225,11 @@ int32 AntWreck::FindPiece(UWorld* World, const FString& NameOrIndex)
 	for (const FPiece& P : GCat.Pieces)
 	{
 		if (FString(All[P.Inst].Name).Contains(Name)) { return P.Inst; }
+	}
+	// Not a piece that wrecks (a fixture row, architecture): its row all the same (callers want its place).
+	for (int32 i = 0; i < All.Num(); ++i)
+	{
+		if (FString(All[i].Name).Equals(Name, ESearchCase::IgnoreCase) && All[i].Index == Index) { return i; }
 	}
 	return -1;
 }
@@ -604,7 +611,7 @@ void AAntWreckBody::TakeHit(const FVector& Point, const FVector& Impulse, float 
 		{
 			// A loose part: the chunk nearest the blow comes off.
 			const TArray<TSharedPtr<const AntWreckGeo::FGeo>>& Cut = AntWreckGeo::Cut(this, Mesh->GetStaticMesh(), Seed, AntWreckGeo::ChunkCount((float)WorldBox().GetSize().GetMax()));
-			if (Cut.Num() > 2 && Mat != AntWreck::Appliance && Mat != AntWreck::Cloth && Mat != AntWreck::Metal)
+			if (Cut.Num() > 2 && Mat != AntWreck::Appliance && Mat != AntWreck::Cloth && Mat != AntWreck::Metal && Mat != AntWreck::Paper)
 			{
 				const FTransform MT = Mesh->GetComponentTransform();
 				int32 Best = 0; float BestD = 1.e12f;
@@ -720,6 +727,22 @@ bool AAntWreckBody::Wake(const FVector& Impulse, const FVector& At, bool bForce)
 			++Riders;
 		}
 	}
+	// No box of it may start under the floor (a box a little fatter than a thin leg): lift it clear first.
+	{
+		float Low = 1.e9f;
+		Low = FMath::Min(Low, (float)Root->Bounds.GetBox().Min.Z);
+		for (UBoxComponent* Hb : Hull) { Low = FMath::Min(Low, (float)Hb->Bounds.GetBox().Min.Z); }
+		TArray<const AActor*> Ign; Ign.Add(this);
+		const FVector C = WorldBox().GetCenter();
+		const float Floor = FloorUnder(GetWorld(), FVector(C.X, C.Y, WorldBox().Min.Z + 20.f), Ign, Low);
+		if (Low < Floor + 1.f && Floor - Low < 200.f)
+		{
+			AddActorWorldOffset(FVector(0.f, 0.f, Floor - Low + 2.f), false, nullptr, ETeleportType::TeleportPhysics);
+		}
+		UE_LOG(LogTemp, Display, TEXT("ANTWRECK wake %s: boxes from z %.0f, floor %.0f, %d boxes"), *PieceName(), Low, Floor, 1 + Hull.Num());
+	}
+	// Its boxes only approximate it: where one starts inside a neighbour it eases out instead of being fired off.
+	Root->BodyInstance.SetMaxDepenetrationVelocity(60.f);
 	Root->SetSimulatePhysics(true);
 	Root->SetMassOverrideInKg(NAME_None, Mass, true);
 	Root->SetLinearDamping(0.08f);
@@ -788,11 +811,11 @@ void AAntWreckBody::OnPhysHit(UPrimitiveComponent* HitComp, AActor* Other, UPrim
 	}
 	const float I = (float)NormalImpulse.Size() / AntWreck::UuPerM;   // kg m/s
 	const float Dv = I / FMath::Max(0.05f, Mass);
-	if (Dv < 1.0f || I < 1.f)
-	{
-		return;
-	}
 	const float Now = GetWorld()->GetTimeSeconds();
+	if (Dv < 1.0f || I < 1.f || Dv > 14.f || Now - AwakeSince < 0.15f)
+	{
+		return;   // (a solver kick out of an overlap is not a crash: nothing in a kitchen hits at 50 km/h)
+	}
 	TWeakObjectPtr<AActor> Key(Other);
 	if (const float* Last = HitCool.Find(Key); Last && Now - *Last < 0.3f)
 	{
@@ -802,7 +825,7 @@ void AAntWreckBody::OnPhysHit(UPrimitiveComponent* HitComp, AActor* Other, UPrim
 	const FVector At = Hit.ImpactPoint;
 	const FVector Into = -NormalImpulse.GetSafeNormal();
 	// It hurts itself landing (glass and china from a height break) and what it lands on.
-	const float SelfDmg = (Mat == AntWreck::Glass || Mat == AntWreck::China) ? Dv * 6.f : Dv * Mass * 0.25f;
+	const float SelfDmg = (Mat == AntWreck::Glass || Mat == AntWreck::China) ? Dv * 6.f : FMath::Max(0.f, Dv - 3.f) * Mass * 0.15f;
 	if (AAntWreckBody* B = Cast<AAntWreckBody>(Other))
 	{
 		B->TakeHit(At, Into * I * 0.7f, I * 0.9f, this);
@@ -934,11 +957,13 @@ void AAntWreckBody::DropChunk(int32 Chunk, const FVector& Dir)
 	const FVector Land2 = Ctr + Out.GetSafeNormal2D() * R.FRandRange(120.f, 420.f);
 	TArray<const AActor*> Ign; Ign.Add(this);
 	const float FloorZ = FloorUnder(GetWorld(), FVector(Land2.X, Land2.Y, Ctr.Z + 50.f), Ign, (float)WorldBox().Min.Z);
-	// It lies on its flattest side: a random yaw, tipped over by up to 90 degrees.
-	const FQuat Rot = FQuat(FVector::UpVector, R.FRandRange(-PI, PI)) * FQuat(R.VRand().GetSafeNormal(), R.FRandRange(0.f, HALF_PI)) * MT.GetRotation();
+	// It lies on its broadest side (its thinnest axis up), a random yaw, a few degrees of tilt.
 	const FVector Ext = Cut[Chunk]->Box.GetExtent() * MT.GetScale3D().GetAbs();
+	const int32 Thin = Ext.X <= Ext.Y && Ext.X <= Ext.Z ? 0 : Ext.Y <= Ext.Z ? 1 : 2;
+	const FQuat Flat = Thin == 0 ? FQuat(FVector::RightVector, -HALF_PI) : Thin == 1 ? FQuat(FVector::ForwardVector, HALF_PI) : FQuat::Identity;
+	const FQuat Rot = FQuat(FVector::UpVector, R.FRandRange(-PI, PI)) * FQuat(R.VRand().GetSafeNormal2D(), FMath::DegreesToRadians(R.FRandRange(0.f, 8.f))) * Flat;
 	const float Half = (float)Ext.GetMin();
-	const FVector LandCtr(Land2.X, Land2.Y, FloorZ + Half * 0.8f);
+	const FVector LandCtr(Land2.X, Land2.Y, FloorZ + Half + 2.f);
 	FWreckDrop D;
 	D.Chunk = (uint8)Chunk;
 	D.Start = NetNow();
@@ -1099,7 +1124,7 @@ void AAntWreckBody::LandDrop(int32 i)
 				Health = 0.f;
 				BreakApart(FVector::DownVector);
 			}
-			else if (Mass * V > 3.f)
+			else if (Mass > 3.f && Mass * V > 3.f)
 			{
 				AntWreck::Hit(GetWorld(), D.To.GetLocation(), FMath::Clamp((float)WorldBox().GetExtent().Size2D(), 120.f, 600.f), FVector(0.f, 0.f, -Mass * V * 0.5f), Mass * V * 0.5f, this, TEXT("fall"));
 			}
@@ -1213,8 +1238,11 @@ void AAntWreckBody::ServerPhysicsTick(float Dt)
 	const float Now = GetWorld()->GetTimeSeconds();
 	// The engine's gravity is far too weak at this scale: the rest of real gravity (scaled down a little for weight on screen).
 	Root->AddForce(FVector(0.f, 0.f, -(AntWreck::Gravity + GetWorld()->GetGravityZ())), NAME_None, true);
-	const FVector V = Root->GetPhysicsLinearVelocity();
-	const FVector W = Root->GetPhysicsAngularVelocityInRadians();
+	FVector V = Root->GetPhysicsLinearVelocity();
+	FVector W = Root->GetPhysicsAngularVelocityInRadians();
+	// Capped: a falling bookcase, not a rocket (9 m/s, 3 turns a second).
+	if (V.Size() > 17000.f) { V = V.GetSafeNormal() * 17000.f; Root->SetPhysicsLinearVelocity(V); }
+	if (W.Size() > 18.f) { W = W.GetSafeNormal() * 18.f; Root->SetPhysicsAngularVelocityInRadians(W); }
 	if (TiltDeg() > 28.f || V.Size() > 900.f)
 	{
 		SpillRiders(V);
@@ -1385,6 +1413,19 @@ bool AntWreck::DevCommand(AAntKitchenGameMode* GM, const TArray<FString>& A)
 	else if (Op == TEXT("reset"))
 	{
 		ResetAll(W);
+	}
+	else if (Op == TEXT("track"))
+	{
+		// wreck track <piece>: where its actor, mesh and boxes are right now
+		AAntWreckBody* B = BodyFor(W, PieceArg(2));
+		if (B)
+		{
+			FString Boxes;
+			Boxes += FString::Printf(TEXT(" root[%s..%s]"), *B->Root->Bounds.GetBox().Min.ToCompactString(), *B->Root->Bounds.GetBox().Max.ToCompactString());
+			for (UBoxComponent* Hb : B->Hull) { Boxes += FString::Printf(TEXT(" [%s..%s]"), *Hb->Bounds.GetBox().Min.ToCompactString(), *Hb->Bounds.GetBox().Max.ToCompactString()); }
+			UE_LOG(LogTemp, Display, TEXT("ANTWRECK track %s awake %d stage %d actor %s rot %s mesh box %s..%s v %.0f boxes%s"), *B->PieceName(), B->bAwake ? 1 : 0, B->Stage, *B->GetActorLocation().ToCompactString(),
+				*B->GetActorRotation().ToCompactString(), *B->WorldBox().Min.ToCompactString(), *B->WorldBox().Max.ToCompactString(), (float)B->GetVelocity().Size(), *Boxes);
+		}
 	}
 	else if (Op == TEXT("shot"))
 	{

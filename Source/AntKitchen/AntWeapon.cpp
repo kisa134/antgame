@@ -284,17 +284,18 @@ void AntWeapons::SpawnAll(UWorld* World)
 	}
 	for (TActorIterator<AHumanWeapon> It(World); It; ++It) { It->Destroy(); }
 	GAi.Reset();
-	struct FPlace { uint8 Kind; const TCHAR* Near; float Dx, Dy; bool bLean; };
+	// bFloor: on the floor beside the piece (the first free spot round it); else on top of what is there (the worktop).
+	struct FPlace { uint8 Kind; const TCHAR* Near; float Dx, Dy; bool bLean; bool bFloor; };
 	const FPlace Places[] =
 	{
-		{ Bat,        TEXT("SM_V3_ToyBox"),    0.f, -900.f, true },    // the kid's bat, leaning by the toy box
-		{ RollingPin, TEXT("SM_K_RollingPin"), 0.f, -260.f, false },
-		{ Pan,        TEXT("SM_K_Range"),      350.f, -1000.f, false },
-		{ Ladle,      TEXT("SM_K_UtensilRail"), 0.f, -500.f, false },
-		{ Spatula,    TEXT("SM_K_Spatula"),    0.f, -250.f, false },
-		{ Book,       TEXT("SM_L_Bookshelf"),  0.f, -1100.f, false },
-		{ Broom,      TEXT("SM_K_Mop"),        600.f, 0.f, true },
-		{ Slipper,    TEXT("SM_K_Shoe"),       300.f, 300.f, false },
+		{ Bat,        TEXT("SM_V3_ToyBox"),    0.f, 0.f, true, true },    // the kid's bat, leaning by the toy box
+		{ RollingPin, TEXT("SM_K_RollingPin"), 0.f, -260.f, false, false },
+		{ Pan,        TEXT("SM_K_Range"),      350.f, -400.f, false, false },
+		{ Ladle,      TEXT("SM_K_Ladle"),      0.f, -300.f, false, false },
+		{ Spatula,    TEXT("SM_K_Spatula"),    0.f, -250.f, false, false },
+		{ Book,       TEXT("SM_L_Bookshelf"),  0.f, 0.f, false, true },
+		{ Broom,      TEXT("SM_K_Mop"),        0.f, 0.f, true, true },
+		{ Slipper,    TEXT("SM_K_Shoe"),       0.f, 0.f, false, true },
 	};
 	int32 N = 0;
 	for (const FPlace& Pl : Places)
@@ -306,6 +307,24 @@ void AntWeapons::SpawnAll(UWorld* World)
 		const float TopZ = P ? (float)P->Box.Max.Z + 200.f : (float)At.Z + 400.f;
 		At += FVector(Pl.Dx, Pl.Dy, 0.f);
 		At.Z = TopZ;
+		if (Pl.bFloor)
+		{
+			// Round the piece: the first direction where the floor is free (a trace down meets the floor, not furniture).
+			const FBox B = P ? P->Box : FBox(At - FVector(200.f), At + FVector(200.f));
+			const float Floor0 = (float)B.Min.Z;
+			const float Out = (float)B.GetExtent().Size2D() + 260.f;
+			for (int32 k = 0; k < 16; ++k)
+			{
+				const float Ang = k * (PI / 8.f) + 0.3f;
+				const FVector Try = B.GetCenter() + FVector(FMath::Cos(Ang), FMath::Sin(Ang), 0.f) * Out;
+				const float F = FloorAt(World, FVector(Try.X, Try.Y, Floor0 + 900.f), nullptr);
+				if (FMath::Abs(F - Floor0) < 60.f)
+				{
+					At = FVector(Try.X, Try.Y, Floor0 + 120.f);
+					break;
+				}
+			}
+		}
 		AHumanWeapon* W = World->SpawnActorDeferred<AHumanWeapon>(AHumanWeapon::StaticClass(), FTransform(At), nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 		if (!W) { continue; }
 		W->Kind = Pl.Kind;
