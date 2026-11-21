@@ -72,7 +72,7 @@ struct MessF
     float FBM(float2 p) { float s = 0.0, a = 0.5; for (int i = 0; i < 4; i++) { s += a * N(p); p = p * 2.07 + float2(13.7, 7.1); a *= 0.5; } return s; }
     float SegD(float2 p, float2 a, float2 b) { float2 pa = p - a, ba = b - a; float t = saturate(dot(pa, ba) / max(dot(ba, ba), 1e-6)); return length(pa - ba * t); }
 
-    float F(float2 p, float sd, float shape, float asp)
+    float F(float2 p, float sd, float shape, float asp, float spk)
     {
         float2 o = float2(sd * 17.31 + 3.7, sd * 9.73 + 1.1);
         if (shape < 0.5)          // a pool: a lumpy round puddle with a lobe or two
@@ -90,16 +90,16 @@ struct MessF
         if (shape < 1.5)          // a splat: a core with a spiky crown and droplets thrown outwards
         {
             float a = atan2(p.y, p.x); float2 dir = float2(cos(a), sin(a));
-            float sp = pow(N(float2(a * 2.4, 0.0) + o * 3.0), 3.0) * 0.30 + pow(N(float2(a * 6.3, 4.0) + o), 5.0) * 0.28;
-            float s = 0.38 + 0.24 * (FBM(dir * 1.8 + o) - 0.5) + sp - length(p);
-            for (int i = 0; i < 14; i++)
+            float sp = (pow(N(float2(a * 2.4, 0.0) + o * 3.0), 3.0) * 0.30 + pow(N(float2(a * 6.3, 4.0) + o), 5.0) * 0.28) * spk;
+            float s = 0.38 + 0.14 * (1.0 - spk) + (0.24 + 0.16 * (1.0 - spk)) * (FBM(dir * 1.8 + o) - 0.5) + sp - length(p);
+            for (int i = 0; i < 6 + (int)(8.0 * spk); i++)
             {
                 float ang = H(o + float2(i * 1.7, 2.3)) * 6.2832; float2 rd = float2(cos(ang), sin(ang));
                 float dist = 0.48 + 0.46 * H(o + float2(i * 2.9, 5.1));
                 float r = 0.018 + 0.06 * H(o + float2(i * 3.3, 8.9)) * (1.15 - dist);
                 float2 q = p - rd * dist;
                 float along = dot(q, rd), across = dot(q, float2(-rd.y, rd.x));
-                s = max(s, r - length(float2(along * 0.5, across)));
+                s = max(s, r * (1.3 - 0.3 * spk) - length(float2(along * lerp(0.9, 0.5, spk), across)));
             }
             return s;
         }
@@ -151,12 +151,12 @@ struct MessF
     }
 };
 MessF f;
-float s = f.F(P, Seed, Shape, Asp);
+float s = f.F(P, Seed, Shape, Asp, Spk);
 float aa = max(fwidth(s) * 0.8, 0.002);
 float cov = smoothstep(-aa, aa, s);
-float e = 0.006;
-float sx1 = f.F(P + float2(e, 0), Seed, Shape, Asp), sx0 = f.F(P - float2(e, 0), Seed, Shape, Asp);
-float sy1 = f.F(P + float2(0, e), Seed, Shape, Asp), sy0 = f.F(P - float2(0, e), Seed, Shape, Asp);
+float e = 0.012;
+float sx1 = f.F(P + float2(e, 0), Seed, Shape, Asp, Spk), sx0 = f.F(P - float2(e, 0), Seed, Shape, Asp, Spk);
+float sy1 = f.F(P + float2(0, e), Seed, Shape, Asp, Spk), sy0 = f.F(P - float2(0, e), Seed, Shape, Asp, Spk);
 float ed = max(Edge, 0.005);
 float h = sqrt(saturate(s / ed));
 float2 g = float2(sqrt(saturate(sx1 / ed)) - sqrt(saturate(sx0 / ed)), sqrt(saturate(sy1 / ed)) - sqrt(saturate(sy0 / ed))) / (2.0 * e);
@@ -190,10 +190,7 @@ return saturate(r + (1.0 - saturate(Fd.y * 2.0)) * R.z);
 def build_stain():
     m = fresh("M_MessStain")
     m.set_editor_property("material_domain", unreal.MaterialDomain.MD_DEFERRED_DECAL)
-    try:
-        m.set_editor_property("decal_blend_mode", unreal.DecalBlendMode.DBM_TRANSLUCENT)
-    except Exception as e:
-        unreal.log_warning("MESSPY decal_blend_mode: %s" % e)
+    m.set_editor_property("blend_mode", unreal.BlendMode.BLEND_TRANSLUCENT)   # a decal: translucent (DBuffer colour, normal, roughness)
     uv = MEL.create_material_expression(m, unreal.MaterialExpressionTextureCoordinate, -1900, -300)
     p2 = MEL.create_material_expression(m, unreal.MaterialExpressionConstantBiasScale, -1700, -300)
     p2.set_editor_property("bias", -0.5); p2.set_editor_property("scale", 2.0)
@@ -208,9 +205,10 @@ def build_stain():
     opac = vparam(m, "Opac", (1.0, 0.6, 0.0, 0.0), -1900, 900)         # opacity where thick, where thin
     rgh = vparam(m, "Rough", (0.08, 0.45, 0.1, 0.0), -1900, 1100)       # wet, dry, extra at the thin edge
 
-    fd = custom(m, FIELD, unreal.CustomMaterialOutputType.CMOT_FLOAT4, ["P", "Seed", "Shape", "Asp", "Edge"], -1300, -200, "MessField")
+    fd = custom(m, FIELD, unreal.CustomMaterialOutputType.CMOT_FLOAT4, ["P", "Seed", "Shape", "Asp", "Edge", "Spk"], -1300, -200, "MessField")
     MEL.connect_material_expressions(p2, "", fd, "P")
-    wire(fd, [(seed, "Seed"), (shape, "Shape"), (asp, "Asp"), (edge, "Edge")])
+    spk = sparam(m, "Spike", 1.0, -1900, 1300)   # 1 a thin liquid (a spiky crown, thrown drops), 0 a viscous one (round lobes)
+    wire(fd, [(seed, "Seed"), (shape, "Shape"), (asp, "Asp"), (edge, "Edge"), (spk, "Spk")])
     look = custom(m, LOOK, unreal.CustomMaterialOutputType.CMOT_FLOAT4, ["Fd", "C1", "C2", "Par", "Opac"], -900, 200, "MessLook")
     MEL.connect_material_expressions(fd, "", look, "Fd")
     wire(look, [(c1, "C1"), (c2, "C2"), (par, "Par"), (opac, "Opac")])
@@ -292,7 +290,7 @@ float stir = 1.0 + 2.5 * Stir2.y * exp(-Stir.w * 1.1) * saturate(1.0 - sdl / max
 // hot spots (fridge, radiator): Spot.w is the radius; outside every spot the layer keeps Wind's share only
 float spot = 1.0;
 if (Spot.w > 0.0) { spot = saturate(Spot2.x + (1.0 - length((W - Spot.xyz) / float3(Spot.w, Spot.w, Spot.w * 3.0)))); }
-float k = edge * nearf * (0.25 + 0.75 * VC.a) * (tw + spark) * stir * spot / (grow * grow);
+float k = edge * nearf * (0.25 + 0.75 * VA) * (tw + spark) * stir * spot / (grow * grow);
 return float4(k, spark, 0, 0);
 """
 
@@ -342,8 +340,9 @@ def build_dust(lit):
     w = custom(m, DUSTWPO, unreal.CustomMaterialOutputType.CMOT_FLOAT3, ["P0", "VC", "Cam", "T", "Box", "Wind", "Band", "Stir", "Stir2", "Pix", "UV", "CamF", "AWP"], -1200, -300, "DustWPO")
     wire(w, common + [(uv, "UV"), (fwd, "CamF"), (awp, "AWP")])
     MEL.connect_material_property(w, "", unreal.MaterialProperty.MP_WORLD_POSITION_OFFSET)
-    fd = custom(m, DUSTFADE, unreal.CustomMaterialOutputType.CMOT_FLOAT4, ["P0", "VC", "Cam", "T", "Box", "Wind", "Band", "Stir", "Stir2", "Pix", "Spot", "Spot2"], -1200, 300, "DustFade")
+    fd = custom(m, DUSTFADE, unreal.CustomMaterialOutputType.CMOT_FLOAT4, ["P0", "VC", "Cam", "T", "Box", "Wind", "Band", "Stir", "Stir2", "Pix", "Spot", "Spot2", "VA"], -1200, 300, "DustFade")
     wire(fd, common + [(spot, "Spot"), (spot2, "Spot2")])
+    MEL.connect_material_expressions(vc, "A", fd, "VA")
     vi = MEL.create_material_expression(m, unreal.MaterialExpressionVertexInterpolator, -900, 300)
     MEL.connect_material_expressions(fd, "", vi, "")
     k = chan(m, vi, True, False, False, False, -700, 300)

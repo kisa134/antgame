@@ -534,7 +534,7 @@ namespace
 	{
 		auto Is = [&C](const FLinearColor& K) { return C.Equals(K, 0.002f); };
 		FSurf S;
-		if (Is(TileA) || Is(TileB)) { S.Mode = 0; S.Tex = TEXT("T_Floor_Tile"); S.Size = 1400.f; S.Tint = Is(TileA) ? 1.f : 0.93f; S.Rough = 0.3f; }   // satin, not a mirror: from an ant's eye every tile is seen at a grazing angle
+		if (Is(TileA) || Is(TileB)) { S.Mode = 0; S.Tex = TEXT("T_Floor_Tile"); S.Size = 1400.f; S.Tint = Is(TileA) ? 1.f : 0.93f; S.Rough = 0.24f; }   // crisp satin, not a mirror (the mess must read against it): from an ant's eye every tile is seen at a grazing angle
 		else if (Is(WallC)) { S.Mode = 4; S.bUseColor = true; S.Rough = 0.9f; }
 		else if (Is(Ceiling)) { S.Mode = 0; S.Tex = TEXT("T_Ceiling"); S.Size = 900.f; S.Rough = 0.95f; }
 		else if (Is(Backsplash)) { S.Mode = 0; S.Tex = TEXT("T_Subway_Tile"); S.Size = 700.f; S.Rough = 0.12f; }

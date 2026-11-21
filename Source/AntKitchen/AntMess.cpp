@@ -39,7 +39,7 @@ namespace
 
 	const FKindLook GKinds[MessKind::Count] =
 	{
-		/* Jam       */ { FLinearColor(0.24f, 0.006f, 0.03f), FLinearColor(0.62f, 0.05f, 0.09f), 0.05f, 0.25f, 0.12f, 0.07f, 0.13f, 1.f, 0.8f, 240.f, false },
+		/* Jam       */ { FLinearColor(0.36f, 0.012f, 0.075f), FLinearColor(0.86f, 0.13f, 0.28f), 0.05f, 0.25f, 0.12f, 0.07f, 0.13f, 1.f, 0.8f, 240.f, false },
 		/* Honey     */ { FLinearColor(0.50f, 0.20f, 0.01f), FLinearColor(0.95f, 0.60f, 0.10f), 0.04f, 0.18f, 0.08f, 0.08f, 0.16f, 0.96f, 0.6f, 400.f, false },
 		/* Cola      */ { FLinearColor(0.05f, 0.016f, 0.004f), FLinearColor(0.32f, 0.14f, 0.05f), 0.03f, 0.40f, 0.15f, 0.03f, 0.06f, 0.94f, 0.45f, 120.f, false },
 		/* Oil       */ { FLinearColor(0.30f, 0.24f, 0.05f), FLinearColor(0.55f, 0.48f, 0.18f), 0.02f, 0.06f, 0.04f, 0.01f, 0.05f, 0.5f, 0.22f, 0.f, false },
@@ -56,6 +56,9 @@ namespace
 	};
 
 	const FKindLook& Look(uint8 K) { return GKinds[FMath::Min<int32>(K, MessKind::Count - 1)]; }
+
+	// How runny a splat is: 1 a thin liquid (a spiky crown, drops thrown far), 0 a thick one (round lobes, a few fat drops).
+	const float GSpike[MessKind::Count] = { 0.25f, 0.12f, 1.f, 0.8f, 0.08f, 1.f, 0.5f, 1.f, 0.3f, 1.f, 1.f, 1.f, 0.9f, 1.f };
 
 	uint8 DefaultShape(uint8 Kind)
 	{
@@ -425,6 +428,7 @@ void AAntMess::ApplyDecal(FDecal& D, uint8 Kind, uint8 Shape, const FVector& Pos
 	D.M->SetScalarParameterValue(TEXT("Shape"), (float)Shape);
 	D.M->SetScalarParameterValue(TEXT("Asp"), FMath::Max(1.f, Aspect));
 	D.M->SetScalarParameterValue(TEXT("Edge"), L.Edge);
+	D.M->SetScalarParameterValue(TEXT("Spike"), GSpike[FMath::Min<int32>(Kind, MessKind::Count - 1)]);
 	D.M->SetVectorParameterValue(TEXT("Color"), Thick);
 	D.M->SetVectorParameterValue(TEXT("Color2"), Thin);
 	D.M->SetVectorParameterValue(TEXT("Par"), FLinearColor(L.Height, 0.f, 0.f, 1.f));
@@ -957,7 +961,12 @@ void AAntMess::FoodTick(AKitchenLoot* Loot, float Dt, USceneComponent* Visual)
 		F->Kind = AntMess::FoodKind(Loot->LootName);
 		F->Visual = Visual;
 		F->BaseScale = Visual->GetRelativeScale3D();
+		F->SquashT = 10.f;
 		F->bInit = true;
+		return;
+	}
+	if (Loot->GetVelocity().ContainsNaN() || P.ContainsNaN())
+	{
 		return;
 	}
 	if (F->Visual.Get() != Visual)
@@ -975,13 +984,14 @@ void AAntMess::FoodTick(AKitchenLoot* Loot, float Dt, USceneComponent* Visual)
 	const float Rad = Loot->GetRadius();
 
 	// ---- landing: squash and stretch
-	if (F->LastVz < -380.f && V.Z > -90.f && !Loot->bHeld)
+	// (one squash at a time, from the scale it has at rest: a bouncing piece must never compound its own squash)
+	if (F->LastVz < -380.f && F->LastVz > -20000.f && V.Z > -90.f && !Loot->bHeld && F->SquashT >= 0.4f)
 	{
 		F->Squash = FMath::Clamp(-F->LastVz / 1700.f, 0.12f, 0.42f) * (IsSoftKind(F->Kind) ? 1.35f : 1.f);
 		F->SquashT = 0.f;
-		F->BaseScale = Visual->GetRelativeScale3D();
 		FVector FP, FN;
-		if (FloorUnder(GetWorld(), P, Rad * 2.5f + 20.f, Loot, FP, FN))
+		// (food settling when the level is laid out is no mess: only a real fall, and not in the first seconds)
+		if (F->LastVz < -700.f && GetWorld()->GetTimeSeconds() > 12.f && FloorUnder(GetWorld(), P, Rad * 2.5f + 20.f, Loot, FP, FN))
 		{
 			if (IsSoftKind(F->Kind))
 			{
@@ -1006,7 +1016,8 @@ void AAntMess::FoodTick(AKitchenLoot* Loot, float Dt, USceneComponent* Visual)
 	}
 	else
 	{
-		F->BaseScale = Visual->GetRelativeScale3D();
+		const FVector Now3 = Visual->GetRelativeScale3D();
+		if (!Now3.ContainsNaN() && Now3.GetMax() < 1.e4f) { F->BaseScale = Now3; }   // at rest: follow what RefreshVisual set (a bite makes it smaller)
 	}
 
 	// ---- sliding soft food smears; dragged food scuffs
@@ -1597,6 +1608,19 @@ bool AntMess::DevCommand(AAntKitchenGameMode* GM, const TArray<FString>& A)
 	{
 		// mess cost <tag> [1|0]: averages of the frame, the GPU frame and the mess tick, logged every 4 s while on
 		GCost.bOn = Num(3, 1.f) > 0.5f; GCost.Tag = A.IsValidIndex(2) ? A[2] : TEXT("-"); GCost.N = 0; GCost.TickSum = GCost.GpuSum = GCost.FrameSum = 0.0; GCost.Acc = 0.f;
+	}
+	else if (Op == TEXT("decaltest"))
+	{
+		// mess decaltest x y z [size]: a plain engine decal there (is the decal path alive at all?)
+		FVector N; const FVector G = Ground(Vec(2), N);
+		UDecalComponent* C = NewObject<UDecalComponent>(M);
+		C->SetupAttachment(M->GetRootComponent());
+		C->SetUsingAbsoluteLocation(true); C->SetUsingAbsoluteRotation(true);
+		C->SetDecalMaterial(LoadObject<UMaterialInterface>(nullptr, TEXT("/Engine/EngineMaterials/DefaultDeferredDecalMaterial.DefaultDeferredDecalMaterial")));
+		C->DecalSize = FVector(20.f, Num(5, 200.f), Num(5, 200.f));
+		C->SetWorldLocationAndRotation(G, FRotator(-90.f, 0.f, 0.f));
+		C->RegisterComponent();
+		UE_LOG(LogTemp, Display, TEXT("ANTMESS dev decaltest at %s, material %s"), *G.ToCompactString(), *GetNameSafe(C->GetDecalMaterial()));
 	}
 	else if (Op == TEXT("profilegpu") && PC)
 	{

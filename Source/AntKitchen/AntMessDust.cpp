@@ -44,8 +44,9 @@ namespace
 
 	const FLayerDef GLayers[] =
 	{
-		{ 1800, FVector(700.f, 700.f, 700.f),     0.30f, FVector4(5.f, 2.f, 1.2f, 16.f),  false, FVector2D(0, 0),       FVector4(0, 0, 0, 0),           1.f,  3.f,  1.f, 1.0f, FLinearColor(0.95f, 0.92f, 0.86f) },
-		{ 1600, FVector(5000.f, 5000.f, 4000.f),  2.0f,  FVector4(12.f, 5.f, 2.5f, 110.f), false, FVector2D(0, 0),      FVector4(0, 0, 0, 0),           1.f,  50.f, 1.f, 0.8f, FLinearColor(0.95f, 0.92f, 0.86f) },
+		{ 2200, FVector(240.f, 240.f, 240.f),     0.16f, FVector4(3.f, 1.f, 0.8f, 7.f),   false, FVector2D(0, 0),       FVector4(0, 0, 0, 0),           1.f,  2.f,  1.f, 1.3f, FLinearColor(0.95f, 0.92f, 0.86f) },
+		{ 2400, FVector(1400.f, 1400.f, 1400.f),  0.55f, FVector4(6.f, 2.5f, 1.5f, 30.f), false, FVector2D(0, 0),       FVector4(0, 0, 0, 0),           1.f,  12.f, 1.f, 1.0f, FLinearColor(0.95f, 0.92f, 0.86f) },
+		{ 1600, FVector(6000.f, 6000.f, 5000.f),  2.6f,  FVector4(12.f, 5.f, 2.5f, 110.f), false, FVector2D(0, 0),      FVector4(0, 0, 0, 0),           1.f,  60.f, 1.f, 0.8f, FLinearColor(0.95f, 0.92f, 0.86f) },
 		{ 700,  FVector(1500.f, 1500.f, 100.f),   0.75f, FVector4(-6.f, -14.f, 0.f, 9.f), true,  FVector2D(2.f, 70.f),  FVector4(3700.f, 2600.f, 0.f, 1500.f), 0.f, 4.f, 0.3f, 1.2f, FLinearColor(0.85f, 0.82f, 0.76f) },
 		{ 700,  FVector(1500.f, 1500.f, 100.f),   0.75f, FVector4(3.f, 2.f, 14.f, 12.f), true,  FVector2D(2.f, 160.f), FVector4(0.f, -4600.f, 0.f, 1600.f), 0.f, 4.f, 0.3f, 1.2f, FLinearColor(0.88f, 0.84f, 0.78f) },
 	};
