@@ -1026,7 +1026,7 @@ void AKitchenFixture::ReportMess()
 	}
 	else if (State == Lying && Id == TEXT("cola")) { AddMess(W, NpcRoutine::Spill, At, this, TEXT("липкая лужа колы")); }
 	else if (State == Lying && Id != TEXT("tablecloth") && !Id.StartsWith(TEXT("curtain_k")) && Id != TEXT("balloons")) { AddMess(W, Fallen, At, this, FString::Printf(TEXT("%s на полу"), *Name)); }
-	else if (Id == TEXT("upper_doors")) { AddMess(W, Fallen, GetActorLocation(), this, TEXT("дверца шкафа")); }
+	else if (Id == TEXT("upper_doors")) { AddMess(W, Fallen, FVector(GetActorLocation().X, 3000.f, 0.f), this, TEXT("дверца шкафа")); }   // (where he stands to put it back: in front of the worktop)
 }
 
 void AKitchenFixture::Tidy(bool bPutBack)

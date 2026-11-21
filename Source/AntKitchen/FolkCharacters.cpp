@@ -215,6 +215,22 @@ void AHouseFolk::Tick(float DeltaSeconds)
 		{
 			Think(DeltaSeconds, Now);
 		}
+		// Never higher up than furniture lets them be: something lifted the figure (an ant held in the fingers it stood on, a
+		// fixture's box) - back down onto the floor under it.
+		if (bSettled && !IsSeated() && GetCharacterMovement()->MovementMode == MOVE_Walking && FeetZ() > 1300.f)
+		{
+			HighFor += DeltaSeconds;
+			if (HighFor > 1.5f)
+			{
+				HighFor = 0.f;
+				UE_LOG(LogTemp, Display, TEXT("ANTNPC %s was up at %.0f: put back on the floor"), Fig == HumanFig::Kid ? TEXT("kid") : TEXT("gran"), FeetZ());
+				SetActorLocation(FloorPoint(GetActorLocation()), false, nullptr, ETeleportType::TeleportPhysics);
+			}
+		}
+		else
+		{
+			HighFor = 0.f;
+		}
 	}
 	Super::Tick(DeltaSeconds);
 }

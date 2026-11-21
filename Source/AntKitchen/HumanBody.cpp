@@ -1815,9 +1815,12 @@ void AHumanCharacter::BodyEffects(float DeltaSeconds)
 		}
 	}
 	const bool bCan = Rig.SprayW >= 0.35f;
-	if (PaperArt && PaperArt->IsVisible() == bCan)
+	// (level v3: the newspaper is put down while his hands are busy with the routine: the phone, the plate, the ladle, the bag)
+	const bool bChore = (Act.Kind == HumanAct::Sit || (Act.Kind == HumanAct::Busy && Act.Arg != HumanBusy::Look)) && ActTime() >= 0.f;
+	const bool bPaper = !bCan && !bChore;
+	if (PaperArt && PaperArt->IsVisible() != bPaper)
 	{
-		PaperArt->SetVisibility(!bCan);
+		PaperArt->SetVisibility(bPaper);
 	}
 	if (SprayArt && SprayArt->IsVisible() != bCan)
 	{

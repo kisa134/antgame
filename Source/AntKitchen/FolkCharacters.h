@@ -74,6 +74,7 @@ protected:
 	int32 Strokes = 0;
 	bool bRtWant = false;
 	float NextMessCheck = 0.f;
+	float HighFor = 0.f;
 };
 
 UCLASS()

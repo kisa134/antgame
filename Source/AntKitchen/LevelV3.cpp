@@ -16,8 +16,8 @@ bool Enabled()
 	if (State < 0)
 	{
 		const TCHAR* Cmd = FCommandLine::Get();
-		// v3 is asked for with -AntLevelV3; -AntLevelV2 always wins (the way back is one switch).
-		const bool bAsk = FParse::Param(Cmd, TEXT("AntLevelV3")) && !FParse::Param(Cmd, TEXT("AntLevelV2")) && !FParse::Param(Cmd, TEXT("AntOldKitchen"));
+		// v3 is the default level (21.11.2026; -AntLevelV3 still accepted); -AntLevelV2 always wins (the way back is one switch).
+		const bool bAsk = !FParse::Param(Cmd, TEXT("AntLevelV2")) && !FParse::Param(Cmd, TEXT("AntOldKitchen"));
 		State = (bAsk && KitchenArt::Mesh(TEXT("SM_V3_WallShelf")) != nullptr) ? 1 : 0;
 		if (bAsk && !State)
 		{

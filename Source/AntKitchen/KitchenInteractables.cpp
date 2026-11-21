@@ -478,7 +478,9 @@ void AKitchenDoor::ApplyAlpha()
 		if (Kind == EKitchenDoorKind::Fridge && LevelV3::Enabled())
 		{
 			// Level v3: at night the open fridge is the brightest thing in the kitchen - a cold wedge of light across the floor.
-			const bool bNight = LevelV3::TimeOfDay() == LevelV3::Night;
+			int32 Pinned = -1;
+			FParse::Value(FCommandLine::Get(), TEXT("AntTime="), Pinned);   // (-AntTime pins the light: the fridge follows it)
+			const bool bNight = Pinned >= 0 ? Pinned == 2 : LevelV3::TimeOfDay() == LevelV3::Night;
 			InnerLight->SetIntensity(bNight ? 22.f : 6.f);
 			InnerLight->SetAttenuationRadius(bNight ? 5200.f : 2600.f);
 		}

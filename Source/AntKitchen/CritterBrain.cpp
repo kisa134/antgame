@@ -378,11 +378,19 @@ bool ACritter::WalkTo(const FVector& Dest, float Pace, float Dt, float Arrive)
 		}
 	}
 	const float Radius = Kind == 1 ? 95.f : 125.f;
-	const FVector Dir = NpcWorld::Steer(GetWorld(), this, Me, Way, Radius, Radius + 75.f, SteerSide, SteerUntil);
+	FVector Dir = NpcWorld::Steer(GetWorld(), this, Me, Way, Radius, Radius + 75.f, SteerSide, SteerUntil);
 	if (Dir.IsZero())
 	{
 		StuckTime += Dt;
-		return StuckTime > 1.6f;   // boxed in: call it there
+		if (NpcRoutine::Enabled() && StuckTime > 1.f && FVector::Dist2D(Me, Dest) > 600.f && Me.Z < 250.f)
+		{
+			// Level v3: boxed in (under the slid-off blanket, between the sofa and the table) with somewhere to be: it squeezes out along its way.
+			Dir = (Way - Me).GetSafeNormal2D();
+		}
+		if (Dir.IsZero())
+		{
+			return StuckTime > 1.6f;   // boxed in: call it there
+		}
 	}
 	StuckTime = FMath::Max(0.f, StuckTime - Dt);
 	// Spilled oil: the paws slide out sideways and it gets across slowly (it does not fall: it is a cat, or a bulldog).

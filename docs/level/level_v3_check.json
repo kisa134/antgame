@@ -2772,10 +2772,6 @@
    "stand_cells": 11771
   }
  ],
- "pairs": {
-  "checked": 939,
-  "failed": []
- },
  "loot_covered": {
   "hollow_ok": [
    {
@@ -3359,7 +3355,7 @@
    {
     "seed": 19,
     "threat": 4,
-    "time": "evening",
+    "time": "night",
     "home": [
      "human",
      "grandma",
@@ -3367,7 +3363,7 @@
      "dog",
      "cat"
     ],
-    "variants": "BAAAABBDBBCCBC",
+    "variants": "BAAAABBCBBCCAC",
     "cake": "M4",
     "ok": true,
     "fails": [],
@@ -3605,7 +3601,7 @@
    {
     "seed": 31,
     "threat": 4,
-    "time": "evening",
+    "time": "night",
     "home": [
      "human",
      "grandma",
@@ -3613,7 +3609,7 @@
      "dog",
      "cat"
     ],
-    "variants": "CACBACAAABBACC",
+    "variants": "CACBACACABBABC",
     "cake": "M2",
     "ok": true,
     "fails": [],
@@ -3687,7 +3683,7 @@
    {
     "seed": 35,
     "threat": 4,
-    "time": "evening",
+    "time": "night",
     "home": [
      "human",
      "grandma",
@@ -3695,7 +3691,7 @@
      "dog",
      "cat"
     ],
-    "variants": "CACACBCABCBCBC",
+    "variants": "CACACBCCBCBCAC",
     "cake": "M2",
     "ok": true,
     "fails": [],
@@ -3769,7 +3765,7 @@
    {
     "seed": 39,
     "threat": 4,
-    "time": "evening",
+    "time": "night",
     "home": [
      "human",
      "grandma",
@@ -3777,7 +3773,7 @@
      "dog",
      "cat"
     ],
-    "variants": "ABACCCBABAAABB",
+    "variants": "ABACCCBCBAAABB",
     "cake": "M1",
     "ok": true,
     "fails": [],
@@ -4425,7 +4421,7 @@
    {
     "seed": 71,
     "threat": 4,
-    "time": "evening",
+    "time": "night",
     "home": [
      "human",
      "grandma",
@@ -4671,7 +4667,7 @@
    {
     "seed": 83,
     "threat": 4,
-    "time": "evening",
+    "time": "night",
     "home": [
      "human",
      "grandma",
@@ -4753,7 +4749,7 @@
    {
     "seed": 87,
     "threat": 4,
-    "time": "evening",
+    "time": "night",
     "home": [
      "human",
      "grandma",
@@ -4761,14 +4757,14 @@
      "dog",
      "cat"
     ],
-    "variants": "ABBBCBBCBBCCDB",
-    "cake": "M1",
+    "variants": "ABBBCBBCBBCCCB",
+    "cake": "M2",
     "ok": true,
     "fails": [],
     "cover_worst_s": 3.95,
     "cake_s": [
-     113.7,
-     136.7
+     126.9,
+     129.4
     ]
    },
    {
@@ -5245,7 +5241,7 @@
    {
     "seed": 111,
     "threat": 4,
-    "time": "evening",
+    "time": "night",
     "home": [
      "human",
      "grandma",
@@ -5253,14 +5249,14 @@
      "dog",
      "cat"
     ],
-    "variants": "ACABBAAABCAACB",
-    "cake": "M2",
+    "variants": "ACABBAACBCAABB",
+    "cake": "M1",
     "ok": true,
     "fails": [],
     "cover_worst_s": 3.95,
     "cake_s": [
-     129.4,
-     134.0
+     113.7,
+     143.8
     ]
    },
    {
@@ -5819,7 +5815,7 @@
    {
     "seed": 139,
     "threat": 4,
-    "time": "evening",
+    "time": "night",
     "home": [
      "human",
      "grandma",
@@ -5827,7 +5823,7 @@
      "dog",
      "cat"
     ],
-    "variants": "BACABBADCBCACB",
+    "variants": "BACABBACCBCABB",
     "cake": "M2",
     "ok": true,
     "fails": [],
@@ -6065,7 +6061,7 @@
    {
     "seed": 151,
     "threat": 4,
-    "time": "evening",
+    "time": "night",
     "home": [
      "human",
      "grandma",
@@ -6073,7 +6069,7 @@
      "dog",
      "cat"
     ],
-    "variants": "CBDCACCDABCACB",
+    "variants": "CBDCACCCABCABB",
     "cake": "M3",
     "ok": true,
     "fails": [],
@@ -6475,7 +6471,7 @@
    {
     "seed": 171,
     "threat": 4,
-    "time": "evening",
+    "time": "night",
     "home": [
      "human",
      "grandma",
@@ -6483,7 +6479,7 @@
      "dog",
      "cat"
     ],
-    "variants": "ABDBABCAACCCCA",
+    "variants": "ABDBABCCACCCBA",
     "cake": "M1",
     "ok": true,
     "fails": [],
@@ -6803,7 +6799,7 @@
    {
     "seed": 187,
     "threat": 4,
-    "time": "evening",
+    "time": "night",
     "home": [
      "human",
      "grandma",
@@ -6811,7 +6807,7 @@
      "dog",
      "cat"
     ],
-    "variants": "CBCCCCBCCABCCB",
+    "variants": "CBCCCCBCCABCBB",
     "cake": "M1",
     "ok": true,
     "fails": [],
@@ -6885,7 +6881,7 @@
    {
     "seed": 191,
     "threat": 4,
-    "time": "evening",
+    "time": "night",
     "home": [
      "human",
      "grandma",
@@ -6893,7 +6889,7 @@
      "dog",
      "cat"
     ],
-    "variants": "BABBCAADCCBCAC",
+    "variants": "BABBCAACCCBCAC",
     "cake": "M2",
     "ok": true,
     "fails": [],
@@ -7705,7 +7701,7 @@
    {
     "seed": 231,
     "threat": 4,
-    "time": "evening",
+    "time": "night",
     "home": [
      "human",
      "grandma",
@@ -7713,14 +7709,14 @@
      "dog",
      "cat"
     ],
-    "variants": "CACBBABCBCCADA",
-    "cake": "M1",
+    "variants": "CACBBABCBCCACA",
+    "cake": "M2",
     "ok": true,
     "fails": [],
     "cover_worst_s": 3.95,
     "cake_s": [
-     113.7,
-     136.7
+     126.9,
+     129.4
     ]
    },
    {
@@ -7869,7 +7865,7 @@
    {
     "seed": 239,
     "threat": 4,
-    "time": "evening",
+    "time": "night",
     "home": [
      "human",
      "grandma",
@@ -7877,14 +7873,14 @@
      "dog",
      "cat"
     ],
-    "variants": "ACDBCCCCCCCCDC",
-    "cake": "M1",
+    "variants": "ACDBCCCCCCCCCC",
+    "cake": "M2",
     "ok": true,
     "fails": [],
     "cover_worst_s": 3.95,
     "cake_s": [
-     113.7,
-     143.8
+     129.4,
+     134.0
     ]
    },
    {
@@ -9099,7 +9095,7 @@
    {
     "seed": 299,
     "threat": 4,
-    "time": "evening",
+    "time": "night",
     "home": [
      "human",
      "grandma",
@@ -9186,5 +9182,5 @@
    "fixed": "ткань не препятствие для капсулы (её проходят насквозь, стол под ней уже препятствие); шалаш — препятствие"
   }
  ],
- "seconds": 594.7
+ "seconds": 286.1
 }

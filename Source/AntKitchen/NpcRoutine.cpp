@@ -182,7 +182,7 @@ void Rebuild(const UWorld* W)
 		float T = 0.f;
 		FVector Prev = StepPoint(GSteps[Order[Start]]);
 		FString Line;
-		for (int32 n = 0; T < 1200.f && n < 200; ++n)
+		for (int32 n = 0; T < 2400.f && n < 400; ++n)
 		{
 			const int32 i = Order[(Start + n) % Order.Num()];
 			const FStep& St = GSteps[i];
@@ -518,10 +518,10 @@ bool DevCommand(AAntKitchenGameMode* GM, const TArray<FString>& A)
 			{
 				const uint8 Who = GSteps[Step].Who;
 				const float T = Clock(W);
-				for (const FSlot& S : GPlan[Who])
-				{
-					if (S.Step == Step && S.To > T) { GWarp += FMath::Max(0.f, S.From - T) + 0.1f; break; }
-				}
+				const FSlot* Found = nullptr;
+				for (const FSlot& S : GPlan[Who]) { if (S.Step == Step && S.From > T) { Found = &S; break; } }
+				for (const FSlot& S : GPlan[Who]) { if (!Found && S.Step == Step) { Found = &S; } }   // (none ahead: back to the first one)
+				if (Found) { GWarp += Found->From - T + 0.1f; }
 				for (int32 i = 0; i < NumWho; ++i) { ++GNudge[i]; }
 				UE_LOG(LogTemp, Display, TEXT("ANTRT goto %s: clock now %.1f"), GSteps[Step].Key, Clock(W));
 			}

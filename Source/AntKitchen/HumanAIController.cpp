@@ -299,6 +299,25 @@ void AHumanAIController::Tick(float DeltaSeconds)
 		T = nullptr;
 		Target = nullptr;
 	}
+	if (NpcRoutine::Enabled() && H->HasJointedBody() && RtPhase != 3)
+	{
+		// The clock moves him on to the next chore even in the middle of a chase: from then on he sees only what is near or in
+		// front of him (below), so a distant ant is let go and the evening goes on. An ant right by him still wins.
+		const int32 Due = NpcRoutine::Current(GetWorld(), NpcRoutine::Dad);
+		if (Due >= 0 && Due != RtStep && !H->IsAway())
+		{
+			if (RtPhase == 2 || H->IsBusyPose()) { H->EndBusy(); }
+			RtStep = Due;
+			RtPhase = 1;
+			RtSince = TimeNow;
+			RtGiveUp = TimeNow + 50.f;
+			H->Task.Step = (uint8)Due;
+			H->Task.Phase = 1;
+			H->Task.Start = TimeNow;
+			H->Task.Target = FVector(NpcRoutine::Steps()[Due].X, NpcRoutine::Steps()[Due].Y, 0.f);
+			NpcRoutine::Log(GetWorld(), NpcRoutine::Dad, TEXT("goes to it"), Due, MyLoc);
+		}
+	}
 	if (T && RoutineHolds(H))
 	{
 		// Busy with his routine (his back to the room at the stove or the sink, eyes on the phone or the TV): he notices only what is
@@ -867,11 +886,21 @@ bool AHumanAIController::TickRoutine(AHumanCharacter* H, float Dt)
 		}
 		if (GM) { GM->SetHumanGoal(AntHumanGoal::Idle, FString::Printf(TEXT("идёт: %s"), St.Ru), P); }
 		if (St.Pose == PGone && !H->IsBusyPose()) { H->PlayBusy(HumanBusy::Bag, P); }
-		if (FVector::Dist2D(Me, P) > (St.Pose == PGone ? 520.f : 330.f) && Now < RtGiveUp)
+		const float DistP = (float)FVector::Dist2D(Me, P);
+		if (DistP > (St.Pose == PGone ? 520.f : 330.f) && Now < RtGiveUp)
 		{
 			DesiredRotation.Pitch = -10.f;
 			MoveTowards(H, P, St.Pose == PGone ? 0.85f : 0.7f);
 			return true;
+		}
+		if (DistP > 1300.f)
+		{
+			// Never got there (furniture, a long chase on the way): this one is skipped, he waits for the next.
+			Log(W, Dad, TEXT("could not get there, skips it"), S, Me);
+			RtPhase = 4;
+			H->Task.Phase = 0;
+			if (H->IsBusyPose()) { H->EndBusy(); }
+			return false;
 		}
 		RtPhase = 2;
 		RtSince = Now;
@@ -995,7 +1024,7 @@ bool AHumanAIController::TickReact(AHumanCharacter* H, float Dt)
 			return true;
 		}
 		FMess* J = FindJob(W, Dad, Me, 14000.f);
-		if (J && (J->bSeen[Dad] || Now - J->Time < 20.f))
+		if (J && (J->bSeen[Dad] || Now - J->Time < 120.f))   // seen, or heard come down in the last two minutes: he knows
 		{
 			M = J;
 			ReactMess = J->Id;
@@ -1057,7 +1086,8 @@ bool AHumanAIController::TickReact(AHumanCharacter* H, float Dt)
 		}
 		const FVector Out = FVector(Me - Loc).GetSafeNormal2D();
 		const FVector Stand = Loc + (Out.IsNearlyZero() ? FVector(1.f, 0.f, 0.f) : Out) * 680.f;
-		if (FVector::Dist2D(Me, Stand) > 260.f && FVector::Dist2D(Me, Loc) > 850.f)
+		const bool bAsNearAsHeGets = Now - H->Task.Start > 25.f && FVector::Dist2D(Me, Loc) < 2600.f;   // (behind furniture: he works from where he got to)
+		if (FVector::Dist2D(Me, Stand) > 260.f && FVector::Dist2D(Me, Loc) > 850.f && !bAsNearAsHeGets)
 		{
 			MoveTowards(H, FVector(Stand.X, Stand.Y, Me.Z), 0.75f);
 			return true;
