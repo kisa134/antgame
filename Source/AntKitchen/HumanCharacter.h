@@ -333,6 +333,10 @@ protected:
 	float LastSprintSent = -1.f;
 	float NextHandJolt = 0.f;
 	float NextStaggerAt = 0.f;
+	float BlockArmedUntil = 0.f;
+	float BlockSpeed = 0.f;
+	FVector BlockDir = FVector::ZeroVector;
+	FVector BlockPoint = FVector::ZeroVector;
 	int32 BumpCount = 0;
 	UFUNCTION(NetMulticast, Unreliable) void MulticastStomp(uint8 Leg);
 	UFUNCTION() void OnRep_KnockedOut();

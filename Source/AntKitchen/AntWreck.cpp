@@ -243,6 +243,34 @@ int32 AntWreck::PieceOfComponent(UWorld* World, const UPrimitiveComponent* C)
 	return I ? *I : -1;
 }
 
+int32 AntWreck::ShakeRiders(AAntWreckBody* Carrier, const FVector& Vel, float Chance)
+{
+	if (!Carrier || !Carrier->HasAuthority())
+	{
+		return 0;
+	}
+	int32 N = 0;
+	for (TActorIterator<AAntWreckBody> It(Carrier->GetWorld()); It; ++It)
+	{
+		AAntWreckBody* R = *It;
+		if (R->RideOn != Carrier || FMath::FRand() >= Chance)
+		{
+			continue;
+		}
+		R->RideOn = nullptr;
+		R->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+		R->Root->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
+		for (UBoxComponent* Hb : R->Hull) { Hb->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly); }
+		const FVector V = Vel + FVector(FMath::FRandRange(-200.f, 200.f), FMath::FRandRange(-200.f, 200.f), FMath::FRandRange(0.f, 200.f));
+		if (!R->Wake(V / UuPerM * R->Mass, R->GetActorLocation()))
+		{
+			R->Spill(V);
+		}
+		++N;
+	}
+	return N;
+}
+
 AntWreck::FOnWreckMess& AntWreck::OnMess()
 {
 	static FOnWreckMess D;

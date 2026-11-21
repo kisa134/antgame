@@ -654,7 +654,8 @@ void AHumanCharacter::BodyContacts(float Dt)
 	const FVector V = GetVelocity() * FVector(1.f, 1.f, 0.f);
 	const float Speed = (float)V.Size();
 	// The momentum he brings: last tick's velocity when this tick's is lower (a blocking hit has already eaten this tick's).
-	const FVector MV = PrevBodySpeed > Speed ? PrevBodyVel : V;
+	// (capped at his top speed: a shove out of an overlap by a woken table is not his momentum)
+	const FVector MV = (PrevBodySpeed > Speed ? PrevBodyVel : V).GetClampedToMaxSize(GetWalkSpeed() * 1.15f + 100.f);
 	const float MS = (float)MV.Size();
 	const float DropK = PrevBodySpeed > 1.f ? Speed / PrevBodySpeed : 1.f;
 	PrevBodyVel = V;
@@ -765,7 +766,7 @@ void AHumanCharacter::BodyContacts(float Dt)
 		}
 		const float Mo = Body ? Body->Mass : Pc->Mass;
 		const bool bFixed = Body ? Body->bFixed : Pc->bFixed;
-		if (!bRough && Mo > 1.5f)
+		if (!bRough)
 		{
 			continue;   // the calm AI does not wreck his own kitchen
 		}
@@ -807,6 +808,22 @@ void AHumanCharacter::BodyContacts(float Dt)
 				UE_LOG(LogTemp, Display, TEXT("ANTHEAVY body hits %s (%s %.1f kg) at %.0f uu/s: %s, impulse %.1f, damage %.0f (awake %d)"), All.IsValidIndex(Inst) ? All[Inst].Name : TEXT("?"),
 					Cl.Name, Mo, Approach, bGives ? TEXT("shoved") : TEXT("held"), (float)J.Size(), Dmg, AAntWreckBody::NumAwake(W));
 			}
+			if (Hit && Mo > 15.f && Approach > 850.f)
+			{
+				// A table hit at a run: what stands on it jumps, some of it goes over the edge.
+				const float K = FMath::Clamp((Approach - 850.f) / 600.f, 0.2f, 1.f);
+				const FBox Top = Hit->WorldBox().ExpandBy(FVector(60.f, 60.f, 400.f));
+				const int32 Spilled = AntWreck::ShakeRiders(Hit, To * Approach * 0.5f + FVector(0.f, 0.f, 500.f * K), 0.35f + 0.5f * K);
+				for (TActorIterator<AKitchenProp> It(W); It; ++It)
+				{
+					if (Top.IsInside(It->GetActorLocation())) { It->Jolt(To * 300.f * K + FVector(0.f, 0.f, 350.f * K) + FMath::VRand() * 60.f, this); }
+				}
+				for (TActorIterator<AKitchenLoot> It(W); It; ++It)
+				{
+					if (!It->bHeld && !It->IsCarried() && Top.IsInside(It->GetActorLocation())) { It->Kick(To * 500.f * K + FVector(0.f, 0.f, 600.f * K) + FMath::VRand() * 80.f, It->GetActorLocation()); }
+				}
+				UE_LOG(LogTemp, Display, TEXT("ANTHEAVY the top of it jumps: %d riders spilled (k %.2f)"), Spilled, K);
+			}
 			if (bGives && Mo > 6.f)
 			{
 				Jolt(-To, FMath::Clamp(Approach / 1500.f, 0.15f, 0.6f) * FMath::Min(1.f, Mo / Mh * 2.f), 0);   // the shove goes back into him a little
@@ -818,22 +835,34 @@ void AHumanCharacter::BodyContacts(float Dt)
 			BlockAt = Pt;
 		}
 	}
-	// Ran into something that does not give: he reels back (and at a run he may go down).
-	if (bBlocked && MS > 850.f && DropK < 0.6f && Now >= NextStaggerAt)
+	// Ran into something that does not give: he reels back (and at a run he may go down). The probe sees it a moment before the
+	// capsule meets it: the blow is armed with the speed he had, and fires when his speed really drops.
+	if (bBlocked && MS > 850.f && (Now >= BlockArmedUntil || MS > BlockSpeed))
 	{
+		BlockArmedUntil = Now + 0.45f;
+		BlockSpeed = MS;
+		BlockDir = Dir;
+		BlockPoint = BlockAt;
+	}
+	if (Now < BlockArmedUntil && BlockSpeed > 850.f && DropK < 0.6f && Speed < 0.6f * BlockSpeed && Now >= NextStaggerAt)
+	{
+		BlockArmedUntil = 0.f;
+		const float MSb = BlockSpeed;
+		const FVector Dirb = BlockDir;
+		BlockAt = BlockPoint;
 		NextStaggerAt = Now + 1.2f;
-		const float K = FMath::Clamp((MS - 850.f) / 700.f, 0.f, 1.f);
-		Jolt(-Dir, 0.6f + 0.9f * K, 2);
+		const float K = FMath::Clamp((MSb - 850.f) / 700.f, 0.f, 1.f);
+		Jolt(-Dirb, 0.6f + 0.9f * K, 2);
 		StaggerUntil = Now + 0.4f + 0.5f * K;
-		const FVector Back = -Dir * (450.f + 650.f * K);
+		const FVector Back = -Dirb * (450.f + 650.f * K);
 		if (IsPlayerControlled() && !IsLocallyControlled()) { ClientStagger(Back, 0.4f + 0.5f * K); }
 		else { LaunchCharacter(Back, true, false); }
 		AntSfx::Everyone(this, AntSfx::Stomp, BlockAt, 0.7f);
-		UE_LOG(LogTemp, Display, TEXT("ANTHEAVY stagger: ran into something solid at %.0f uu/s (k %.2f) at %s"), MS, K, *BlockAt.ToCompactString());
-		if (bRough && MS > 1150.f && FMath::FRand() < 0.3f + 0.5f * K)
+		UE_LOG(LogTemp, Display, TEXT("ANTHEAVY stagger: ran into something solid at %.0f uu/s (k %.2f) at %s"), MSb, K, *BlockAt.ToCompactString());
+		if (bRough && MSb > 1150.f && FMath::FRand() < 0.3f + 0.5f * K)
 		{
 			FTimerHandle H;
-			const FVector D = Dir;
+			const FVector D = Dirb;
 			GetWorldTimerManager().SetTimer(H, FTimerDelegate::CreateWeakLambda(this, [this, D]() { Topple(D, TEXT("врезался на бегу")); }), 0.25f, false);
 		}
 	}

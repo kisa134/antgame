@@ -61,6 +61,8 @@ namespace AntWreck
 	ANTKITCHEN_API int32 FindPiece(UWorld* World, const FString& NameOrIndex);
 	/** The builder instance whose static copy C is (-1: not a piece that wrecks). The Human's body uses it (HumanPhys.cpp). */
 	ANTKITCHEN_API int32 PieceOfComponent(UWorld* World, const class UPrimitiveComponent* C);
+	/** Server: the things riding on Carrier (the plates on the table) jolt: each with Chance comes off with Vel (uu/s), awake or along an arc. */
+	ANTKITCHEN_API int32 ShakeRiders(AAntWreckBody* Carrier, const FVector& Vel, float Chance);
 
 	/**
 	 * Server: something struck the world at Point (radius Radius): Impulse is kg m/s along its direction, Damage in hit points.
