@@ -32,6 +32,7 @@
 #include "KitchenSlick.h"
 #include "Misc/ScopeExit.h"
 #include "AntRts.h"
+#include "AntAdmin.h"
 
 namespace
 {
@@ -245,6 +246,7 @@ void AAntHUD::DrawHUD()
 	DrawRun(GS, Me);
 	if (Raid) { DrawRaid(Raid, GS, Me); }
 	if (Raid) { AntRts::DrawHud(this, Canvas, PC); }   // the snowball: mass, picks, squad groups, selection (AntRts.cpp)
+	AntAdmin::DrawHud(this, Canvas, PC);   // the АДМИН badge, "show everyone" (AntAdmin.h)
 	DrawFeed(GS);
 	DrawToastsAndNumbers(PC);
 	DrawHelp(Me);
@@ -983,6 +985,16 @@ void AAntHUD::DrawWorldTags(APawn* Me)
 		const FVector S2 = Project(P);
 		const AAntCharacter* MyAnt = Cast<AAntCharacter>(Me);
 		const bool bEnemy = MyAnt ? MyAnt->IsEnemy(Ant) : Ant->Team != 0;
+		if (!bEnemy && !Ant->IsPlayerControlled())
+		{
+			// A friendly bot / squad ant: its name only when the crosshair is on it or it is selected (a squad of 30 «Муравей» tags hid the kitchen).
+			const UAntRtsInput* Rts = UAntRtsInput::Of(PlayerOwner);
+			const bool bSelected = Rts && Rts->Selection.Contains(TWeakObjectPtr<AAntCharacter>(Ant));
+			if (!bSelected && !Aimed(P, 2.5f))
+			{
+				continue;
+			}
+		}
 		Txt(Ant->GetDisplayName(), S2.X, S2.Y - 18.f * S, bEnemy ? FLinearColor(1.f, 0.4f, 0.25f) : FLinearColor(0.8f, 0.9f, 1.f), Small, 1.f * S, true);
 		if (bEnemy)
 		{

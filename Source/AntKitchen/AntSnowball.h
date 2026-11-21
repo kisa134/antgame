@@ -155,6 +155,8 @@ namespace AntSnowball
 	ANTKITCHEN_API void OnDelivered(AAntKitchenGameMode* GM, AKitchenLoot* Food, const TArray<AAntCharacter*>& Carriers, int32 Value);
 	/** Who gets the credit for a delivery without carriers (a trail's workers): set around the call. */
 	ANTKITCHEN_API void SetCredit(APlayerState* PS);
+	/** Server: a trail from the nest to the nearest cluster of light food for this player, if he has none (the raid's start kit, admin "workers"). */
+	ANTKITCHEN_API void StarterTrail(APlayerState* PS, bool bAtStart);
 	/** Keys 1/2/3 on the local machine: true if a pick was waiting and the key took it. */
 	ANTKITCHEN_API bool TryPick(AAntPlayerController* PC, int32 Option);
 	/** Server: a player picked. */

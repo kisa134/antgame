@@ -122,22 +122,80 @@ void AAntCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	DOREPLIFETIME(AAntCharacter, StuckLeg);
 	DOREPLIFETIME(AAntCharacter, bCorpseGone);
 	DOREPLIFETIME(AAntCharacter, BodyAct);
+	DOREPLIFETIME(AAntCharacter, AdminFlags);
+	DOREPLIFETIME(AAntCharacter, AdminSpeed);
+}
+
+// ---- Admin mode (AntAdmin.h)
+
+void AAntCharacter::SetAdmin(uint8 Flags, float Speed)
+{
+	AdminFlags = Flags;
+	AdminSpeed = Speed;
+	ApplyAdmin();
+	ForceNetUpdate();
+}
+
+void AAntCharacter::OnRep_Admin()
+{
+	ApplyAdmin();
+}
+
+void AAntCharacter::ApplyAdmin()
+{
+	UCharacterMovementComponent* CM = GetCharacterMovement();
+	const bool bFly = (AdminFlags & 4) != 0, bWasFly = (AdminApplied & 4) != 0;
+	AdminApplied = AdminFlags;
+	if (CM && bFly != bWasFly)
+	{
+		if (bFly)
+		{
+			// Through walls: no collision, the engine's flying mode (no crawling, no gravity); the input flies where the camera looks.
+			SetActorEnableCollision(false);
+			CM->bCheatFlying = true;
+			CM->SetMovementMode(MOVE_Flying);
+		}
+		else
+		{
+			SetActorEnableCollision(true);
+			CM->bCheatFlying = false;
+			CM->SetMovementMode(MOVE_Falling);
+		}
+	}
+	if (CM)
+	{
+		CM->MaxFlySpeed = 900.f * SpeedK * FMath::Max(0.1f, AdminSpeed) * 2.f;
+		CM->BrakingDecelerationFlying = 4000.f;
+	}
+	UpdateSpeed();
 }
 
 float AAntCharacter::GetStrength() const
 {
+	if (AdminFlags & 8)
+	{
+		return 100000.f;   // admin: carries anything alone
+	}
 	const float S = StrengthOverride >= 0.f ? StrengthOverride : GetClassDef().Strength;
 	return ((Team == 0 && Creature == 0 && AntCard::Has(this, AntCard::Jaws)) ? S * 1.25f : S) * AntSnowball::CarryMul(this);
 }
 
 float AAntCharacter::AcidCost() const
 {
+	if (AdminFlags & 2)
+	{
+		return 0.f;
+	}
 	const float Cost = Weapon.bWeb ? 18.f : 7.f + Weapon.Damage * 0.25f;
 	return ((Team == 0 && AntCard::Has(this, AntCard::Acid)) ? Cost * 0.65f : Cost) * AntSnowball::AcidMul(this);
 }
 
 float AAntCharacter::DashCooldown() const
 {
+	if (AdminFlags & 2)
+	{
+		return 0.15f;
+	}
 	return (Team == 0 && AntCard::Has(this, AntCard::Spring)) ? 1.f : 1.6f;
 }
 
@@ -697,6 +755,11 @@ void AAntCharacter::MoveForward(float Value)
 	{
 		return;
 	}
+	if (AdminFlags & 4)
+	{
+		AddMovementInput(Controller->GetControlRotation().Vector(), Value);   // admin flight: where the camera looks
+		return;
+	}
 	FVector F, R;
 	SurfaceAxes(F, R);
 	AddMovementInput(F, Value);
@@ -706,6 +769,11 @@ void AAntCharacter::MoveRight(float Value)
 {
 	if (!Controller || bDead || IsAttached() || FMath::IsNearlyZero(Value))
 	{
+		return;
+	}
+	if (AdminFlags & 4)
+	{
+		AddMovementInput(FRotationMatrix(FRotator(0.f, Controller->GetControlRotation().Yaw, 0.f)).GetUnitAxis(EAxis::Y), Value);
 		return;
 	}
 	FVector F, R;
@@ -1045,7 +1113,7 @@ void AAntCharacter::Stagger(float Seconds, const FVector& Knock)
 void AAntCharacter::Dash()
 {
 	const float Now = GetWorld()->GetTimeSeconds();
-	if (bDead || Now < NextDash || IsAttached() || Carrying || HoldingAnt || Creature == 1 || HasStatus(AntStatus::Webbed) || HasStatus(AntStatus::Sticky))
+	if (bDead || Now < NextDash || IsAttached() || Carrying || HoldingAnt || Creature == 1 || (AdminFlags & 4) || HasStatus(AntStatus::Webbed) || HasStatus(AntStatus::Sticky))
 	{
 		return;
 	}
@@ -1230,6 +1298,16 @@ void AAntCharacter::Tick(float DeltaSeconds)
 	{
 		if (IsLocallyControlled())
 		{
+			if ((AdminFlags & 4) && Controller)
+			{
+				// Admin flight: Space up, Ctrl down. Keep the flying mode (a teleport or a landing may have changed it).
+				if (const APlayerController* MyPC = Cast<APlayerController>(Controller))
+				{
+					if (MyPC->IsInputKeyDown(EKeys::SpaceBar)) { AddMovementInput(FVector::UpVector, 1.f); }
+					if (MyPC->IsInputKeyDown(EKeys::LeftControl)) { AddMovementInput(FVector::UpVector, -1.f); }
+				}
+				if (GetCharacterMovement() && GetCharacterMovement()->MovementMode != MOVE_Flying) { GetCharacterMovement()->SetMovementMode(MOVE_Flying); }
+			}
 			TickFire();
 			if (bDevGo && Controller)
 			{
@@ -1280,6 +1358,15 @@ void AAntCharacter::Tick(float DeltaSeconds)
 			if (GetWorld()->GetTimeSeconds() - LastDamageTime > 5.f && Health < MaxHealth)
 			{
 				Health = FMath::Min(MaxHealth, Health + 6.f * DeltaSeconds);
+			}
+			if (AdminFlags & 2)
+			{
+				Acid = MaxAcid;   // admin: endless acid
+			}
+			if (AdminFlags & 4)
+			{
+				if (GetCharacterMovement() && GetCharacterMovement()->MovementMode != MOVE_Flying) { GetCharacterMovement()->SetMovementMode(MOVE_Flying); }
+				if (GetActorEnableCollision()) { SetActorEnableCollision(false); }
 			}
 			if (Acid < MaxAcid)
 			{
@@ -2025,7 +2112,7 @@ float AAntCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEv
 			return 0.f;   // no friendly fire
 		}
 	}
-	if (AntFilm::NoHarm() && !(EventInstigator && Cast<AAntCharacter>(EventInstigator->GetPawn())))
+	if ((AdminFlags & 1) || (AntFilm::NoHarm() && !(EventInstigator && Cast<AAntCharacter>(EventInstigator->GetPawn()))))
 	{
 		// Filming mode, "no attacks": the blow plays (the body flinches) but nothing in the house harms an ant.
 		const FVector From = DamageCauser ? DamageCauser->GetActorLocation() : GetActorLocation() + FVector(VisNormal);
@@ -2056,6 +2143,15 @@ void AAntCharacter::Die(AController* Killer, AActor* Causer)
 {
 	if (bDead)
 	{
+		return;
+	}
+	if (AdminFlags & 1)
+	{
+		// Admin "no harm": squashed, licked, drowned or fallen out of the world - it lives on.
+		Health = MaxHealth;
+		DeathKind = 0;
+		if (GetActorLocation().Z < -800.f) { ApplyTeleport(AKitchenBuilder::NestLocation(Team) + FVector(300.f, 0.f, 60.f)); }
+		UE_LOG(LogTemp, Display, TEXT("ANTADMIN god: %s would have died (by %s), kept alive"), *GetDisplayName(), Causer ? *Causer->GetName() : TEXT("-"));
 		return;
 	}
 	UE_LOG(LogTemp, Display, TEXT("ANTDEATH %s (team %d, creature %d) died at %s, by %s / %s, kind %d"), *GetDisplayName(), (int32)Team, (int32)Creature,
@@ -2218,6 +2314,8 @@ void AAntCharacter::UpdateSpeed()
 	if (IsFrozen()) { Mult *= 0.5f; }
 	if (HasStatus(AntStatus::Webbed)) { Mult *= 0.08f; }
 	if (HasStatus(AntStatus::Staggered)) { Mult *= 0.45f; }
+	Mult *= FMath::Max(0.1f, AdminSpeed);   // admin mode: x1..x10 (AntAdmin.h)
+	if (AdminFlags & 4) { Mult = FMath::Max(0.1f, AdminSpeed); }   // flying: nothing slows it
 	M->SpeedMultiplier = Mult;
 	M->bNoJump = HasStatus(AntStatus::Sticky) || IsFrozen() || Carrying != nullptr || HoldingAnt != nullptr || HasStatus(AntStatus::Webbed);
 	M->bNoClimb = IsFrozen() || bVeryHeavy;
@@ -2986,7 +3084,7 @@ bool AAntCharacter::StartChainHere(const FVector& Aim)
 
 void AAntCharacter::TearLegOff(const FVector& From)
 {
-	if (!HasAuthority() || bDead || NumLostLegs() >= 4)
+	if (!HasAuthority() || bDead || NumLostLegs() >= 4 || (AdminFlags & 1))
 	{
 		return;
 	}

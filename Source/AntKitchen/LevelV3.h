@@ -105,6 +105,8 @@ namespace LevelV3
 	ANTKITCHEN_API TCHAR CurrentLetter(int32 D);
 	ANTKITCHEN_API bool IsHome(int32 Who);
 	ANTKITCHEN_API int32 TimeOfDay();
+	/** Admin mode (AntAdmin.h): -1 the seed's time of day, else this one (routines and the lights follow). */
+	ANTKITCHEN_API void SetTimeOverride(int32 T);
 	ANTKITCHEN_API const TCHAR* TimeName(int32 T);
 	/** Is this base row loose in the current seed (unscrews twice as fast)? */
 	ANTKITCHEN_API bool IsLoose(int32 Inst);

@@ -172,12 +172,13 @@ float AAntSnowball::RaidClock() const
 
 int32 AAntSnowball::Threshold(int32 Index) const
 {
-	// Cumulative mass for pick #Index+1: 10 (a crumb or two), then 57, 110, 177, 260, 357, 470, 597, 740, 897, 1070 ... (one player; +60 % per extra player).
+	// Cumulative mass for pick #Index+1 (v12, a snappier start): 12 (two crumbs), then 35, 70, 115, 170, 235, 310, 395, 490, 595 ...
+	// (one player; +60 % per extra player). Was 10, 57, 110, 177, 260 ...: the second pick came at minute 3-4.
 	int32 Humans = 0;
 	for (const FAntSnowPlayer& P : Players) { Humans += P.PS ? 1 : 0; }
 	const float K = 1.f + 0.6f * FMath::Max(0, Humans - 1);
 	const float I = (float)Index;
-	return FMath::RoundToInt((Index == 0 ? 10.f : 20.f + 30.f * I + 7.5f * I * I) * K);
+	return FMath::RoundToInt((Index == 0 ? 12.f : 10.f + 20.f * I + 5.f * I * I) * K);
 }
 
 int32 AAntSnowball::SquadCap() const
@@ -222,6 +223,33 @@ void AAntSnowball::Begin(AAntRaid* Raid)
 	int32 Auto = -1;
 	if (FParse::Value(FCommandLine::Get(), TEXT("AntAutoPick="), Auto)) { AutoPick = Auto == 9 ? 8 : FMath::Clamp(Auto - 1, -1, 2); }
 	if (AAntTrailNet* T = AAntTrailNet::Get(GetWorld(), true)) { T->Clear(); }
+	// v12, a snappy first minutes: every player starts with a few workers on a starter trail from the nest to the nearest
+	// cluster of light food, and the family has dropped crumbs round the nest (a solo player picks within about a minute).
+	if (!FParse::Param(FCommandLine::Get(), TEXT("AntSnowOld")))
+	{
+		AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>();
+		const FVector Nest = AKitchenBuilder::NestLocation(0);
+		int32 Crumbs = 0;
+		for (int32 k = 0; GM && k < 60 && Crumbs < 16; ++k)
+		{
+			const float Ang = Rng.FRandRange(0.f, 2.f * PI), R = Rng.FRandRange(1300.f, 3600.f);
+			const FVector P = Nest + FVector(FMath::Cos(Ang) * R, FMath::Sin(Ang) * R, 0.f);
+			FHitResult H;
+			FCollisionQueryParams Q(SCENE_QUERY_STAT(SnowCrumbs), false);
+			if (!GetWorld()->LineTraceSingleByChannel(H, P + FVector(0.f, 0.f, 400.f), P - FVector(0.f, 0.f, 400.f), ECC_Visibility, Q) || H.ImpactPoint.Z > 150.f
+				|| KitchenContainers::SealedAt(GetWorld(), H.ImpactPoint) >= 0)
+			{
+				continue;   // only the open floor
+			}
+			Crumbs += GM->SpawnFood(H.ImpactPoint + FVector(0.f, 0.f, 30.f), 0) ? 1 : 0;
+		}
+		for (FAntSnowPlayer& P : Players)
+		{
+			P.Workers = FMath::Max(P.Workers, 10);
+			AntSnowball::StarterTrail(P.PS, true);
+		}
+		UE_LOG(LogTemp, Display, TEXT("ANTSNOW start kit: %d crumbs round the nest, %d workers and a starter trail each"), Crumbs, 10);
+	}
 	if (Raid)
 	{
 		Raid->Note(FString::Printf(TEXT("%s — каждый вышел один. Масса до первого выбора: %d"), *Raid->Clock(), NextAt));
@@ -371,9 +399,10 @@ void AAntSnowball::Apply(FAntSnowPlayer& P, uint8 Id)
 	auto Room = [&](int32 N) { return FMath::Clamp(SquadCap() - P.Squad.Num(), 0, N); };
 	switch (Id)
 	{
-	case AntPick::Recruit2: AntRts::Spawn(P.PS, Room(2), 0); break;
-	case AntPick::Recruit3: AntRts::Spawn(P.PS, Room(3), 0); break;
-	case AntPick::Veteran: AntRts::Spawn(P.PS, Room(1), 1); AntRts::Spawn(P.PS, Room(1), 0); break;
+	// v12: one more ant per squad pick (a squad of 10+ by minute 4-5 needs 3 picks, not 5); the names stay.
+	case AntPick::Recruit2: AntRts::Spawn(P.PS, Room(3), 0); break;
+	case AntPick::Recruit3: AntRts::Spawn(P.PS, Room(4), 0); break;
+	case AntPick::Veteran: AntRts::Spawn(P.PS, Room(1), 1); AntRts::Spawn(P.PS, Room(2), 0); break;
 	case AntPick::Workers12: P.Workers = FMath::Min(WorkerCap(), P.Workers + 12); break;
 	case AntPick::Workers25: P.Workers = FMath::Min(WorkerCap(), P.Workers + 25); break;
 	case AntPick::TrailLong: Up(AntBoost::TrailLen); break;
@@ -488,16 +517,32 @@ void AAntSnowball::Second()
 	// The family drops crumbs all evening: a light crumb on the floor every few seconds, so that trails have something to
 	// fetch (the flat holds only ~30 light pieces on its floors at the start). -AntCrumbEvery=N seconds, 0 = off.
 	static float CrumbEvery = -1.f;
-	if (CrumbEvery < 0.f) { CrumbEvery = 6.f; FParse::Value(FCommandLine::Get(), TEXT("AntCrumbEvery="), CrumbEvery); }
+	static const bool bOld = FParse::Param(FCommandLine::Get(), TEXT("AntSnowOld"));
+	if (CrumbEvery < 0.f) { CrumbEvery = bOld ? 6.f : 3.5f; FParse::Value(FCommandLine::Get(), TEXT("AntCrumbEvery="), CrumbEvery); }
 	if (CrumbEvery > 0.f && Now >= NextCrumb)
 	{
-		NextCrumb = Now + CrumbEvery;
+		// v12: more often in the first four minutes (every 2.5 s), then every 3.5 s.
+		NextCrumb = Now + (bOld ? CrumbEvery : RaidClock() < 240.f ? FMath::Min(CrumbEvery, 2.5f) : CrumbEvery);
 		if (AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
 		{
 			// Half of them fall near the far end of somebody's trail (people drop crumbs where they eat; that is why ants lay trails there).
 			FVector P = AKitchenBuilder::RandomFloorPoint() + FVector(0.f, 0.f, 30.f);
 			const AAntTrailNet* TN = AAntTrailNet::Get(GetWorld());
-			if (TN && TN->Lines.Num() > 0 && Rng.FRand() < 0.5f)
+			const float Roll = Rng.FRand();
+			if (!bOld && Roll >= 0.5f && Roll < 0.8f)
+			{
+				// v12: a third of the rest near the nest (1500..3500 from it, on the open floor): a lone ant has something close by.
+				const FVector N = AKitchenBuilder::NestLocation(0);
+				const float Ang = Rng.FRandRange(0.f, 2.f * PI), R = Rng.FRandRange(1500.f, 3500.f);
+				const FVector Q = N + FVector(FMath::Cos(Ang) * R, FMath::Sin(Ang) * R, 0.f);
+				FHitResult H;
+				FCollisionQueryParams CQ(SCENE_QUERY_STAT(SnowCrumbNear), false);
+				if (GetWorld()->LineTraceSingleByChannel(H, Q + FVector(0.f, 0.f, 400.f), Q - FVector(0.f, 0.f, 400.f), ECC_Visibility, CQ) && H.ImpactPoint.Z < 150.f)
+				{
+					P = H.ImpactPoint + FVector(0.f, 0.f, 30.f);
+				}
+			}
+			if (TN && TN->Lines.Num() > 0 && Roll < 0.5f)
 			{
 				const FAntTrailLine& L = TN->Lines[Rng.RandRange(0, TN->Lines.Num() - 1)];
 				if (!L.bLaying && L.Points.Num() > 1 && L.Points.Last().Z < 150.f)
@@ -588,6 +633,58 @@ namespace AntSnowball
 	void SetCredit(APlayerState* PS)
 	{
 		GCredit = PS;
+	}
+
+	void StarterTrail(APlayerState* PS, bool bAtStart)
+	{
+		UWorld* W = PS ? PS->GetWorld() : nullptr;
+		AAntTrailNet* T = W ? AAntTrailNet::Get(W, true) : nullptr;
+		if (!T)
+		{
+			return;
+		}
+		if (T->TrailsOf(PS) > 0)
+		{
+			T->Rebalance(PS);
+			return;
+		}
+		// The floor spot (1500..6000 from the nest) with the most light food within 700: where a player would lay a trail to.
+		const FVector Nest = AKitchenBuilder::NestLocation(0);
+		TArray<FVector> Foods;
+		for (TActorIterator<AKitchenLoot> It(W); It; ++It)
+		{
+			const FVector P = It->GetActorLocation();
+			const float D = (float)FVector::Dist2D(P, Nest);
+			if (!It->bIsGear && !It->bMain && !It->bBody && !It->IsCarried() && !It->bHeld && It->Weight <= 8 && P.Z < 150.f && D > 1500.f && D < 6000.f
+				&& KitchenContainers::SealedAt(W, P) < 0) { Foods.Add(P); }
+		}
+		int32 Best = -1, BestN = 0;
+		for (int32 i = 0; i < Foods.Num(); ++i)
+		{
+			int32 N = 0;
+			for (const FVector& Q : Foods) { N += FVector::Dist2D(Q, Foods[i]) < 700.f ? 1 : 0; }
+			if (N > BestN || (N == BestN && Best >= 0 && FVector::Dist2D(Foods[i], Nest) < FVector::Dist2D(Foods[Best], Nest))) { BestN = N; Best = i; }
+		}
+		FVector Target = Best >= 0 ? Foods[Best] : Nest + FVector(3000.f, 0.f, 0.f);
+		TArray<FVector> Way;
+		if (!AntRoutes::PathPoints(Nest, Target, false, Way, nullptr, AntRoutes::FloorOnly) || Way.Num() < 1)
+		{
+			Way.Reset();
+		}
+		Way.Insert(Nest, 0);
+		Way.Add(Target);
+		const int32 Id = T->DevLay(PS, Way);
+		// The family ate there: a few more crumbs at its far end.
+		AAntKitchenGameMode* GM = W->GetAuthGameMode<AAntKitchenGameMode>();
+		int32 Crumbs = 0;
+		for (int32 k = 0; bAtStart && GM && k < 6; ++k)
+		{
+			const FVector2D O = FMath::RandPointInCircle(450.f);
+			Crumbs += GM->SpawnFood(Target + FVector(O.X, O.Y, 40.f), 0) ? 1 : 0;
+		}
+		T->Rebalance(PS);
+		UE_LOG(LogTemp, Display, TEXT("ANTSNOW starter trail %d for %s: %d points to %s (%d light pieces there, +%d crumbs), workers on it %d"), Id, *PS->GetPlayerName(), Way.Num(),
+			*Target.ToCompactString(), BestN, Crumbs, T->WorkersOnTrails(PS));
 	}
 
 	void OnDelivered(AAntKitchenGameMode* GM, AKitchenLoot* Food, const TArray<AAntCharacter*>& Carriers, int32 Value)

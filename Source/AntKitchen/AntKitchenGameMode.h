@@ -133,6 +133,8 @@ public:
 	void Ping(class AAntPlayerController* By, const FVector& Loc);
 	/** Dev: start the shift's event now (AntEvent::EId). */
 	void StartEvent(uint8 Id);
+	/** Admin mode (AntAdmin.cpp): one command from the host's panel; anything it does not know goes to DevCommand. */
+	void AdminCommand(class AAntPlayerController* By, const FString& Cmd);
 	void EndEvent();
 	FAntRunState Run;
 	FTimerHandle RunTimer;

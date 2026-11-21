@@ -408,7 +408,9 @@ TCHAR CurrentLetter(int32 D)
 }
 
 bool IsHome(int32 Who) { return GCur ? (GCur->Home & Who) != 0 : true; }
-int32 TimeOfDay() { return GCur ? GCur->Time : Evening; }
+static int32 GTimeOverride = -1;
+void SetTimeOverride(int32 T) { GTimeOverride = FMath::Clamp(T, -1, 2); }
+int32 TimeOfDay() { return GTimeOverride >= 0 ? GTimeOverride : GCur ? GCur->Time : Evening; }
 const TCHAR* TimeName(int32 T) { return T == Day ? TEXT("день") : T == Night ? TEXT("ночь") : TEXT("вечер"); }
 
 bool IsLoose(int32 Inst)

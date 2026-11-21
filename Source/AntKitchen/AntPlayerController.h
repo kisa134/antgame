@@ -95,6 +95,13 @@ public:
 	UFUNCTION(Server, Reliable) void ServerGrab();
 	UFUNCTION(Server, Reliable) void ServerAddBot(int32 Team, int32 Count);
 
+	/** Admin mode (AntAdmin.h): F10 shows / hides the panel (solo and the host only). */
+	void ToggleAdmin();
+	/** A command from the panel: the few that are this machine's own (con ..., stat ..., hudtoggle, film, freecam) run here, the rest on the server. */
+	void Admin(const FString& Cmd);
+	UFUNCTION(Server, Reliable) void ServerAdmin(const FString& Cmd);
+	TSharedPtr<class SWidget> AdminWidget;
+
 	TSharedPtr<class SWidget> MenuWidget;
 	/** Filming mode (F8, AntFilm.h): made for the local player only. */
 	UPROPERTY() class UAntFilm* Film = nullptr;
