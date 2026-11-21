@@ -1,4 +1,5 @@
 ﻿#include "KitchenLoot.h"
+#include "AntMess.h"
 #include "AntFx.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/BoxComponent.h"
@@ -278,6 +279,7 @@ void AKitchenLoot::Shatter(const FVector& At)
 		const FVector Out(FMath::Cos(A), FMath::Sin(A), 0.f);
 		SpawnPiece(Base, PieceValue, PieceWeight, C + Out * GetRadius() * 0.5f, Out * FMath::FRandRange(250.f, 550.f) + FVector(0.f, 0.f, FMath::FRandRange(250.f, 500.f)), i, N, CutSeed);
 	}
+	AntMess::OnFoodBreak(this, At, CutSeed);   // the stain and the burst that match the food (AntMess.cpp)
 	if (AAntGameState* GS = GetWorld()->GetGameState<AAntGameState>())
 	{
 		GS->MulticastCrumbs(At, Color, 18, FMath::Clamp(GetRadius() * 0.18f, 4.f, 14.f));
@@ -507,6 +509,10 @@ void AKitchenLoot::Tick(float DeltaSeconds)
 	if (GetNetMode() == NM_DedicatedServer)
 	{
 		return;
+	}
+	if (!bIsGear)
+	{
+		AntMess::FoodTick(this, DeltaSeconds, (Shard && Shard->IsVisible()) ? (USceneComponent*)Shard : (USceneComponent*)Mesh);   // squash on landing, smears, scuffs (AntMess.cpp)
 	}
 	Phase += DeltaSeconds;
 	if (!bIsGear)

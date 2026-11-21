@@ -2,6 +2,7 @@
 #include "HumanCharacter.h"
 #include "AntCharacter.h"
 #include "AntFx.h"
+#include "AntMess.h"
 #include "AntTypes.h"
 #include "AntRun.h"
 #include "AntGameState.h"
@@ -1575,6 +1576,7 @@ void AHumanCharacter::OnFootfall(int32 Leg, float Strength)
 	const FVector At = Rig.Feet[Leg & 1].Pos;
 	AntSfx::Play(this, AntSfx::HumanStep, At, (0.5f + 0.45f * Strength) * FMath::Min(1.f, FigScale + 0.15f), FMath::FRandRange(0.9f, 1.05f) / FMath::Sqrt(FigScale));
 	AntFx::LandDust(this, At + FVector(0.f, 0.f, 6.f), FVector::UpVector, (150.f + 130.f * Strength) * FigScale);
+	AntMess::HumanStep(this, At, GetActorRotation().Yaw, 560.f * FigScale);   // sticky prints after a step in jam, dust stirred (AntMess.cpp)
 	if (const APlayerController* PC = GetWorld()->GetFirstPlayerController())
 	{
 		if (AAntCharacter* Me = Cast<AAntCharacter>(PC->GetPawn()))

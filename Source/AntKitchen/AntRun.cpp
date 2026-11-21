@@ -38,6 +38,7 @@
 #include "AntRaid.h"
 #include "KitchenSlick.h"
 #include "AntFilm.h"
+#include "AntMess.h"
 #include "Engine/OverlapResult.h"
 
 namespace
@@ -1537,6 +1538,10 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 	if (Raid && Raid->DevCommand(A))
 	{
 		return;   // raid ..., nest ... (AntRaid.cpp)
+	}
+	if (AntMess::DevCommand(this, A))
+	{
+		return;   // mess stain|test|break|splat|burst|jamwalk|walk|dust|stir|clean|fill|hide|cost|profilegpu|info (AntMess.cpp)
 	}
 	if (AntBodyRules::DevCommand(this, A))
 	{

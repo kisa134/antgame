@@ -207,6 +207,9 @@ public:
 	float DevGoJumpAt = 0.f;
 	/** Dev (scripted test runs): a commander order without the keyboard. */
 	void DevCommand(uint8 Cmd, const FVector& Point);
+	/** Mess (AntMess.cpp): a cosmetic multiplier on the chitin's tint (a coat of jam reddens it, cream pales it). White: clean. Local. */
+	void SetMessTint(const FLinearColor& Mul) { if (!MessTint.Equals(Mul, 0.004f)) { MessTint = Mul; OnRep_BodyColor(); } }
+	FLinearColor MessTint = FLinearColor::White;
 	/** Local camera shake (0..1, adds up, decays). */
 	void AddTrauma(float Amount) { Trauma = FMath::Min(1.f, Trauma + Amount); }
 	/** Server: set on fire for a few seconds (spreads to ants nearby, water puts it out). */
