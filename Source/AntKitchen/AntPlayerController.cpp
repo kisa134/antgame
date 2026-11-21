@@ -18,6 +18,8 @@
 #include "Engine/GameViewportClient.h"
 #include "AntSession.h"
 #include "AntMenu.h"
+#include "AntUiMenu.h"
+#include "AntUiStyle.h"
 #include "KitchenLoot.h"
 #include "Engine/PostProcessVolume.h"
 #include "AntFx.h"
@@ -515,7 +517,20 @@ void AAntPlayerController::OpenMenu(bool bPause)
 	{
 		return;
 	}
-	TSharedRef<SAntMenu> Menu = SNew(SAntMenu).PC(this).bPause(bPause);
+	// The front end (AntUiMenu.h): the studio card and the logo on the first start, the main menu after, the pause screen on Esc.
+	// -AntUiClassic keeps the old plain menu.
+	TSharedPtr<SWidget> Made;
+	if (AntUi::Classic())
+	{
+		Made = SNew(SAntMenu).PC(this).bPause(bPause);
+	}
+	else
+	{
+		TSharedRef<SAntUiMenu> Ui = SNew(SAntUiMenu).PC(this).Screen(bPause ? AntUiScreen::Pause : (SAntUiMenu::bBootShown ? AntUiScreen::Main : AntUiScreen::Boot));
+		UiMenu = Ui;
+		Made = Ui;
+	}
+	TSharedRef<SWidget> Menu = Made.ToSharedRef();
 	MenuWidget = Menu;
 	GEngine->GameViewport->AddViewportWidgetContent(Menu, 100);
 	FInputModeUIOnly Mode;
@@ -536,9 +551,38 @@ void AAntPlayerController::CloseMenu()
 		GEngine->GameViewport->RemoveViewportWidgetContent(MenuWidget.ToSharedRef());
 	}
 	MenuWidget.Reset();
+	UiMenu.Reset();
 	FInputModeGameOnly Mode;
 	SetInputMode(Mode);
 	bShowMouseCursor = false;
+}
+
+void AAntPlayerController::OpenUiScreen(uint8 Screen)
+{
+	if (TSharedPtr<SAntUiMenu> Ui = UiMenu.Pin())
+	{
+		Ui->Go(Screen);
+		return;
+	}
+	if (MenuWidget.IsValid() || !IsLocalController() || !GEngine || !GEngine->GameViewport)
+	{
+		CloseMenu();   // the classic menu is up: replace it
+		if (MenuWidget.IsValid() || !GEngine || !GEngine->GameViewport) { return; }
+	}
+	TSharedRef<SAntUiMenu> Ui = SNew(SAntUiMenu).PC(this).Screen(Screen);
+	UiMenu = Ui;
+	MenuWidget = Ui;
+	GEngine->GameViewport->AddViewportWidgetContent(Ui, 100);
+	FInputModeUIOnly Mode;
+	Mode.SetWidgetToFocus(Ui);
+	Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	SetInputMode(Mode);
+	bShowMouseCursor = true;
+}
+
+void AAntPlayerController::SetUiSettingsTab(int32 Tab)
+{
+	if (TSharedPtr<SAntUiMenu> Ui = UiMenu.Pin()) { Ui->SetSettingsTab(Tab); }
 }
 
 void AAntPlayerController::ToggleMenu()
@@ -566,6 +610,7 @@ void AAntPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		GEngine->GameViewport->RemoveViewportWidgetContent(MenuWidget.ToSharedRef());
 	}
 	MenuWidget.Reset();
+	UiMenu.Reset();
 	if (AdminWidget.IsValid() && GEngine && GEngine->GameViewport)
 	{
 		GEngine->GameViewport->RemoveViewportWidgetContent(AdminWidget.ToSharedRef());
@@ -588,6 +633,7 @@ void AAntPlayerController::ToggleAdmin()
 	{
 		GEngine->GameViewport->RemoveViewportWidgetContent(AdminWidget.ToSharedRef());
 		AdminWidget.Reset();
+		if (AdminLook) { PopInputComponent(AdminLook); }
 		if (!MenuWidget.IsValid())
 		{
 			FInputModeGameOnly Mode;
@@ -608,9 +654,25 @@ void AAntPlayerController::ToggleAdmin()
 	// The game keeps running and keeps the keyboard (WASD); the mouse is for the panel.
 	FInputModeGameAndUI Mode;
 	Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-	Mode.SetHideCursorDuringCapture(false);
+	Mode.SetHideCursorDuringCapture(true);
 	SetInputMode(Mode);
 	bShowMouseCursor = true;
+	// Right mouse held over the world looks around: the viewport captures the mouse for the right button only (a left click
+	// stays a click), and the right press itself is swallowed so the ant does not spit acid while the admin looks.
+	GEngine->GameViewport->SetMouseCaptureMode(EMouseCaptureMode::CaptureDuringRightMouseDown);
+	if (!AdminLook)
+	{
+		AdminLook = NewObject<UInputComponent>(this, TEXT("AntAdminLook"));
+		AdminLook->Priority = 50;
+		for (const EInputEvent Ev : { IE_Pressed, IE_Released })
+		{
+			FInputKeyBinding KB(FInputChord(EKeys::RightMouseButton), Ev);
+			KB.bConsumeInput = true;
+			KB.KeyDelegate.GetDelegateForManualSet().BindLambda([]() {});
+			AdminLook->KeyBindings.Add(KB);
+		}
+	}
+	PushInputComponent(AdminLook);
 	UE_LOG(LogTemp, Display, TEXT("ANTADMIN panel opened"));
 }
 

@@ -1,4 +1,6 @@
 ﻿#include "AntHUD.h"
+#include "AntUiStyle.h"
+#include "AntUiCanvas.h"
 #include "AntRaid.h"
 #include "AntNest.h"
 #include "AntRun.h"
@@ -21,21 +23,46 @@ int32 AAntHUD::DevClickFrames = 0;
 
 namespace
 {
-	const FLinearColor NGold(1.f, 0.8f, 0.2f);
-	const FLinearColor NText(0.93f, 0.91f, 0.86f);
-	const FLinearColor NDim(0.64f, 0.61f, 0.55f);
-	const FLinearColor NGood(0.45f, 0.95f, 0.45f);
-	const FLinearColor NBad(1.f, 0.42f, 0.32f);
-	const FLinearColor NJelly(0.78f, 0.62f, 1.f);
+	// The palette. The war-room look (docs/UI_STYLE.md) is set by NestPalette() when the screen is drawn; -AntUiClassic keeps these.
+	bool bUiClassic = true;
+	FLinearColor NGold(1.f, 0.8f, 0.2f);
+	FLinearColor NText(0.93f, 0.91f, 0.86f);
+	FLinearColor NDim(0.64f, 0.61f, 0.55f);
+	FLinearColor NGood(0.45f, 0.95f, 0.45f);
+	FLinearColor NBad(1.f, 0.42f, 0.32f);
+	FLinearColor NJelly(0.78f, 0.62f, 1.f);
 	const FLinearColor NBack(0.006f, 0.005f, 0.004f, 0.98f);
-	const FLinearColor NPanel(0.022f, 0.017f, 0.012f, 1.f);
-	const FLinearColor NRow(0.036f, 0.028f, 0.019f, 1.f);
-	const FLinearColor NRowHot(0.075f, 0.056f, 0.032f, 1.f);
-	const FLinearColor NBtn(0.17f, 0.105f, 0.02f, 1.f);
-	const FLinearColor NBtnHot(0.36f, 0.23f, 0.04f, 1.f);
-	const FLinearColor NBtnOn(0.05f, 0.2f, 0.045f, 1.f);
+	FLinearColor NPanel(0.022f, 0.017f, 0.012f, 1.f);
+	FLinearColor NRow(0.036f, 0.028f, 0.019f, 1.f);
+	FLinearColor NRowHot(0.075f, 0.056f, 0.032f, 1.f);
+	FLinearColor NBtn(0.17f, 0.105f, 0.02f, 1.f);
+	FLinearColor NBtnHot(0.36f, 0.23f, 0.04f, 1.f);
+	FLinearColor NBtnOn(0.05f, 0.2f, 0.045f, 1.f);
 	const FLinearColor NBtnOff(0.03f, 0.029f, 0.027f, 1.f);
-	const FLinearColor NEdge(0.3f, 0.21f, 0.07f, 1.f);
+	FLinearColor NEdge(0.3f, 0.21f, 0.07f, 1.f);
+
+	/** The war-room palette: ink panels over the HQ table, amber accents, sugar text (linear values of the sRGB swatches). */
+	void NestPalette()
+	{
+		static bool bSet = false;
+		if (bSet) { return; }
+		bSet = true;
+		bUiClassic = AntUi::Classic();
+		if (bUiClassic) { return; }
+		NGold = FLinearColor(0.8879f, 0.3968f, 0.0437f);
+		NText = FLinearColor(0.9647f, 0.9131f, 0.7913f);
+		NDim = FLinearColor(0.62f, 0.52f, 0.37f);
+		NGood = FLinearColor(0.2384f, 0.5841f, 0.1022f);
+		NBad = FLinearColor(0.8070f, 0.1170f, 0.0782f);
+		NJelly = FLinearColor(0.6105f, 0.3916f, 1.f);
+		NPanel = FLinearColor(0.0110f, 0.0060f, 0.0033f, 0.86f);
+		NRow = FLinearColor(0.0242f, 0.0123f, 0.0060f, 0.92f);
+		NRowHot = FLinearColor(0.0685f, 0.0296f, 0.0144f, 0.96f);
+		NBtn = FLinearColor(0.1470f, 0.0423f, 0.0060f, 0.96f);
+		NBtnHot = FLinearColor(0.3916f, 0.1170f, 0.0116f, 1.f);
+		NBtnOn = FLinearColor(0.0497f, 0.2051f, 0.0232f, 1.f);
+		NEdge = FLinearColor(0.5776f, 0.1714f, 0.0130f, 1.f);
+	}
 
 	const TCHAR* RomanN(int32 N)
 	{
@@ -55,6 +82,10 @@ bool AAntHUD::NestBtn(const FString& Label, float X, float Y, float BW, float BH
 	const FLinearColor Fill = !bEnabled ? NBtnOff : bOn ? (bHot ? FLinearColor(0.09f, 0.32f, 0.07f, 1.f) : NBtnOn) : bHot ? NBtnHot : NBtn;
 	DrawRect(bEnabled ? NEdge : FLinearColor(0.07f, 0.065f, 0.06f, 1.f), X, Y, BW, BH);
 	DrawRect(Fill, X + 2.f, Y + 2.f, BW - 4.f, BH - 4.f);
+	if (!bUiClassic && bEnabled)
+	{
+		DrawRect(FLinearColor(1.f, 0.85f, 0.6f, bHot ? 0.22f : 0.1f), X + 2.f, Y + 2.f, BW - 4.f, FMath::Max(1.f, (BH - 4.f) * 0.18f));
+	}
 	UFont* F = GEngine->GetSmallFont();
 	float TW = 0.f, TH = 0.f;
 	float Sc = TextScale * NestFs;
@@ -100,6 +131,7 @@ float AAntHUD::WrapTxt(const FString& Str, float X, float Y, float MaxW, const F
 
 void AAntHUD::DrawNest(AAntRaid* Raid, AAntGameState* GS)
 {
+	NestPalette();
 	const float W = Canvas->ClipX, H = Canvas->ClipY;
 	UFont* Small = GEngine->GetSmallFont();
 	UFont* Med = GEngine->GetMediumFont();
@@ -137,13 +169,33 @@ void AAntHUD::DrawNest(AAntRaid* Raid, AAntGameState* GS)
 	auto Send = [&](uint8 Cmd, int32 A, int32 B) { if (PC) { PC->ServerRaid(Cmd, A, B); } };
 	auto Panel = [&](float X, float Y, float PW, float PH, const TCHAR* Title)
 	{
-		DrawRect(NPanel, PX(X), PY(Y), PW * U, PH * U);
+		if (bUiClassic)
+		{
+			DrawRect(NPanel, PX(X), PY(Y), PW * U, PH * U);
+			DrawRect(NEdge, PX(X), PY(Y), PW * U, 3.f * U);
+			Txt(Title, PX(X + 16.f), PY(Y + 12.f), NGold, Small, 1.3f * Fs);
+			return;
+		}
+		// A sheet of the war-room table: ink glass, an amber edge, a strip of tape, the title in the poster face.
+		AntUiCanvas::Glass(Canvas, PX(X), PY(Y), PW * U, PH * U, 0.86f);
 		DrawRect(NEdge, PX(X), PY(Y), PW * U, 3.f * U);
-		Txt(Title, PX(X + 16.f), PY(Y + 12.f), NGold, Small, 1.3f * Fs);
+		AntUiCanvas::Tile(Canvas, AntUi::Tex(TEXT("Materials/T_UI_Tape")), PX(X + PW - 84.f), PY(Y - 9.f), 96.f * U, 24.f * U, FLinearColor(1.f, 1.f, 1.f, 0.8f), FVector2D(0.f, 0.f), FVector2D(1.f, 1.f), 8.f);
+		AntUiCanvas::Text(Canvas, Title, PX(X + 16.f), PY(Y + 10.f), AntUi::EFont::Display, 14.f * Fs, NGold, 0, 0.6f);
 	};
 	const TCHAR* HostOnly = TEXT("Колония хоста: строит и решает он");
 
-	DrawRect(NBack, 0.f, 0.f, W, H);
+	if (bUiClassic)
+	{
+		DrawRect(NBack, 0.f, 0.f, W, H);
+	}
+	else
+	{
+		// The HQ: the war-room table (Higgsfield plate) under the sheets, dimmed so every panel reads.
+		DrawRect(NBack, 0.f, 0.f, W, H);
+		AntUiCanvas::Cover(Canvas, AntUi::Tex(TEXT("Backgrounds/T_UI_BgWarRoom")), 0.f, 0.f, W, H, FLinearColor(0.62f, 0.58f, 0.54f, 1.f));
+		DrawRect(FLinearColor(0.012f, 0.007f, 0.004f, 0.45f), 0.f, 0.f, W, H);
+		AntUiCanvas::Tile(Canvas, AntUi::Tex(TEXT("Materials/T_UI_Vignette")), 0.f, 0.f, W, H, FLinearColor(1.f, 1.f, 1.f, 0.9f));
+	}
 
 	// ------------------------------------------------------------------ the top: the stores
 	Txt(TEXT("ГНЕЗДО"), PX(34.f), PY(14.f), NGold, Big, 1.75f * Fs);
@@ -163,6 +215,11 @@ void AAntHUD::DrawNest(AAntRaid* Raid, AAntGameState* GS)
 			DrawRect(NPanel, PX(X), PY(14.f), 232.f * U, 76.f * U);
 			Txt(Chips[i].Label, PX(X + 14.f), PY(20.f), NDim, Small, 1.05f * Fs);
 			Txt(Chips[i].Value, PX(X + 14.f), PY(42.f), Chips[i].C, Med, 1.6f * Fs);
+			if (!bUiClassic)
+			{
+				static const TCHAR* ChipIcons[4] = { TEXT("Cookie"), TEXT("Jelly"), TEXT("Larva"), TEXT("Worker") };
+				AntUiCanvas::Icon(Canvas, ChipIcons[i], PX(X + 168.f), PY(20.f), 58.f * U);
+			}
 			if (NestHover(PX(X), PY(14.f), 232.f * U, 76.f * U)) { NestTip = Chips[i].Tip; }
 		}
 	}

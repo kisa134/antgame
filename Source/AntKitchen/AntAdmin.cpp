@@ -1,4 +1,5 @@
 ﻿#include "AntAdmin.h"
+#include "AntUiStyle.h"
 #include "AntKitchenGameMode.h"
 #include "AntPlayerController.h"
 #include "AntPlayerState.h"
@@ -106,9 +107,9 @@ namespace
 	bool GUsed = false;
 	TArray<FString> GHistory;
 
-	const FLinearColor AdmGold(1.f, 0.8f, 0.25f);
+	const FLinearColor AdmGold(0.8879f, 0.3968f, 0.0437f);   // the UI kit's amber (docs/UI_STYLE.md)
 	const FLinearColor AdmRed(1.f, 0.4f, 0.35f);
-	const FLinearColor AdmGreen(0.5f, 1.f, 0.55f);
+	const FLinearColor AdmGreen(0.2384f, 0.5841f, 0.1022f);   // leaf
 
 	/** Every food of the game, by name (AntKit::RollFood of each tier, sampled) and the four heavy prizes. Same on every machine. */
 	const TArray<FAntFoodDef>& Foods()
@@ -805,7 +806,7 @@ void SAntAdminPanel::Construct(const FArguments& InArgs)
 {
 	PC = InArgs._PC;
 	Tab = GLastTab;
-	const FSlateFontInfo Small = FCoreStyle::GetDefaultFontStyle("Regular", 12);
+	const FSlateFontInfo Small = AntUi::Font(AntUi::EFont::Body, 14);
 	ChildSlot
 	.HAlign(HAlign_Left)
 	.VAlign(VAlign_Fill)
@@ -814,8 +815,8 @@ void SAntAdminPanel::Construct(const FArguments& InArgs)
 		SNew(SBox).WidthOverride(640.f)
 		[
 			SNew(SBorder)
-			.BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush"))
-			.BorderBackgroundColor(FLinearColor(0.02f, 0.015f, 0.01f, 0.86f))
+			.BorderImage(AntUi::Rounded(12.f))
+			.BorderBackgroundColor(FLinearColor(0.0110f, 0.0060f, 0.0033f, 0.9f))   // ink glass of the UI kit
 			.Padding(10.f)
 			[
 				SNew(SVerticalBox)
@@ -823,7 +824,7 @@ void SAntAdminPanel::Construct(const FArguments& InArgs)
 				[
 					SNew(STextBlock)
 					.Text(FText::FromString(TEXT("АДМИН-ПАНЕЛЬ   ·   F10 / Esc — закрыть   ·   кнопки «у прицела» бьют в центр экрана")))
-					.Font(FCoreStyle::GetDefaultFontStyle("Bold", 13))
+					.Font(AntUi::Font(AntUi::EFont::Bold, 15))
 					.ColorAndOpacity(AdmGold)
 				]
 				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 2.f)
@@ -853,7 +854,7 @@ void SAntAdminPanel::Construct(const FArguments& InArgs)
 				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 2.f)
 				[
 					SAssignNew(Line, SEditableTextBox)
-					.Font(FCoreStyle::GetDefaultFontStyle("Mono", 13))
+					.Font(AntUi::Font(AntUi::EFont::Mono, 14))
 					.HintText(FText::FromString(TEXT("команда: god, fly, speed 5, mass 500, cat act sleep, seed 7 ...")))
 					.ClearKeyboardFocusOnCommit(false)
 					.SelectAllTextOnCommit(false)
@@ -973,7 +974,7 @@ void SAntAdminPanel::Section(const FString& Title)
 	[
 		SNew(STextBlock)
 		.Text(FText::FromString(Title))
-		.Font(FCoreStyle::GetDefaultFontStyle("Bold", 14))
+		.Font(AntUi::Font(AntUi::EFont::Bold, 16))
 		.ColorAndOpacity(AdmGold)
 	];
 	Body->AddSlot().AutoHeight()
@@ -996,13 +997,14 @@ void SAntAdminPanel::BtnL(TFunction<FString()> Label, TFunction<void()> Fn, cons
 	Row->AddSlot().Padding(3.f)
 	[
 		SNew(SButton)
+			.ButtonStyle(&AntUi::ButtonStyle())   // paper tags of the UI kit
 		.ContentPadding(FMargin(9.f, 5.f))
 		.ButtonColorAndOpacity(Color)
 		.OnClicked_Lambda([Fn]() { Fn(); return FReply::Handled(); })
 		[
 			SNew(STextBlock)
 			.Text_Lambda([Label]() { return FText::FromString(Label()); })
-			.Font(FCoreStyle::GetDefaultFontStyle("Bold", 12))
+			.Font(AntUi::Font(AntUi::EFont::Bold, 14))
 			.ColorAndOpacity(FLinearColor::Black)
 		]
 	];
@@ -1017,13 +1019,14 @@ void SAntAdminPanel::Rebuild()
 		Tabs->AddSlot().AutoWidth().Padding(2.f)
 		[
 			SNew(SButton)
+			.ButtonStyle(&AntUi::ButtonStyle())   // paper tags of the UI kit
 			.ContentPadding(FMargin(10.f, 5.f))
-			.ButtonColorAndOpacity(i == Tab ? AdmGold : FLinearColor(0.45f, 0.45f, 0.45f))
+			.ButtonColorAndOpacity(i == Tab ? FLinearColor(1.f, 0.75f, 0.35f) : FLinearColor(0.62f, 0.6f, 0.56f))
 			.OnClicked_Lambda([this, i]() { Tab = i; Rebuild(); return FReply::Handled(); })
 			[
 				SNew(STextBlock)
 				.Text(FText::FromString(GTabNames[i]))
-				.Font(FCoreStyle::GetDefaultFontStyle("Bold", 13))
+				.Font(AntUi::Font(AntUi::EFont::Bold, 15))
 				.ColorAndOpacity(FLinearColor::Black)
 			]
 		];
@@ -1190,7 +1193,7 @@ void SAntAdminPanel::Rebuild()
 		[
 			SNew(SBox).WidthOverride(110.f)
 			[
-				SAssignNew(SeedBox, SEditableTextBox).HintText(FText::FromString(TEXT("сид №"))).Font(FCoreStyle::GetDefaultFontStyle("Bold", 12))
+				SAssignNew(SeedBox, SEditableTextBox).HintText(FText::FromString(TEXT("сид №"))).Font(AntUi::Font(AntUi::EFont::Bold, 14))
 			]
 		];
 		Btn(TEXT("Применить сид"), [this]() { if (SeedBox.IsValid() && !SeedBox->GetText().IsEmpty()) { Run(TEXT("seed ") + SeedBox->GetText().ToString().TrimStartAndEnd()); } });
