@@ -28,9 +28,13 @@
 #include "Engine/World.h"
 #include "Engine/OverlapResult.h"
 #include "TimerManager.h"
+#include "UnrealClient.h"
+#include "Misc/Paths.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 
 // =============================================================================================
-// The heavy body (docs/FEATURES.md, section 28): the Human is a 90 kg giant with momentum.
+// The heavy body (docs/FEATURES.md, section 31): the Human is a 90 kg giant with momentum.
 //  - Movement with mass: slow to get going, a sprint that winds up, braking that takes a moment, a turn that lags (a player Human).
 //  - What his body runs into is shoved by his momentum (AntWreck's own load path): a chair flies, a table slides and tips,
 //    food is punted; something that does not give stops him and he reels back (at a run he can go down).
@@ -982,6 +986,68 @@ void AHumanCharacter::TickHeavyBody(float Dt)
 	if (IsLocallyControlled() && IsPlayerControlled())
 	{
 		TickCamera(Dt);
+		TickKeyScript();
+	}
+}
+
+void AHumanCharacter::TickKeyScript()
+{
+	// Dev: -AntHumanDo="t:op args;..." on ANY machine (a client too): the local player's Human presses his own keys at those seconds
+	// of this world (the same handlers and server RPCs as the keyboard): move f r secs | sprint 1|0 | fire [hold s] | jump [hold s]
+	// | kick | throw | grab | aim yaw [pitch] | shot name. For two-copy network tests.
+	struct FStep { float T; FString Op; TArray<FString> A; };
+	static TArray<FStep> Steps;
+	static bool bParsed = false;
+	static int32 Next = 0;
+	if (!bParsed)
+	{
+		bParsed = true;
+		FString Script;
+		if (FParse::Value(FCommandLine::Get(), TEXT("AntHumanDo="), Script, false))
+		{
+			TArray<FString> Parts;
+			Script.ParseIntoArray(Parts, TEXT(";"));
+			for (const FString& P : Parts)
+			{
+				FString L, R;
+				if (!P.Split(TEXT(":"), &L, &R)) { continue; }
+				FStep S;
+				S.T = FCString::Atof(*L);
+				R.TrimStartAndEnd().ParseIntoArrayWS(S.A);
+				if (S.A.Num() == 0) { continue; }
+				S.Op = S.A[0].ToLower();
+				Steps.Add(S);
+			}
+			UE_LOG(LogTemp, Display, TEXT("ANTHEAVY key script: %d steps"), Steps.Num());
+		}
+	}
+	UWorld* W = GetWorld();
+	const float Now = W->GetTimeSeconds();
+	static bool bStarted = false;
+	if (!bStarted)
+	{
+		bStarted = true;
+		while (Steps.IsValidIndex(Next) && Steps[Next].T < Now - 0.5f) { ++Next; }   // what was due before he was the Human is skipped
+	}
+	if (FireDownAt >= 0.f && KeyFireUpAt > 0.f && Now >= KeyFireUpAt) { KeyFireUpAt = -1.f; OnFireReleased(); }
+	if (JumpDownAt >= 0.f && KeyJumpUpAt > 0.f && Now >= KeyJumpUpAt) { KeyJumpUpAt = -1.f; OnJumpReleased(); }
+	while (Steps.IsValidIndex(Next) && Steps[Next].T <= Now)
+	{
+		const FStep& S = Steps[Next++];
+		auto Num = [&S](int32 i, float Def) { return S.A.IsValidIndex(i) ? FCString::Atof(*S.A[i]) : Def; };
+		UE_LOG(LogTemp, Display, TEXT("ANTHEAVY key %.1f: %s (%s)"), Now, *S.Op, GetNetMode() == NM_Client ? TEXT("client") : TEXT("host"));
+		if (S.Op == TEXT("move")) { DevInput = FVector2D(Num(1, 1.f), Num(2, 0.f)); DevInputUntil = Now + Num(3, 2.f); }
+		else if (S.Op == TEXT("sprint")) { if (Num(1, 1.f) > 0.5f) { OnSprintPressed(); } else { OnSprintReleased(); } }
+		else if (S.Op == TEXT("fire")) { OnFirePressed(); KeyFireUpAt = Now + Num(1, 0.1f); }
+		else if (S.Op == TEXT("jump")) { OnJumpPressed(); KeyJumpUpAt = Now + Num(1, 0.1f); }
+		else if (S.Op == TEXT("kick")) { OnKickPressed(); }
+		else if (S.Op == TEXT("throw")) { OnThrowPressed(); }
+		else if (S.Op == TEXT("grab")) { OnGrabPressed(); }
+		else if (S.Op == TEXT("aim") && Controller) { Controller->SetControlRotation(FRotator(Num(2, -12.f), Num(1, 0.f), 0.f)); }
+		else if (S.Op == TEXT("shot"))
+		{
+			FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir() / TEXT("Screenshots") / TEXT("wreck") / (S.A.IsValidIndex(1) ? S.A[1] : FString(TEXT("key"))) + TEXT(".png"), true, false);
+		}
 	}
 }
 

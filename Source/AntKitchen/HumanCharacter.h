@@ -306,6 +306,10 @@ protected:
 	void Shockwave(const FVector& P, float Radius, float Power, const TCHAR* Why);
 	/** Local: the camera of the one who plays him (sway, bob, the run's FOV). */
 	void TickCamera(float Dt);
+	/** Local, dev: -AntHumanDo="t:op;..." presses the local player's Human keys (any machine; HumanPhys.cpp). */
+	void TickKeyScript();
+	float KeyFireUpAt = -1.f;
+	float KeyJumpUpAt = -1.f;
 	/** Local, PoseBody: the semi-ragdoll springs. */
 	void TickPhysLayer(float Dt, const FTransform& Body);
 	/** The stomp's landing point (server): the aimed one, or GetStompPoint. */
