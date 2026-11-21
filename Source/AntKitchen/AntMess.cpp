@@ -923,6 +923,22 @@ namespace
 {
 	bool IsSoftKind(uint8 K) { return K == MessKind::Jam || K == MessKind::Honey || K == MessKind::Cream || K == MessKind::Chocolate || K == MessKind::Juice; }
 
+	/** Where the ant's feet are: the surface right under it, along its own up (walls too). (GetGroundLocation is 35 above it: a marker point.) */
+	FVector AntFeet(const AAntCharacter* A, FVector* OutN = nullptr)
+	{
+		const FVector Up = A->GetVisualUp();
+		const FVector P = A->GetActorLocation();
+		FHitResult H;
+		FCollisionQueryParams Q(TEXT("AntMessFeet"), false, A);
+		if (A->GetWorld()->LineTraceSingleByChannel(H, P + Up * 2.f, P - Up * 40.f, ECC_Visibility, Q))
+		{
+			if (OutN) { *OutN = H.ImpactNormal; }
+			return H.ImpactPoint;
+		}
+		if (OutN) { *OutN = Up; }
+		return P - Up * 8.f;
+	}
+
 	bool FloorUnder(UWorld* W, const FVector& P, float Down, const AActor* Ignore, FVector& OutP, FVector& OutN)
 	{
 		FHitResult H;
@@ -1098,7 +1114,7 @@ void AAntMess::DirtyAnt(AAntCharacter* Ant, uint8 Kind, const FLinearColor& Col,
 	{
 		D = &Dirt.AddDefaulted_GetRef();
 		D->Ant = Ant;
-		D->LastStamp = Ant->GetGroundLocation();
+		D->LastStamp = AntFeet(Ant);
 	}
 	if (Feet > D->Feet) { D->Feet = Feet; D->FeetKind = Kind; D->FeetColor = Col; }
 	if (Body > D->Body + 0.05f)
@@ -1182,7 +1198,7 @@ void AAntMess::TickAnts(float Dt)
 		{
 			continue;
 		}
-		const FVector G = A->GetGroundLocation();
+		const FVector G = AntFeet(A);
 		FLinearColor Col;
 		const uint8 K = StainUnder(G, 2.f, &Col);
 		if (K != 255)
@@ -1203,12 +1219,13 @@ void AAntMess::TickAnts(float Dt)
 			continue;
 		}
 		// tracks: the tripod gait, alternate sides
-		const FVector G = A->GetGroundLocation();
+		FVector GN;
+		const FVector G = AntFeet(A, &GN);
 		const float VS = A->VisScale();
 		const float Len = 98.f * VS;
 		if (D.Feet > 0.03f && FVector::Dist(G, D.LastStamp) > Len * 0.3f)
 		{
-			const FVector N = A->GetVisualUp();
+			const FVector N = GN;
 			FVector Fw = (G - D.LastStamp);
 			Fw = (Fw - N * FVector::DotProduct(Fw, N)).GetSafeNormal();
 			if (Fw.IsNearlyZero()) { Fw = A->GetActorForwardVector(); }
@@ -1219,8 +1236,9 @@ void AAntMess::TickAnts(float Dt)
 			const bool bDry = D.FeetKind == MessKind::Crumbs || D.FeetKind == MessKind::Sugar || D.FeetKind == MessKind::Mud;
 			const float Dot = Len * (bDry ? 0.06f : 0.075f) * (0.6f + 0.4f * D.Feet);
 			const FVector Feet[3] = { G + Fw * Len * 0.32f + Rt * Sd * Len * 0.34f, G - Rt * Sd * Len * 0.4f, G - Fw * Len * 0.34f + Rt * Sd * Len * 0.36f };
-			for (const FVector& F : Feet)
+			for (const FVector& F0 : Feet)
 			{
+				const FVector F = F0 + (Fw * FMath::FRandRange(-0.09f, 0.09f) + Rt * FMath::FRandRange(-0.07f, 0.07f)) * Len;   // no two steps land exactly alike
 				Speck(F, N, Dot * FMath::FRandRange(0.8f, 1.2f), bDry ? 0.8f : 0.35f, D.FeetColor * FMath::Lerp(1.25f, 0.95f, D.Feet), L.RWet + (bDry ? 0.5f : 0.08f), 50.f, Yaw, 1.4f);
 			}
 			D.LastStamp = G;
