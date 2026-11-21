@@ -172,12 +172,12 @@ float AAntSnowball::RaidClock() const
 
 int32 AAntSnowball::Threshold(int32 Index) const
 {
-	// Cumulative mass for pick #Index+1: 20, 57, 110, 177, 260, 357, 470, 597, 740, 897, 1070 ... (one player; +60 % per extra player).
+	// Cumulative mass for pick #Index+1: 10 (a crumb or two), then 57, 110, 177, 260, 357, 470, 597, 740, 897, 1070 ... (one player; +60 % per extra player).
 	int32 Humans = 0;
 	for (const FAntSnowPlayer& P : Players) { Humans += P.PS ? 1 : 0; }
 	const float K = 1.f + 0.6f * FMath::Max(0, Humans - 1);
 	const float I = (float)Index;
-	return FMath::RoundToInt((20.f + 30.f * I + 7.5f * I * I) * K);
+	return FMath::RoundToInt((Index == 0 ? 10.f : 20.f + 30.f * I + 7.5f * I * I) * K);
 }
 
 int32 AAntSnowball::SquadCap() const
