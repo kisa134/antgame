@@ -37,9 +37,9 @@ namespace
 		float C = Opt(TEXT("AntCarryC="), 7.f);               // grip damper, 1/s
 		float Reserve = Opt(TEXT("AntCarryReserve="), 1.35f);// a carrier may give 135 % of its strength while the team has slack
 		float MainReserve = 1.75f;                            // the cake (it was carried with 1.75 before: over door rails)
-		float Brake = Opt(TEXT("AntCarryBrake="), 0.3f);     // braking: the feet slip - friction 0.3 of what presses them down
-		float SideMu = Opt(TEXT("AntCarrySide="), 0.5f);     // turning a running load: friction 0.5 (claws sideways)
-		float AntW = 0.6f;                                    // an ant's own weight, in weight units (it brakes even under a crumb)
+		float Brake = Opt(TEXT("AntCarryBrake="), 0.15f);    // braking: the feet slip - friction 0.15 of what presses them down
+		float SideMu = Opt(TEXT("AntCarrySide="), 0.25f);    // turning a running load: friction 0.25 (claws sideways)
+		float AntW = 0.15f;                                   // an ant's own weight, in weight units (it brakes even under a crumb)
 		float Upright = Opt(TEXT("AntCarryUpright="), 22.f); // how stiffly the jaws keep the load from tipping (1/s^2)
 		float Beat = Opt(TEXT("AntCarryBeat="), 55.f);       // units of travel per beat of the carriers' stride
 		float BeatAmp = Opt(TEXT("AntCarryBeatAmp="), 0.2f); // how much each carrier's support rises and falls with its stride
