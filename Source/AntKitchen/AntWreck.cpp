@@ -856,7 +856,7 @@ void AAntWreckBody::KnockFixtures(const FVector& InDir, const TCHAR* Why)
 	{
 		AKitchenFixture* Fx = *It;
 		const FVector L = Fx->GetActorLocation();
-		if (Fx->State != AKitchenFixture::Fixed || L.X < Me.Min.X || L.X > Me.Max.X || L.Y < Me.Min.Y || L.Y > Me.Max.Y || L.Z < Me.Max.Z - 250.f || L.Z > Me.Max.Z + 600.f)
+		if (Fx->State != AKitchenFixture::Fixed || L.X < Me.Min.X || L.X > Me.Max.X || L.Y < Me.Min.Y || L.Y > Me.Max.Y || L.Z < Me.Min.Z - 100.f || L.Z > Me.Max.Z + 600.f)
 		{
 			continue;
 		}
@@ -1463,8 +1463,15 @@ bool AntWreck::DevCommand(AAntKitchenGameMode* GM, const TArray<FString>& A)
 			++Bodies; Awake += It->bAwake ? 1 : 0; Broken += It->IsBroken() ? 1 : 0; Staged[FMath::Min<int32>(It->Stage, 4)]++;
 		}
 		AAntWreckPiles* Pl = AAntWreckPiles::Get(W);
-		UE_LOG(LogTemp, Display, TEXT("ANTWRECK info: %d pieces, %d bodies (%d awake, %d broken; stages %d/%d/%d/%d), debris %d chunks in %d piles"), GCat.Pieces.Num(), Bodies, Awake, Broken,
-			Staged[0], Staged[1], Staged[2], Staged[3], Pl ? Pl->NumChunks : 0, Pl ? Pl->Piles.Num() : 0);
+		// Frame rate since the last "wreck info" (the HUD's own -AntFpsLog stops with "hud 0").
+		static double LastT = 0.0;
+		static uint64 LastFrame = 0;
+		const double NowT = FPlatformTime::Seconds();
+		const float Fps = LastT > 0.0 ? (float)((GFrameCounter - LastFrame) / FMath::Max(0.001, NowT - LastT)) : 0.f;
+		LastT = NowT;
+		LastFrame = GFrameCounter;
+		UE_LOG(LogTemp, Display, TEXT("ANTWRECK info: %d pieces, %d bodies (%d awake, %d broken; stages %d/%d/%d/%d), debris %d chunks in %d piles, fps %.1f since the last info"), GCat.Pieces.Num(), Bodies, Awake, Broken,
+			Staged[0], Staged[1], Staged[2], Staged[3], Pl ? Pl->NumChunks : 0, Pl ? Pl->Piles.Num() : 0, Fps);
 	}
 	return true;
 }

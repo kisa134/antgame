@@ -41,6 +41,7 @@ namespace
 		float NextThink = 0.f;
 		float NextRampage = 0.f;
 		int32 RampageInst = -1;
+		int32 LastRampage = -1;
 	};
 	TMap<TWeakObjectPtr<AHumanCharacter>, FAiState> GAi;
 
@@ -170,7 +171,7 @@ bool AntWeapons::AiTick(AHumanCharacter* H, AAntCharacter* Target, float Dt, FVe
 			for (TActorIterator<AHumanWeapon> It(W); It; ++It)
 			{
 				AHumanWeapon* Wp = *It;
-				if (Wp->Holder || Wp->bStashed || Wp->D().Tier <= MyTier)
+				if (Wp->Holder || Wp->bStashed || Wp->D().Tier <= MyTier || Wp->D().Tier > Want)
 				{
 					continue;
 				}
@@ -237,13 +238,18 @@ bool AntWeapons::AiTick(AHumanCharacter* H, AAntCharacter* Target, float Dt, FVe
 			S.NextRampage = Now + FMath::FRandRange(3.f, 4.5f);
 			S.RampageInst = -1;
 			float Best = 1.e9f;
+			const int32 Last = S.LastRampage;
 			for (const AntWreck::FPiece& P : AntWreck::Pieces(W))
 			{
 				const float Dd = (float)FVector::Dist2D(P.Box.GetCenter(), Me);
-				if (Dd > 4500.f || Dd < 600.f || P.Box.Max.Z > Me.Z + 1200.f) { continue; }
+				if (Dd > 4500.f || Dd < 600.f || P.Box.Max.Z > Me.Z + 1200.f || P.Inst == Last || !AntWreck::Class(P.Mat).bBreaks) { continue; }
+				bool bBroken = false;
+				for (TActorIterator<AAntWreckBody> It(W); It; ++It) { if (It->Inst == P.Inst && It->IsBroken()) { bBroken = true; break; } }
+				if (bBroken) { continue; }
 				const float Score = Dd + FMath::FRand() * 2500.f;
 				if (Score < Best) { Best = Score; S.RampageInst = P.Inst; }
 			}
+			S.LastRampage = S.RampageInst;
 		}
 		const AntWreck::FPiece* P = AntWreck::PieceOf(W, S.RampageInst);
 		if (!P)
