@@ -191,11 +191,12 @@ namespace
 		}
 		for (float& V : S) { V = (float)(V / Sum); }
 		// Statics with several grips has many answers; the least-norm one can pile most of the weight on one ant when the grips
-		// are uneven. Ants also shift the weight among themselves: a third of it is shared evenly, nobody bears more than 60 %.
+		// are uneven. Ants also shift the weight among themselves: half of it is shared evenly, and with three or more nobody bears
+		// more than one and a half times an even share (four ants: 37.5 %).
 		if (N >= 2)
 		{
 			Sum = 0;
-			for (float& V : S) { V = FMath::Min(0.7f * V + 0.3f / N, N >= 3 ? 0.6f : 1.f); Sum += V; }
+			for (float& V : S) { V = FMath::Min(0.5f * V + 0.5f / N, N >= 3 ? 1.5f / N : 1.f); Sum += V; }
 			for (float& V : S) { V = (float)(V / Sum); }
 		}
 	}
@@ -817,7 +818,7 @@ void FAntCarrySolver::Yanks(AKitchenLoot* L, FAntCarryState& S, float Dt, const 
 			continue;
 		}
 		const FVector Dir = M.Vrel.GetSafeNormal();
-		if (Y > K.TumbleV || (M.Over > 1.2f && Y > K.YankV * 0.7f))
+		if (Y > K.TumbleV || (M.Over > 2.f && Y > K.YankV))
 		{
 			M.NextYank = Now + 1.5f;
 			Tumble.Add(A);
@@ -1526,6 +1527,7 @@ namespace
 		float CamFov = 40.f;
 		bool bLog = false;
 		float NextLog = 0.f;
+		float NextRegrab = 0.f;
 		FTimerHandle Ticker;
 		TWeakObjectPtr<AAntArmy> Army;
 		TWeakObjectPtr<UWorld> World;
@@ -1586,17 +1588,39 @@ namespace
 		AAntCharacter* Me = PC ? Cast<AAntCharacter>(PC->GetPawn()) : nullptr;
 		const float Now = W->GetTimeSeconds();
 		// the player walks with the group (the dev walker of AAntCharacter, pointed half a step ahead)
-		if (Me && D.Crew.Contains(Me))
+		if (Me && D.Crew.Contains(Me) && Me->Carrying)
 		{
 			const FVector4* O = D.Own.Find(Me);
 			FVector Dir = (O && O->W > Now) ? FVector(O->X, O->Y, 0.f) : GroupDir();
 			const float Sc = (O && O->W > Now) ? O->Z : D.Speed;
-			Me->bDevGo = !Dir.IsNearlyZero() && Sc > 0.f && Me->Carrying != nullptr;
+			Me->bDevGo = !Dir.IsNearlyZero() && Sc > 0.f;
 			Me->DevGoTo = Me->GetActorLocation() + Dir * 400.f;
+		}
+		// the scripted crew takes hold again after a tumble (a player presses [E]; bots do it in their own AI)
+		if (L && Now >= D.NextRegrab)
+		{
+			D.NextRegrab = Now + 0.5f;
+			for (const TWeakObjectPtr<AAntCharacter>& C : D.Crew)
+			{
+				AAntCharacter* A = C.Get();
+				if (A && !A->bDead && !A->Carrying && FVector::Dist(A->GetActorLocation(), L->GetActorLocation()) < L->GetRadius() + 25.f) { A->GrabLoot(L); }
+			}
+			if (Me && D.Crew.Contains(Me) && !Me->Carrying && !Me->bDead)
+			{
+				Me->bDevGo = true;   // back to the load
+				Me->DevGoTo = L->GetActorLocation();
+			}
 		}
 		if (L && D.Cam.IsValid() && !D.CamMode.IsEmpty())
 		{
-			const FVector C = L->GetActorLocation();
+			// framed on the carriers (the middle of their grips), not on the middle of a load 15 ants tall
+			FVector C = L->GetActorLocation();
+			if (L->CarryNet.Grips.Num() > 0)
+			{
+				FVector Sum = FVector::ZeroVector;
+				for (const FAntCarryGrip& G : L->CarryNet.Grips) { Sum += L->GetActorTransform().TransformPosition(G.Local); }
+				C = Sum / L->CarryNet.Grips.Num();
+			}
 			D.Cam->SetActorLocationAndRotation(C + D.CamOff, (-D.CamOff).Rotation());
 		}
 		if (L && D.bLog && Now >= D.NextLog)
