@@ -777,6 +777,33 @@ namespace AntSnowball
 					UE_LOG(LogTemp, Display, TEXT("ANTTRAIL dev goto %d: %d points"), Node, Way.Num());
 				}
 			}
+			else if (Sub == TEXT("drop"))
+			{
+				// trail drop: the player's ant lets go of what it carries (on a trail: the workers take it from there)
+				if (AAntCharacter* Ant = PS ? Cast<AAntCharacter>(PS->GetPawn()) : nullptr)
+				{
+					UE_LOG(LogTemp, Display, TEXT("ANTTRAIL dev drop: %s"), Ant->Carrying ? *Ant->Carrying->LootName : TEXT("nothing"));
+					Ant->LetGo();
+				}
+			}
+			else if (Sub == TEXT("toend"))
+			{
+				// trail toend: the host's ant walks to the far end of its first trail (route graph, floor)
+				AAntCharacter* Ant = Host ? Cast<AAntCharacter>(Host->GetPawn()) : nullptr;
+				for (const FAntTrailLine& L : T->Lines)
+				{
+					TArray<FVector> Way;
+					if (Ant && L.Owner == PS && L.Points.Num() > 1 && AntRoutes::PathPoints(Ant->GetActorLocation(), FVector(L.Points.Last()), false, Way, nullptr, AntRoutes::FloorOnly))
+					{
+						Way.Add(FVector(L.Points.Last()));
+						GM->DevGoPts = Way;
+						GM->DevGoStart = GM->DevGoBestAt = W->GetTimeSeconds();
+						GM->DevGoBest = 1.e9f;
+						GM->DevGoLogAt = 0.f;
+						break;
+					}
+				}
+			}
 			else if (Sub == TEXT("rich"))
 			{
 				// trail rich: the host's ant walks (route graph, floor) to the floor spot with the most light food within 700 - where a player would lay a trail to
