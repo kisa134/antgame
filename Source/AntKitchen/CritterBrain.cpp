@@ -1934,6 +1934,13 @@ void ACritter::DogThink(float Dt, float Now)
 		LookAt = FVector::ZeroVector;
 		if (WalkTo(WalkGoal, DogWalk, Dt, 90.f) || Now >= BrainUntil)
 		{
+			if (Rests.IsValidIndex(LeapSpot) && Rests[LeapSpot].Rt >= 0 && FVector::Dist2D(Me, WalkGoal) > 1200.f)
+			{
+				// Level v3: did not get to its routine spot: sits where it is a moment and tries again (not "there" in the wrong place).
+				State = QuadMode::Sit;
+				SetBrain(EBrain::Idle, 4.f);
+				break;
+			}
 			ArriveAtSpot(Rests.IsValidIndex(LeapSpot) ? LeapSpot : RestIndex);
 		}
 		break;
