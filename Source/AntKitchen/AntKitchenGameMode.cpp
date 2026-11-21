@@ -29,6 +29,8 @@
 #include "EngineUtils.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
+#include "AntSnowball.h"
+#include "AntRts.h"
 
 namespace GMColors
 {
@@ -1085,6 +1087,7 @@ void AAntKitchenGameMode::OnFoodDelivered(uint8 Team, AKitchenLoot* Food, const 
 	if (bRaid && Raid)
 	{
 		Raid->OnDelivered(Team, Food, Carriers, Value);   // the tier's price, the cake, what the Queen thinks of it
+		if (Team == 0) { AntSnowball::OnDelivered(this, Food, Carriers, Value); }   // the in-raid snowball's mass (AntSnowball.h)
 	}
 	if (Team == 0)
 	{
@@ -1125,6 +1128,10 @@ void AAntKitchenGameMode::OnAntKilled(AAntCharacter* Ant, AController* Killer, A
 	if (!Ant)
 	{
 		return;
+	}
+	if (AntRts::OnSquadBotKilled(Ant))
+	{
+		return;   // a squad ant of the snowball raid: gone for good, no respawn, no kill feed line (AntRts.cpp)
 	}
 	AAntGameState* GS = GetGameState<AAntGameState>();
 	if (GS)

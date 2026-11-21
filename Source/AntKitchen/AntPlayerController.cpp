@@ -25,6 +25,8 @@
 #include "AntSquad.h"
 #include "EngineUtils.h"
 #include "AntFilm.h"
+#include "AntSnowball.h"
+#include "AntRts.h"
 
 void AAntPlayerController::BeginPlay()
 {
@@ -44,6 +46,7 @@ void AAntPlayerController::BeginPlay()
 		Film = NewObject<UAntFilm>(this, TEXT("AntFilm"));
 		Film->RegisterComponent();
 		Film->Init(this);
+		UAntRtsInput::Attach(this);   // the snowball raid's squad selection and orders (AntRts.h)
 
 		// A touch of grade over the whole kitchen: warmer, punchier, a soft vignette. -AntNoPP switches it off to compare.
 		if (!FParse::Param(FCommandLine::Get(), TEXT("AntNoPP")))
@@ -315,6 +318,10 @@ void AAntPlayerController::ServerPing_Implementation(FVector_NetQuantize Locatio
 
 bool AAntPlayerController::TryVote(int32 Option)
 {
+	if (AntSnowball::TryPick(this, Option))
+	{
+		return true;   // keys 1/2/3 take the snowball pick first (AntSnowball.h)
+	}
 	const AAntGameState* GS = GetWorld()->GetGameState<AAntGameState>();
 	if (!GS || GS->Interlude != 2 || !GS->CardOffer.IsValidIndex(Option))
 	{

@@ -139,6 +139,8 @@ namespace NpcWorld
 	ANTKITCHEN_API bool BestScent(const UWorld* W, const FVector& From, float Radius, float MinStrength, FVector& OutPoint, float& OutStrength);
 	/** The nose has been here: this patch is sniffed out. */
 	ANTKITCHEN_API void ScentClear(const UWorld* W, const FVector& P, float Radius);
+	/** Scent laid by something that is not an ant actor (the workers on a pheromone trail, AntTrail.cpp). */
+	ANTKITCHEN_API void ScentAdd(const UWorld* W, const FVector& P, float Amount);
 
 	/** An ant bit something of the house within its reach. True if it bit a pet or one of the family (they react). */
 	ANTKITCHEN_API bool AntBites(AAntCharacter* Ant, float Reach);

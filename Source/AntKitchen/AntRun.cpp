@@ -39,6 +39,7 @@
 #include "KitchenSlick.h"
 #include "AntFilm.h"
 #include "Engine/OverlapResult.h"
+#include "AntSnowball.h"
 
 namespace
 {
@@ -1533,6 +1534,10 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 	if (NpcWorld::DevCommand(this, A))
 	{
 		return;   // the pets and the family: cat ..., dog ..., gran ..., kid ..., npclevel N (CritterBrain.cpp)
+	}
+	if (AntSnowball::DevCommand(this, A))
+	{
+		return;   // snow ..., trail ..., rts ..., perf ..., squad+ ... (AntSnowball.cpp)
 	}
 	if (Raid && Raid->DevCommand(A))
 	{

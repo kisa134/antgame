@@ -19,6 +19,7 @@
 #include "Net/UnrealNetwork.h"
 #include "EngineUtils.h"
 #include "Engine/World.h"
+#include "AntTrail.h"
 
 AAntArmy::AAntArmy()
 {
@@ -162,6 +163,7 @@ int32 AAntArmy::KillInSphere(UWorld* World, const FVector& Center, float R, int3
 	{
 		return 0;
 	}
+	AntTrail::OnBlow(World, Center, R);   // the snowball raid's pheromone trails are cut where a blow lands (AntTrail.cpp)
 	for (TActorIterator<AAntArmy> It(World); It; ++It)
 	{
 		AAntArmy* A = *It;

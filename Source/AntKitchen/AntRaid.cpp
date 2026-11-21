@@ -31,6 +31,7 @@
 #include "EngineUtils.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
+#include "AntSnowball.h"
 
 namespace
 {
@@ -452,6 +453,7 @@ void AAntRaid::OnWorldReset()
 	{
 		return;
 	}
+	AntSnowball::OnWorldReset(this);   // the last raid's squad ants and trails go (AntSnowball.cpp)
 	const AntTier::FDef& T = TierDef();
 	const int32 Players = FMath::Max(1, GM->GetNumPlayers());
 	S->Shift = RaidNo;
@@ -550,6 +552,14 @@ void AAntRaid::OnWorldReset()
 
 void AAntRaid::StartSquads()
 {
+	if (InRaid() && AntSnowball::Enabled(this))
+	{
+		// The snowball raid: everybody goes out alone; squads and workers come from the picks (AntSnowball.h).
+		AntSnowball::OnRaidStart(this);
+		SpawnGuards();
+		SaveNest();
+		return;
+	}
 	if (InRaid() && !FParse::Param(FCommandLine::Get(), TEXT("AntNoSquad")))   // (dev: a raid without squads)
 	{
 		Result.SquadOut = AntSquad::SpawnAll(this);
@@ -824,6 +834,7 @@ void AAntRaid::RaidSecond()
 	FParse::Value(FCommandLine::Get(), TEXT("AntQuiet="), Quiet);   // dev
 	const uint8 Stage = Left <= 30.f ? 3 : Left <= T.Final ? 2 : Gone >= Quiet ? 1 : 0;
 	GM->RunTick();   // greed, the event, who is shut in the fridge, what the Human is up to
+	AntSnowball::RaidSecond(this);   // picks, squad tasks, the timeline
 	if (S->Phase != 0 || !InRaid())
 	{
 		return;
@@ -1110,6 +1121,7 @@ void AAntRaid::EndRaid(uint8 How)
 		return;
 	}
 	Phase = AntRaidPhase::Results;   // first: what follows may kill ants, and their deaths must not end the raid again
+	AntSnowball::OnRaidEnd(this);   // squad ants and trails go; the story gets each player's snowball
 	int32 Home = 0;
 	FString Away;
 	const int32 Living = LivingPlayers(&Home, &Away);
