@@ -11,6 +11,15 @@
 #include "KitchenLoot.h"
 #include "LevelV2.h"
 #include "LevelV3.h"
+#include "AntWreck.h"
+#include "AntWeapon.h"
+#include "AntCarry.h"
+#include "AntTrail.h"
+#include "AntSwarm.h"
+#include "AntSnowball.h"
+#include "AntVersus.h"
+#include "HumanBody.h"
+#include "GameFramework/PlayerState.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/AudioComponent.h"
 #include "Sound/SoundBase.h"
@@ -113,8 +122,8 @@ namespace
 		D(RipOff,      "A_RipOff*1",                      0.9f, 0.08f, AttSmall,  KSfx, 3, 0.20f, Count, 0.f, 0.05f),
 		D(DeliverCheer,"A_DeliverCheer*1",                0.8f, 0.05f, AttMedium, KVoice, 2, 0.60f, DeliverChime, 0.8f, 0.f),
 		D(DeliverChime,"A_DeliverChime*1",                0.7f, 0.02f, AttMedium, KUi,  2, 0.20f, Count, 0.f, 0.f),
-		D(TrailLay,    "A_TrailLay*3",                    0.6f, 0.08f, AttSmall,  KSfx, 3, 0.15f, Count, 0.f, 0.f),
-		D(TrailCut,    "A_TrailCut*1",                    0.8f, 0.05f, AttSmall,  KSfx, 3, 0.10f, Count, 0.f, 0.f),
+		D(TrailLay,    "A_TrailLay*3",                    0.6f, 0.08f, AttSmall,  KSfx, 3, 1.00f, Count, 0.f, 0.f),
+		D(TrailCut,    "A_TrailCut*1",                    0.8f, 0.05f, AttSmall,  KSfx, 3, 0.10f, AntHurt, 0.5f, 0.1f),
 		D(WorkerPatter,"A_WorkerPatter*1",                0.8f, 0.00f, AttSmall,  KSfx, 1, 0.f,   Count, 0.f, 0.f),
 		// ---- UI
 		D(CardPick,    "A_CardPick*1",                    0.8f, 0.00f, Att2D,     KUi,  2, 0.05f, Count, 0.f, 0.f),
@@ -432,6 +441,67 @@ EAntSfx ForMess(uint8 MessKind)
 	}
 }
 
+EAntSfx ForWreck(uint8 WreckMat, bool bBreak)
+{
+	switch (WreckMat)
+	{
+	case AntWreck::Wood: case AntWreck::Board: return bBreak ? EAntSfx::CrashWood : EAntSfx::BatImpact;
+	case AntWreck::Metal: case AntWreck::Appliance: return EAntSfx::CrashMetal;
+	case AntWreck::Glass: return bBreak ? EAntSfx::CrashGlass : EAntSfx::Crunch;
+	case AntWreck::China: return bBreak ? EAntSfx::CrashCeramic : EAntSfx::Crunch;
+	case AntWreck::Plastic: return EAntSfx::CrashPlastic;
+	case AntWreck::Food: return bBreak ? EAntSfx::SplatJam : EAntSfx::SplatCream;
+	default: return EAntSfx::SoftThud;   // cloth, paper
+	}
+}
+
+EAntSfx ForWeapon(uint8 WeaponKind)
+{
+	switch (WeaponKind)
+	{
+	case AntWeapons::Slipper: return EAntSfx::SlipperSlap;
+	case AntWeapons::Ladle: case AntWeapons::Pan: return EAntSfx::CrashMetal;
+	case AntWeapons::Book: return EAntSfx::SoftThud;
+	case AntWeapons::RollingPin: case AntWeapons::Bat: return EAntSfx::BatImpact;
+	case AntWeapons::Broom: return EAntSfx::Broom;
+	case AntWeapons::Sausage: return EAntSfx::SplatCream;
+	default: return EAntSfx::Swat;   // the newspaper, the spatula
+	}
+}
+
+static IConsoleVariable* VolumeVar(uint8 MixClass)
+{
+	switch (MixClass)
+	{
+	case AntMixClass::Sfx: return CVarSfx.AsVariable();
+	case AntMixClass::Voice: return CVarVoice.AsVariable();
+	case AntMixClass::Ui: return CVarUi.AsVariable();
+	case AntMixClass::Ambience: return CVarAmb.AsVariable();
+	case AntMixClass::Music: return CVarMusic.AsVariable();
+	default: return CVarMaster.AsVariable();
+	}
+}
+
+float GetVolume(uint8 MixClass)
+{
+	return FMath::Clamp(VolumeVar(MixClass)->GetFloat(), 0.f, 1.f);
+}
+
+void SetVolume(uint8 MixClass, float Value)
+{
+	VolumeVar(MixClass)->Set(FMath::Clamp(Value, 0.f, 1.f), ECVF_SetByConsole);   // the subsystem notices and saves it
+}
+
+bool MusicMuted()
+{
+	return CVarMute.GetValueOnGameThread() != 0;
+}
+
+void SetMusicMuted(bool bMuted)
+{
+	CVarMute.AsVariable()->Set(bMuted ? 1 : 0, ECVF_SetByConsole);
+}
+
 static void PlayImpl(const UObject* Ctx, uint8 Id, const FVector* Loc, float Volume, float Pitch, int32 Depth)
 {
 	UWorld* W = Ctx ? Ctx->GetWorld() : nullptr;
@@ -659,11 +729,21 @@ void UAntAudioSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 	{
 		AntAudio::Get(Id);
 	}
+	// the server hears about carried loads dropped, broken, snatched (AntCarry events) and multicasts their sounds
+	if (InWorld.GetNetMode() != NM_Client)
+	{
+		CarryEventsHandle = AntCarry::Events().AddUObject(this, &UAntAudioSubsystem::OnCarryEvent);
+	}
 	UE_LOG(LogTemp, Display, TEXT("ANTMUSIC audio subsystem up (%s)"), *InWorld.GetMapName());
 }
 
 void UAntAudioSubsystem::Deinitialize()
 {
+	if (CarryEventsHandle.IsValid())
+	{
+		AntCarry::Events().Remove(CarryEventsHandle);
+		CarryEventsHandle.Reset();
+	}
 	for (UAudioComponent* C : Owned)
 	{
 		if (C)
@@ -1038,9 +1118,9 @@ void UAntAudioSubsystem::UpdateState()
 	const float Threat = bInRaid ? ComputeThreat(Chase) : 0.f;
 	const float RageAll = GS ? GS->HumanRage / 3.f * 0.5f : 0.f;
 	float I = FMath::Max(Threat, RageAll) + 0.55f * Chase + 0.7f * Excitement;
-	if (GS && GS->bWarMode)
+	if ((GS && GS->bWarMode) || AntVersus::Active(W))
 	{
-		I = FMath::Max(I, 0.45f);
+		I = FMath::Max(I, 0.5f);   // war, versus (a player is the Human): a fight all the way
 	}
 	const float Force = CVarForce.GetValueOnGameThread();
 	if (Force >= 0.f)
@@ -1215,6 +1295,8 @@ void UAntAudioSubsystem::TickWorldState(float Dt)
 		auto Prune = [](auto& Map) { for (auto It = Map.CreateIterator(); It; ++It) { if (!It.Key().IsValid()) { It.RemoveCurrent(); } } };
 		Prune(FastenerProgress); Prune(FastenerTick); Prune(FastenerOff); Prune(FixtureState); Prune(NextVoice);
 		Prune(BackAche); Prune(HeldSomething); Prune(PetState); Prune(TrailOn);
+		Prune(CarryBark); Prune(CarryNextBeat); Prune(HumanActStart);
+		if (TrailLaying.Num() > 200) { TrailLaying.Reset(); }
 	}
 	if (LevelV3::Enabled())
 	{
@@ -1318,31 +1400,14 @@ void UAntAudioSubsystem::TickWorldState(float Dt)
 	{
 		AAntCharacter* A = *It;
 		bool& bWas = TrailOn.FindOrAdd(A, A->bLayingTrail);
-		if (A->bLayingTrail != bWas && FVector::DistSquared(A->GetActorLocation(), Ear) < FMath::Square(4000.f))
+		if (A->bLayingTrail && !bWas && FVector::DistSquared(A->GetActorLocation(), Ear) < FMath::Square(4000.f))
 		{
-			AntAudio::Play(this, A->bLayingTrail ? EAntSfx::TrailLay : EAntSfx::TrailCut, A->GetActorLocation(), 0.8f);
+			AntAudio::Play(this, EAntSfx::TrailLay, A->GetActorLocation(), 0.8f);
 		}
 		bWas = A->bLayingTrail;
 	}
-	// carrying together: the load creaks while two or more drag it
-	APlayerController* PC = W->GetFirstPlayerController();
-	if (AAntCharacter* Me = PC ? Cast<AAntCharacter>(PC->GetPawn()) : nullptr)
-	{
-		StrainClock -= Dt;
-		if (Me->Carrying && StrainClock <= 0.f)
-		{
-			StrainClock = 1.4f;
-			int32 N = 0;
-			for (TActorIterator<AAntCharacter> It(W); It; ++It)
-			{
-				N += (It->Carrying == Me->Carrying) ? 1 : 0;
-			}
-			if (N >= 2)
-			{
-				AntAudio::Play(this, EAntSfx::CarryStrain, Me->Carrying->GetActorLocation(), FMath::Clamp(0.4f + 0.15f * N, 0.4f, 1.2f));
-			}
-		}
-	}
+	// carrying together, trails and workers, the snowball's cards, the Human's swings
+	TickV12(Dt, Ear);
 }
 
 // ---------------------------------------------------------------------------- pets and people: idle voices from their replicated state
@@ -1460,5 +1525,166 @@ void UAntAudioSubsystem::TickPets(float Dt)
 			}
 			Next = Now + FMath::FRandRange(9.f, 20.f);
 		}
+	}
+}
+
+// ---------------------------------------------------------------------------- v12: carrying together, trails and workers, the snowball's cards, the Human's swings
+void UAntAudioSubsystem::TickV12(float Dt, const FVector& Ear)
+{
+	UWorld* W = GetWorld();
+	const float Now = (float)W->GetRealTimeSeconds();
+	// carrying together (AntCarry.h, replicated CarryNet): a shout from a carrier («Раз-два, взяли!» and the rest) is a small
+	// chorus with the music dipping under it; in rhythm every stride is a thump of the load; out of step it creaks
+	for (TActorIterator<AKitchenLoot> It(W); It; ++It)
+	{
+		AKitchenLoot* L = *It;
+		const FAntCarryNet& Net = L->CarryNet;
+		if (L->bIsGear || !Net.bActive || Net.Grips.Num() == 0)
+		{
+			continue;
+		}
+		const FVector At = L->GetActorLocation();
+		const bool bNear = FVector::DistSquared(At, Ear) < FMath::Square(5000.f);
+		uint8& Seq = CarryBark.FindOrAdd(L, Net.BarkSeq);
+		if (Seq != Net.BarkSeq)
+		{
+			Seq = Net.BarkSeq;
+			if (bNear)
+			{
+				AntAudio::Play(this, EAntSfx::ArmyCharge, At, 0.45f);
+				AntAudio::Duck(this, 0.9f);
+			}
+		}
+		float& Beat = CarryNextBeat.FindOrAdd(L, Now + 0.5f);
+		if (bNear && Now >= Beat && Net.Grips.Num() >= 2)
+		{
+			if (Net.bRhythm)
+			{
+				AntAudio::CarryBeat(this, At, Net.Grips.Num());
+				Beat = Now + 0.62f;
+			}
+			else
+			{
+				AntAudio::Play(this, EAntSfx::CarryStrain, At, FMath::Clamp(0.5f + 0.1f * Net.Grips.Num(), 0.5f, 1.2f) * (Net.Sync < 140 ? 1.2f : 0.8f));
+				Beat = Now + FMath::FRandRange(1.3f, 2.f);
+			}
+		}
+	}
+	// the Human's body: the swing of a weapon whooshes, peering under the furniture he sniffs
+	for (TActorIterator<AHumanCharacter> It(W); It; ++It)
+	{
+		AHumanCharacter* H = *It;
+		float& Start = HumanActStart.FindOrAdd(H, H->Act.Start);
+		if (H->Act.Start != Start)
+		{
+			Start = H->Act.Start;
+			const FVector At = H->GetActorLocation() + FVector(0.f, 0.f, 1200.f);
+			if (H->Act.Kind == HumanAct::Swat)
+			{
+				if (const AntWeapons::FDef* D = AntWeapons::Held(H))
+				{
+					AntAudio::Play(this, EAntSfx::BatWhoosh, At, 0.6f + 0.25f * D->Tier);
+				}
+			}
+			else if (H->Act.Kind == HumanAct::Peer)
+			{
+				AntAudio::Play(this, EAntSfx::HumanSniff, At - FVector(0.f, 0.f, 700.f), 1.f);
+			}
+		}
+	}
+	// trails: a shimmer when one starts being laid near here; the workers on trails and swarm streams patter (one loop)
+	SwarmClock += Dt;
+	const bool bSwarmScan = SwarmClock >= 0.5f;
+	if (bSwarmScan)
+	{
+		SwarmClock = 0.f;
+	}
+	float BestD2 = FMath::Square(4000.f);
+	FVector BestAt = FVector::ZeroVector;
+	int32 BestCount = 0;
+	if (AAntTrailNet* T = AAntTrailNet::Get(W, false))
+	{
+		for (const FAntTrailLine& Ln : T->Lines)
+		{
+			bool& bWas = TrailLaying.FindOrAdd(Ln.Id, Ln.bLaying);
+			if (Ln.bLaying && !bWas && Ln.Points.Num() > 0)
+			{
+				AntAudio::Play(this, EAntSfx::TrailLay, FVector(Ln.Points.Last()), 0.9f);
+			}
+			bWas = Ln.bLaying;
+			if (bSwarmScan && Ln.Workers > 0)
+			{
+				for (int32 i = 0; i < Ln.Points.Num(); i += 4)
+				{
+					const float D2 = (float)FVector::DistSquared(FVector(Ln.Points[i]), Ear);
+					if (D2 < BestD2) { BestD2 = D2; BestAt = Ln.Points[i]; BestCount = Ln.Workers; }
+				}
+			}
+		}
+	}
+	if (bSwarmScan)
+	{
+		if (AAntSwarm* Sw = AAntSwarm::Get(W))
+		{
+			for (const FSwarmStream& St : Sw->Streams)
+			{
+				if (St.Count <= 0) { continue; }
+				for (int32 i = 0; i < St.Points.Num(); i += 4)
+				{
+					const float D2 = (float)FVector::DistSquared(FVector(St.Points[i]), Ear);
+					if (D2 < BestD2) { BestD2 = D2; BestAt = St.Points[i]; BestCount = St.Count; }
+				}
+			}
+		}
+		if (BestCount > 0)
+		{
+			SwarmAt(BestAt, BestCount);
+		}
+	}
+	// the snowball (AntSnowball.h): my cards are dealt, I picked one, the colony grew a level
+	APlayerController* PC = W->GetFirstPlayerController();
+	AAntSnowball* S = AAntSnowball::Get(W);
+	if (S && PC && PC->PlayerState)
+	{
+		for (const FAntSnowPlayer& P : S->Players)
+		{
+			if (P.PS != PC->PlayerState)
+			{
+				continue;
+			}
+			if (P.Offer.Num() > 0 && LastOfferNum == 0)
+			{
+				AntAudio::Play2D(this, EAntSfx::CardFlip, 1.f);
+			}
+			LastOfferNum = P.Offer.Num();
+			if (LastPicks >= 0 && P.PicksDone > LastPicks)
+			{
+				AntAudio::Play2D(this, EAntSfx::CardPick, 1.f);
+				PlaySting(EAntSting::Card);
+			}
+			LastPicks = P.PicksDone;
+		}
+		if (LastSnowLevel >= 0 && S->Level > LastSnowLevel)
+		{
+			AntAudio::Play2D(this, EAntSfx::Legendary, 0.7f);
+		}
+		LastSnowLevel = S->Level;
+	}
+}
+
+void UAntAudioSubsystem::OnCarryEvent(AKitchenLoot* L, uint8 Kind, uint8 Team)
+{
+	if (!L)
+	{
+		return;
+	}
+	const FVector At = L->GetActorLocation();
+	switch (Kind)
+	{
+	case AntCarryEvent::Dropped: AntAudio::Everyone(this, EAntSfx::Release, At, 1.f); break;
+	case AntCarryEvent::Broken: AntAudio::Everyone(this, EAntSfx::SplatJam, At, 1.2f); break;
+	case AntCarryEvent::Snatched: AntAudio::Everyone(this, EAntSfx::HumanPickup, At, 1.f); break;
+	case AntCarryEvent::Joined: AntAudio::Everyone(this, EAntSfx::Grab, At, 0.6f); break;
+	default: break;
 	}
 }

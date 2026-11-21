@@ -1,4 +1,5 @@
 ﻿#include "AntAdmin.h"
+#include "AntAudio.h"
 #include "AntKitchenGameMode.h"
 #include "AntPlayerController.h"
 #include "AntPlayerState.h"
@@ -1257,6 +1258,20 @@ void SAntAdminPanel::Rebuild()
 		Btn(TEXT("Режим съёмки (F8)"), R(TEXT("film")));
 		Btn(TEXT("Свободная камера"), R(TEXT("freecam")));
 		Btn(TEXT("Скриншот"), R(TEXT("con HighResShot 1")));
+		Section(TEXT("Звук (на этой машине, сохраняется; M — музыка вкл/выкл)"));
+		BtnL([]() { return AntAudio::MusicMuted() ? FString(TEXT("Музыка: выкл")) : FString(TEXT("Музыка: вкл")); }, []() { AntAudio::SetMusicMuted(!AntAudio::MusicMuted()); }, On);
+		auto Vol = [this](const TCHAR* Name, uint8 Kls)
+		{
+			const FString N(Name);
+			BtnL([N, Kls]() { return FString::Printf(TEXT("%s: %d%%"), *N, FMath::RoundToInt(AntAudio::GetVolume(Kls) * 100.f)); }, []() {}, FLinearColor(0.6f, 0.6f, 0.6f));
+			Btn(TEXT("−"), [Kls]() { AntAudio::SetVolume(Kls, AntAudio::GetVolume(Kls) - 0.1f); });
+			Btn(TEXT("+"), [Kls]() { AntAudio::SetVolume(Kls, AntAudio::GetVolume(Kls) + 0.1f); });
+		};
+		Vol(TEXT("Музыка"), AntMixClass::Music);
+		Vol(TEXT("Звуки"), AntMixClass::Sfx);
+		Vol(TEXT("Голоса"), AntMixClass::Voice);
+		Vol(TEXT("Комната"), AntMixClass::Ambience);
+		Vol(TEXT("Всё"), AntMixClass::Num);
 		Section(TEXT("Клавиши: V — вид от первого лица, F8 — съёмка, в съёмке F5 — свободная камера, F2 — HUD"));
 	}
 }

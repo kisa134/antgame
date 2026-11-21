@@ -112,46 +112,35 @@ grandma / kid / spider 7, UI 3, ambience loops 6. Plus 14 music files (9 loops, 
 - CPU: the director ticks cheaply every frame (volume smoothing); world scans run every 0.12 s (fasteners, fixtures, residents)
   and 0.25 s (pets) with class iterators; all sounds are one-shots or a handful of loops.
 
-## 5. Hooks for the branches being merged into v12
+## 5. The v12 systems (merged: carry, mess, swarm, wreck, versus, admin) — all hooked
 
-Include `"AntAudio.h"`. All calls are local and cheap: call them on every machine (or server-side through
-`AntAudio::Everyone(...)`, which multicasts). Already automatic (no line needed): fasteners, fixture falls and breaks,
-the Human's falls and pick-ups, pets, residents' idle voices, trails (`bLayingTrail`), sticky footsteps, delivery, cards.
+Most of it is read from replicated state by `UAntAudioSubsystem::TickV12` (no edits in their files); the rest are single lines.
 
-**Carry (code/ANT-carry)** — `AntCarry.cpp`, where a client sees a new shout (the counter in the replicated `FAntCarryFeel`
-changes) and on each beat of the rhythm:
-```cpp
-AntAudio::Duck(L, 0.9f);                                           // the shout «Раз-два, взяли!» starts: music dips
-AntAudio::CarryBeat(L, L->GetActorLocation(), NumCarriers);        // each beat while bRhythm (thump + load creak)
-AntAudio::Play(L, EAntSfx::RipOff, L->GetActorLocation(), 1.f);    // AntCarryEvent: the load is yanked / torn loose
-AntAudio::Play(L, EAntSfx::Release, L->GetActorLocation(), 0.8f);  // a carrier lets go
-```
-**Mess (code/ANT-mess)** — `AAntMess::MulticastBurst_Implementation` (every machine) and the big `StainAt`:
-```cpp
-if (AntAudio::ForMess(Kind) != EAntSfx::Count) { AntAudio::Play(this, AntAudio::ForMess(Kind), At, FMath::Clamp(Size / 40.f, 0.5f, 1.6f)); }
-```
-(Sticky footsteps need nothing: stains that add a LevelV3 play zone of kind 0 already switch steps to `StepSticky`;
-if the mess branch keeps its own sticky test, call `AntAudio::Play(Ant, EAntSfx::StepSticky, Foot, 1.f)` from its footstep.)
+| System | Event | Sound | Where |
+|---|---|---|---|
+| Carry | a carrier's shout («Раз-два, взяли!», «Тяни!»...: `CarryNet.BarkSeq` changes) | a tiny chorus (`ArmyCharge`, quiet) + music ducks 0.9 s | subsystem, every machine |
+| Carry | in rhythm (`CarryNet.bRhythm`, 2+ grips) | `CarryBeat` every stride (thump + creak) | subsystem |
+| Carry | out of step | load strain creaks (louder when `Sync` is low) | subsystem |
+| Carry | `AntCarry::Events()`: dropped / broken / snatched / joined | release, splat, the Human's grab, a grab | subsystem binds the delegate on the server, multicasts |
+| Mess | every burst (`AAntMess::MulticastBurst`) | `AntAudio::ForMess(Kind)`: jam/honey/mud splat, cream, cola/juice fizz, oil/water splash, crumbs/sugar | AntMess.cpp, 1 line |
+| Mess | an ant with sticky feet leaves a track | `StepSticky` | AntMess.cpp `TickAnts`, 1 line |
+| Swarm | workers on trails (`AAntTrailNet::Lines`) and swarm streams (`AAntSwarm::Streams`) | one patter loop at the nearest point, level from the count | subsystem |
+| Swarm | a trail starts being laid | shimmer | subsystem (`Lines[].bLaying`, and `AAntCharacter::bLayingTrail`) |
+| Swarm | a trail is cut (`AAntTrailNet::Cut`) | snip + tiny squeaks | AntTrail.cpp, 1 line (server → everyone) |
+| Snowball | my 1/2/3 cards dealt / picked / colony level up | card flip / card pick + Card sting / chime | subsystem (`AAntSnowball::Players`) |
+| Wreck | a piece struck (`TakeHit`) | `AntAudio::ForWreck(Mat, false)`: wood thwack, metal clang, glass/china crunch, plastic, soft, food | AntWreck.cpp (replaces the old Crunch/Stomp) |
+| Wreck | a piece leans (stage 2) | wobble groan | AntWreck.cpp, 1 line |
+| Wreck | a piece breaks apart | `ForWreck(Mat, true)`: wood / glass / china / metal / plastic crash, food splat | AntWreck.cpp (replaces Crunch) |
+| Weapons | the Human swings a held weapon (`Act` = Swat with a weapon) | whoosh (bigger for heavier tiers) | subsystem |
+| Weapons | the swing lands (`AntWeapons::OnSwingLanded`) | `ForWeapon(Kind)`: slipper slap, ladle/pan clang, book thud, rolling pin/bat thwack, broom swish, sausage splat | AntWeapon.cpp, 1 line |
+| Human | peers under furniture (`Act` = Peer) | sniffing | subsystem |
+| Versus / war | a player is the Human | music intensity never below 0.5 | director |
+| Admin panel | tab «Экран» | «Музыка: вкл/выкл», volume − / + for music, sounds, voices, room, all | AntAdmin.cpp |
 
-**Swarm (code/ANT-swarm)**:
-```cpp
-AntAudio::Swarm(this, GroupCenter, NumWorkers);                    // ~2x a second per visible worker group (one patter loop)
-AntAudio::Play(this, EAntSfx::TrailCut, Center, 1.f);              // AAntTrail::Cut, when it returns > 0 (or Everyone on the server)
-AntAudio::Play2D(this, EAntSfx::CardPick, 1.f); AntAudio::Sting(this, EAntSting::Card);   // AntSnowball::Pick on the picking client
-AntAudio::Play2D(this, EAntSfx::CardFlip, 1.f);                    // the 1/2/3 cards are shown
-AntAudio::Play(this, EAntSfx::ArmyCharge, Point, 0.8f);            // AntRts::OrderAt (an order given)
-```
-**Wreck (code/ANT-wreck)**:
-```cpp
-AntAudio::Play(H, EAntSfx::BatWhoosh, HandLoc, 1.f);               // the swing starts (after SwingWindup)
-AntAudio::Everyone(H, EAntSfx::BatImpact, Point, 1.2f);            // AntWeapon::OnSwingLanded (server)
-AntAudio::Everyone(H, EAntSfx::HumanPickup, H->GetActorLocation(), 1.f);   // a weapon picked up (also automatic via Held)
-AntAudio::Everyone(this, AntAudio::CrashFor(LevelV3Mat), Point, Damage / MaxHealth + 0.5f);   // AntWreck::TakeHit stage 3/4
-AntAudio::Everyone(this, EAntSfx::Wobble, Point, 1.f);             // a bookcase starts to topple (domino)
-AntAudio::Excite(this, 0.5f, Point);                               // any big destruction moment near the listener
-```
-Map the wreck material to the LevelV3 `EMat` numbers for `CrashFor` (glass 0, china 1, terracotta 2, plastic 4, cardboard 5,
-wood 9, metal 10). In versus the player-Human is detected automatically (the director treats it as a fight).
+Every crash, break, slap, roar and fall near the listener also pushes the music towards the action layer (the table's excite
+column), so destruction and versus fights get the chaos layer by themselves.
+
+To add a sound to new code: `AntAudio::Play(this, EAntSfx::X, Where, Intensity)` (local) or `AntAudio::Everyone(...)` (server).
 
 ## 6. Pipeline
 

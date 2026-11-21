@@ -63,6 +63,16 @@ namespace AntAudio
 	/** The splat of a mess kind (AntMess MessKind order: Jam, Honey, Cola, Oil, Cream, Crumbs, Mud, Water, Chocolate, Scratch, Print,
 	 *  Drag, Juice, Sugar). Count: that kind makes no sound (prints, scratches, drag marks). */
 	ANTKITCHEN_API EAntSfx ForMess(uint8 MessKind);
+	/** A wreck piece (AntWreck::EMat) struck (bBreak false) or breaking apart. */
+	ANTKITCHEN_API EAntSfx ForWreck(uint8 WreckMat, bool bBreak);
+	/** The Human's weapon (AntWeapons::EKind) landing. */
+	ANTKITCHEN_API EAntSfx ForWeapon(uint8 WeaponKind);
+
+	/** Settings (the admin panel's Экран tab, a future options screen): AntMixClass, or AntMixClass::Num for the master. Saved. */
+	ANTKITCHEN_API float GetVolume(uint8 MixClass);
+	ANTKITCHEN_API void SetVolume(uint8 MixClass, float Value);
+	ANTKITCHEN_API bool MusicMuted();
+	ANTKITCHEN_API void SetMusicMuted(bool bMuted);
 
 	// ---- hooks for the systems in other branches (docs/AUDIO.md "Hooks"): all local and cheap, call them on every machine
 	/** Team carrying: one beat of the «Раз-два, взяли!» rhythm (a thump, a creak of the load; Carriers scales it). */
@@ -161,6 +171,18 @@ private:
 	TMap<TWeakObjectPtr<AActor>, uint8> PetState;
 	TMap<TWeakObjectPtr<AActor>, bool> TrailOn;
 	int32 PruneCount = 0;
+	// ---- v12 systems (carrying, trails and workers, snowball cards, weapons): read from their replicated state
+	void TickV12(float Dt, const FVector& Ear);
+	void OnCarryEvent(class AKitchenLoot* L, uint8 Kind, uint8 Team);
+	FDelegateHandle CarryEventsHandle;
+	TMap<TWeakObjectPtr<AActor>, uint8> CarryBark;
+	TMap<TWeakObjectPtr<AActor>, float> CarryNextBeat;
+	TMap<TWeakObjectPtr<AActor>, float> HumanActStart;
+	TMap<uint16, bool> TrailLaying;
+	int32 LastPicks = -1;
+	int32 LastOfferNum = 0;
+	int32 LastSnowLevel = -1;
+	float SwarmClock = 0.f;
 	float PatterLevel = 0.f;
 	FVector PatterAt = FVector::ZeroVector;
 	float PatterSeen = -100.f;

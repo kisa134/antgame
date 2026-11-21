@@ -1,5 +1,6 @@
 ﻿#include "AntWreck.h"
 #include "AntWreckGeo.h"
+#include "AntAudio.h"
 #include "AntTypes.h"
 #include "AntRun.h"
 #include "AntCharacter.h"
@@ -608,6 +609,7 @@ void AAntWreckBody::TakeHit(const FVector& Point, const FVector& Impulse, float 
 		Stage = FMath::Min<uint8>(NewStage, 3);
 		if (Stage >= 2 && Before < 2 && !bAwake && !bFixed && !RideOn)
 		{
+			AntAudio::Everyone(this, EAntSfx::Wobble, Point, 1.f);   // it groans and leans
 			ApplyLean(Dir);
 		}
 		if (Stage >= 3 && Before < 3)
@@ -645,7 +647,7 @@ void AAntWreckBody::TakeHit(const FVector& Point, const FVector& Impulse, float 
 	if (Now - LastHitAt > 0.25f && (Damage > 10.f || I > Mass))
 	{
 		LastHitAt = Now;
-		AntSfx::Everyone(this, Mat == AntWreck::Glass || Mat == AntWreck::China ? AntSfx::Crunch : AntSfx::Stomp, Point, FMath::FRandRange(0.8f, 1.1f));
+		AntAudio::Everyone(this, AntAudio::ForWreck(Mat, false), Point, FMath::Clamp(0.5f + Damage / 60.f, 0.5f, 1.5f));
 		if (AAntKitchenGameMode* GM = GMOf(GetWorld()))
 		{
 			GM->MakeNoise(Point, FMath::Clamp(C.Noise * (0.3f + Damage / 120.f), 0.1f, 1.f), AntNoise::Crash, this, Cast<AAntCharacter>(Source));
@@ -1121,7 +1123,7 @@ void AAntWreckBody::BreakApart(const FVector& Dir)
 	Mesh->SetCollisionEnabled(bCollapse ? ECollisionEnabled::QueryOnly : ECollisionEnabled::NoCollision);
 	OnRep_Look();
 	const FVector At = WorldBox().GetCenter();
-	AntSfx::Everyone(this, AntSfx::Crunch, At, 0.8f);
+	AntAudio::Everyone(this, AntAudio::ForWreck(Mat, true), At, 1.4f);
 	AntWreck::OnMess().Broadcast(GetWorld(), At, (float)WorldBox().GetExtent().Size2D(), Mat);
 	if (AAntKitchenGameMode* GM = GMOf(GetWorld()))
 	{
