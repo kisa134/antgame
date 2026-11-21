@@ -11,6 +11,8 @@
 #include "AntRun.h"
 #include "AntTypes.h"
 #include "AntMovementComponent.h"
+#include "GameFramework/Character.h"
+#include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
@@ -104,6 +106,43 @@ void AKitchenHeld::ForceDone(AAntCharacter* By)
 }
 
 // =============================================================================================
+// The climbable stand-in of a curtain: the curtain mesh is one sheet of cloth with its hem above the floor, an ant cannot get onto it.
+// A thin invisible box over the whole panel (floor to rod) is what they climb, "ants only" like the v2 threads.
+// =============================================================================================
+
+UStaticMeshComponent* AKitchenFixture::AddClimbProxy(AActor* Owner, USceneComponent* Parent, const FTransform& Panel)
+{
+	if (!Owner || !Parent)
+	{
+		return nullptr;
+	}
+	UStaticMeshComponent* C = NewObject<UStaticMeshComponent>(Owner);
+	C->SetMobility(EComponentMobility::Movable);
+	C->SetStaticMesh(AntKit::ShapeMesh(EAntShape::Cube));
+	C->SetupAttachment(Parent);
+	// the panel: 560 wide, 5230 tall from its origin (40 above the floor), hanging straight: a box 560 x 50 from the floor to the top
+	const float Top = (float)Panel.GetLocation().Z + 5230.f;
+	// (it goes 100 below the floor, like the walls: the ant's step onto a wall is found by a trace just under its feet)
+	const FVector Center(Panel.GetLocation().X, Panel.GetLocation().Y, (Top - 100.f) * 0.5f);
+	const FTransform World(FRotator(0.f, Panel.Rotator().Yaw, 0.f), Center, FVector(5.6f, 1.6f, (Top + 100.f) / 100.f));   // as deep as the folds (±80)
+	C->SetRelativeTransform(World.GetRelativeTransform(Parent->GetComponentTransform()));
+	C->SetHiddenInGame(true);
+	C->SetCastShadow(false);
+	KitchenArt::SetSolid(C, KitchenArt::ESolid::Static);
+	C->ComponentTags.AddUnique(TEXT("Surf_Fabric"));
+	C->RegisterComponent();
+	Owner->AddInstanceComponent(C);
+	C->ComponentTags.AddUnique(TEXT("AntsOnly"));
+	C->SetCollisionResponseToChannel(ECC_PhysicsBody, ECR_Ignore);
+	C->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
+	for (TActorIterator<ACharacter> It(Owner->GetWorld()); It; ++It)
+	{
+		if (!It->IsA<AAntCharacter>() && It->GetCapsuleComponent()) { It->GetCapsuleComponent()->IgnoreComponentWhenMoving(C, true); }
+	}
+	return C;
+}
+
+// =============================================================================================
 // A fastener
 // =============================================================================================
 
@@ -156,6 +195,19 @@ namespace
 
 	AAntKitchenGameMode* GMOf(const UWorld* W) { return W ? W->GetAuthGameMode<AAntKitchenGameMode>() : nullptr; }
 
+	/** "Ants only" (as the v2 threads): ants climb it, the Human, grandma, the kid and the pets walk through it. */
+	void LetBigThrough(UPrimitiveComponent* C)
+	{
+		if (!C || !C->GetWorld()) { return; }
+		C->ComponentTags.AddUnique(TEXT("AntsOnly"));
+		C->SetCollisionResponseToChannel(ECC_PhysicsBody, ECR_Ignore);
+		C->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
+		for (TActorIterator<ACharacter> It(C->GetWorld()); It; ++It)
+		{
+			if (!It->IsA<AAntCharacter>() && It->GetCapsuleComponent()) { It->GetCapsuleComponent()->IgnoreComponentWhenMoving(C, true); }
+		}
+	}
+
 	const TCHAR* const BreakableIds[] = { TEXT("jam_jar"), TEXT("pickles"), TEXT("plant_k"), TEXT("teapot"), TEXT("photo_l"), TEXT("glasses") };
 	float BreakFrom(int32 Mat) { return Mat == LevelV3::Glass ? 450.f : (Mat == LevelV3::Ceramic || Mat == LevelV3::Terracotta) ? 700.f : 1.e9f; }
 	float NoiseOf(int32 Mat) { return Mat == LevelV3::Glass ? 0.9f : Mat == LevelV3::Ceramic ? 0.8f : Mat == LevelV3::Terracotta ? 0.8f : Mat == LevelV3::Metal ? 0.9f : Mat == LevelV3::Wood ? 0.7f
@@ -198,8 +250,7 @@ void AKitchenFastener::Build()
 		Mesh = AddRow(this, Root, Rows[F.Inst], TEXT("FastenerMesh"));
 		if (Mesh)
 		{
-			Mesh->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
-			Mesh->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
+			LetBigThrough(Mesh);   // an ant stands on the screw head; nobody else notices it
 			Home = Mesh->GetComponentTransform();
 			FloorZ = FloorBelow(GetWorld(), Home.GetLocation() + FVector(Home.GetRotation().GetForwardVector().X * 0.f, 0.f, -40.f), this, 0.f);
 		}
@@ -302,6 +353,29 @@ void AKitchenFixture::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME(AKitchenFixture, BreakYaw);
 }
 
+void AKitchenFixture::SetCurtainClimb(bool bOn)
+{
+	if (!FixId().StartsWith(TEXT("curtain_k")) || !LevelV3::Fixtures().IsValidIndex(Fix))
+	{
+		return;
+	}
+	TArray<int32> Rows;
+	LevelV3::FixtureParts(Fix, Rows);
+	Rows.Add(LevelV3::Fixtures()[Fix].Inst);
+	for (const TCHAR* E : LevelV3::ExtraParts(*FixId())) { Rows.Add(LevelV3::FindBase(E)); }
+	for (TActorIterator<AKitchenBuilder> It(GetWorld()); It; ++It)
+	{
+		for (int32 R : Rows)
+		{
+			if (UStaticMeshComponent* X = It->CurtainProxy(R))
+			{
+				X->SetCollisionEnabled(bOn ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
+				UE_LOG(LogTemp, Display, TEXT("ANTFIX curtain climb row %d %s at %s"), R, bOn ? TEXT("on") : TEXT("off"), *X->Bounds.GetBox().ToString());
+			}
+		}
+	}
+}
+
 FString AKitchenFixture::FixId() const
 {
 	const TConstArrayView<FLevelV3Fixture> All = LevelV3::Fixtures();
@@ -380,8 +454,15 @@ void AKitchenFixture::Build()
 	if (Body && (LevelV3::BaseFlags(F.Inst) & 1 || Id.StartsWith(TEXT("curtain")) || Id == TEXT("tablecloth") || Id == TEXT("fridge_art") || Id == TEXT("balloons")))
 	{
 		// cloth, paper, ribbons: the ants climb them, the Human walks through
-		Body->ComponentTags.AddUnique(TEXT("AntsOnly"));
-		Body->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
+		LetBigThrough(Body);
+		for (UStaticMeshComponent* P : Parts) { if (P && Id.StartsWith(TEXT("curtain"))) { LetBigThrough(P); } }
+	}
+	if (Id.StartsWith(TEXT("curtain_k")))
+	{
+		// the cloth itself does not collide (its folds stopped the ants at the hem): they climb the builder's stand-in box
+		if (Body) { Body->SetCollisionEnabled(ECollisionEnabled::NoCollision); }
+		for (UStaticMeshComponent* P : Parts) { if (P) { P->SetCollisionEnabled(ECollisionEnabled::NoCollision); } }
+		SetCurtainClimb(true);
 	}
 	Home = GetActorTransform();
 	// The held work of the fixture itself: pushing it over its edge (friction), or a fastener the design keeps in the code.
@@ -792,6 +873,10 @@ void AKitchenFixture::OnRep_State()
 	{
 		DropStaticRiders();
 	}
+	if (State != Fixed)
+	{
+		SetCurtainClimb(false);   // torn down: nothing to climb where it hung
+	}
 	if (State == Falling)
 	{
 		Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -864,7 +949,11 @@ void AKitchenFixture::ShowAfter()
 	}
 	else if (Id == TEXT("tablecloth"))
 	{
-		Put(TEXT("SM_V3_TableclothPulled"), 1.f, 0.f, FVector::ZeroVector, true);
+		// the pulled cloth is modelled draped from the table to the floor: it lies where the table is (as in the design's "after the battle")
+		if (UStaticMeshComponent* Pulled = Put(TEXT("SM_V3_TableclothPulled"), 1.f, 0.f, FVector::ZeroVector, true))
+		{
+			Pulled->SetWorldTransform(FTransform(FRotator(0.f, 180.f, 0.f), FVector(Home.GetLocation().X, Home.GetLocation().Y, 0.f), FVector(KitchenArt::ImportScale)));
+		}
 		// the cups rode it over the edge: shards where they hit
 		int32 n = 0;
 		for (UStaticMeshComponent* P : Parts)

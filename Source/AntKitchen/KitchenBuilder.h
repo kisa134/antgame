@@ -81,6 +81,9 @@ public:
 	void ApplyV3Layout();
 	/** Level v3: the component of base row Inst (null if a fixture builds it, or it is not a static piece). */
 	UStaticMeshComponent* ArtComponent(int32 Inst) const { return ArtByInst.IsValidIndex(Inst) ? ArtByInst[Inst] : nullptr; }
+	/** Level v3: the climb stand-in of curtain row Inst (null if none). */
+	UStaticMeshComponent* CurtainProxy(int32 Inst) const { UStaticMeshComponent* const* P = CurtainProxies.Find(Inst); return P ? *P : nullptr; }
+	TMap<int32, UStaticMeshComponent*> CurtainProxies;
 
 	/** Ceiling lamps on/off (light switch). */
 	void SetMainLights(bool bOn);

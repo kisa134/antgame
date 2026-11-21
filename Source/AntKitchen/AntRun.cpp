@@ -38,6 +38,7 @@
 #include "AntRaid.h"
 #include "KitchenSlick.h"
 #include "AntFilm.h"
+#include "Engine/OverlapResult.h"
 
 namespace
 {
@@ -1565,6 +1566,30 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 	else if (Op == TEXT("look") && PC) { PC->SetControlRotation(FRotator(Num(2), Num(1), 0.f)); }   // look yaw pitch
 	else if (Op == TEXT("trophies")) { for (int32 i = 0; i < 16; ++i) { SpawnTrophy(i); } }      // one on every trophy spot
 	else if (Op == TEXT("shot") && PC) { PC->ConsoleCommand(TEXT("Shot showui"), false); }        // a screenshot at an exact moment (Saved/Screenshots)
+	else if (Op == TEXT("hits"))
+	{
+		// hits x y z dx dy dz: every component a ray meets on the pawn channel (what stops an ant there)
+		const FVector HA = Vec(1), HB = HA + Vec(4);
+		TArray<FHitResult> Hs;
+		FCollisionQueryParams Q(TEXT("AntDevHits"), true);
+		FCollisionObjectQueryParams OQ;
+		OQ.AddObjectTypesToQuery(ECC_WorldStatic); OQ.AddObjectTypesToQuery(ECC_WorldDynamic); OQ.AddObjectTypesToQuery(ECC_PhysicsBody); OQ.AddObjectTypesToQuery(ECC_AntClimbable);
+		W->LineTraceMultiByObjectType(Hs, HA, HB, OQ, Q);
+		TArray<FOverlapResult> Os;
+		W->OverlapMultiByChannel(Os, HA, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeSphere(30.f), Q);
+		if (Me)
+		{
+			// the player ant's own capsule swept along the ray
+			TArray<FHitResult> Sw;
+			FCollisionQueryParams SQ(TEXT("AntDevSweep"), false, Me);
+			UCapsuleComponent* Cap = Me->GetCapsuleComponent();
+			W->SweepMultiByChannel(Sw, HA, HB, Cap->GetComponentQuat(), ECC_Pawn, Cap->GetCollisionShape(), SQ);
+			for (const FHitResult& H : Sw) { UE_LOG(LogTemp, Display, TEXT("ANTHITS sweep %s.%s at %s n %s t %.2f start-pen %d"), *GetNameSafe(H.GetActor()), *GetNameSafe(H.GetComponent()), *H.ImpactPoint.ToCompactString(), *H.ImpactNormal.ToCompactString(), H.Time, H.bStartPenetrating ? 1 : 0); }
+		}
+		for (const FHitResult& H : Hs) { UE_LOG(LogTemp, Display, TEXT("ANTHITS ray %s.%s type %d pawn %d at %s n %s"), *GetNameSafe(H.GetActor()), *GetNameSafe(H.GetComponent()), H.GetComponent() ? (int32)H.GetComponent()->GetCollisionObjectType() : -1, H.GetComponent() ? (int32)H.GetComponent()->GetCollisionResponseToChannel(ECC_Pawn) : -1, *H.ImpactPoint.ToCompactString(), *H.ImpactNormal.ToCompactString()); }
+		for (const FOverlapResult& O : Os) { UE_LOG(LogTemp, Display, TEXT("ANTHITS overlap %s.%s"), *GetNameSafe(O.GetActor()), *GetNameSafe(O.GetComponent())); }
+		UE_LOG(LogTemp, Display, TEXT("ANTHITS done %d ray, %d overlap"), Hs.Num(), Os.Num());
+	}
 	else if (Op == TEXT("probe"))
 	{
 		for (TActorIterator<AKitchenLoot> It(W); It; ++It)

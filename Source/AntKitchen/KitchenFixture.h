@@ -131,6 +131,8 @@ public:
 	UFUNCTION() void OnRep_State();
 
 	FString FixId() const;
+	/** Level v3: switches the builder's climb stand-ins of the kitchen curtain on (hung) or off (torn down). */
+	void SetCurtainClimb(bool bOn);
 	int32 Mat() const;
 	bool IsBreakable() const;
 
@@ -147,6 +149,8 @@ public:
 	/** Respawns them all for the current seed (each raid starts with everything whole and fastened). */
 	static void ResetAll(UWorld* World);
 	static AKitchenFixture* Find(UWorld* World, const FString& Id);
+	/** An invisible "ants only" box over a curtain panel (floor to rod) that the ants climb (the cloth sheet itself has nothing to grip). */
+	static UStaticMeshComponent* AddClimbProxy(AActor* Owner, USceneComponent* Parent, const FTransform& PanelWorld);
 	/** Rage the Human gets for one broken thing (in rage levels: three breaks = one level). */
 	static constexpr float RagePerBreak = 0.34f;
 
@@ -175,6 +179,7 @@ private:
 	UPROPERTY() UStaticMeshComponent* Body = nullptr;
 	UPROPERTY() TArray<UStaticMeshComponent*> Parts;
 	UPROPERTY() TArray<UStaticMeshComponent*> After;
+	UPROPERTY() TArray<UStaticMeshComponent*> Proxies;
 	FTransform Home;
 	TWeakObjectPtr<AAntCharacter> LastBy;
 	bool bLanded = false;

@@ -5,6 +5,7 @@
 #include "KitchenArt.h"
 #include "LevelV2.h"
 #include "LevelV3.h"
+#include "KitchenFixture.h"
 #include "GameFramework/Character.h"
 #include "Components/CapsuleComponent.h"
 #include "Engine/StaticMesh.h"
@@ -1160,6 +1161,12 @@ void AKitchenBuilder::BuildArt()
 	for (int32 n = 0; n < All.Num(); ++n)
 	{
 		const FKitchenArtInst& I = All[n];
+		if (bV3 && I.Role == KitchenArt::Static && FCString::Strcmp(I.Name, TEXT("SM_V3_CurtainPanel")) == 0)
+		{
+			UStaticMeshComponent* Px = AKitchenFixture::AddClimbProxy(this, Root, KitchenArt::WorldTransform(I));   // the ants climb a curtain (the sheet has no grip)
+			MakeAntsOnly(Px);
+			CurtainProxies.Add(n, Px);
+		}
 		if (I.Role != KitchenArt::Static || Fixtured.Contains(n))
 		{
 			continue;
@@ -1174,6 +1181,10 @@ void AKitchenBuilder::BuildArt()
 		if (C && bV3)
 		{
 			KitchenArt::ApplyTint(C, LevelV3::BaseTint(n));
+			if (FCString::Strcmp(I.Name, TEXT("SM_V3_CurtainPanel")) == 0)
+			{
+				C->SetCollisionEnabled(ECollisionEnabled::NoCollision);   // (the climb proxy above is what collides)
+			}
 		}
 		if (C && FString(I.Name).EndsWith(TEXT("_CeilingLamp")))
 		{
