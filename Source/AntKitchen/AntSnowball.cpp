@@ -764,6 +764,35 @@ namespace AntSnowball
 					UE_LOG(LogTemp, Display, TEXT("ANTTRAIL dev goto %d: %d points"), Node, Way.Num());
 				}
 			}
+			else if (Sub == TEXT("rich"))
+			{
+				// trail rich: the host's ant walks (route graph, floor) to the floor spot with the most light food within 700 - where a player would lay a trail to
+				AAntCharacter* Ant = Host ? Cast<AAntCharacter>(Host->GetPawn()) : nullptr;
+				TArray<FVector> Foods;
+				for (TActorIterator<AKitchenLoot> It(W); It; ++It)
+				{
+					const FVector P = It->GetActorLocation();
+					if (!It->bIsGear && !It->bMain && !It->IsCarried() && !It->bHeld && It->Weight <= 8 && P.Z < 150.f && KitchenContainers::SealedAt(W, P) < 0
+						&& FVector::Dist2D(P, AKitchenBuilder::NestLocation(0)) > 1500.f && FVector::Dist2D(P, AKitchenBuilder::NestLocation(0)) < ANum(2, 9000.f)) { Foods.Add(P); }
+				}
+				int32 Best = -1, BestN = 0;
+				for (int32 i = 0; i < Foods.Num(); ++i)
+				{
+					int32 Nn = 0;
+					for (const FVector& Q : Foods) { Nn += FVector::Dist2D(Q, Foods[i]) < 700.f ? 1 : 0; }
+					if (Nn > BestN) { BestN = Nn; Best = i; }
+				}
+				TArray<FVector> Way;
+				if (Ant && Best >= 0 && AntRoutes::PathPoints(Ant->GetActorLocation(), Foods[Best], false, Way, nullptr, AntRoutes::FloorOnly))
+				{
+					Way.Add(Foods[Best]);
+					GM->DevGoPts = Way;
+					GM->DevGoStart = GM->DevGoBestAt = W->GetTimeSeconds();
+					GM->DevGoBest = 1.e9f;
+					GM->DevGoLogAt = 0.f;
+				}
+				UE_LOG(LogTemp, Display, TEXT("ANTTRAIL dev rich: %d pieces of food within 700 of %s (%d light pieces on the floor in all), %d points"), BestN, Best >= 0 ? *Foods[Best].ToCompactString() : TEXT("-"), Foods.Num(), Way.Num());
+			}
 			else if (Sub == TEXT("fetch"))
 			{
 				// trail fetch: the host's ant walks to the nearest light food on the floor (then "grab" and "trail goto 0" bring it home)

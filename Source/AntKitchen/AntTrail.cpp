@@ -828,7 +828,9 @@ void AAntTrailNet::Forage(FAntTrailLine& L, float Dt)
 		}
 		float D2;
 		const float S0 = NearestOnLine(L, P, D2);
-		if (D2 > Reach * Reach || KitchenContainers::SealedAt(GetWorld(), P) >= 0)
+		// The far end of a trail is where the food is: there the workers search wider (700, or the forage reach if larger).
+		const float R = S0 > L.Length - 150.f ? FMath::Max(Reach, 700.f) : Reach;
+		if (D2 > R * R || KitchenContainers::SealedAt(GetWorld(), P) >= 0)
 		{
 			continue;
 		}
