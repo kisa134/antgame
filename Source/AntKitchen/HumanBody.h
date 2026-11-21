@@ -51,7 +51,13 @@ namespace HumanAct
 		Fall,     // slipped in a puddle: the feet go out, he lands flat on his back, lies, sits up, gets up. Arg: the slipping leg
 		Wipe,     // down on his haunches, wiping the floor at Target with a towel. Arg: seconds * 10
 		Busy,     // level v3, a chore of the routine (NpcRoutine.h): standing at it, the hands busy. Arg: HumanBusy, Target: what at
+		Kick,     // the right foot drawn back and punted forward through Target (HumanPhys.cpp)
+		JumpStomp,// both feet: a crouch, a heavy hop, a two-footed landing with a shockwave at Target
 	};
+	constexpr float KickHit = 0.36f;
+	constexpr float KickDur = 0.85f;
+	constexpr float JumpHit = 0.62f;
+	constexpr float JumpDur = 1.45f;
 	/** The fall (HumanAct::Fall), seconds from the slip: the arms flail (the tell), the back hits the floor, he sits up, he stands. */
 	constexpr float FallHit = 0.92f;
 	constexpr float FallSitUp = 3.4f;
@@ -99,6 +105,17 @@ struct FHumanRig
 	/** The last pose, body space: origin on the floor under the capsule, X forward, Y right. */
 	FVector SegPos[HumanSeg::Count];
 	FQuat SegRot[HumanSeg::Count];
+	// ---- the semi-ragdoll layer (HumanPhys.cpp): springs on top of the posed body, pushed by acceleration and by hits
+	FVector PrevVel = FVector::ZeroVector;
+	bool bPrevVel = false;
+	float PLean = 0.f, PLeanV = 0.f;      // degrees forward (+) / back (-)
+	float PSide = 0.f, PSideV = 0.f;      // degrees of roll
+	float PTwist = 0.f, PTwistV = 0.f;    // degrees of yaw of the chest
+	FVector POff = FVector::ZeroVector, POffV = FVector::ZeroVector;   // the pelvis shoved, body space
+	float PArm[2] = { 0.f, 0.f }, PArmV[2] = { 0.f, 0.f };             // arms swinging with momentum (degrees)
+	float PFlail = 0.f;                   // 0..1: arms thrown out (a stagger, a stumble)
+	float PHand[2] = { 0.f, 0.f }, PHandV[2] = { 0.f, 0.f };           // a hand jerked (an ant bit it)
+	float ChargeW = 0.f;                  // the swing wound up while the button is held
 };
 
 /** How one of the figures carries itself: size, tempo, posture, how it hits. */

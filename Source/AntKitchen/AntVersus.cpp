@@ -166,6 +166,12 @@ bool& AntVersus::Wanted()
 	return b;
 }
 
+bool& AntVersus::InfinitePatience()
+{
+	static bool b = false;
+	return b;
+}
+
 bool AntVersus::Active(const UWorld* World)
 {
 	const AAntVersus* V = AAntVersus::Get(World);
@@ -184,6 +190,10 @@ bool AntVersus::Spend(AHumanCharacter* H, float Cost)
 	if (!V || !V->bActive || !IsPlayerHuman(H))
 	{
 		return true;
+	}
+	if (InfinitePatience())
+	{
+		Cost = 0.f;
 	}
 	if (V->Patience < Cost)
 	{
@@ -207,7 +217,7 @@ bool AntVersus::XrayOn(const UWorld* World)
 FString AntVersus::HudLine(const UWorld* World, const AHumanCharacter* H, float& OutPatience01)
 {
 	const AntWeapons::FDef* D = AntWeapons::Held(H);
-	FString S = FString::Printf(TEXT("В руке: %s (Q — удар, E у предмета — взять)"), D ? D->Name : TEXT("газета"));
+	FString S = FString::Printf(TEXT("В руке: %s (ЛКМ — удар, держать — сильный; E у предмета — взять, Q — бросить)"), D ? D->Name : TEXT("газета"));
 	OutPatience01 = -1.f;
 	const AAntVersus* V = AAntVersus::Get(World);
 	if (V && V->bActive)

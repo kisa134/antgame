@@ -236,6 +236,13 @@ int32 AntWreck::FindPiece(UWorld* World, const FString& NameOrIndex)
 	return -1;
 }
 
+int32 AntWreck::PieceOfComponent(UWorld* World, const UPrimitiveComponent* C)
+{
+	BuildCatalog(World);
+	const int32* I = C ? GCat.ByComp.Find(C) : nullptr;
+	return I ? *I : -1;
+}
+
 AntWreck::FOnWreckMess& AntWreck::OnMess()
 {
 	static FOnWreckMess D;

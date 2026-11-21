@@ -60,6 +60,12 @@ namespace AntVersus
 	ANTKITCHEN_API bool Spend(AHumanCharacter* H, float Cost);
 	ANTKITCHEN_API float SwingCost(const AHumanCharacter* H);
 	constexpr float StompCost = 12.f;
+	/** The heavy body's keys (HumanPhys.cpp): a kick, a jump-stomp, a charged swing (x the swing's cost). */
+	constexpr float KickCost = 8.f;
+	constexpr float JumpStompCost = 20.f;
+	constexpr float ChargedK = 1.5f;
+	/** Admin: «Бесконечное терпение» (the patience never drops). */
+	ANTKITCHEN_API bool& InfinitePatience();
 	/** May the Human player see the ants' loads now? (Always outside versus.) */
 	ANTKITCHEN_API bool XrayOn(const UWorld* World);
 	/** HUD lines for the Human player (weapon, patience, x-ray), on top of AAntHUD::DrawHuman. */

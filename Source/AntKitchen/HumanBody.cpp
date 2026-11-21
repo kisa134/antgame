@@ -508,8 +508,11 @@ void AHumanCharacter::PoseBody(float Dt)
 	case HumanAct::Fall: ActDur = HumanAct::FallUp; break;
 	case HumanAct::Wipe: ActDur = Act.Arg * 0.1f; break;
 	case HumanAct::Busy: ActDur = 1.e9f; break;
+	case HumanAct::Kick: ActDur = HumanAct::KickDur; break;
+	case HumanAct::JumpStomp: ActDur = HumanAct::JumpDur; break;
 	default: break;
 	}
+	TickPhysLayer(Dt, Body);   // the semi-ragdoll springs (HumanPhys.cpp)
 	if (T < 0.f || T > ActDur || bStun || bKO)
 	{
 		A = HumanAct::None;
@@ -557,7 +560,7 @@ void AHumanCharacter::PoseBody(float Dt)
 			F.FromYaw = F.Yaw;
 		}
 		const FVector Cock = Origin + (Fwd * 130.f + Right * (Sgn * HipY * 1.2f)) * FK;
-		const FVector Hit = GetStompPoint(StompLeg);
+		const FVector Hit = FVector(Act.Target).IsZero() ? GetStompPoint(StompLeg) : FVector(Act.Target);   // the aimed stomp (HumanPhys.cpp)
 		const float Top = 900.f;
 		if (T < 0.40f)
 		{
@@ -622,6 +625,95 @@ void AHumanCharacter::PoseBody(float Dt)
 		L.Pitch = bFootStun ? 10.f : -25.f + 20.f * FMath::Sin(C * 23.f);
 		L.Yaw = Yaw + (bFootStun ? -30.f : 0.f);
 		L.T = 0.5f;
+	}
+	// The kick (HumanPhys.cpp): the right foot drawn back behind him, punted forward shin high through the target, follows
+	// through, comes back down. The left foot stays planted.
+	const bool bKick = A == HumanAct::Kick;
+	if (bKick)
+	{
+		FHumanFoot& F = R.Feet[1];
+		bDrive[1] = true;
+		if (!R.bDriven[1])
+		{
+			F.From = F.Pos;
+			F.FromYaw = F.Yaw;
+		}
+		const FVector Back = Origin + (Fwd * -430.f + Right * HipY) * FK;
+		const FVector Front = Origin + (Fwd * 1150.f + Right * (HipY * 0.5f)) * FK;
+		if (T < 0.22f)
+		{
+			const float K = EaseOut(T / 0.22f);
+			F.Pos = FMath::Lerp(F.From, Back, K);
+			F.Lift = 330.f * K;
+			F.Pitch = -45.f * K;
+		}
+		else if (T < HumanAct::KickHit)
+		{
+			const float K = EaseIn((T - 0.22f) / (HumanAct::KickHit - 0.22f));
+			F.Pos = FMath::Lerp(Back, Front, K);
+			F.Lift = 330.f + 170.f * K;
+			F.Pitch = FMath::Lerp(-45.f, 28.f, K);
+		}
+		else if (T < 0.58f)
+		{
+			const float K = (T - HumanAct::KickHit) / (0.58f - HumanAct::KickHit);
+			F.Pos = Front + Fwd * (60.f * FK * FMath::Sin(PI * K));
+			F.Lift = 500.f - 120.f * K;
+			F.Pitch = 28.f - 10.f * K;
+		}
+		else
+		{
+			const float K = Ease(FMath::Min(1.f, (T - 0.58f) / (HumanAct::KickDur - 0.6f)));
+			F.Pos = FMath::Lerp(Front, Home(1) + Fwd * 150.f * FK, K);
+			F.Lift = 380.f * (1.f - K);
+			F.Pitch = 18.f * (1.f - K);
+		}
+		F.Pos.Z = FloorZ;
+		F.T = 0.5f;
+		F.Yaw += FMath::FindDeltaAngleDegrees(F.Yaw, Yaw) * FMath::Min(1.f, Dt * 10.f);
+	}
+	// The jump-stomp: both feet down in a crouch, a heavy hop forward, a two-footed landing that shakes the room.
+	const bool bJump = A == HumanAct::JumpStomp;
+	if (bJump)
+	{
+		for (int32 i = 0; i < 2; ++i)
+		{
+			FHumanFoot& F = R.Feet[i];
+			bDrive[i] = true;
+			if (!R.bDriven[i])
+			{
+				F.From = F.Pos;
+				F.FromYaw = F.Yaw;
+			}
+			const FVector Land = Home(i) + Fwd * 120.f * FK;
+			if (T < 0.30f)
+			{
+				F.Lift = 0.f;
+				F.T = 1.f;
+			}
+			else if (T < HumanAct::JumpHit)
+			{
+				const float K = (T - 0.30f) / (HumanAct::JumpHit - 0.30f);
+				F.Pos = FMath::Lerp(F.From, Land, Ease(K));
+				F.Lift = 560.f * FMath::Sin(PI * K);
+				F.Pitch = -18.f * FMath::Sin(PI * K);
+				F.T = 0.5f;
+			}
+			else
+			{
+				if (F.T < 1.f)
+				{
+					R.DipVel -= 2200.f;
+					if (i == 0) { OnFootfall(0, 1.f); }
+				}
+				F.Pos = Land;
+				F.Lift = 0.f;
+				F.Pitch = 0.f;
+				F.T = 1.f;
+			}
+			F.Pos.Z = FloorZ;
+			F.Yaw += FMath::FindDeltaAngleDegrees(F.Yaw, Yaw) * FMath::Min(1.f, Dt * 10.f);
+		}
 	}
 	// The fall: the slipping foot shoots forward and up, the other one leaves the floor, both legs come down on the floor straight
 	// out in front of him, a knee comes up while he lies there, both feet come in when he sits up and back under him as he stands.
@@ -723,7 +815,7 @@ void AHumanCharacter::PoseBody(float Dt)
 		Freq = 1.8f;   // panic: pattering away
 	}
 	const float SwingDur = FMath::Clamp(0.8f / Freq, 0.3f, 0.62f);
-	if (!bHop && StompLeg < 0 && !bFall)
+	if (!bHop && StompLeg < 0 && !bFall && !bKick && !bJump)
 	{
 		auto StartSwing = [&](int32 i, float Dur)
 		{
@@ -925,7 +1017,48 @@ void AHumanCharacter::PoseBody(float Dt)
 			Arm[s].Curl = 1.f;
 		}
 		bLook = true;
-		LookB = Body.InverseTransformPosition(GetStompPoint(StompLeg));
+		LookB = Body.InverseTransformPosition(FVector(Act.Target).IsZero() ? GetStompPoint(StompLeg) : FVector(Act.Target));
+	}
+	else if (A == HumanAct::Kick)
+	{
+		// On the left leg, leaning back against the punt, the arms out for balance; the right one swings back as the leg goes.
+		const float W = Ease(Ramp(T, 0.f, 0.18f)) * (1.f - Ease(Ramp(T, 0.55f, HumanAct::KickDur)));
+		const float Punt = Ramp(T, 0.22f, HumanAct::KickHit) * (1.f - Ramp(T, 0.45f, 0.75f));
+		LeanT += -8.f * W - 7.f * Punt;
+		SideT += -5.f * W;
+		CrouchT += 50.f * W;
+		TwistT += 10.f * Punt;
+		for (int32 s = 0; s < 2; ++s)
+		{
+			const float SS = s == 0 ? -1.f : 1.f;
+			Arm[s].W = W * 0.85f;
+			Arm[s].Rel = FVector(s == 1 ? FMath::Lerp(160.f, -260.f, Punt) : 220.f, SS * 640.f, -220.f);
+			Arm[s].RotW = 0.f;
+			Arm[s].Curl = 1.f;
+		}
+		bLook = true;
+		LookB = Body.InverseTransformPosition(KickPoint());
+	}
+	else if (A == HumanAct::JumpStomp)
+	{
+		// Down into a crouch (the tell), up with both arms, the landing: the knees give, the arms slam down, then up again.
+		const float Down = Ease(Ramp(T, 0.f, 0.30f)) * (1.f - Ramp(T, 0.30f, 0.42f));
+		const float Air = FMath::Sin(PI * FMath::Clamp((T - 0.30f) / (HumanAct::JumpHit - 0.30f), 0.f, 1.f));
+		const float Land = Ramp(T, HumanAct::JumpHit, HumanAct::JumpHit + 0.08f) * (1.f - Ease(Ramp(T, HumanAct::JumpHit + 0.25f, HumanAct::JumpDur)));
+		CrouchT += 420.f * Down - 120.f * Air + 520.f * Land;
+		BendT += 14.f * Down + 20.f * Land;
+		LeanT += 4.f * Down + 8.f * Land;
+		PelvisOff.Z += 560.f * Air;
+		for (int32 s = 0; s < 2; ++s)
+		{
+			const float SS = s == 0 ? -1.f : 1.f;
+			Arm[s].W = FMath::Max(Down, FMath::Max(Air, Land));
+			Arm[s].Rel = Land > 0.01f ? FVector(320.f, SS * 420.f, -760.f) : FMath::Lerp(FVector(-120.f, SS * 380.f, -600.f), FVector(160.f, SS * 480.f, 760.f), Air);
+			Arm[s].RotW = 0.f;
+			Arm[s].Curl = 1.f;
+		}
+		bLook = true;
+		LookB = TargetB;
 	}
 	else if (A == HumanAct::Swat || A == HumanAct::Slap)
 	{
@@ -943,8 +1076,12 @@ void AHumanCharacter::PoseBody(float Dt)
 		CrouchT += K * CrouchMax * In;
 		BendT += K * BendMax * In;
 		PelvisOff += FlatDir * (LungeMax * K * In);
-		TwistT += Tw * In + Sgn * 16.f * Wind;
-		LeanT += -6.f * Wind + 5.f * Strike * Out;
+		// The player's blows (HumanPhys.cpp): the backhand winds up across the chest, the overhead / charged one high and far back.
+		const uint8 Blow = bSlap ? 0 : Act.Arg;
+		const bool bBack = (Blow & 3) == 1, bBig = (Blow & 4) || (Blow & 3) == 2;
+		TwistT += Tw * In + Sgn * (bBack ? -22.f : bBig ? 26.f : 16.f) * Wind;
+		LeanT += (bBig ? -12.f : -6.f) * Wind + (bBig ? 11.f : 5.f) * Strike * Out;
+		CrouchT += (bBig ? 140.f : 0.f) * Strike * Out;
 		FArmCtl& H = Arm[s];
 		H.W = Ease(Ramp(T, 0.f, Ti * 0.35f)) * Out;
 		H.AbsW = Strike;
@@ -960,7 +1097,7 @@ void AHumanCharacter::PoseBody(float Dt)
 		}
 		else
 		{
-			H.Rel = FVector(-150.f, Sgn * 250.f, 720.f);   // the fist above the shoulder, the paper pointing back
+			H.Rel = bBack ? FVector(60.f, -Sgn * 260.f, 560.f) : bBig ? FVector(-330.f, Sgn * 200.f, 940.f) : FVector(-150.f, Sgn * 250.f, 720.f);   // the fist above the shoulder, the paper pointing back
 			H.RotA = FRotationMatrix::MakeFromXZ(FVector(-1.f, 0.f, 0.3f), FVector(0.f, 0.f, -1.f)).ToQuat();
 			H.bPaper = true;
 			H.PaperP = TargetB;
@@ -1543,6 +1680,23 @@ void AHumanCharacter::PoseBody(float Dt)
 	{
 		Approach(R.PeerW, 0.f, 6.f, Dt);
 	}
+	if (R.ChargeW > 0.01f && A == HumanAct::None && !bKO && !bStun)
+	{
+		// LMB held (HumanPhys.cpp): the blow is wound up, the fist high behind the shoulder, the body coiled; it trembles at full.
+		const float W = R.ChargeW;
+		TwistT += 30.f * W;
+		LeanT += -10.f * W;
+		CrouchT += 90.f * W;
+		FArmCtl& H = Arm[1];
+		H = FArmCtl();
+		H.W = W;
+		H.Rel = FVector(-380.f, 260.f, 900.f) + FVector(0.f, 0.f, 25.f * W * FMath::Sin(C * 31.f));
+		H.RotA = H.RotB = FRotationMatrix::MakeFromXZ(FVector(-1.f, 0.f, 0.6f), FVector(0.f, 0.f, -1.f)).ToQuat();
+		H.RotW = 1.f;
+		H.bPole = true;
+		H.Pole = FVector(-0.3f, 0.8f, -0.3f);
+		H.Curl = 1.f;
+	}
 
 	// Eased on top of the eased targets: nothing on a body this size starts or stops at once.
 	Approach(R.Crouch, CrouchT, 13.f, Dt);
@@ -1552,7 +1706,8 @@ void AHumanCharacter::PoseBody(float Dt)
 	Approach(R.Side, SideT, 9.f, Dt);
 
 	// ---------------------------------------------------------------------------------- spine and legs
-	FSpine S = BuildSpine(R.Crouch, R.Lean, R.Bend, R.Twist, R.Side, PelvisOff);
+	// The semi-ragdoll springs go on top (HumanPhys.cpp): the torso rocks, the pelvis is shoved.
+	FSpine S = BuildSpine(R.Crouch, R.Lean + R.PLean, R.Bend, R.Twist + R.PTwist, R.Side + R.PSide, PelvisOff + FVector(R.POff.X, R.POff.Y, 0.f));
 	FVector Ankle[2];
 	FQuat QFoot[2];
 	float Drop = 0.f;
@@ -1683,9 +1838,9 @@ void AHumanCharacter::PoseBody(float Dt)
 		const FVector Sh = S.Shoulder[s] + FVector(0.f, 0.f, Shrug);
 		// At rest the arm hangs a little out from the body and swings against the leg of its side.
 		const float Sw = FMath::Clamp((float)(FootB[1 - s].X - FootB[s].X) / 900.f, -1.f, 1.f) * Driven;
-		const float SwingDeg = Sw * (10.f + 14.f * FMath::Min(1.f, Speed / 700.f));
-		const float Abd = 9.f + 9.f * R.RageW + St.ArmsOut;
-		const float Elbow = 14.f + FMath::Max(0.f, Sw) * 18.f + 30.f * R.RageW;
+		const float SwingDeg = Sw * (10.f + 14.f * FMath::Min(1.f, Speed / 700.f) + 10.f * SprintRamp) + R.PArm[s];   // + momentum (HumanPhys.cpp)
+		const float Abd = 9.f + 9.f * R.RageW + St.ArmsOut + 60.f * R.PFlail;                                     // reeling: the arms go out
+		const float Elbow = 14.f + FMath::Max(0.f, Sw) * 18.f + 30.f * R.RageW + 25.f * R.PFlail + 35.f * SprintRamp;
 		const FVector UDir = G.RotateVector((RX(Sgn * Abd) * RY(-SwingDeg)).RotateVector(FVector(0.f, 0.f, -1.f)));
 		const FVector FDir = G.RotateVector((RX(Sgn * Abd * 0.5f) * RY(-(SwingDeg + Elbow))).RotateVector(FVector(0.f, 0.f, -1.f)));
 		FVector Wrist = Sh + UDir * LUpper + FDir * LFore;
@@ -1718,6 +1873,10 @@ void AHumanCharacter::PoseBody(float Dt)
 			{
 				PoleHint = FMath::Lerp(PoleHint, G.RotateVector(Ctl.Pole) * 300.f, Ctl.W);
 			}
+		}
+		if (FMath::Abs(R.PHand[s]) > 1.f)
+		{
+			Wrist += G.RotateVector(FVector(-0.4f, Sgn * 0.6f, 0.7f)) * R.PHand[s];   // a bitten hand jerks away (HumanPhys.cpp)
 		}
 		FVector Pole;
 		const FVector ElbowP = TwoBone(Sh, Wrist, LUpper, LFore, PoleHint, G.RotateVector(FVector(-1.f, Sgn * 0.5f, -0.3f)), Pole);

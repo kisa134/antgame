@@ -929,10 +929,12 @@ void AAntHUD::DrawHuman(AHumanCharacter* H, AAntGameState* GS)
 
 	const float ServerNow = GS ? GS->GetServerWorldTimeSeconds() : GetWorld()->GetTimeSeconds();
 	const bool bStompReady = ServerNow >= H->StompReadyTime;
-	Txt(bStompReady ? TEXT("ЛКМ — ТОПНУТЬ: готово") : TEXT("ЛКМ — ТОПНУТЬ: замах..."), X, Y + 106.f * S, bStompReady ? Green : Grey, Small, 1.2f * S);
+	// The giant's keys (HumanPhys.cpp).
 	const bool bSwatReady = ServerNow >= H->SwatReadyTime;
-	Txt(bSwatReady ? TEXT("Q — ГАЗЕТОЙ по прицелу (стены, столы): готово") : TEXT("Q — газета: замах..."), X, Y + 130.f * S, bSwatReady ? Green : Grey, Small, 1.2f * S);
-	Txt(H->Held ? TEXT("E — ШВЫРНУТЬ еду (разобьётся!)") : TEXT("E — схватить еду у прицела"), X, Y + 154.f * S, H->Held ? Gold : White, Small, 1.2f * S);
+	Txt(H->bCharging ? TEXT("ЛКМ — ЗАМАХ... отпусти: СИЛЬНЫЙ УДАР") : bSwatReady ? TEXT("ЛКМ — удар (держать — сильный, в ритм — серия из 3)") : TEXT("ЛКМ — удар: замах..."), X, Y + 106.f * S,
+		H->bCharging ? Gold : bSwatReady ? Green : Grey, Small, 1.2f * S);
+	Txt(bStompReady ? TEXT("ПРОБЕЛ — топнуть (держать — прыжок двумя ногами)  ·  CTRL/C — пинок") : TEXT("ПРОБЕЛ — топнуть: замах...  ·  CTRL/C — пинок"), X, Y + 130.f * S, bStompReady ? Green : Grey, Small, 1.2f * S);
+	Txt(H->Held ? TEXT("Q / E — ШВЫРНУТЬ еду (разобьётся!)  ·  SHIFT — бег") : TEXT("E — взять еду / оружие  ·  Q — бросить оружие  ·  SHIFT — бег  ·  F — стряхнуть"), X, Y + 154.f * S, H->Held ? Gold : White, Small, 1.2f * S);
 	{
 		// The weapon in hand, and in versus his patience and the x-ray (AntVersus.h).
 		float Pat = -1.f;
@@ -943,10 +945,24 @@ void AAntHUD::DrawHuman(AHumanCharacter* H, AAntGameState* GS)
 			Bar(X + 420.f * S, Y + 82.f * S, 260.f * S, 14.f * S, Pat, FLinearColor(1.f, 0.55f, 0.2f));
 		}
 	}
-	// Where the slippers will land.
-	for (int32 Leg = 0; Leg < 2; ++Leg)
+	// Where the slipper will land: the stomp goes where he aims (clamped to where a foot gets).
+	if (PlayerOwner && PlayerOwner->PlayerCameraManager)
 	{
-		Marker(H->GetStompPoint(Leg) + FVector(0.f, 0.f, 20.f), TEXT("тапок"), bStompReady ? FLinearColor(1.f, 0.5f, 0.2f) : Grey, false);
+		const FVector Cam = PlayerOwner->PlayerCameraManager->GetCameraLocation();
+		const FVector Dir = PlayerOwner->PlayerCameraManager->GetCameraRotation().Vector();
+		FHitResult Hit;
+		FCollisionQueryParams Q(SCENE_QUERY_STAT(HudStompAim), false, H);
+		const FVector Aim = GetWorld()->LineTraceSingleByChannel(Hit, Cam, Cam + Dir * 9000.f, ECC_Visibility, Q) ? FVector(Hit.ImpactPoint) : Cam + Dir * 2000.f;
+		int32 Leg = 0;
+		Marker(H->StompAimFrom(Aim, Leg) + FVector(0.f, 0.f, 20.f), TEXT("тапок"), bStompReady ? FLinearColor(1.f, 0.5f, 0.2f) : Grey, false);
+	}
+	if (H->IsStaggered())
+	{
+		Txt(TEXT("ВРЕЗАЛСЯ!"), W * 0.5f, Hh * 0.42f, Gold, Big, 1.4f * S, true);
+	}
+	if (H->SprintRamp > 0.05f)
+	{
+		Txt(FString::Printf(TEXT("БЕГ %d%%"), FMath::RoundToInt(H->SprintRamp * 100.f)), X + 420.f * S, Y + 106.f * S, FLinearColor(1.f, 0.7f, 0.3f), Small, 1.2f * S);
 	}
 
 	if (H->IsKnockedOut())
@@ -1129,7 +1145,7 @@ void AAntHUD::DrawHelp(APawn* Me)
 	FString Help;
 	if (Cast<AHumanCharacter>(Me))
 	{
-		Help = TEXT("WASD — ходить | ЛКМ — топнуть | ПКМ (держать) — дихлофос | Q — газета по прицелу | E — схватить/швырнуть еду | H — снова муравей | Tab — счёт");
+		Help = TEXT("WASD — ходить | Shift — бег | ЛКМ — удар (держать — сильный, в ритм — серия) | Пробел — топнуть (держать — прыжок) | Ctrl/C — пинок | ПКМ — дихлофос | E — взять | Q — бросить | F — стряхнуть | H — снова муравей");
 	}
 	else if (const AAntCharacter* C = Cast<AAntCharacter>(Me); C && C->Creature == 1)
 	{

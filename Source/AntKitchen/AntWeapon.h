@@ -82,6 +82,17 @@ public:
 	/** Hidden away by the ants (under the sofa...). */
 	UPROPERTY(Replicated) bool bStashed = false;
 
+	/** Thrown with Q (HumanPhys.cpp): it flies along a parabola from FlyFrom at FlyVel since FlyStart (server time), the same
+	 *  on every machine; the server sweeps it and it smashes what it meets (AntWreck::Hit), then lies there. */
+	UPROPERTY(ReplicatedUsing = OnRep_Holder) bool bFlying = false;
+	UPROPERTY(Replicated) FVector_NetQuantize10 FlyFrom;
+	UPROPERTY(Replicated) FVector_NetQuantize10 FlyVel;
+	UPROPERTY(Replicated) float FlyStart = 0.f;
+	TWeakObjectPtr<AHumanCharacter> FlyBy;
+	FVector FlyAt(float T) const;
+	/** Server: out of the hand and into the air. */
+	void Launch(AHumanCharacter* By, const FVector& From, const FVector& Vel);
+
 	UFUNCTION() void OnRep_Kind();
 	UFUNCTION() void OnRep_Holder();
 
@@ -97,6 +108,9 @@ protected:
 private:
 	void Build();
 	void Attach();
+	void FlyTick(float Dt);
+	float NetNow() const;
+	FVector FlyPrev = FVector::ZeroVector;
 	UPROPERTY() TArray<UStaticMeshComponent*> Parts;
 	uint8 BuiltKind = 255;
 };

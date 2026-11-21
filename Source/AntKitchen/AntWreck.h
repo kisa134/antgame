@@ -59,6 +59,8 @@ namespace AntWreck
 	ANTKITCHEN_API const TArray<FPiece>& Pieces(UWorld* World);
 	ANTKITCHEN_API const FPiece* PieceOf(UWorld* World, int32 Inst);
 	ANTKITCHEN_API int32 FindPiece(UWorld* World, const FString& NameOrIndex);
+	/** The builder instance whose static copy C is (-1: not a piece that wrecks). The Human's body uses it (HumanPhys.cpp). */
+	ANTKITCHEN_API int32 PieceOfComponent(UWorld* World, const class UPrimitiveComponent* C);
 
 	/**
 	 * Server: something struck the world at Point (radius Radius): Impulse is kg m/s along its direction, Damage in hit points.

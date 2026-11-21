@@ -56,7 +56,53 @@ public:
 
 	void SetRage(uint8 NewRage);
 	float GetSprayRange() const { return SprayRange * (1.f + 0.25f * Rage); }
-	float GetWalkSpeed() const { return (bStunned || IsDown()) ? 1.f : bKnockedOut ? (Fig == HumanFig::Kid ? 1000.f : 260.f) : HumanBody::Style(Fig).WalkSpeed * (1.f + 0.12f * Rage) * (HasBackAche() ? 0.5f : 1.f); }
+	float GetWalkSpeed() const { return (bStunned || IsDown()) ? 1.f : bKnockedOut ? (Fig == HumanFig::Kid ? 1000.f : 260.f) : HumanBody::Style(Fig).WalkSpeed * (1.f + 0.12f * Rage) * (HasBackAche() ? 0.5f : 1.f) * (1.f + (SprintMax - 1.f) * SprintRamp); }
+
+	// ---- The heavy body (HumanPhys.cpp): mass and inertia, momentum that shoves the flat about, the semi-ragdoll, the player's keys ----
+	/** kg: what his momentum is made of (x BodyMassK, the admin's "масса тела"). */
+	static constexpr float BodyKg = 90.f;
+	/** Running (Shift): the top speed is this many times the walk, reached after a wind-up. */
+	static constexpr float SprintMax = 1.9f;
+	UPROPERTY(Replicated) bool bSprinting = false;
+	/** 0..1: how far into the sprint's wind-up he is (local on every machine, eased from bSprinting and the speed). */
+	float SprintRamp = 0.f;
+	/** LMB held: the swing is being wound up (a charged blow on release). */
+	UPROPERTY(Replicated) bool bCharging = false;
+	/** Server world time until which he reels back from something he ran into (no walking). */
+	UPROPERTY(Replicated) float StaggerUntil = -100.f;
+	/** Admin: x the weight of his body (inertia, what he shoves) and x the force of his blows. */
+	UPROPERTY(Replicated) float BodyMassK = 1.f;
+	UPROPERTY(Replicated) float StrengthK = 1.f;
+	UPROPERTY(Replicated) float KickReadyTime = 0.f;
+	/** The swing in flight (server): x its impulse and damage (charged, the combo's last blow) and which way it sweeps (zero: down onto the point). */
+	float SwingPower = 1.f;
+	FVector SwingDir = FVector::ZeroVector;
+	bool IsStaggered() const { return NetNow() < StaggerUntil; }
+	/** Server: a blow with LMB (player): Charge 0..1 (how long it was held). A rhythm of clicks makes a combo of three. */
+	void TrySwing(const FVector& Point, float Charge);
+	/** Server: the stomp at a point near his feet (the player aims it: clamped to where a foot gets). */
+	void TryStompAt(const FVector& Point);
+	/** Server: both feet: a heavy jump and a landing with a shockwave (hold Space). */
+	void TryJumpStomp();
+	/** Server: a punt with the right foot along where he faces (Ctrl / C). */
+	void TryKick();
+	/** Server: throws what is in his hands (food, or the weapon: it flies and smashes what it hits). */
+	void ThrowHeld(const FVector& Dir);
+	/** Server: he goes down (ran into something at a run): the slip's fall, without a puddle. Dir: where he was going. */
+	bool Topple(const FVector& Dir, const TCHAR* Why);
+	/** Server: a hit on the body (every machine sees it): Dir world, Strength 0..1+, Kind 0 a bump, 1 a recoil, 2 a stagger, 3 a hand jerked (Side in Kind 3/4). */
+	void Jolt(const FVector& Dir, float Strength, uint8 Kind);
+	/** Where the kick lands (in front of him, shin high). */
+	FVector KickPoint() const;
+	/** The aimed stomp: Point clamped to where a foot gets (and which foot). The HUD marks it. */
+	FVector StompAimFrom(const FVector& Point, int32& OutLeg) const;
+	/** Dev (-AntDo): the player's keys and movement for a scripted Human (hin ...). */
+	static bool HeavyDevCommand(class AAntKitchenGameMode* GM, const TArray<FString>& A);
+	/** Q on the keyboard: the player controller has Q for the squad; it hands it over when the pawn is the Human. */
+	void OnThrowPressed();
+	/** Dev: scripted input (forward / right -1..1) as if the player held the keys. */
+	FVector2D DevInput = FVector2D::ZeroVector;
+	float DevInputUntil = -1.f;
 
 	// ---- The family: grandma and the kid are this same jointed figure with their own tables, size and habits (FolkCharacters.h) ----
 	/** HumanFig: who wears the figure. Set in the constructor of the subclass (InitFigure). */
@@ -225,6 +271,69 @@ protected:
 	UFUNCTION(Server, Reliable) void ServerShake();
 	UFUNCTION(NetMulticast, Unreliable) void MulticastShake();
 	bool AimPoint(FVector& OutPoint, FVector& OutDir) const;
+
+	// ---- the player's keys (HumanPhys.cpp)
+	void OnFirePressed();
+	void OnFireReleased();
+	void OnJumpPressed();
+	void OnJumpReleased();
+	void OnKickPressed();
+	void OnSprintPressed();
+	void OnSprintReleased();
+	float FireDownAt = -1.f;
+	float JumpDownAt = -1.f;
+	bool bJumpFired = false;
+	UFUNCTION(Server, Reliable) void ServerSwing(FVector_NetQuantize Point, float Charge);
+	UFUNCTION(Server, Reliable) void ServerCharge(bool bOn);
+	UFUNCTION(Server, Reliable) void ServerStompAt(FVector_NetQuantize Point);
+	UFUNCTION(Server, Reliable) void ServerJumpStomp();
+	UFUNCTION(Server, Reliable) void ServerKick();
+	UFUNCTION(Server, Reliable) void ServerThrow(FVector_NetQuantizeNormal Dir);
+	UFUNCTION(Server, Reliable) void ServerSprint(bool bOn);
+	/** The owner's machine moves a player Human (client-authoritative movement): the reel back is applied there. */
+	UFUNCTION(Client, Reliable) void ClientStagger(FVector_NetQuantize10 Vel, float Seconds);
+	UFUNCTION(NetMulticast, Unreliable) void MulticastJolt(FVector_NetQuantizeNormal Dir, float Strength, uint8 Kind);
+
+	// ---- the heavy body, every tick (HumanPhys.cpp)
+	void TickHeavyBody(float Dt);
+	/** Server: what his body runs into (furniture, chairs, food, fixtures): shoved by his momentum, or he reels back. */
+	void BodyContacts(float Dt);
+	/** Server: the thrown things in flight (food, the weapon): what they hit. */
+	void TickThrown(float Dt);
+	void DoKickImpact();
+	void DoJumpImpact();
+	/** Server: things on the floor/tables round P jump; light ones hop, pieces are shoved out radially (stomps). */
+	void Shockwave(const FVector& P, float Radius, float Power, const TCHAR* Why);
+	/** Local: the camera of the one who plays him (sway, bob, the run's FOV). */
+	void TickCamera(float Dt);
+	/** Local, PoseBody: the semi-ragdoll springs. */
+	void TickPhysLayer(float Dt, const FTransform& Body);
+	/** The stomp's landing point (server): the aimed one, or GetStompPoint. */
+	FVector StompAim = FVector::ZeroVector;
+	FVector PendingAim = FVector::ZeroVector;
+	bool bPendingAim = false;
+	/** The next TrySwat's Act.Arg: bits 0-1 the combo's blow, bit 2 charged (see SwingWindK). */
+	uint8 SwingArg = 0;
+public:
+	/** The wind-up of a swing with Act.Arg A, times the weapon's own: charged longer, the combo's follow-ups quicker. */
+	static float SwingWindK(uint8 A) { return (A & 4) ? 1.35f : (A & 3) ? 0.8f : 1.f; }
+protected:
+	FVector PrevBodyVel = FVector::ZeroVector;
+	float PrevBodySpeed = 0.f;
+	TMap<TWeakObjectPtr<UObject>, float> ContactCool;
+	float NextContactLog = 0.f;
+	struct FThrownThing { TWeakObjectPtr<AActor> What; float Until = 0.f; FVector LastVel = FVector::ZeroVector; float Kg = 1.f; };
+	TArray<FThrownThing> ThrownThings;
+	uint8 Combo = 0;
+	float ComboUntil = 0.f;
+	float CamBob = 0.f;
+	float BaseFov = 90.f;
+	FVector BaseSocket = FVector::ZeroVector;
+	bool bCamInit = false;
+	float LastSprintSent = -1.f;
+	float NextHandJolt = 0.f;
+	float NextStaggerAt = 0.f;
+	int32 BumpCount = 0;
 	UFUNCTION(NetMulticast, Unreliable) void MulticastStomp(uint8 Leg);
 	UFUNCTION() void OnRep_KnockedOut();
 	UFUNCTION() void OnRep_Rage();

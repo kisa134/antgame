@@ -13,6 +13,8 @@
 #include "EngineUtils.h"
 #include "GameFramework/GameStateBase.h"
 #include "Net/UnrealNetwork.h"
+#include "Kismet/GameplayStatics.h"
+#include "GameFramework/DamageType.h"
 
 namespace
 {
@@ -80,7 +82,9 @@ const AntWeapons::FDef* AntWeapons::Held(const AHumanCharacter* H)
 float AntWeapons::SwingWindup(const AHumanCharacter* H, float PaperWindup)
 {
 	const AHumanWeapon* W = HeldBy(H);
-	return W ? FMath::Max(0.4f, W->D().Windup) : PaperWindup;
+	const float Base = W ? FMath::Max(0.4f, W->D().Windup) : PaperWindup;
+	// The player's blows (HumanPhys.cpp): a charged one winds up longer, the combo's follow-ups quicker (never under the 0.4 s tell).
+	return (H && H->Act.Kind == HumanAct::Swat) ? FMath::Max(0.4f, Base * AHumanCharacter::SwingWindK(H->Act.Arg)) : Base;
 }
 
 void AntWeapons::OnSwingLanded(AHumanCharacter* H, const FVector& Point)
@@ -94,7 +98,13 @@ void AntWeapons::OnSwingLanded(AHumanCharacter* H, const FVector& Point)
 	const float R = 1.f + 0.15f * H->Rage;   // angrier: wider and harder
 	FVector Dir = (Point - Shoulder(H)).GetSafeNormal();
 	Dir = (Dir + FVector(0.f, 0.f, -0.6f)).GetSafeNormal();
-	AntWreck::Hit(H->GetWorld(), Point, D.Radius * R, Dir * D.Impulse * (1.f + 0.2f * H->Rage), D.WorldDamage * (1.f + 0.25f * H->Rage), H, D.Name);
+	// A player's swing sweeps across (HumanPhys.cpp): the impulse goes the way the weapon travels; a charged / combo blow is heavier.
+	const float P = FMath::Max(0.1f, H->SwingPower);
+	if (!H->SwingDir.IsNearlyZero())
+	{
+		Dir = (H->SwingDir.GetSafeNormal() + FVector(0.f, 0.f, -0.25f)).GetSafeNormal();
+	}
+	AntWreck::Hit(H->GetWorld(), Point, D.Radius * R * (P > 1.2f ? 1.25f : 1.f), Dir * D.Impulse * (1.f + 0.2f * H->Rage) * P, D.WorldDamage * (1.f + 0.25f * H->Rage) * P, H, D.Name);
 	if (W && D.Tier >= 2)
 	{
 		AntSfx::Everyone(H, AntSfx::Stomp, Point, FMath::FRandRange(0.6f, 0.75f));
@@ -129,7 +139,7 @@ bool AntWeapons::TryPickOrDrop(AHumanCharacter* H, const FVector& Point)
 	for (TActorIterator<AHumanWeapon> It(H->GetWorld()); It; ++It)
 	{
 		AHumanWeapon* W = *It;
-		if (W->Holder || W->bStashed || FVector::Dist2D(W->GetActorLocation(), H->GetActorLocation()) > 1900.f)
+		if (W->Holder || W->bStashed || W->bFlying || FVector::Dist2D(W->GetActorLocation(), H->GetActorLocation()) > 1900.f)
 		{
 			continue;
 		}
@@ -171,7 +181,7 @@ bool AntWeapons::AiTick(AHumanCharacter* H, AAntCharacter* Target, float Dt, FVe
 			for (TActorIterator<AHumanWeapon> It(W); It; ++It)
 			{
 				AHumanWeapon* Wp = *It;
-				if (Wp->Holder || Wp->bStashed || Wp->D().Tier <= MyTier || Wp->D().Tier > Want)
+				if (Wp->Holder || Wp->bStashed || Wp->bFlying || Wp->D().Tier <= MyTier || Wp->D().Tier > Want)
 				{
 					continue;
 				}
@@ -443,6 +453,86 @@ void AHumanWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	DOREPLIFETIME(AHumanWeapon, Holder);
 	DOREPLIFETIME(AHumanWeapon, LiePose);
 	DOREPLIFETIME(AHumanWeapon, bStashed);
+	DOREPLIFETIME(AHumanWeapon, bFlying);
+	DOREPLIFETIME(AHumanWeapon, FlyFrom);
+	DOREPLIFETIME(AHumanWeapon, FlyVel);
+	DOREPLIFETIME(AHumanWeapon, FlyStart);
+}
+
+float AHumanWeapon::NetNow() const
+{
+	const AGameStateBase* GS = GetWorld() ? GetWorld()->GetGameState() : nullptr;
+	return (HasAuthority() || !GS) ? GetWorld()->GetTimeSeconds() : (float)GS->GetServerWorldTimeSeconds();
+}
+
+FVector AHumanWeapon::FlyAt(float T) const
+{
+	return FVector(FlyFrom) + FVector(FlyVel) * T - FVector(0.f, 0.f, 0.5f * AntWreck::Gravity * 0.6f * T * T);
+}
+
+void AHumanWeapon::Launch(AHumanCharacter* By, const FVector& From, const FVector& Vel)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+	Holder = nullptr;
+	bStashed = false;
+	FlyBy = By;
+	FlyFrom = From;
+	FlyVel = Vel;
+	FlyStart = GetWorld()->GetTimeSeconds();
+	FlyPrev = From;
+	bFlying = true;
+	DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+	SetActorLocation(From);
+	ForceNetUpdate();
+	UE_LOG(LogTemp, Display, TEXT("ANTHEAVY throw: the %s flies from %s at %.0f uu/s"), D().Name, *From.ToCompactString(), Vel.Size());
+}
+
+void AHumanWeapon::FlyTick(float Dt)
+{
+	const float T = FMath::Max(0.f, NetNow() - FlyStart);
+	const FVector P = FlyAt(T);
+	const FVector V = FVector(FlyVel) - FVector(0.f, 0.f, AntWreck::Gravity * 0.6f * T);
+	// Tumbling end over end along its flight.
+	const FRotator R = FRotator(FMath::Fmod(-T * 900.f, 360.f), (float)V.Rotation().Yaw, 0.f);
+	if (!HasAuthority())
+	{
+		SetActorLocationAndRotation(P, R);
+		return;
+	}
+	FHitResult Hit;
+	FCollisionQueryParams Q(SCENE_QUERY_STAT(WeaponFly), false, this);
+	if (FlyBy.IsValid()) { Q.AddIgnoredActor(FlyBy.Get()); }
+	for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It) { Q.AddIgnoredActor(*It); }
+	const bool bHit = GetWorld()->SweepSingleByChannel(Hit, FlyPrev, P, FQuat::Identity, ECC_Visibility, FCollisionShape::MakeSphere(90.f), Q);
+	FlyPrev = P;
+	if (!bHit && T < 3.f)
+	{
+		SetActorLocationAndRotation(P, R);
+		return;
+	}
+	const FVector At = bHit ? FVector(Hit.ImpactPoint) : P;
+	const FDef& Df = D();
+	const float Speed = (float)V.Size();
+	const float K = FMath::Clamp(Speed / 3000.f, 0.4f, 1.6f) * (FlyBy.IsValid() ? FlyBy->StrengthK : 1.f);
+	const float Rad = FMath::Max(320.f, Df.Radius);
+	// What it meets: the furniture and the fixtures take the blow along its flight, ants under it are squashed.
+	AntWreck::Hit(GetWorld(), At, Rad, V.GetSafeNormal() * FMath::Max(8.f, Df.Impulse * 1.3f) * K, FMath::Max(10.f, Df.WorldDamage * 1.2f) * K, FlyBy.Get(), *FString::Printf(TEXT("бросок: %s"), Df.Name));
+	for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
+	{
+		if (!It->bDead && !It->IsInNest() && FVector::Dist(It->GetActorLocation(), At) < Rad && Df.AntDamage > 0.f)
+		{
+			UGameplayStatics::ApplyDamage(*It, Df.AntDamage * K, FlyBy.IsValid() ? FlyBy->GetController() : nullptr, FlyBy.Get(), UDamageType::StaticClass());
+		}
+	}
+	AntSfx::Everyone(this, AntSfx::Stomp, At, FMath::FRandRange(0.7f, 0.85f));
+	UE_LOG(LogTemp, Display, TEXT("ANTHEAVY throw: the %s hit %s at %s (speed %.0f, k %.2f)"), Df.Name, bHit && Hit.GetActor() ? *Hit.GetActor()->GetName() : TEXT("nothing"), *At.ToCompactString(), Speed, K);
+	bFlying = false;
+	FlyBy = nullptr;
+	const FVector Back = V.GetSafeNormal2D();
+	LayDown(At - Back * 160.f, (float)V.Rotation().Yaw + 60.f);
 }
 
 void AHumanWeapon::BeginPlay()
@@ -455,6 +545,11 @@ void AHumanWeapon::BeginPlay()
 void AHumanWeapon::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	if (bFlying)
+	{
+		FlyTick(DeltaSeconds);
+		return;
+	}
 	if (Holder && GetAttachParentActor() != Holder)
 	{
 		Attach();   // the hand segment came up late on this machine
@@ -533,6 +628,12 @@ void AHumanWeapon::Build()
 
 void AHumanWeapon::Attach()
 {
+	if (bFlying)
+	{
+		DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+		FlyPrev = FlyFrom;
+		return;   // in the air: FlyTick places it
+	}
 	if (Holder)
 	{
 		USceneComponent* Hand = Holder->GetSegment(HumanSeg::HandR);
@@ -568,7 +669,7 @@ FString AHumanWeapon::DoorNoun() const
 
 bool AHumanWeapon::CanInteract(const AAntCharacter* Ant) const
 {
-	return !Holder && !bDone && !bStashed && Kind != Sausage && Kind != None;
+	return !Holder && !bFlying && !bDone && !bStashed && Kind != Sausage && Kind != None;
 }
 
 FString AHumanWeapon::GetPrompt(const AAntCharacter* Ant) const

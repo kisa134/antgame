@@ -5,6 +5,7 @@
 #include "AntGameState.h"
 #include "AntCharacter.h"
 #include "HumanCharacter.h"
+#include "AntVersus.h"
 #include "FolkCharacters.h"
 #include "Critters.h"
 #include "KitchenLoot.h"
@@ -709,6 +710,7 @@ const TArray<FString>& AntAdmin::Help()
 			TEXT("rage N — ярость Человека 0..3"),
 			TEXT("hplay — вселиться в Человека (ещё раз — вернуться)"),
 			TEXT("hpuppet 1|0, hact stomp0|swat|grab|ko|... — Человек-кукла"),
+			TEXT("heavy play|patience|strength K|mass K|topple — тяжёлое тело Человека (и move/aim/sprint/swing/stomp/jump/kick/throw для тестов)"),
 			TEXT("killaim x y z / stunaim x y z — убить / оглушить у прицела"),
 			TEXT("routine day|evening|night — распорядок NPC и свет"),
 			TEXT("routine info|plan|warp S|skip who|off|on — распорядок v3"),
@@ -1139,6 +1141,15 @@ void SAntAdminPanel::Rebuild()
 		for (int32 i = 0; i <= 3; ++i) { Btn(FString::Printf(TEXT("Ярость %d"), i), R(FString::Printf(TEXT("rage %d"), i)), i == 3 ? Danger : FLinearColor(0.85f, 0.85f, 0.85f)); }
 		Btn(TEXT("Вселиться в Человека / выйти"), R(TEXT("hplay")), Blue);
 		Btn(TEXT("Погром"), R(TEXT("rampage")), Danger);
+		Section(TEXT("Человек: тяжёлое тело (ЛКМ удар, Пробел топот, Ctrl пинок, Q бросок, Shift бег)"));
+		Btn(TEXT("Играть за Человека"), R(TEXT("heavy play")), Blue);
+		BtnL([]() { return AntVersus::InfinitePatience() ? FString(TEXT("Бесконечное терпение: ВКЛ")) : FString(TEXT("Бесконечное терпение: выкл")); }, R(TEXT("heavy patience")), On);
+		Btn(TEXT("Сила x1"), R(TEXT("heavy strength 1")));
+		Btn(TEXT("Сила x2"), R(TEXT("heavy strength 2")), Danger);
+		Btn(TEXT("Сила x5"), R(TEXT("heavy strength 5")), Danger);
+		Btn(TEXT("Масса тела x1"), R(TEXT("heavy mass 1")));
+		Btn(TEXT("Масса тела x2"), R(TEXT("heavy mass 2")), Danger);
+		Btn(TEXT("Упасть (проверка)"), R(TEXT("heavy topple")));
 		Section(TEXT("Оружие Человека"));
 		static const TCHAR* Weapons[][2] = { { TEXT("none"), TEXT("Газета") }, { TEXT("slipper"), TEXT("Тапок") }, { TEXT("ladle"), TEXT("Половник") }, { TEXT("spatula"), TEXT("Лопатка") },
 			{ TEXT("book"), TEXT("Книга") }, { TEXT("pin"), TEXT("Скалка") }, { TEXT("pan"), TEXT("Сковорода") }, { TEXT("broom"), TEXT("Веник") }, { TEXT("bat"), TEXT("Бита") }, { TEXT("sausage"), TEXT("Колбаса") } };

@@ -36,6 +36,7 @@
 #include "GameFramework/GameStateBase.h"
 #include "LevelV3.h"
 #include "NpcRoutine.h"
+#include "Misc/ScopeExit.h"
 
 namespace HumanLook
 {
@@ -162,6 +163,12 @@ void AHumanCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME(AHumanCharacter, BackAcheUntil);
 	DOREPLIFETIME(AHumanCharacter, bTowel);
 	DOREPLIFETIME(AHumanCharacter, Task);
+	DOREPLIFETIME(AHumanCharacter, bSprinting);
+	DOREPLIFETIME(AHumanCharacter, bCharging);
+	DOREPLIFETIME(AHumanCharacter, StaggerUntil);
+	DOREPLIFETIME(AHumanCharacter, BodyMassK);
+	DOREPLIFETIME(AHumanCharacter, StrengthK);
+	DOREPLIFETIME(AHumanCharacter, KickReadyTime);
 }
 
 void AHumanCharacter::PlayBusy(uint8 Busy, const FVector& Target)
@@ -435,11 +442,20 @@ void AHumanCharacter::SetupPlayerInputComponent(UInputComponent* Input)
 	Input->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
 	Input->BindAxis("TurnRate", this, &AHumanCharacter::TurnRate);
 	Input->BindAxis("LookUpRate", this, &AHumanCharacter::LookUpRate);
-	Input->BindAction("Fire", IE_Pressed, this, &AHumanCharacter::OnStompPressed);
+	// The giant's keys (HumanPhys.cpp): LMB a blow (hold: charged), Space a stomp (hold: a jump-stomp), Ctrl/C a kick,
+	// RMB the spray, E grab / pick up, Q throw (the player controller hands Q over), F shake, Shift run.
+	Input->BindAction("Fire", IE_Pressed, this, &AHumanCharacter::OnFirePressed);
+	Input->BindAction("Fire", IE_Released, this, &AHumanCharacter::OnFireReleased);
+	Input->BindAction("Jump", IE_Pressed, this, &AHumanCharacter::OnJumpPressed);
+	Input->BindAction("Jump", IE_Released, this, &AHumanCharacter::OnJumpReleased);
+	Input->BindKey(EKeys::LeftControl, IE_Pressed, this, &AHumanCharacter::OnKickPressed);
+	Input->BindKey(EKeys::C, IE_Pressed, this, &AHumanCharacter::OnKickPressed);
+	Input->BindAction("Sprint", IE_Pressed, this, &AHumanCharacter::OnSprintPressed);
+	Input->BindAction("Sprint", IE_Released, this, &AHumanCharacter::OnSprintReleased);
 	Input->BindAction("AltFire", IE_Pressed, this, &AHumanCharacter::OnSprayPressed);
 	Input->BindAction("AltFire", IE_Released, this, &AHumanCharacter::OnSprayReleased);
 	Input->BindAction("Interact", IE_Pressed, this, &AHumanCharacter::OnGrabPressed);
-	Input->BindKey(EKeys::Q, IE_Pressed, this, &AHumanCharacter::OnSwatPressed);
+	Input->BindKey(EKeys::Q, IE_Pressed, this, &AHumanCharacter::OnThrowPressed);
 	Input->BindKey(EKeys::F, IE_Pressed, this, &AHumanCharacter::OnShakePressed);
 }
 
@@ -580,8 +596,11 @@ void AHumanCharacter::TrySwat(const FVector& InPoint, int32 Force)
 	{
 		return;
 	}
-	if (!AntVersus::Spend(this, AntVersus::SwingCost(this)))
+	if (!AntVersus::Spend(this, AntVersus::SwingCost(this) * ((SwingArg & 4) ? AntVersus::ChargedK : 1.f)))
 	{
+		SwingArg = 0;
+		SwingPower = 1.f;
+		SwingDir = FVector::ZeroVector;
 		return;   // versus: a player Human out of patience (AntVersus.h)
 	}
 	// Out of reach: slap as far as the arm goes.
@@ -591,7 +610,7 @@ void AHumanCharacter::TrySwat(const FVector& InPoint, int32 Force)
 	// Both land only where the arm really gets to.
 	const FHumanStyle& St = HumanBody::Style(Fig);
 	const AntWeapons::FDef* Wd = Fig == HumanFig::Dad ? AntWeapons::Held(this) : nullptr;   // a weapon in the fist (AntWeapon.h): its wind-up, reach, radius
-	const float SwatR = Wd ? Wd->Radius * (1.f + 0.15f * Rage) : St.SwatRadius;
+	const float SwatR = (Wd ? Wd->Radius * (1.f + 0.15f * Rage) : St.SwatRadius) * (SwingPower > 1.2f ? 1.25f : 1.f);
 	const float AntDmg = Wd ? Wd->AntDamage : 150.f;
 	const bool bSlap = !Wd && bNewBody && Fig == HumanFig::Dad && (Force >= 0 ? Force == 0 : Point.Z - FeetZ() < 260.f);   // (grandma swats the floor with her swatter too)
 	float Delay = 0.28f;
@@ -613,7 +632,7 @@ void AHumanCharacter::TrySwat(const FVector& InPoint, int32 Force)
 		{
 			Point = Shoulder + (Point - Shoulder).GetSafeNormal() * Arm;
 		}
-		Delay = Wd ? FMath::Max(0.4f, Wd->Windup) : St.SwatHit;
+		Delay = FMath::Max(0.4f, (Wd ? FMath::Max(0.4f, Wd->Windup) : St.SwatHit) * SwingWindK(SwingArg));   // a charged blow winds up longer, the combo's follow-ups quicker
 	}
 	else if (FVector::Dist(Point, Chest) > SwatRange)
 	{
@@ -623,11 +642,20 @@ void AHumanCharacter::TrySwat(const FVector& InPoint, int32 Force)
 	MulticastSwat(Point);
 	if (bNewBody)
 	{
-		StartAct(bSlap ? HumanAct::Slap : HumanAct::Swat, 0, Point);
+		StartAct(bSlap ? HumanAct::Slap : HumanAct::Swat, bSlap ? 0 : SwingArg, Point);
 	}
+	// The blow's weight (HumanPhys.cpp: charged, the combo's last, the admin's strength) and which way it sweeps.
+	const float Power = SwingPower * StrengthK;
+	const FVector SDir = SwingDir;
+	SwingArg = 0;
+	SwingPower = 1.f;
+	SwingDir = FVector::ZeroVector;
 	FTimerHandle H;
-	GetWorldTimerManager().SetTimer(H, FTimerDelegate::CreateWeakLambda(this, [this, Point, SwatR, AntDmg]()
+	GetWorldTimerManager().SetTimer(H, FTimerDelegate::CreateWeakLambda(this, [this, Point, SwatR, AntDmg, Power, SDir]()
 	{
+		SwingPower = Power;
+		SwingDir = SDir;
+		ON_SCOPE_EXIT { SwingPower = 1.f; SwingDir = FVector::ZeroVector; };
 		AntSfx::Everyone(this, AntSfx::Swat, Point, FMath::FRandRange(0.9f, 1.05f));
 		if (AAntSwarm* Swarm = AAntSwarm::Get(GetWorld()))
 		{
@@ -644,15 +672,20 @@ void AHumanCharacter::TrySwat(const FVector& InPoint, int32 Force)
 					UE_LOG(LogTemp, Display, TEXT("ANTV2 cover: %s is under cover, the swat at %s did nothing"), *Ant->GetDisplayName(), *Point.ToCompactString());
 					continue;
 				}
-				if (AntDmg > 0.f) { UGameplayStatics::ApplyDamage(Ant, AntDmg, GetController(), this, UDamageType::StaticClass()); }
+				if (AntDmg > 0.f) { UGameplayStatics::ApplyDamage(Ant, AntDmg * Power, GetController(), this, UDamageType::StaticClass()); }
+				if (!Ant->bDead && !Ant->IsAttached() && !SDir.IsNearlyZero())
+				{
+					Ant->ApplyLaunch((SDir.GetSafeNormal2D() * 900.f * FMath::Min(Power, 3.f) + FVector(0.f, 0.f, 450.f)) * AntKit::SpeedK);   // batted away along the swing
+				}
 			}
 		}
 		for (TActorIterator<AKitchenLoot> It(GetWorld()); It; ++It)
 		{
 			const FVector To = It->GetActorLocation() - Point;
-			if (To.Size() < SwatR * 1.6f)
+			if (To.Size() < SwatR * 1.6f && !It->bHeld)
 			{
-				It->Kick(To.GetSafeNormal() * 500.f + FVector(0.f, 0.f, 300.f), It->GetActorLocation());
+				const FVector Out = SDir.IsNearlyZero() ? To.GetSafeNormal() : (To.GetSafeNormal() * 0.4f + SDir.GetSafeNormal() * 0.8f).GetSafeNormal();
+				It->Kick(Out * 500.f * FMath::Min(Power, 4.f) + FVector(0.f, 0.f, 300.f), It->GetActorLocation());
 			}
 		}
 		if (Fig == HumanFig::Dad)
@@ -772,12 +805,19 @@ bool AHumanCharacter::IsBodyBusy() const
 	case HumanAct::Throw: return T < HumanAct::ThrowRelease + 0.05f;
 	case HumanAct::Fall: return T < HumanAct::FallUp;
 	case HumanAct::Wipe: return T < Act.Arg * 0.1f;
+	case HumanAct::Kick: return T < HumanAct::KickHit + 0.12f;
+	case HumanAct::JumpStomp: return T < HumanAct::JumpHit + 0.35f;
 	default: return false;
 	}
 }
 
 bool AHumanCharacter::IsRooted() const
 {
+	if (bNewBody && (Act.Kind == HumanAct::Kick || Act.Kind == HumanAct::JumpStomp))
+	{
+		const float T = ActTime();
+		return T >= 0.f && T < (Act.Kind == HumanAct::Kick ? HumanAct::KickHit + 0.2f : HumanAct::JumpHit + 0.45f);   // on one leg / in the air: no steering
+	}
 	if (bNewBody && (Act.Kind == HumanAct::Wipe || Act.Kind == HumanAct::Fall))
 	{
 		return IsBodyBusy();   // on the floor, or down on his haunches with the towel
@@ -833,7 +873,7 @@ void AHumanCharacter::MulticastSwat_Implementation(FVector_NetQuantize Point)
 
 void AHumanCharacter::MoveForward(float Value)
 {
-	if (Controller && !FMath::IsNearlyZero(Value) && !IsRooted())   // down on the floor with a hand out: he gets up first
+	if (Controller && !FMath::IsNearlyZero(Value) && !IsRooted() && !IsStaggered())   // down on the floor with a hand out: he gets up first; reeling back: no
 	{
 		const FRotator Yaw(0.f, Controller->GetControlRotation().Yaw, 0.f);
 		AddMovementInput(FRotationMatrix(Yaw).GetUnitAxis(EAxis::X), Value);
@@ -842,7 +882,7 @@ void AHumanCharacter::MoveForward(float Value)
 
 void AHumanCharacter::MoveRight(float Value)
 {
-	if (Controller && !FMath::IsNearlyZero(Value) && !IsRooted())
+	if (Controller && !FMath::IsNearlyZero(Value) && !IsRooted() && !IsStaggered())
 	{
 		const FRotator Yaw(0.f, Controller->GetControlRotation().Yaw, 0.f);
 		AddMovementInput(FRotationMatrix(Yaw).GetUnitAxis(EAxis::Y), Value);
@@ -879,10 +919,12 @@ void AHumanCharacter::TryStomp(int32 Leg)
 	bStompPending = true;
 	StompImpactTime = Now + 0.55f;
 	StompReadyTime = Now + 1.05f * (1.f - 0.18f * Rage);
+	StompAim = bPendingAim ? PendingAim : GetStompPoint(PendingLeg);   // the player aims his stomps (TryStompAt)
+	bPendingAim = false;
 	MulticastStomp(PendingLeg);
 	if (bNewBody)
 	{
-		StartAct(HumanAct::Stomp, PendingLeg, GetStompPoint(PendingLeg));
+		StartAct(HumanAct::Stomp, PendingLeg, StompAim);
 	}
 }
 
@@ -921,8 +963,12 @@ bool AHumanCharacter::InCover(const UWorld* World, const FVector& P)
 
 void AHumanCharacter::DoStompImpact()
 {
-	const FVector P = GetStompPoint(PendingLeg);
+	const FVector P = StompAim.IsZero() ? GetStompPoint(PendingLeg) : StompAim;
 	const float SR = GetStompRadius();
+	if (Fig == HumanFig::Dad)
+	{
+		Shockwave(P, SR * 2.6f, 1.f * StrengthK, TEXT("топот"));   // the floor jumps: light things hop, pieces round the slipper are shoved out (HumanPhys.cpp)
+	}
 	if (AAntSwarm* Swarm = AAntSwarm::Get(GetWorld()))
 	{
 		Swarm->KillInSphere(P, SR * 1.15f);
@@ -1056,6 +1102,14 @@ float AHumanCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damage
 	}
 	Health = FMath::Max(0.f, Health - Actual);
 	LastHurtTime = GetWorld()->GetTimeSeconds();
+	for (int32 Side = 0; Side < 2 && DamageCauser; ++Side)
+	{
+		if (FVector::Dist(DamageCauser->GetActorLocation(), GetPalmLocation(Side)) < 500.f)
+		{
+			Jolt(GetActorRightVector() * (Side == 0 ? -1.f : 1.f), 1.f, (uint8)(3 + Side));   // bitten on the hand: it jerks (HumanPhys.cpp)
+			break;
+		}
+	}
 	if (DamageCauser && FVector::Dist(DamageCauser->GetActorLocation(), GetPalmLocation(1)) < 450.f && FMath::FRand() < 0.35f)
 	{
 		AntWeapons::Drop(this, TEXT("укусили за руку"));
@@ -1152,7 +1206,7 @@ void AHumanCharacter::Tick(float DeltaSeconds)
 		{
 			bStompPending = false;
 			DoStompImpact();
-			AntSfx::Everyone(this, AntSfx::Stomp, GetStompPoint(PendingLeg), FMath::FRandRange(0.9f, 1.1f));
+			AntSfx::Everyone(this, AntSfx::Stomp, StompAim.IsZero() ? GetStompPoint(PendingLeg) : StompAim, FMath::FRandRange(0.9f, 1.1f));
 		}
 
 		if (bSpraying && (SprayFuel <= 0.f || bKnockedOut))
@@ -1265,6 +1319,7 @@ void AHumanCharacter::Tick(float DeltaSeconds)
 		}
 	}
 
+	TickHeavyBody(DeltaSeconds);   // inertia, what his body shoves, thrown things, the camera (HumanPhys.cpp)
 	AnimateBody(DeltaSeconds);
 	UpdateVisuals(DeltaSeconds);
 }

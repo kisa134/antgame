@@ -1562,7 +1562,7 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 	{
 		return;   // carrying together: carry spawn|crew|go|desync|yank|stop|kill|human|rivals|army|workers|ramp|corner|cam|shot|log|info (AntCarry.cpp)
 	}
-	if (AntWreck::DevCommand(this, A) || AntWeapons::DevCommand(this, A) || AntVersus::DevCommand(this, A))
+	if (AntWreck::DevCommand(this, A) || AntWeapons::DevCommand(this, A) || AntVersus::DevCommand(this, A) || AHumanCharacter::HeavyDevCommand(this, A))
 	{
 		return;   // wreck ..., weapon ..., rage N, versus ... (AntWreck.cpp, AntWeapon.cpp, AntVersus.cpp)
 	}

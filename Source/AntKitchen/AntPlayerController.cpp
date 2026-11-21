@@ -391,6 +391,11 @@ FVector AAntPlayerController::CrosshairPoint() const
 
 void AAntPlayerController::SquadHaul()
 {
+	if (AHumanCharacter* Hu = Cast<AHumanCharacter>(GetPawn()))
+	{
+		Hu->OnThrowPressed();   // the Human's Q: throw what is in his hands (this binding eats Q before the pawn's)
+		return;
+	}
 	if (Cast<AAntCharacter>(GetPawn()) && AAntRaid::Get(GetWorld())) { ServerSquad(AntSquad::Haul, CrosshairPoint()); }
 }
 
