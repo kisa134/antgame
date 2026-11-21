@@ -153,3 +153,18 @@ To add a sound to new code: `AntAudio::Play(this, EAntSfx::X, Where, Intensity)`
 5. `UnrealEditor-Cmd.exe AntKitchen.uproject -run=pythonscript -script=<abs>/Tools/audio/import_audio.py -unattended -nosplash -nullrhi`
    → `/Game/Audio/{Sfx,Music,Mix}` (classes, looping, inline music). `/Game/Audio` is in `DirectoriesToAlwaysCook`.
 6. New id: add it to `EAntSfx`, a row to `Table` and `Names` in AntAudio.cpp (same order; a static_assert counts them).
+
+## 7. Verification (21.11.2026)
+
+- Build: `AntKitchenEditor` and `AntKitchen` (Win64 Development) on code/ANT-sound compile clean. Packaged build: `DistSound/`
+  (made from code/ANT-sound + code/ANT-capture merged in a throwaway worktree, for the capture rig; the sound code is identical).
+  Cook: 1342 packages, `/Game/Audio` in the pak (290 files). Packaged log: no `SoundsReal` / `Audio` SkipPackage or missing
+  warnings (only unrelated `/Game/Meshy` spider/fly meshes).
+- Session with sound capture (`Tools/audio/S27_sound-demo.scene`, the capture rig records the game's output, deterministic audio,
+  1280x720 30 fps, 80 s): no silence, no clipped samples, peak -6.4 dBFS, RMS -28..-20 dB; 373 sounds of 37 kinds logged.
+  The director did what it should: Funk set, calm (base only, I 0.0-0.07) → the Human comes in and rages (tension 0.67 → 1.0)
+  → chase and stomps (action up) → kitchen chaos (action 1.0, excitement 0.98) → the Human leaves, action back to 0 in ~12 s
+  (tension stays: his rage is 3) → last light at 30 s (sting + urgency 1.0) → extraction: Win sting, the nest march.
+  Card stings and chimes on every snowball pick. `Tools/audio/analyse_capture.py <audio.wav> <game.log>` repeats the check.
+- Loops: `Tools/audio/check_loops.py` — every music stem and ambience loop seam below the signal's own sample-to-sample step.
+- Demo clip: `<AntKitchen>/Saved/clips/final/AK_sound_demo_v1.mp4` (80 s, captions say which layer is playing).
