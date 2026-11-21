@@ -85,6 +85,7 @@ struct FAntCarryState
 		FVector RealV = FVector::ZeroVector;
 		bool bDragged = false, bAtLimit = false;
 		float JoinedAt = 0.f;                     // a fresh grip settles for a moment before any yank counts
+		float TornT = 0.f;                        // workers: how long it has been pulled too far
 		bool IsWorker() const { return Worker >= 0; }
 	};
 	TArray<FMate> Mates;
@@ -389,7 +390,9 @@ bool AntCarry::AddCarrier(AKitchenLoot* L, AActor* Who, int32 Worker, const FVec
 	}
 	FVector Closest = L->GetActorLocation();
 	if (UBoxComponent* B = FAntCarrySolver::Body(L)) { B->GetClosestPointOnCollision(At, Closest); }
-	const FVector P = PickGrip(L, FVector(At.X, At.Y, L->GetActorLocation().Z - L->GetRadius() * 0.3f), Closest);
+	// a worker's jaws are a few units above the floor the load stands on
+	const float Bottom = (float)L->GetActorLocation().Z - (FAntCarrySolver::Body(L) ? (float)FAntCarrySolver::Body(L)->GetScaledBoxExtent().Z : L->GetRadius() * 0.5f);
+	const FVector P = PickGrip(L, FVector(At.X, At.Y, Bottom + 5.f), Closest);
 	FAntCarryState::FMate M;
 	M.Army = Army;
 	M.Worker = Worker;
@@ -684,6 +687,7 @@ void AntCarry::ServerTick(AKitchenLoot* L, float Dt, const float* Extra, int32 W
 
 void FAntCarrySolver::Workers(AKitchenLoot* L, FAntCarryState& S, float Dt)
 {
+	Dt = FMath::Min(Dt, 0.05f);   // (a hitch - a screenshot, a load - must not throw the virtual jaws across the room)
 	const FTune& K = CT();
 	UWorld* W = L->GetWorld();
 	const FTransform TM = L->GetActorTransform();
@@ -730,7 +734,8 @@ void FAntCarrySolver::Workers(AKitchenLoot* L, FAntCarryState& S, float Dt)
 		M.Jaw = Jaw;
 		// dragged off its feet: the load runs away faster than it can walk, or it hangs from a load that is lifted high
 		M.bDragged = Pull.Size() > Pace * 1.25f + 60.f || (float)G.Z - FloorZ > 26.f;
-		if (D > 70.f || (float)G.Z - FloorZ > 70.f)
+		M.TornT = (D > 70.f || (float)G.Z - FloorZ > 70.f) ? M.TornT + Dt : 0.f;
+		if (M.TornT > 0.3f)
 		{
 			// torn off (a corner, an edge): it falls away; its squad may send it back
 			UE_LOG(LogTemp, Display, TEXT("ANTCARRY worker %d of %s torn off «%s»"), M.Worker, M.Army.IsValid() ? *M.Army->GetName() : TEXT("?"), *L->LootName);
@@ -826,7 +831,7 @@ void FAntCarrySolver::Yanks(AKitchenLoot* L, FAntCarryState& S, float Dt, const 
 			S.NextBark = 0.f;
 			SayBark(L, S, B_Ouch, i, 1.2f);
 		}
-		else if (Y > K.YankV && i != Cause)
+		else if (Y > K.YankV && Cause >= 0 && i != Cause)
 		{
 			// pulled off balance: the body reels along the pull and the ant takes a stumbling step
 			M.NextYank = Now + 0.9f;
@@ -1360,22 +1365,40 @@ bool AntCarry::JustTumbled(const AAntCharacter* Ant)
 
 bool AntCarry::WorkerPose(const AAntArmy* Army, int32 Worker, FVector& Pos, FVector& Dir, float& Lift)
 {
-	if (!Army || Worker < 0 || Worker > 30)
+	if (!Army || Worker < 0 || Worker > 254)
 	{
 		return false;
 	}
-	const AKitchenLoot* Cands[2] = { Army->Cargo, IsValid(Army->Commander) ? Army->Commander->Carrying : nullptr };
-	for (const AKitchenLoot* L : Cands)
+	// Which loads this army's workers hold: one pass over the carried loads per frame, for every army at once.
+	static uint64 Frame = 0;
+	static TMap<const AAntArmy*, TArray<TPair<TWeakObjectPtr<AKitchenLoot>, int32>>> Held;
+	if (Frame != GFrameCounter)
 	{
-		if (!IsValid(L) || !L->CarryNet.bActive)
+		Frame = GFrameCounter;
+		Held.Reset();
+		for (TActorIterator<AKitchenLoot> It(Army->GetWorld()); It; ++It)
+		{
+			const FAntCarryNet& Net = It->CarryNet;
+			if (!Net.bActive) { continue; }
+			for (int32 g = 0; g < Net.Grips.Num(); ++g)
+			{
+				if (Net.Grips[g].Worker != 255 && Net.Grips[g].Who) { Held.FindOrAdd(Cast<AAntArmy>(Net.Grips[g].Who)).Add(TPair<TWeakObjectPtr<AKitchenLoot>, int32>(*It, g)); }
+			}
+		}
+	}
+	const TArray<TPair<TWeakObjectPtr<AKitchenLoot>, int32>>* List = Held.Find(Army);
+	if (!List)
+	{
+		return false;
+	}
+	for (const TPair<TWeakObjectPtr<AKitchenLoot>, int32>& E : *List)
+	{
+		const AKitchenLoot* L = E.Key.Get();
+		if (!L || !L->CarryNet.Grips.IsValidIndex(E.Value) || L->CarryNet.Grips[E.Value].Worker != Worker)
 		{
 			continue;
 		}
-		const FAntCarryGrip* G = NetGrip(L, Army, Worker);
-		if (!G)
-		{
-			continue;
-		}
+		const FAntCarryGrip* G = &L->CarryNet.Grips[E.Value];
 		const FVector Gw = L->GetActorTransform().TransformPosition(G->Local);
 		const FVector Out = Flat(Gw - L->GetActorLocation()).GetSafeNormal(UE_SMALL_NUMBER, FVector::ForwardVector);
 		Dir = -Out;
@@ -1787,6 +1810,7 @@ bool AntCarry::DevCommand(AAntKitchenGameMode* GM, const TArray<FString>& A)
 	}
 	if (Op == TEXT("cam") && PC)
 	{
+		const AKitchenLoot* L0 = D.Load.Get();
 		// carry cam side|front|back|top dist height [fov] | carry cam player | carry cam off
 		const FString Mode = A.IsValidIndex(2) ? A[2].ToLower() : FString(TEXT("side"));
 		if (Mode == TEXT("player") || Mode == TEXT("off"))
@@ -1795,7 +1819,7 @@ bool AntCarry::DevCommand(AAntKitchenGameMode* GM, const TArray<FString>& A)
 			PC->SetViewTargetWithBlend(PC->GetPawn(), 0.f);
 			return true;
 		}
-		const float Dist = Num(3, 900.f), Hgt = Num(4, 220.f);
+		const float Dist = FMath::Max(Num(3, 900.f), L0 ? L0->GetRadius() * 1.6f + 60.f : 0.f), Hgt = Num(4, 220.f);
 		D.CamFov = Num(5, 40.f);
 		FVector G = GroupDir();
 		if (G.IsNearlyZero()) { G = FVector::ForwardVector; }
