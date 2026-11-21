@@ -1,4 +1,6 @@
 ﻿#include "AntHUD.h"
+#include "AntUiStyle.h"
+#include "AntUiCanvas.h"
 #include "AntRaid.h"
 #include "AntRun.h"
 #include "AntGameState.h"
@@ -517,6 +519,17 @@ void AAntHUD::DrawRaid(AAntRaid* Raid, AAntGameState* GS, APawn* Me)
 
 void AAntHUD::DrawRaidResults(AAntRaid* Raid, AAntGameState* GS)
 {
+	if (!AntUi::Classic())
+	{
+		// The debrief as a newsreel + a typed field report (AntUiCanvas.cpp). -AntUiClassic: the old panel below.
+		const int32 SecondsLeft = FMath::Max(0, FMath::CeilToInt(Raid->PhaseEnds - GS->GetServerWorldTimeSeconds()));
+		AntUiCanvas::DrawDebrief(Canvas, GetWorld(), Raid->Result, GS, SecondsLeft);
+		if (AAntPlayerController* PC = Cast<AAntPlayerController>(PlayerOwner))
+		{
+			if (PC->WasInputKeyJustPressed(EKeys::Enter)) { PC->ServerRaid(AntRaidCmd::Skip, 0, 0); }
+		}
+		return;
+	}
 	const float W = Canvas->ClipX, H = Canvas->ClipY;
 	UFont* Small = GEngine->GetSmallFont();
 	UFont* Med = GEngine->GetMediumFont();

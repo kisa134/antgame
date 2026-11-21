@@ -1,4 +1,6 @@
 ﻿#include "AntRts.h"
+#include "AntUiStyle.h"
+#include "AntUiCanvas.h"
 #include "AntSnowball.h"
 #include "AntTrail.h"
 #include "AntHaulAdapter.h"
@@ -1238,6 +1240,12 @@ namespace AntRts
 		if (P->Offer.Num() > 0)
 		{
 			GCardsShown = true;
+			if (!AntUi::Classic())
+			{
+				// Illustrated cards with rarity frames (AntUiCanvas.cpp); the click rectangles stay this file's.
+				AntUiCanvas::DrawCardPick(Cv, P->Offer, P->OfferEnds, Now, P->PicksDone + 1, In ? In->Mouse : FVector2D::ZeroVector, In && In->bRtsMode, GCardRect);
+				return;
+			}
 			const float CW = 330.f * K, CH = 118.f * K, Gap = 18.f * K;
 			const float X0 = Cv->ClipX * 0.5f - (CW * 3.f + Gap * 2.f) * 0.5f;
 			const float Y0 = Cv->ClipY - CH - 200.f * K;

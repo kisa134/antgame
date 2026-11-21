@@ -34,6 +34,8 @@
 #include "Misc/ScopeExit.h"
 #include "AntRts.h"
 #include "AntAdmin.h"
+#include "AntUiStyle.h"
+#include "AntUiCanvas.h"
 
 namespace
 {
@@ -52,7 +54,7 @@ namespace HudColors
 	const FLinearColor Gold(1.f, 0.8f, 0.2f);
 	const FLinearColor Red(1.f, 0.3f, 0.25f);
 	const FLinearColor Green(0.4f, 1.f, 0.4f);
-	const FLinearColor Panel(0.f, 0.f, 0.f, 0.55f);
+	const FLinearColor Panel(0.012f, 0.007f, 0.004f, 0.62f);   // warm ink (docs/UI_STYLE.md)
 }
 using namespace HudColors;
 
@@ -78,8 +80,13 @@ void AAntHUD::TxtRight(const FString& Str, float RightX, float Y, const FLinearC
 
 void AAntHUD::Bar(float X, float Y, float W, float H, float Frac, const FLinearColor& Fill)
 {
-	DrawRect(Panel, X, Y, W, H);
-	DrawRect(Fill, X + 2.f, Y + 2.f, (W - 4.f) * FMath::Clamp(Frac, 0.f, 1.f), H - 4.f);
+	if (AntUi::Classic())
+	{
+		DrawRect(Panel, X, Y, W, H);
+		DrawRect(Fill, X + 2.f, Y + 2.f, (W - 4.f) * FMath::Clamp(Frac, 0.f, 1.f), H - 4.f);
+		return;
+	}
+	AntUiCanvas::Bar(Canvas, X, Y, W, H, Frac, Fill);   // ink track, fill, a light edge, ticks (AntUiCanvas.cpp)
 }
 
 void AAntHUD::Marker(const FVector& World, const FString& Label, const FLinearColor& C, bool bClampToEdges)
@@ -119,6 +126,15 @@ void AAntHUD::Marker(const FVector& World, const FString& Label, const FLinearCo
 		// No words: just a small quiet mark where the thing is.
 		DrawRect(FLinearColor(0.f, 0.f, 0.f, 0.5f), P.X - 4.f * S, P.Y - 4.f * S, 8.f * S, 8.f * S);
 		DrawRect(FLinearColor(C.R, C.G, C.B, 0.8f), P.X - 3.f * S, P.Y - 3.f * S, 6.f * S, 6.f * S);
+		return;
+	}
+	if (const TCHAR* IconName = AntUi::Classic() ? nullptr : AntUi::IconForLabel(Label))
+	{
+		// The front end's icon for the thing (cake, nest, the Giant, ...) on a small ink disc, the words under it.
+		const float IS = 34.f * S;
+		AntUiCanvas::Tile(Canvas, AntUi::Tex(TEXT("Materials/T_UI_Dot")), P.X - IS * 0.8f, P.Y - IS * 0.8f, IS * 1.6f, IS * 1.6f, FLinearColor(0.f, 0.f, 0.f, 0.55f));
+		AntUiCanvas::Icon(Canvas, IconName, P.X - IS * 0.5f, P.Y - IS * 0.5f, IS);
+		Txt(Full, P.X, P.Y + IS * 0.55f, C, GEngine->GetSmallFont(), 1.05f * S, true);
 		return;
 	}
 	DrawRect(C, P.X - 5.f * S, P.Y - 5.f * S, 10.f * S, 10.f * S);
@@ -179,7 +195,7 @@ void AAntHUD::DrawHUD()
 	{
 		return;
 	}
-	S = FMath::Max(0.7f, Canvas->ClipY / 1080.f);
+	S = FMath::Max(0.7f, Canvas->ClipY / 1080.f) * AntUi::HudScale();   // the HUD scale setting (AntUiSettings.h)
 
 	// Dev: -AntFpsLog writes the frame rate to the log (to measure without a screenshot).
 	static const bool bFpsLog = FParse::Param(FCommandLine::Get(), TEXT("AntFpsLog"));
@@ -211,6 +227,7 @@ void AAntHUD::DrawHUD()
 		return;
 	}
 	ON_SCOPE_EXIT { if (Film && Canvas) { Film->DrawOverlay(this, Canvas); } };
+	ON_SCOPE_EXIT { if (Canvas) { AntUiCanvas::DrawTests(this, Canvas); } };   // dev: -AntUiTest=cards|debrief|debrieflose
 
 	// A raid: the nest screen and the results cover everything else.
 	AAntRaid* Raid = (GS && GS->bHeistMode) ? AAntRaid::Get(GetWorld()) : nullptr;

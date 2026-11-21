@@ -34,6 +34,10 @@ public:
 	void OpenMenu(bool bPause);
 	void CloseMenu();
 	void ToggleMenu();
+	/** The Slate front end (AntUiMenu.h): opens the menu on that screen, or switches the open one to it. */
+	void OpenUiScreen(uint8 Screen);
+	void SetUiSettingsTab(int32 Tab);
+	TWeakPtr<class SAntUiMenu> UiMenu;
 
 	UFUNCTION(Client, Reliable) void ClientToast(const FString& Text);
 	UFUNCTION(Client, Unreliable) void ClientDamageNumber(FVector_NetQuantize Location, int32 Amount, bool bCrit);
@@ -101,6 +105,8 @@ public:
 	void Admin(const FString& Cmd);
 	UFUNCTION(Server, Reliable) void ServerAdmin(const FString& Cmd);
 	TSharedPtr<class SWidget> AdminWidget;
+	/** While the admin panel is open: swallows the right mouse button (it is the look button then). */
+	UPROPERTY() class UInputComponent* AdminLook = nullptr;
 
 	TSharedPtr<class SWidget> MenuWidget;
 	/** Filming mode (F8, AntFilm.h): made for the local player only. */
