@@ -38,6 +38,7 @@
 #include "LevelV2.h"
 #include "LevelV3.h"
 #include "KitchenFixture.h"
+#include "Map4.h"
 #include "KitchenBuilder.h"
 #include "HumanCharacter.h"
 #include "AntRaid.h"
@@ -1573,6 +1574,10 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 	if (AntWreck::DevCommand(this, A) || AntWeapons::DevCommand(this, A) || AntVersus::DevCommand(this, A) || AHumanCharacter::HeavyDevCommand(this, A))
 	{
 		return;   // wreck ..., weapon ..., rage N, versus ... (AntWreck.cpp, AntWeapon.cpp, AntVersus.cpp)
+	}
+	if (Map4::DevCommand(this, A))
+	{
+		return;   // map v4: art audit | art shots <tag> [cams] | colltest [walkers] [kinds] [tag] | humantest (Map4.cpp)
 	}
 	if (AntBodyRules::DevCommand(this, A))
 	{

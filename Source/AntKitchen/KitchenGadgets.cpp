@@ -1,4 +1,5 @@
 ﻿#include "KitchenGadgets.h"
+#include "Map4Look.h"
 #include "AntFx.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
@@ -93,7 +94,13 @@ void AKitchenKnob::BeginPlay()
 			KnobBase = Knob->GetRelativeRotation().Quaternion();
 		}
 		const int32 Ring = Coil ? Coil->GetMaterialIndex(TEXT("BurnerRing")) : INDEX_NONE;
-		if (UMaterialInterface* Base = Ring != INDEX_NONE ? LoadObject<UMaterialInterface>(nullptr, TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial")) : nullptr)
+		const Map4Look::FLook* CoilLook = Ring != INDEX_NONE && Map4Look::Enabled() ? Map4Look::Named(TEXT("Coil")) : nullptr;
+		if (CoilLook)
+		{
+			CoilMID = Map4Look::Own(*CoilLook, Coil);   // map v4: cast iron that glows red as it heats up ("Color" drives it as before)
+			if (CoilMID) { Coil->SetMaterial(Ring, CoilMID); }
+		}
+		else if (UMaterialInterface* Base = Ring != INDEX_NONE ? LoadObject<UMaterialInterface>(nullptr, TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial")) : nullptr)
 		{
 			CoilMID = UMaterialInstanceDynamic::Create(Base, Coil);   // the ring reddens as it heats up
 			Coil->SetMaterial(Ring, CoilMID);

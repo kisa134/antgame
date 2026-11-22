@@ -6,6 +6,7 @@
 #include "Sound/SoundAttenuation.h"
 #include "Kismet/GameplayStatics.h"
 #include "AntGameState.h"
+#include "Map4Look.h"
 #include "Engine/World.h"
 #include "Engine/CollisionProfile.h"
 #include "Components/StaticMeshComponent.h"
@@ -28,6 +29,10 @@ UStaticMesh* ShapeMesh(EAntShape Shape)
 		TEXT("/Engine/BasicShapes/Cone.Cone")
 	};
 	const int32 Index = FMath::Clamp((int32)Shape, 0, 3);
+	if (Map4Look::Enabled())
+	{
+		if (UStaticMesh* M = Map4Look::Shape(Index)) { return M; }   // map v4: bevelled, UV'd, the same size and pivot
+	}
 	return LoadObject<UStaticMesh>(nullptr, Paths[Index]);
 }
 
@@ -36,6 +41,14 @@ UMaterialInstanceDynamic* Paint(UStaticMeshComponent* Comp, const FLinearColor& 
 	if (!Comp)
 	{
 		return nullptr;
+	}
+	if (Map4Look::Enabled())
+	{
+		if (UMaterialInstanceDynamic* M = Map4Look::Paint(Comp, Color))   // map v4: painted enamel / plastic, same "Color" parameter
+		{
+			Comp->SetMaterial(0, M);
+			return M;
+		}
 	}
 	UMaterialInterface* Base = LoadObject<UMaterialInterface>(nullptr, TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"));
 	if (!Base)
@@ -305,10 +318,25 @@ const FPart& Get(const TCHAR* Name)
 	FPart P;
 	const FString N(Name);
 	const FString Short = N.StartsWith(TEXT("SM_")) ? N.Mid(3) : N;
-	P.Mesh = LoadObject<UStaticMesh>(nullptr, *FString::Printf(TEXT("/Game/Meshy/%s/%s.%s"), *N, *N, *N), nullptr, LOAD_NoWarn | LOAD_Quiet);
+	FString MeshName = N, LookName;
+	if (N.Split(TEXT("@"), &MeshName, &LookName)) {}
+	if (N.StartsWith(TEXT("SM_M4_")))
+	{
+		// map v4: a generated prop (/Game/Map4/Props) with its own material, or "SM_M4_<shape>@<look>": a base shape in a named look
+		P.Mesh = Map4Look::Prop(*MeshName);
+		if (P.Mesh)
+		{
+			const Map4Look::FLook* L = LookName.IsEmpty() ? nullptr : Map4Look::Named(*LookName);
+			P.Material = L ? Map4Look::Get(*L) : P.Mesh->GetMaterial(0);
+		}
+	}
+	else
+	{
+		P.Mesh = LoadObject<UStaticMesh>(nullptr, *FString::Printf(TEXT("/Game/Meshy/%s/%s.%s"), *N, *N, *N), nullptr, LOAD_NoWarn | LOAD_Quiet);
+	}
 	if (P.Mesh)
 	{
-		P.Material = LoadObject<UMaterialInterface>(nullptr, *FString::Printf(TEXT("/Game/Meshy/%s/MI_%s.MI_%s"), *N, *Short, *Short), nullptr, LOAD_NoWarn | LOAD_Quiet);
+		if (!P.Material) { P.Material = LoadObject<UMaterialInterface>(nullptr, *FString::Printf(TEXT("/Game/Meshy/%s/MI_%s.MI_%s"), *N, *Short, *Short), nullptr, LOAD_NoWarn | LOAD_Quiet); }
 		P.Bounds = P.Mesh->GetBoundingBox();
 		const FVector E = P.Bounds.GetSize();
 		P.LongAxis = (E.X >= E.Y && E.X >= E.Z) ? 0 : ((E.Y >= E.Z) ? 1 : 2);
@@ -468,6 +496,30 @@ UStaticMeshComponent* AddArt(AActor* Owner, USceneComponent* Parent, const FPart
 
 const TCHAR* FoodArtName(const FString& LootName)
 {
+	if (Map4Look::Enabled())
+	{
+		// map v4: every food has a model (generated props, Meshy food, or a base shape in a real food look)
+		static const TCHAR* const Map[][2] =
+		{
+			{ TEXT("Полбутерброда"), TEXT("SM_M4_Sandwich") }, { TEXT("Котлета"), TEXT("SM_M4_Cutlet") }, { TEXT("Печенье с противня"), TEXT("SM_M4_Cookie") },
+			{ TEXT("мороженого"), TEXT("SM_M4_IceCream") }, { TEXT("пломбира"), TEXT("SM_M4_IceCream") }, { TEXT("яблока"), TEXT("SM_M4_AppleSlice") },
+			{ TEXT("Попкорн"), TEXT("SM_M4_Popcorn") }, { TEXT("Зефирка"), TEXT("SM_M4_Zefir") }, { TEXT("Карамелька"), TEXT("SM_M4_Caramel") },
+			{ TEXT("Леденец"), TEXT("SM_M4_Lollipop") }, { TEXT("сгущёнки"), TEXT("SM_M4_CondensedMilk") }, { TEXT("Пачка печенья"), TEXT("SM_M4_BiscuitPack") },
+			{ TEXT("Хлебная крошка"), TEXT("SM_M4_Crumb@Toast") }, { TEXT("Крошка печенья"), TEXT("SM_M4_Crumb@Biscuit") }, { TEXT("Семечка"), TEXT("SM_M4_Droplet@Seed") },
+			{ TEXT("Макаронина"), TEXT("SM_M4_Macaroni") }, { TEXT("Горошина"), TEXT("SM_M4_Ball@Pea") }, { TEXT("Рисинка"), TEXT("SM_M4_Ball@Rice") },
+			{ TEXT("Кошачий корм"), TEXT("SM_M4_Pebble@Kibble") }, { TEXT("Собачий корм"), TEXT("SM_M4_Pebble@Kibble") }, { TEXT("Изюминка"), TEXT("SM_M4_Crumb@Raisin") },
+			{ TEXT("Хлопья"), TEXT("SM_M4_Speck@Cornflake") }, { TEXT("Орех в шоколаде"), TEXT("SM_M4_Pebble@ChocoNut") }, { TEXT("Чипсина"), TEXT("SM_M4_Speck@Crisps") },
+			{ TEXT("Шоколадный батончик"), TEXT("SM_Food_Chocolate") }, { TEXT("шоколадка"), TEXT("SM_Food_Chocolate") }, { TEXT("Плитка шоколада"), TEXT("SM_Food_Chocolate") },
+		};
+		for (const auto& M : Map)
+		{
+			if (LootName.Contains(M[0]))
+			{
+				const FPart& P = Get(M[1]);
+				if (P.IsValid()) { return M[1]; }
+			}
+		}
+	}
 	if (LootName.Contains(TEXT("мишка"))) return TEXT("SM_Food_GummyBearGold");
 	if (LootName.Contains(TEXT("Мармелад"))) return TEXT("SM_Food_Gummy");
 	if (LootName.Contains(TEXT("сыр"))) return TEXT("SM_Food_CheeseChunk");

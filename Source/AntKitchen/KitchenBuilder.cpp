@@ -7,6 +7,7 @@
 #include "LevelV2.h"
 #include "LevelV3.h"
 #include "KitchenFixture.h"
+#include "Map4Look.h"
 #include "GameFramework/Character.h"
 #include "Components/CapsuleComponent.h"
 #include "Engine/StaticMesh.h"
@@ -594,6 +595,20 @@ namespace
 				C->ComponentTags.AddUnique(Tag);
 			}
 		}
+		if (C && Map4Look::Enabled())
+		{
+			// Map v4: the palette colour picks a real surface (wood, tile, wallpaper of this room, fabric...), shared material
+			FLinearColor Tint;
+			if (const Map4Look::FLook* L = Map4Look::ForColor(Color, C->Bounds.Origin, Tint))
+			{
+				if (UMaterialInterface* M = Map4Look::Get(*L, Tint))
+				{
+					C->SetMaterial(0, M);
+					if (L->Step) { C->ComponentTags.AddUnique(FName(L->Step)); }
+					return;
+				}
+			}
+		}
 		static UMaterialInterface* Base = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Textures/M_Surface.M_Surface"));
 		if (Base && !Base->IsRooted()) { Base->AddToRoot(); }   // static: must survive map travel
 		if (!Base || !C)
@@ -648,7 +663,50 @@ UStaticMeshComponent* AKitchenBuilder::Part(EAntShape Shape, const FVector& Cent
 
 UStaticMeshComponent* AKitchenBuilder::Box(const FVector& Min, const FVector& Max, const FLinearColor& Color, bool bCollide)
 {
-	return Part(EAntShape::Cube, (Min + Max) * 0.5f, Max - Min, FRotator::ZeroRotator, Color, bCollide);
+	UStaticMeshComponent* C = Part(EAntShape::Cube, (Min + Max) * 0.5f, Max - Min, FRotator::ZeroRotator, Color, bCollide);
+	if (Map4Look::Enabled() && Color.Equals(WallC, 0.002f))
+	{
+		WallSkins(Min, Max);
+	}
+	return C;
+}
+
+// Map v4: a wall box shows one material on all its faces. Each vertical face that looks into another room, out of the
+// house or into a window / door reveal gets a paper-thin skin (no collision) with that side's surface: the living room's
+// wallpaper on the kitchen wall's far side, the facade outside, plaster in the reveals.
+void AKitchenBuilder::WallSkins(const FVector& Min, const FVector& Max)
+{
+	auto Room = [](const FVector& P, float Grow) { return Map4Look::RoomAt(P, Grow); };
+	const FVector Ctr = (Min + Max) * 0.5f;
+	const int32 Own = Map4Look::WallRoom(Ctr);
+	const FVector Size = Max - Min;
+	static const FVector Dirs[4] = { FVector(1, 0, 0), FVector(-1, 0, 0), FVector(0, 1, 0), FVector(0, -1, 0) };
+	for (const FVector& D : Dirs)
+	{
+		const bool bX = D.X != 0.f;
+		const float Wide = bX ? Size.Y : Size.X;
+		if (Wide < 20.f || Size.Z < 20.f) { continue; }
+		const float Face = bX ? (D.X > 0 ? Max.X : Min.X) : (D.Y > 0 ? Max.Y : Min.Y);
+		FVector Probe = Ctr;
+		if (bX) { Probe.X = Face + D.X * 12.f; } else { Probe.Y = Face + D.Y * 12.f; }
+		const int32 Side = Room(Probe, 0.f);
+		const bool bReveal = Side == 0 && Room(Probe, 230.f) != 0;
+		const TCHAR* Look = Side == 2 ? TEXT("WallL") : Side == 1 ? TEXT("WallK") : bReveal ? TEXT("Plaster") : TEXT("WallOut");
+		const int32 Want = Side;
+		if (Want == Own && Side != 0) { continue; }   // the box itself already shows this room's paper
+		const Map4Look::FLook* L = Map4Look::Named(Look);
+		if (!L) { continue; }
+		FVector SMin = Min, SMax = Max;
+		if (bX) { SMin.X = SMax.X = Face + D.X * 0.6f; SMin.X -= 0.4f; SMax.X += 0.4f; }
+		else { SMin.Y = SMax.Y = Face + D.Y * 0.6f; SMin.Y -= 0.4f; SMax.Y += 0.4f; }
+		UStaticMeshComponent* S = Part(EAntShape::Cube, (SMin + SMax) * 0.5f, SMax - SMin, FRotator::ZeroRotator, Hex(1, 2, 3), false);
+		if (S)
+		{
+			S->SetMaterial(0, Map4Look::Get(*L));
+			S->SetCastShadow(false);
+			S->ComponentTags.Add(TEXT("M4Skin"));
+		}
+	}
 }
 
 UStaticMeshComponent* AKitchenBuilder::Cyl(const FVector& Base, float Radius, float Height, const FLinearColor& Color, bool bCollide)
@@ -728,7 +786,7 @@ void AKitchenBuilder::Build()
 	bArt = KitchenArt::Enabled();   // the modelled kitchen replaces most of the boxes below (see BuildArt)
 	// ---- Floor, walls, ceiling, baseboards: the shell with all its real holes (KitchenHouse.cpp) ----
 	BuildShell();
-	for (int32 i = 0; i < 14; ++i)   // checker tiles on top of the slab
+	for (int32 i = 0; i < (Map4Look::Enabled() ? 0 : 14); ++i)   // checker tiles on top of the slab (map v4: the floor material has the tiles and the grout)
 	{
 		for (int32 j = 0; j < 10; ++j)
 		{

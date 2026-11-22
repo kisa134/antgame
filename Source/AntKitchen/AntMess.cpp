@@ -1,4 +1,5 @@
 ﻿#include "AntMess.h"
+#include "Map4Look.h"
 #include "AntAudio.h"
 #include "AntFx.h"
 #include "AntTypes.h"
@@ -204,7 +205,7 @@ void AAntMess::BuildLocal()
 	Specks->SetUsingAbsoluteLocation(true);
 	Specks->SetUsingAbsoluteRotation(true);
 	Specks->SetUsingAbsoluteScale(true);
-	Specks->SetStaticMesh(LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Plane.Plane")));
+	Specks->SetStaticMesh(Map4Look::Enabled() && Map4Look::Shape(4) ? Map4Look::Shape(4) : LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Plane.Plane")));
 	if (DropMat) { Specks->SetMaterial(0, DropMat); }
 	Specks->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	Specks->SetCastShadow(false);

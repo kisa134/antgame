@@ -95,6 +95,8 @@ private:
 	void Build();
 	UStaticMeshComponent* Part(EAntShape Shape, const FVector& Center, const FVector& Size, const FRotator& Rot, const FLinearColor& Color, bool bCollide);
 	UStaticMeshComponent* Box(const FVector& Min, const FVector& Max, const FLinearColor& Color, bool bCollide = true);
+	/** Map v4: paper-thin skins on the faces of a wall box that look into another room, outside or into a reveal. */
+	void WallSkins(const FVector& Min, const FVector& Max);
 	UStaticMeshComponent* Cyl(const FVector& Base, float Radius, float Height, const FLinearColor& Color, bool bCollide = true);
 	UStaticMeshComponent* Ball(const FVector& Center, const FVector& Radii, const FLinearColor& Color);
 	void Doors(float X0, float X1, int32 Count, const FLinearColor& DoorColor, const FLinearColor& HandleColor);

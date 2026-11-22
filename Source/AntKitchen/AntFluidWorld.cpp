@@ -1,4 +1,5 @@
 ﻿#include "AntFluidWorld.h"
+#include "Map4Look.h"
 #include "AntCharacter.h"
 #include "AntMovementComponent.h"
 #include "KitchenLoot.h"
@@ -615,7 +616,7 @@ void UAntFluidWorld::BuildViews()
 	// drops: instanced spheres
 	DropMesh = NewObject<UInstancedStaticMeshComponent>(Holder);
 	DropMesh->SetupAttachment(Root);
-	DropMesh->SetStaticMesh(LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Sphere.Sphere")));
+	DropMesh->SetStaticMesh(Map4Look::Enabled() && Map4Look::Shape(5) ? Map4Look::Shape(5) : LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Sphere.Sphere")));
 	if (DropMat) { DropMesh->SetMaterial(0, DropMat); }
 	DropMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	DropMesh->SetCastShadow(false);
@@ -623,7 +624,7 @@ void UAntFluidWorld::BuildViews()
 	DropMesh->RegisterComponent();
 	StreamMesh = NewObject<UInstancedStaticMeshComponent>(Holder);
 	StreamMesh->SetupAttachment(Root);
-	StreamMesh->SetStaticMesh(LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cylinder.Cylinder")));
+	StreamMesh->SetStaticMesh(Map4Look::Enabled() && Map4Look::Shape(2) ? Map4Look::Shape(2) : LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cylinder.Cylinder")));
 	if (UMaterialInterface* SM = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Fluid/M_AntStream.M_AntStream"))) { StreamMesh->SetMaterial(0, SM); }
 	else if (DropMat) { StreamMesh->SetMaterial(0, DropMat); }
 	StreamMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -633,7 +634,7 @@ void UAntFluidWorld::BuildViews()
 	// cosmetic droplets: the broken lower part of every stream and the crown where it lands (drawn, never simulated)
 	SprayMesh = NewObject<UInstancedStaticMeshComponent>(Holder);
 	SprayMesh->SetupAttachment(Root);
-	SprayMesh->SetStaticMesh(LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Sphere.Sphere")));
+	SprayMesh->SetStaticMesh(Map4Look::Enabled() && Map4Look::Shape(5) ? Map4Look::Shape(5) : LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Sphere.Sphere")));
 	if (DropMat) { SprayMesh->SetMaterial(0, DropMat); }
 	SprayMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	SprayMesh->SetCastShadow(false);
@@ -1617,14 +1618,9 @@ bool UAntFluidWorld::DevCommand(const TArray<FString>& A)
 		{
 			UStaticMeshComponent* M = Box->GetStaticMeshComponent();
 			M->SetMobility(EComponentMobility::Movable);
-			M->SetStaticMesh(LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cube.Cube")));
+			M->SetStaticMesh(AntKit::ShapeMesh(EAntShape::Cube));
 			Box->SetActorScale3D(Size / 100.f);
-			if (UMaterialInterface* Base = LoadObject<UMaterialInterface>(nullptr, TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial")))
-			{
-				UMaterialInstanceDynamic* MID = UMaterialInstanceDynamic::Create(Base, Box);
-				MID->SetVectorParameterValue(TEXT("Color"), Kind == TEXT("sponge") ? FLinearColor(0.95f, 0.8f, 0.15f) : (Kind == TEXT("brick") ? FLinearColor(0.5f, 0.2f, 0.12f) : FLinearColor(0.75f, 0.55f, 0.3f)));
-				M->SetMaterial(0, MID);
-			}
+			AntKit::Paint(M, Kind == TEXT("sponge") ? FLinearColor(0.95f, 0.8f, 0.15f) : (Kind == TEXT("brick") ? FLinearColor(0.5f, 0.2f, 0.12f) : FLinearColor(0.75f, 0.55f, 0.3f)));
 			M->SetCollisionProfileName(TEXT("PhysicsActor"));
 			M->SetSimulatePhysics(true);
 			M->SetMassOverrideInKg(NAME_None, Kind == TEXT("sponge") ? 0.08f : (Kind == TEXT("brick") ? 0.2f : 0.03f), true);

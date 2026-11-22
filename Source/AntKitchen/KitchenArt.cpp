@@ -18,6 +18,7 @@
 
 #include "KitchenArtData.inl"
 #include "LevelV3.h"
+#include "Map4Look.h"
 
 // ---------------------------------------------------------------------------------------------
 // The look table: material slot name -> one of the game's own surfaces.
@@ -305,6 +306,13 @@ void ApplyTint(UStaticMeshComponent* C, const TCHAR* Tint)
 	{
 		return;
 	}
+	if (Map4Look::Enabled())
+	{
+		if (const Map4Look::FLook* L4 = Map4Look::ForSlot(TEXT("Tint"), 0, FString(Tint)))
+		{
+			if (UMaterialInterface* Mat = Map4Look::Get(*L4)) { C->SetMaterial(0, Mat); return; }
+		}
+	}
 	if (const FLook* L = FindLook(TEXT("Tint"), 0, FString(Tint)))
 	{
 		if (UMaterialInstanceDynamic* Mat = SharedMaterial(*L)) { C->SetMaterial(0, Mat); }
@@ -322,6 +330,21 @@ void ApplyLook(UStaticMeshComponent* C, const TCHAR* Name, int32 Index)
 	for (int32 i = 0; i < Slots.Num(); ++i)
 	{
 		const FString Slot = Slots[i].MaterialSlotName.ToString();
+		if (Map4Look::Enabled())
+		{
+			// Map v4: real texture sets (M_M4). The driven lamp shades get their own instance (the light switch sets "Color").
+			if (const Map4Look::FLook* L4 = Map4Look::ForSlot(Name, Index, Slot))
+			{
+				const bool bDriven = Slot.Equals(TEXT("LampShade"), ESearchCase::IgnoreCase) && FCString::Strcmp(Name, TEXT("SM_L_FloorLamp")) != 0;
+				UMaterialInterface* Mat = bDriven ? (UMaterialInterface*)Map4Look::Own(*L4, C) : Map4Look::Get(*L4);
+				if (Mat)
+				{
+					C->SetMaterial(i, Mat);
+					if (i == 0 && L4->Step) { C->ComponentTags.AddUnique(FName(L4->Step)); }
+					continue;
+				}
+			}
+		}
 		const FLook* L = FindLook(Name, Index, Slot);
 		if (!L)
 		{

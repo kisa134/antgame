@@ -1,4 +1,7 @@
 ﻿#include "AntFx.h"
+#include "Map4Look.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/SceneComponent.h"
 #include "Materials/MaterialInterface.h"
@@ -78,7 +81,8 @@ UMaterialInterface* AAntFxManager::BaseFor(EAntFxLook Look)
 	// Held by this actor's UPROPERTYs and loaded again by the next manager: nothing static survives a map reload.
 	if (!SolidBase)
 	{
-		SolidBase = LoadObject<UMaterialInterface>(nullptr, TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"));
+		SolidBase = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Map4/Materials/MI_M4_Paint.MI_M4_Paint"), nullptr, LOAD_NoWarn | LOAD_Quiet);   // map v4: painted PBR with a "Color"
+		if (!SolidBase || FParse::Param(FCommandLine::Get(), TEXT("AntMap3"))) { SolidBase = LoadObject<UMaterialInterface>(nullptr, TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial")); }
 		SoftBase = LoadObject<UMaterialInterface>(nullptr, TEXT("/Engine/EngineDebugMaterials/M_SimpleUnlitTranslucent.M_SimpleUnlitTranslucent"));
 		GlowBase = LoadObject<UMaterialInterface>(nullptr, TEXT("/Engine/EngineMaterials/EmissiveMeshMaterial.EmissiveMeshMaterial"));
 		UE_LOG(LogTemp, Display, TEXT("AntFx: materials solid=%d soft=%d glow=%d"), SolidBase ? 1 : 0, SoftBase ? 1 : 0, GlowBase ? 1 : 0);
