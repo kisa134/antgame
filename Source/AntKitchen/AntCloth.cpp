@@ -1090,8 +1090,10 @@ void AAntCloth::UpdateMesh(bool bRebuild, bool bCollision)
 			if (Nm.IsNearlyZero()) { Nm = FVector::UpVector; }
 			V[i] = X[i];
 			V[N + i] = X[i];
-			Nrm[i] = Nm;
-			Nrm[N + i] = -Nm;
+			// UE's front face of (a, b, c) faces (c - a) x (b - a) = -(Du x Dv): the normals follow the faces they belong to
+			// (map v4: with Du x Dv the lit top of a tablecloth was shaded as its underside, near black from above)
+			Nrm[i] = -Nm;
+			Nrm[N + i] = Nm;
 		}
 	}
 	if (bRebuild || bTopoDirty)

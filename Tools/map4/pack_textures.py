@@ -41,6 +41,8 @@ SETS = {
     'RugRose': (with_color(ph('dirty_carpet'), os.path.join(GEN, 'rug_rose.png')), 2048),
     'Linen': (ph('rough_linen'), 1024),
     'Gingham': (ph('fabric_pattern_07', 'col_1.jpg'), 1024),
+    'GinghamBlue': (ph('fabric_pattern_07', 'col_2.jpg'), 1024),    # the tablecloth of each Плато layout has its own colour
+    'GinghamGreen': (ph('fabric_pattern_07', 'col_03.jpg'), 1024),
     'SofaWool': (ph('poly_wool_herringbone'), 1024),
     'Boucle': (ph('wool_boucle'), 1024),
     'Knit': (ph('knitted_fleece'), 1024),

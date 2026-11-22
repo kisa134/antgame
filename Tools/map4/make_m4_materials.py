@@ -42,7 +42,10 @@ def import_tex(f, dest, name, kind):
     EAL.save_asset(dest + "/" + name)
 
 if not ONLY_MATS:
+    only_tex = [t for t in os.environ.get("M4_TEX", "").split(",") if t]   # e.g. M4_TEX=GinghamBlue,GinghamGreen
     for f in sorted(glob.glob(os.path.join(PACKED, "T_M4_*"))):
+        if only_tex and not any(os.path.basename(f).startswith("T_M4_%s_" % t) for t in only_tex):
+            continue
         name = os.path.splitext(os.path.basename(f))[0]
         import_tex(f, TEX, name, name[-1])
         unreal.log("M4TEX " + name)
@@ -158,6 +161,8 @@ def build_m4(name="M_M4", two_sided=False):
     m = fresh(MAT, name)
     m.set_editor_property("tangent_space_normal", False)
     m.set_editor_property("two_sided", two_sided)
+    m.set_editor_property("used_with_instanced_static_meshes", True)   # grass tufts, trail dots: else the grey default draws there
+    m.set_editor_property("used_with_nanite", True)
     X = -1500
     tc = tp(m, "C", TEX + "/T_M4_Oak_C", X, -600)
     tn = tp(m, "N", TEX + "/T_M4_Oak_N", X, -350, unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL)
@@ -211,6 +216,8 @@ def build_m4(name="M_M4", two_sided=False):
 def build_uv(name, two_sided=False):
     m = fresh(MAT, name)
     m.set_editor_property("two_sided", two_sided)
+    m.set_editor_property("used_with_instanced_static_meshes", True)
+    m.set_editor_property("used_with_nanite", True)
     X = -1200
     c = MEL.create_material_expression(m, unreal.MaterialExpressionTextureSampleParameter2D, X, -300)
     c.set_editor_property("parameter_name", "C")

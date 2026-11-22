@@ -180,6 +180,15 @@ const TCHAR* VarId(int32 V) { return V >= 0 && V < (int32)UE_ARRAY_COUNT(GV3VarA
 
 bool IsVarActive(int32 V)
 {
+	// map v4: the tablecloth is on the kitchen table in every Плато layout (pulling it is a headline trick). "Малыш завтракал"
+	// (B) had none: it gets the plain one of "Ужин накрыт" (A), without the teapot and cups. (C has its own row, D the long one.)
+	static const int32 PlatoD = []() { for (int32 d = 0; d < (int32)UE_ARRAY_COUNT(GV3DistrictIds); ++d) { if (FCString::Strcmp(GV3DistrictIds[d], TEXT("plato")) == 0) { return d; } } return -1; }();
+	if (PlatoD >= 0 && CurrentLetter(PlatoD) == TEXT('B') && FCString::Strcmp(VarId(V), TEXT("v3_cloth")) == 0)
+	{
+		static int32 FirstCloth = INDEX_NONE;
+		if (FirstCloth == INDEX_NONE) { for (int32 v = 0; v < (int32)UE_ARRAY_COUNT(GV3VarArtIds); ++v) { if (FCString::Strcmp(GV3VarArtIds[v], TEXT("v3_cloth")) == 0) { FirstCloth = v; break; } } }
+		if (V == FirstCloth) { return true; }
+	}
 	for (int32 D = 0; D < NumDistricts(); ++D)
 	{
 		const int32 Vi = CurrentVariant(D);

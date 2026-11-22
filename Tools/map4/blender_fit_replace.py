@@ -11,6 +11,8 @@ argv = sys.argv[sys.argv.index("--") + 1:]
 src, orig, out, name, max_tris = argv[0], argv[1], argv[2], argv[3], int(argv[4])
 tex_px = int(argv[5]) if len(argv) > 5 else 1024
 yaw_arg = argv[6] if len(argv) > 6 else "auto"
+cut_top = float(argv[7]) if len(argv) > 7 else 0.0
+fit_mode = argv[8] if len(argv) > 8 else "box"   # box | z (uniform, by height: tall thin tools) | axis (tilted in its file: match the long axis)   # drop this fraction of the model's height from the top (a lid that is its own piece in the game)
 os.makedirs(out, exist_ok=True)
 bpy.ops.wm.read_factory_settings(use_empty=True)
 
@@ -23,6 +25,7 @@ def bbox(objs):
 bpy.ops.import_scene.fbx(filepath=orig)
 ometa = [o for o in bpy.context.scene.objects if o.type == "MESH"]
 omn, omx = bbox(ometa)
+opts = np.array([(o.matrix_world @ v.co)[:] for o in ometa for v in o.data.vertices])
 for o in list(bpy.context.scene.objects):
     bpy.data.objects.remove(o, do_unlink=True)
 
@@ -37,6 +40,12 @@ bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 for o in list(bpy.context.scene.objects):
     if o != ob: bpy.data.objects.remove(o, do_unlink=True)
 me = ob.data
+if cut_top > 0.0:
+    zs = [v.co.z for v in me.vertices]
+    zc = max(zs) - (max(zs) - min(zs)) * cut_top
+    bmc = bmesh.new(); bmc.from_mesh(me)
+    bmesh.ops.bisect_plane(bmc, geom=bmc.verts[:] + bmc.edges[:] + bmc.faces[:], plane_co=(0, 0, zc), plane_no=(0, 0, 1), clear_outer=True)
+    bmc.to_mesh(me); bmc.free()
 co = np.array([v.co[:] for v in me.vertices])
 osz = np.array(omx - omn)
 best, byaw = 1e9, 0
@@ -56,6 +65,26 @@ u = float(np.exp(np.log(k).mean()))
 k = np.clip(k, u / 1.2, u * 1.2)
 ctr_new = np.array([(mn[0] + mx[0]) / 2, (mn[1] + mx[1]) / 2, mn[2]])
 ctr_old = np.array([(omn.x + omx.x) / 2, (omn.y + omx.y) / 2, omn.z])
+if fit_mode == "z":
+    k = np.full(3, osz[2] / max(sz[2], 1e-6))
+elif fit_mode == "axis":
+    # the original lies or leans in its own file: turn the model's long axis onto the original's, scale by length
+    def pca(P):
+        c = P.mean(0); w, V = np.linalg.eigh(np.cov((P - c).T)); a = V[:, np.argmax(w)]
+        return c, a / np.linalg.norm(a)
+    oc, oa = pca(opts)
+    gc, ga = pca(co)
+    if np.dot(ga, [0, 0, 1]) < 0: ga = -ga
+    # the original's handle end is its higher end
+    if np.dot(oa, [0, 0, 1]) < 0: oa = -oa
+    Rm = Vector(ga.tolist()).rotation_difference(Vector(oa.tolist())).to_matrix()
+    for v in me.vertices: v.co = Rm @ (v.co - Vector(gc.tolist()))
+    co = np.array([v.co[:] for v in me.vertices])
+    olen = np.ptp((opts - oc) @ oa); glen = np.ptp(co @ oa)
+    sc = olen / max(glen, 1e-6)
+    ext_o = ((opts - oc) @ oa).min(); ext_g = (co @ oa).min() * sc
+    shift = oc + oa * (ext_o - ext_g)
+    k = np.full(3, sc); ctr_new = np.zeros(3); ctr_old = shift
 for v in me.vertices:
     p = (np.array(v.co[:]) - ctr_new) * k + ctr_old
     v.co = Vector(p.tolist())

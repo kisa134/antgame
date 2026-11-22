@@ -19,7 +19,7 @@
 | Plaster | https://polyhaven.com/a/plastered_wall | штукатурка, основа обоев |
 | Stucco | https://polyhaven.com/a/white_stucco | потолок |
 | Linen | https://polyhaven.com/a/rough_linen | шторы, абажуры |
-| Gingham | https://polyhaven.com/a/fabric_pattern_07 | скатерть |
+| Gingham, GinghamBlue, GinghamGreen | https://polyhaven.com/a/fabric_pattern_07 (col_1, col_2, col_03) | скатерти раскладок Плато A/B/C |
 | SofaWool | https://polyhaven.com/a/poly_wool_herringbone | диван |
 | Boucle | https://polyhaven.com/a/wool_boucle | плед, теннисный мяч |
 | Knit | https://polyhaven.com/a/knitted_fleece | пряжа, носки |
@@ -49,9 +49,14 @@
 
 - `tex/`: обои кухни, обои гостиной, ковёр (бесшовные; швы сглажены в `pack_textures.py`).
 - `decal/`: 4 рисунка малыша, фото семьи, картина, календарь, этикетки (кола, хлопья, сгущёнка, печенье, леденец). Бренды выдуманные.
-- `shots/`: продуктовые снимки для image→3D; `glb/`: исходные 3D-модели Meshy v7 (через Higgsfield) — торт, бутерброд, котлета, печенье, пломбир, долька яблока, попкорн, зефир, карамелька.
+- `shots/`: продуктовые снимки для image→3D; `glb/`: исходные 3D-модели Meshy v7 (через Higgsfield) — торт, бутерброд, котлета, печенье, пломбир, долька яблока, попкорн, зефир, карамелька; позже — кресло, стул, монстера, герань, чайник, паровозик, самосвал, мишка, ведро с педалью, швабра, веник.
 - `concept/`: концепт-арт районов (ориентир, в игру не идёт; на одном кадре модель нарисовала реальные бренды — не использовать).
 
 Процедурные (наши): эмаль/краска (нормаль «апельсиновая корка»), микро-нормаль масштаба муравья, базовые формы и FX-меши (`Tools/map4/blender_shapes.py`), упаковка еды (`Tools/map4/blender_food_simple.py`).
 
 **Ревью художника (Данила):** всё в `SourceArt/Map4/` и `Content/Map4/` сделано по прямому распоряжению владельца без художника — просьба просмотреть.
+
+## Сделано процедурно (без внешних источников)
+- `T_M4_Weave_N` — нормаль полотняного переплетения (Tools/map4, numpy), микро-деталь ткани вблизи.
+- `SM_M4_BoxSharp`, новый `SM_M4_TrashBag` — Blender-скрипт `Tools/map4/blender_more2.py`.
+- Печатные детали (рисунок малыша, фото, календарь) — геометрия исходных мешей Blender + сгенерированные картинки, `Tools/map4/blender_print_replace.py`.

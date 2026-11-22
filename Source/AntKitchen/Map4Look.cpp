@@ -1,4 +1,5 @@
 ﻿#include "Map4Look.h"
+#include "LevelV3.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/Texture.h"
 #include "Materials/MaterialInterface.h"
@@ -36,7 +37,7 @@ namespace
 		{ TEXT("Brass"), TEXT("Brushed2"), 400.000f, 1.300f, 0.930f, 0.400f, 0.700f, 0.000f, 1.000f, 0.600f, 0.000f, 0.000f, 0.000f, TEXT("Surf_Metal") },
 		{ TEXT("Iron"), TEXT("MetalPlate"), 500.000f, 0.350f, 0.350f, 0.360f, 1.100f, 0.000f, 0.400f, 1.000f, 0.200f, 0.000f, 0.000f, TEXT("Surf_Metal") },
 		{ TEXT("Enamel"), TEXT("Enamel"), 600.000f, 1.060f, 1.050f, 1.010f, 1.000f, 0.000f, 0.000f, 1.000f, 0.150f, 0.200f, 0.000f, nullptr },
-		{ TEXT("FridgeRed"), TEXT("Enamel"), 600.000f, 0.800f, 0.120f, 0.090f, 0.800f, 0.000f, 0.000f, 1.000f, 0.100f, 0.200f, 0.000f, TEXT("Surf_Metal") },
+		{ TEXT("FridgeRed"), TEXT("Enamel"), 600.000f, 0.560f, 0.055f, 0.050f, 0.450f, 0.000f, 0.000f, 1.000f, 0.180f, 0.250f, 0.000f, TEXT("Surf_Metal") },   // deep glossy cherry enamel (was a flat coral in warm light)
 		{ TEXT("FridgeLiner"), TEXT("Plastic"), 600.000f, 0.980f, 1.000f, 1.020f, 1.000f, 0.000f, 0.000f, 0.500f, 0.000f, 0.000f, 0.000f, nullptr },
 		{ TEXT("Red"), TEXT("Enamel"), 600.000f, 0.780f, 0.100f, 0.080f, 1.000f, 0.050f, 0.000f, 1.000f, 0.100f, 0.000f, 0.000f, nullptr },
 		{ TEXT("Blue"), TEXT("Enamel"), 600.000f, 0.100f, 0.250f, 0.780f, 1.000f, 0.050f, 0.000f, 1.000f, 0.100f, 0.000f, 0.000f, nullptr },
@@ -50,6 +51,10 @@ namespace
 		{ TEXT("Terracotta"), TEXT("Concrete"), 220.000f, 1.000f, 0.520f, 0.330f, 1.000f, 0.100f, 0.000f, 1.000f, 0.100f, 0.000f, 0.000f, nullptr },
 		{ TEXT("Leaf"), TEXT("Enamel"), 600.000f, 0.160f, 0.500f, 0.180f, 1.000f, 0.250f, 0.000f, 1.000f, 0.000f, 0.000f, 0.000f, nullptr },
 		{ TEXT("Paper"), TEXT("Paper"), 300.000f, 1.050f, 1.040f, 0.980f, 1.000f, 0.000f, 0.000f, 1.000f, 0.000f, 0.000f, 0.000f, nullptr },
+		{ TEXT("SM_K_TeaBag/Paper"), TEXT("Linen"), 120.000f, 0.950f, 0.930f, 0.870f, 1.000f, 0.050f, 0.000f, 1.000f, 0.000f, 0.000f, 0.000f, TEXT("Surf_Fabric") },   // the tea bag's cotton string
+		{ TEXT("SM_K_TeaBag/Fabric"), TEXT("Paper"), 200.000f, 1.000f, 0.780f, 0.150f, 1.000f, 0.000f, 0.000f, 1.000f, 0.000f, 0.000f, 0.000f, nullptr },   // its printed paper tag
+		{ TEXT("SM_K_TeaBag/Cardboard"), TEXT("Paper"), 150.000f, 0.880f, 0.780f, 0.600f, 1.000f, 0.000f, 0.000f, 1.000f, 0.000f, 0.000f, 0.000f, nullptr },   // filter paper, tea showing through
+		{ TEXT("SM_K_FlyPaper/Honey"), TEXT("Plastic"), 300.000f, 0.640f, 0.420f, 0.080f, 0.200f, 0.000f, 0.000f, 0.600f, 0.000f, 0.000f, 0.000f, nullptr },   // sticky amber fly tape
 		{ TEXT("Honey"), TEXT("Enamel"), 600.000f, 0.900f, 0.550f, 0.050f, 0.300f, 0.000f, 0.000f, 0.300f, 0.000f, 0.000f, 0.000f, nullptr },
 		{ TEXT("Jam"), TEXT("Enamel"), 600.000f, 0.550f, 0.050f, 0.120f, 0.300f, 0.000f, 0.000f, 0.300f, 0.000f, 0.000f, 0.000f, nullptr },
 		{ TEXT("Sugar"), TEXT("Concrete"), 40.000f, 1.300f, 1.300f, 1.300f, 1.000f, 0.100f, 0.000f, 1.000f, 0.000f, 0.000f, 0.000f, nullptr },
@@ -84,7 +89,7 @@ namespace
 		{ TEXT("Bark"), TEXT("Bark"), 600.000f, 1.000f, 1.000f, 1.000f, 1.000f, 0.000f, 0.000f, 1.000f, 0.000f, 0.000f, 0.000f, TEXT("Surf_Wood") },
 		{ TEXT("FencePaint"), TEXT("Picket"), 500.000f, 1.020f, 0.980f, 0.900f, 1.000f, 0.000f, 0.000f, 1.000f, 0.100f, 0.300f, 0.000f, TEXT("Surf_Wood") },
 		{ TEXT("BinGreen"), TEXT("Plastic"), 500.000f, 0.150f, 0.400f, 0.220f, 1.000f, 0.050f, 0.000f, 0.600f, 0.100f, 0.200f, 0.000f, TEXT("Surf_Metal") },
-		{ TEXT("TrashBag"), TEXT("Plastic"), 300.000f, 0.060f, 0.060f, 0.070f, 0.600f, 0.000f, 0.000f, 0.600f, 0.000f, 0.000f, 0.000f, nullptr },
+		{ TEXT("TrashBag"), TEXT("Plastic"), 300.000f, 0.022f, 0.024f, 0.028f, 0.350f, 0.020f, 0.000f, 1.000f, 0.000f, 0.000f, 0.000f, nullptr },   // black bin-bag film: dark and glossy, the wrinkles catch highlights
 		{ TEXT("Bone"), TEXT("Enamel"), 600.000f, 0.950f, 0.900f, 0.780f, 1.000f, 0.300f, 0.000f, 1.000f, 0.000f, 0.000f, 0.000f, nullptr },
 		{ TEXT("Stone"), TEXT("Concrete"), 300.000f, 1.050f, 1.020f, 0.950f, 1.000f, 0.050f, 0.000f, 1.000f, 0.100f, 0.000f, 0.000f, nullptr },
 		{ TEXT("Concrete"), TEXT("Pavement"), 900.000f, 1.000f, 1.000f, 1.000f, 1.000f, 0.000f, 0.000f, 1.000f, 0.100f, 0.000f, 0.000f, nullptr },
@@ -103,7 +108,11 @@ namespace
 		{ TEXT("Headlight"), TEXT("Enamel"), 600.000f, 1.000f, 0.950f, 0.800f, 1.000f, 0.000f, 0.000f, 0.200f, 0.000f, 0.000f, 2.000f, nullptr },
 		{ TEXT("HeatGlow"), TEXT("Enamel"), 600.000f, 1.000f, 0.300f, 0.080f, 1.000f, 0.000f, 0.000f, 0.200f, 0.000f, 0.000f, 4.000f, nullptr },
 		{ TEXT("LampShade"), TEXT("Linen"), 200.000f, 1.000f, 0.980f, 0.940f, 1.000f, 0.000f, 0.000f, 0.600f, 0.000f, 0.000f, 0.250f, nullptr },
-		{ TEXT("ClothCheck"), TEXT("Gingham"), 1500.000f, 1.000f, 1.000f, 1.000f, 1.000f, 0.000f, 0.000f, 1.000f, 0.000f, 0.000f, 0.000f, TEXT("Surf_Fabric") },
+		{ TEXT("ClothCheck"), TEXT("Gingham"), 700.000f, 1.000f, 1.000f, 1.000f, 1.000f, 0.000f, 0.000f, 1.000f, 0.000f, 0.000f, 0.000f, TEXT("Surf_Fabric") },
+		// the kitchen tablecloth per Плато layout (ForSlot): A red, B blue, C green gingham, D the festive long one in ivory linen
+		{ TEXT("ClothCheckB"), TEXT("GinghamBlue"), 700.000f, 1.000f, 1.000f, 1.000f, 1.000f, 0.000f, 0.000f, 1.000f, 0.000f, 0.000f, 0.000f, TEXT("Surf_Fabric") },
+		{ TEXT("ClothCheckC"), TEXT("GinghamGreen"), 700.000f, 1.000f, 1.000f, 1.000f, 1.000f, 0.000f, 0.000f, 1.000f, 0.000f, 0.000f, 0.000f, TEXT("Surf_Fabric") },
+		{ TEXT("ClothFestive"), TEXT("Linen"), 500.000f, 1.080f, 1.020f, 0.880f, 1.000f, 0.000f, 0.000f, 1.000f, 0.000f, 0.000f, 0.000f, TEXT("Surf_Fabric") },
 		{ TEXT("Curtain"), TEXT("Linen"), 400.000f, 1.050f, 0.970f, 0.820f, 1.000f, 0.000f, 0.000f, 1.000f, 0.000f, 0.000f, 0.000f, TEXT("Surf_Fabric") },
 		{ TEXT("Cola"), TEXT("Enamel"), 600.000f, 0.160f, 0.050f, 0.020f, 0.200f, 0.000f, 0.000f, 0.200f, 0.000f, 0.000f, 0.000f, nullptr },
 		{ TEXT("PetClear"), TEXT("Enamel"), 600.000f, 0.820f, 0.900f, 0.880f, 0.200f, 0.000f, 0.000f, 0.200f, 0.000f, 0.000f, 0.000f, nullptr },
@@ -115,7 +124,7 @@ namespace
 		{ TEXT("Potato"), TEXT("Soil"), 80.000f, 1.250f, 1.000f, 0.620f, 1.000f, 0.000f, 0.000f, 1.000f, 0.000f, 0.000f, 0.000f, nullptr },
 		{ TEXT("Tint/Enamel"), TEXT("Linen"), 300.000f, 1.120f, 1.100f, 1.040f, 1.000f, 0.000f, 0.000f, 1.000f, 0.000f, 0.000f, 0.000f, TEXT("Surf_Fabric") },
 		{ TEXT("Tint/Teal"), TEXT("Linen"), 300.000f, 0.300f, 0.850f, 0.900f, 1.000f, 0.000f, 0.000f, 1.000f, 0.000f, 0.000f, 0.000f, TEXT("Surf_Fabric") },
-		{ TEXT("@FloorTile"), TEXT("FloorTile"), 2400.000f, 1.080f, 1.000f, 0.900f, 0.900f, 0.000f, 0.000f, 1.000f, 0.000f, 0.000f, 0.000f, nullptr },
+		{ TEXT("@FloorTile"), TEXT("TileCream"), 2400.000f, 1.000f, 0.960f, 0.900f, 1.150f, 0.120f, 0.000f, 1.000f, 0.120f, 0.350f, 0.000f, nullptr },   // calm worn cream tiles (the black-and-white checker shone in blotches)
 		{ TEXT("@WallK"), TEXT("WallpaperK"), 1100.000f, 1.000f, 1.000f, 1.000f, 1.000f, 0.050f, 0.000f, 0.600f, 0.000f, 0.600f, 0.000f, nullptr },
 		{ TEXT("@WallL"), TEXT("WallpaperL"), 1300.000f, 1.000f, 1.000f, 1.000f, 1.000f, 0.050f, 0.000f, 0.600f, 0.000f, 0.600f, 0.000f, nullptr },
 		{ TEXT("@WallOut"), TEXT("Siding"), 800.000f, 1.050f, 0.970f, 0.850f, 1.000f, 0.000f, 0.000f, 1.000f, 0.100f, 0.500f, 0.000f, nullptr },
@@ -197,8 +206,9 @@ namespace
 	/** Single-layer meshes (cloth sheets, blades of grass, leaves, wings): their look is drawn from both sides. */
 	UMaterialInterface* BaseFor(const FLook& L)
 	{
-		static const TCHAR* TwoSided[] = { TEXT("Grass"), TEXT("GrassDark"), TEXT("Leaf"), TEXT("LeafLight"), TEXT("Curtain"), TEXT("ClothCheck"), TEXT("FlyWing"),
-			TEXT("Tint/Enamel"), TEXT("Tint/Teal"), TEXT("Fabric"), TEXT("Paper"), TEXT("Photo"), TEXT("Dust") };
+		static const TCHAR* TwoSided[] = { TEXT("Grass"), TEXT("GrassDark"), TEXT("Leaf"), TEXT("LeafLight"), TEXT("FlyWing"),
+			TEXT("Tint/Enamel"), TEXT("Tint/Teal"), TEXT("Paper"), TEXT("Photo"), TEXT("Dust") };
+		// (not the cloth: AntCloth draws real front and back faces, a two-sided look on them z-fights into dark stripes)
 		const TCHAR* Key = (L.Key && L.Key[0] == TEXT('@')) ? L.Key + 1 : L.Key;   // ('@Grass' is the builder's lawn)
 		for (const TCHAR* K : TwoSided)
 		{
@@ -236,6 +246,13 @@ namespace
 		M->SetVectorParameterValue(TEXT("Glow"), FLinearColor(L.Glow, L.Glow, L.Glow, 1.f));
 		// micro detail: stronger on rough matter (wood, fabric, stone), faint on glossy paint and glass
 		M->SetScalarParameterValue(TEXT("DetailStrength"), L.RoughAdd < -0.05f || L.RoughMul < 0.45f ? 0.04f : 0.14f);
+		if (L.Step && FCString::Strcmp(L.Step, TEXT("Surf_Fabric")) == 0)
+		{
+			// cloth up close: a fine weave under the ant's feet (T_M4_Weave_N, 8 threads per 40 uu) instead of the blurred print
+			if (UTexture* Wv = Tex(TEXT("Weave"), TEXT("N"))) { M->SetTextureParameterValue(TEXT("D"), Wv); }
+			M->SetScalarParameterValue(TEXT("DetailSize"), 40.f);
+			M->SetScalarParameterValue(TEXT("DetailStrength"), 0.45f);
+		}
 	}
 }
 
@@ -287,6 +304,15 @@ UMaterialInstanceDynamic* Own(const FLook& L, UObject* Outer, const FLinearColor
 
 const FLook* ForSlot(const TCHAR* Mesh, int32 Index, const FString& Slot)
 {
+	if (Slot == TEXT("ClothCheck") && Mesh && FString(Mesh).StartsWith(TEXT("SM_V3_Tablecloth")))
+	{
+		// each Плато layout lays its own tablecloth (the cloth sim and the climb proxies only see the mesh, not its look)
+		static int32 PlatoD = INDEX_NONE;
+		for (int32 d = 0; PlatoD == INDEX_NONE && d < LevelV3::NumDistricts(); ++d) { if (FCString::Strcmp(LevelV3::DistrictId(d), TEXT("plato")) == 0) { PlatoD = d; } }
+		const TCHAR L = PlatoD != INDEX_NONE ? LevelV3::CurrentLetter(PlatoD) : TEXT('A');
+		const TCHAR* Key = FString(Mesh).StartsWith(TEXT("SM_V3_TableclothLong")) ? TEXT("ClothFestive") : L == TEXT('B') ? TEXT("ClothCheckB") : L == TEXT('C') ? TEXT("ClothCheckC") : nullptr;
+		if (Key) { for (const FLook& Lk : GLooks) { if (FCString::Stricmp(Lk.Key, Key) == 0) { return &Lk; } } }
+	}
 	const FString Keys[3] = { FString::Printf(TEXT("%s#%d/%s"), Mesh, Index, *Slot), FString::Printf(TEXT("%s/%s"), Mesh, *Slot), Slot };
 	for (const FString& K : Keys)
 	{

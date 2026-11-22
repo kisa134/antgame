@@ -19,6 +19,7 @@
 #include "Components/ExponentialHeightFogComponent.h"
 #include "Components/SpotLightComponent.h"
 #include "Components/PostProcessComponent.h"
+#include "Components/BoxComponent.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "AntFx.h"
@@ -695,6 +696,7 @@ UStaticMeshComponent* AKitchenBuilder::Box(const FVector& Min, const FVector& Ma
 		|| Color.Equals(Hex(120, 95, 70), 0.002f) || Color.Equals(DarkDirt, 0.002f) || Color.Equals(Hex(150, 152, 150), 0.002f) || Color.Equals(TileB, 0.002f)))
 	{
 		C->ComponentTags.AddUnique(TEXT("M4Arch"));   // the shell: walls, ceilings, floors, the pit, ducts (slabs by nature)
+		if (UStaticMesh* Sharp = Map4Look::Prop(TEXT("SM_M4_BoxSharp"))) { C->SetStaticMesh(Sharp); }   // (a bevel scaled to a wall drew a groove at every joint)
 	}
 	return C;
 }
@@ -733,6 +735,7 @@ void AKitchenBuilder::WallSkins(const FVector& Min, const FVector& Max)
 			S->SetMaterial(0, Map4Look::Get(*L));
 			S->SetCastShadow(false);
 			S->ComponentTags.Add(TEXT("M4Skin"));
+			if (UStaticMesh* Sharp = Map4Look::Prop(TEXT("SM_M4_BoxSharp"))) { S->SetStaticMesh(Sharp); }
 		}
 	}
 }
@@ -1166,6 +1169,41 @@ void AKitchenBuilder::Build()
 		TodGrade->Priority = 20.f;
 		TodGrade->RegisterComponent();
 		AddInstanceComponent(TodGrade);
+		if (Map4Look::Enabled())
+		{
+			// map v4: each room keeps its own colour under the shared time-of-day grade (soft 900 uu blend at the doors):
+			// the kitchen warm and a little dense, the living room cooler and calmer, the yard green and crisp
+			struct FRoomGrade { FVector Center, Extent; FVector4 Gain, Gamma, Sat; float Contrast; };
+			const FRoomGrade Rooms[] = {
+				{ FVector(0.f, 0.f, 2700.f), FVector(7000.f, 5000.f, 2700.f), FVector4(1.04f, 1.0f, 0.93f, 1.f), FVector4(1.f, 1.f, 1.f, 0.97f), FVector4(1.f, 1.f, 1.f, 1.02f), 1.06f },
+				{ FVector(13700.f, -3750.f, 2700.f), FVector(6500.f, 5250.f, 2700.f), FVector4(0.97f, 1.0f, 1.04f, 1.f), FVector4(1.f, 1.f, 1.f, 1.01f), FVector4(1.f, 1.f, 1.f, 0.96f), 1.04f },
+				{ FVector(-5500.f, -10000.f, 1500.f), FVector(12500.f, 5000.f, 3000.f), FVector4(1.0f, 1.03f, 0.97f, 1.f), FVector4(1.f, 1.f, 1.f, 1.f), FVector4(1.f, 1.f, 1.f, 1.08f), 1.08f },
+			};
+			for (const FRoomGrade& Rg : Rooms)
+			{
+				UBoxComponent* Bx = NewObject<UBoxComponent>(this);
+				Bx->SetupAttachment(Root);
+				Bx->SetRelativeLocation(Rg.Center);
+				Bx->SetBoxExtent(Rg.Extent);
+				Bx->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+				Bx->SetHiddenInGame(true);
+				Bx->ComponentTags.Add(TEXT("AntDebug"));
+				Bx->RegisterComponent();
+				AddInstanceComponent(Bx);
+				UPostProcessComponent* Pp = NewObject<UPostProcessComponent>(this);
+				Pp->SetupAttachment(Bx);
+				Pp->bUnbound = false;
+				Pp->BlendRadius = 900.f;
+				Pp->Priority = 25.f;
+				FPostProcessSettings& G = Pp->Settings;
+				G.bOverride_ColorGainMidtones = true; G.ColorGainMidtones = Rg.Gain;
+				G.bOverride_ColorGammaShadows = true; G.ColorGammaShadows = Rg.Gamma;
+				G.bOverride_ColorSaturation = true; G.ColorSaturation = Rg.Sat;
+				G.bOverride_ColorContrast = true; G.ColorContrast = FVector4(Rg.Contrast, Rg.Contrast, Rg.Contrast, 1.f);
+				Pp->RegisterComponent();
+				AddInstanceComponent(Pp);
+			}
+		}
 	}
 	// -AntTime=0|1|2 pins the time of day (morning / golden evening / night) whatever the shift is.
 	int32 Pinned = -1;
@@ -1207,6 +1245,13 @@ bool AKitchenBuilder::ScatterTufts(const TArray<FTransform>& Blades, int32 Seed)
 		Tufts[k]->SetCastShadow(false);
 		Tufts[k]->SetCanEverAffectNavigation(false);
 		KitchenArt::ApplyLook(Tufts[k], Names[k]);
+		for (int32 m = 0; m < Tufts[k]->GetNumMaterials(); ++m)
+		{
+			FLinearColor T(0, 0, 0);
+			UMaterialInterface* Mi = Tufts[k]->GetMaterial(m);
+			if (Mi) { Mi->GetVectorParameterValue(FHashedMaterialParameterInfo(TEXT("Tint")), T); }
+			UE_LOG(LogTemp, Display, TEXT("M4TUFT %s slot %d %s tint %s"), Names[k], m, *GetNameSafe(Mi ? Mi->GetMaterial() : nullptr), *T.ToString());
+		}
 		Tufts[k]->RegisterComponent();
 		AddInstanceComponent(Tufts[k]);
 	}
@@ -1352,6 +1397,26 @@ void AKitchenBuilder::BuildArt()
 			{
 				C->ComponentTags.AddUnique(TEXT("M4Dress"));
 				UE_LOG(LogTemp, Display, TEXT("M4DRESS %s on %s at (%.0f,%.0f,%.0f)"), D.Name, H.GetComponent() ? *H.GetComponent()->GetName() : TEXT("-"), H.ImpactPoint.X, H.ImpactPoint.Y, H.ImpactPoint.Z);
+			}
+		}
+		// the fly paper over the table reads as fly paper: a few flies stuck to the strip (dressing, no collision)
+		for (UPrimitiveComponent* Ap : AntsOnlyParts)
+		{
+			UStaticMeshComponent* C = Cast<UStaticMeshComponent>(Ap);
+			if (!C || !C->GetStaticMesh() || C->GetStaticMesh()->GetName() != TEXT("SM_K_FlyPaper")) { continue; }
+			const FBox B = C->Bounds.GetBox();
+			const FVector E = B.GetExtent(), Mid = B.GetCenter();
+			static const float Hs[3] = { 0.28f, 0.52f, 0.71f };
+			for (int32 k = 0; k < 3; ++k)
+			{
+				const float Side = (k % 2) ? 1.f : -1.f;
+				const FVector At(Mid.X + Side * E.X * 0.85f, Mid.Y + (k - 1) * E.Y * 0.3f, B.Min.Z + Hs[k] * 2.f * E.Z);
+				UStaticMesh* Fly = Map4Look::Prop(TEXT("SM_M4_FlyBody"));
+				const float S = Fly ? 44.f / FMath::Max(1.f, (float)Fly->GetBounds().BoxExtent.GetMax() * 2.f) : 1.f;
+				if (UStaticMeshComponent* F = Map4Look::AddProp(this, Root, TEXT("SM_M4_FlyBody"), FTransform(FRotator(70.f * Side, 90.f * Side + k * 25.f, 15.f * k), At - GetActorLocation(), FVector(S)), false))
+				{
+					F->ComponentTags.AddUnique(TEXT("M4Dress"));
+				}
 			}
 		}
 	}
@@ -1987,6 +2052,17 @@ AKitchenBuilder::FTimeOfDay AKitchenBuilder::TimeOfDay(int32 Index)
 			break;
 		}
 	}
+	if (Map4Look::Enabled() && Index == 0)
+	{
+		// map v4 day: a lower, stronger sun that lays long shafts across the floor, less flat fill from the sky
+		T.SunRot = FRotator(-38.f, 100.f, 0.f);
+		T.SunLux = 13.f;
+		T.SunShafts = 34.f;
+		T.Sky = 1.05f;
+		T.Amb = 0.28f;
+		T.Bounce = 0.26f;
+		T.ExposureBias = -0.35f;
+	}
 	if (Map4Look::Enabled() && Index == 1)
 	{
 		// map v4 evening: the same low sun, but whites stay warm white rather than orange (the wallpapers and wood carry the warmth)
@@ -2156,11 +2232,11 @@ void AKitchenBuilder::ApplyLights()
 		if (Map4Look::Enabled())
 		{
 			// map v4 grade: soft ambient occlusion in the corners and under things, a touch of vignette, gentler saturation
-			G.bOverride_AmbientOcclusionIntensity = true; G.AmbientOcclusionIntensity = 0.65f;
+			G.bOverride_AmbientOcclusionIntensity = true; G.AmbientOcclusionIntensity = 0.9f;
 			G.bOverride_AmbientOcclusionRadius = true; G.AmbientOcclusionRadius = 120.f;
 			G.bOverride_VignetteIntensity = true; G.VignetteIntensity = 0.35f;
-			G.bOverride_ColorSaturation = true; G.ColorSaturation = FVector4(0.93f, 0.93f, 0.93f, 1.f);
-			G.bOverride_ColorContrast = true; G.ColorContrast = FVector4(1.04f, 1.04f, 1.04f, 1.f);
+			G.bOverride_ColorSaturation = true; G.ColorSaturation = FVector4(0.95f, 0.95f, 0.95f, 1.f);
+			G.bOverride_ColorContrast = true; G.ColorContrast = FVector4(1.1f, 1.1f, 1.1f, 1.f);
 			G.bOverride_BloomIntensity = true; G.BloomIntensity = 0.45f;
 		}
 	}

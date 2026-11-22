@@ -164,6 +164,7 @@ int32 Audit(UWorld* W, bool bVerbose)
 			}
 			else if (C->IsA<UProceduralMeshComponent>())
 			{
+				if (C->GetOwner() && C->GetOwner()->GetClass()->GetName().Contains(TEXT("Cloth"))) { continue; }   // real cloth (AntCloth): simulated, textured
 				Mesh = TEXT("(procedural)");
 				bProc = true;
 			}
@@ -841,6 +842,26 @@ bool DevCommand(AAntKitchenGameMode* GM, const TArray<FString>& A)
 	{
 		const FString Sub = A[1].ToLower();
 		if (Sub == TEXT("audit")) { Audit(W, true); return true; }
+		if (Sub == TEXT("tall"))
+		{
+			// what stands tall and thin (poles, tapes, handles): mesh, owner, centre, size
+			for (TActorIterator<AActor> It(W); It; ++It)
+			{
+				TArray<UStaticMeshComponent*> Ms;
+				It->GetComponents(Ms);
+				for (UStaticMeshComponent* C : Ms)
+				{
+					if (!C || !C->GetStaticMesh() || !C->IsVisible() || C->IsA<UInstancedStaticMeshComponent>()) { continue; }
+					const FBox B = C->Bounds.GetBox();
+					const FVector S = B.GetSize();
+					if (S.Z > 900.f && S.Z > 4.f * FMath::Max(S.X, S.Y))
+					{
+						UE_LOG(LogTemp, Display, TEXT("M4TALL %s %s (%.0f,%.0f,%.0f) size (%.0f,%.0f,%.0f) %s"), *C->GetStaticMesh()->GetName(), *It->GetName(), B.GetCenter().X, B.GetCenter().Y, B.GetCenter().Z, S.X, S.Y, S.Z, *DistrictAt(B.GetCenter()));
+					}
+				}
+			}
+			return true;
+		}
 		if (Sub == TEXT("fps")) { AMap4Runner* Rn = Runner(W); Rn->StartTour(TEXT("fps"), A.IsValidIndex(2) ? A[2] : FString()); Rn->bFps = true; Rn->AllMs.Reset(); return true; }
 		if (Sub == TEXT("shots")) { Runner(W)->StartTour(A.IsValidIndex(2) ? A[2] : FString(TEXT("now")), A.IsValidIndex(3) ? A[3] : FString()); return true; }
 		return false;
