@@ -364,6 +364,7 @@ void UAntFluidWorld::HandleSpills(int32 b)
 	FBasin& B = *Basins[b];
 	for (const FSpill& S : B.Spills)
 	{
+		SpilledVol += S.Volume;
 		const int32 I = S.Cell % B.Nx, J = S.Cell / B.Nx;
 		const FVector2f C = B.CellCentre(I, J);
 		const ELiquid Liquid = S.Layer == LOil ? Oil : (S.Layer == LHoney ? Honey : (S.Dye > 0.5f ? Cola : Water));
@@ -458,9 +459,16 @@ void UAntFluidWorld::StepSim(float Dt)
 			}
 			Falls.RemoveAtSwap(i, EAllowShrinking::No);
 		}
+		++SimStep;
 		for (int32 b = 0; b < Basins.Num(); ++b)
 		{
-			Basins[b]->Step();
+			// A basin where most of the water is on the move (a flood across the whole floor) steps at 30 Hz with twice the step:
+			// still stable (waves a few cm deep cross a cell in several steps), half the cost. Decided by its own state: the same on every machine.
+			FBasin& Bb = *Basins[b];
+			const bool bHalf = bAllowHalf && Bb.RunTiles[LWater] > 260;
+			if (bHalf && (SimStep & 1)) { continue; }
+			Bb.Dt = bHalf ? 2.f * StepDt : StepDt;
+			Bb.Step();
 			HandleSpills(b);
 		}
 		if (++PendingSteps >= 4) { PendingSteps = 0; FlushPending(); }
@@ -1527,6 +1535,7 @@ bool UAntFluidWorld::DevCommand(const TArray<FString>& A)
 	}
 	else if (Op == TEXT("dry")) { Dry(); }
 	else if (Op == TEXT("flip")) { bFlip = A.Num() < 3 || A[2] == TEXT("on"); UE_LOG(LogTemp, Display, TEXT("ANTFLUID 3D FLIP volumes %s"), bFlip ? TEXT("on") : TEXT("off")); }
+	else if (Op == TEXT("half")) { bAllowHalf = A.Num() < 3 || A[2] == TEXT("on"); UE_LOG(LogTemp, Display, TEXT("ANTFLUID 30 Hz for busy basins %s"), bAllowHalf ? TEXT("on") : TEXT("off")); }
 	else if (Op == TEXT("sleep")) { const bool b = A.Num() < 3 || A[2] == TEXT("on"); for (TUniquePtr<FBasin>& B : Basins) { B->bSleep = b; } UE_LOG(LogTemp, Display, TEXT("ANTFLUID sleeping tiles %s"), b ? TEXT("on") : TEXT("off")); }
 	else if (Op == TEXT("drain")) { SinkDrain = FMath::Max(0.f, NumAt(A, 2, 1.2f)); UE_LOG(LogTemp, Display, TEXT("ANTFLUID the sink's plughole takes %.2f l/s"), SinkDrain); }
 	else if (Op == TEXT("debug"))
@@ -1706,6 +1715,9 @@ void UAntFluidWorld::LogStats()
 	if (GEngine && GEngine->GameViewport) { GEngine->GameViewport->GetViewportSize(VP); }
 	UE_LOG(LogTemp, Display, TEXT("ANTFLUID stats t=%.1f (%.0fx%.0f): frame %.2f ms, gpu %.2f ms | sim %.3f ms, couple %.3f (props %.3f, ants %.3f), drops %.3f, view %.3f (game thread) | falls %d, columns %d, 3D volumes %d, drops %d, lost %.2f l, quality %d"),
 		W->GetTimeSeconds(), VP.X, VP.Y, FrameMs, GpuMs, SimMs, CoupleMs, PropsMs, AntsMs, DropMs, ViewMs, Falls.Num(), Columns.Num(), Volumes.Num(), Drops.Num(), LostVolume / Litre, Quality);
+	const float Since = FMath::Max(0.1f, W->GetTimeSeconds() - SpillStatAt);
+	UE_LOG(LogTemp, Display, TEXT("ANTFLUID   over the edges: %.2f l/s (%s)"), (float)(SpilledVol / Litre) / Since, bAllowHalf ? TEXT("30 Hz allowed") : TEXT("60 Hz"));
+	SpilledVol = 0.; SpillStatAt = W->GetTimeSeconds();
 	for (const TUniquePtr<FBasin>& B : Basins)
 	{
 		UE_LOG(LogTemp, Display, TEXT("ANTFLUID   %s: honey %.2f l (%d wet), water %.2f l (%d wet, box %dx%d, running tiles %d of %d), oil %.3f l (%d wet), step %u, uploaded tiles %d"), *B->Name,
@@ -1919,25 +1931,30 @@ void UAntFluidWorld::DrawStreams()
 			Chain(C.Top, C.Vel, (float)C.Bottom.Z, R0, Wd, Edge, Quality >= 2 ? 10 : 5, C.Top.X * 0.01f + C.Top.Y * 0.007f, C.Liquid);
 		}
 	}
-	auto Push = [](UInstancedStaticMeshComponent* M, const TArray<FTransform>& T, const TArray<float>* Kind)
+	auto Push = [](UInstancedStaticMeshComponent* M, const TArray<FTransform>& T, const TArray<float>* Kind, TArray<float>& LastKind)
 	{
 		if (!M) { return; }
+		bool bNew = false;
 		if (M->GetInstanceCount() != T.Num())
 		{
 			M->ClearInstances();
 			if (T.Num() > 0) { M->AddInstances(T, false, true, false); }
+			bNew = true;
 		}
 		else if (T.Num() > 0)
 		{
 			M->BatchUpdateInstancesTransforms(0, T, true, true, false);
 		}
-		if (Kind && M->NumCustomDataFloats > 0)
+		// the tint per instance only when it changed (it almost never does: a whole stream is water or cola)
+		if (Kind && M->NumCustomDataFloats > 0 && (bNew || LastKind != *Kind))
 		{
 			for (int32 i = 0; i < Kind->Num() && i < M->GetInstanceCount(); ++i) { M->SetCustomDataValue(i, 0, (*Kind)[i], false); }
+			M->MarkRenderStateDirty();
+			LastKind = *Kind;
 		}
 	};
-	Push(StreamMesh, Xf, &XfKind);
-	Push(SprayMesh, Spray, &SprayKind);
+	Push(StreamMesh, Xf, &XfKind, LastStreamKind);
+	Push(SprayMesh, Spray, &SprayKind, LastSprayKind);
 }
 
 // =============================================================================================
@@ -2142,8 +2159,9 @@ void UAntFluidWorld::TickNetServer(float Dt)
 		P.Add(Q);
 	}
 	if (P != N->Pours) { N->Pours = P; }
-	// the pieces go out one a frame: an actor sends only a couple of unreliable calls per net update (net.MaxRPCPerNetUpdate),
-	// the rest would be dropped (a snapshot of the flooded floor is ~16 pieces: a quarter of a second)
+	// The pieces go out reliably, one every other frame (~30 kB/s at most, a few kB/s usually): sent all at once, or unreliably,
+	// a flooded floor's 14 pieces never all arrived (checked: the 6-piece worktop did, the floor never).
+	if ((GFrameCounter & 1) == 0 && SendQueue.Num() > 0) { return; }
 	for (int32 n = 0; n < 1 && SendQueue.Num() > 0; ++n)
 	{
 		const FSnapOut& P0 = SendQueue[0];
@@ -2159,7 +2177,7 @@ void UAntFluidWorld::TickNetServer(float Dt)
 	FBasin& B = *Basins[b];
 	if (B.TotalVolume() <= 0. && (SnapTurn / Basins.Num()) % 5 != 0) { return; }   // a dry basin: now and then, so a client's stray water dries too
 	const int32 C0 = B.SnapCoarse;
-	B.SnapCoarse = 4;
+	B.SnapCoarse = B.Nx * B.Ny > 150000 ? 6 : 4;   // the floor in blocks of 15 cm, the worktop in 8 cm: the mass is corrected, the fine shape is the client's own
 	TArray<uint8> Data;
 	B.WriteSnapshot(Data);
 	B.SnapCoarse = C0;

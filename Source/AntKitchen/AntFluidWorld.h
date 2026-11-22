@@ -91,7 +91,7 @@ public:
 	UPROPERTY(Replicated) uint8 TapLiquid = 0;
 	UPROPERTY(Replicated) TArray<FAntFluidPour> Pours;
 
-	UFUNCTION(NetMulticast, Unreliable) void MulticastSnap(uint8 Basin, uint16 Seq, uint8 Part, uint8 Parts, const TArray<uint8>& Data);
+	UFUNCTION(NetMulticast, Reliable) void MulticastSnap(uint8 Basin, uint16 Seq, uint8 Part, uint8 Parts, const TArray<uint8>& Data);
 	UFUNCTION(NetMulticast, Reliable) void MulticastGeyser(FVector_NetQuantize At, float Seconds, uint8 Liquid);
 	UFUNCTION(NetMulticast, Reliable) void MulticastSpill(uint8 Liquid, FVector_NetQuantize At, float Volume, float Radius);
 	UFUNCTION(NetMulticast, Reliable) void MulticastDry();
@@ -183,6 +183,10 @@ private:
 	TArray<FColumn> Columns;
 	void NoteColumn(const FVector& Top, const FVector& Bottom, float Volume, uint8 Liquid, const FVector2f& Vel);
 	double Accum = 0.;
+	uint32 SimStep = 0;
+	bool bAllowHalf = false;       // fluid half on|off: a basin mostly on the move steps at 30 Hz (off: it held water back on the worktop)
+	double SpilledVol = 0.;        // stats: what went over edges since the last stats line
+	float SpillStatAt = 0.f;
 	int32 MaxSteps = 3;
 	bool bReady = false, bFrozen = false, bTriedBuild = false;
 	float SimMs = 0.f, ViewMs = 0.f, CoupleMs = 0.f, DropMs = 0.f, PropsMs = 0.f, AntsMs = 0.f;
@@ -265,6 +269,7 @@ private:
 	void DrawDrops();
 	UPROPERTY() UInstancedStaticMeshComponent* StreamMesh = nullptr;
 	UPROPERTY() UInstancedStaticMeshComponent* SprayMesh = nullptr;
+	TArray<float> LastStreamKind, LastSprayKind;
 	void DrawStreams();
 	float TapDripAt = -1.f;
 	bool bDrip = false;
