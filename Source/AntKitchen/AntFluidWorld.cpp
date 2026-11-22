@@ -1935,15 +1935,24 @@ void UAntFluidWorld::DrawStreams()
 	{
 		if (!M) { return; }
 		bool bNew = false;
-		if (M->GetInstanceCount() != T.Num())
+		// the instance buffer only grows (rebuilding it whenever a stream starts or stops cost more than all the rest):
+		// spare instances sit at zero scale out of sight
+		const int32 Have = M->GetInstanceCount();
+		if (T.Num() > Have)
 		{
-			M->ClearInstances();
-			if (T.Num() > 0) { M->AddInstances(T, false, true, false); }
+			TArray<FTransform> More;
+			const int32 Want = FMath::Max(T.Num(), Have + 64);
+			More.Init(FTransform(FQuat::Identity, FVector(0.f, 0.f, -10000.f), FVector::ZeroVector), Want - Have);
+			M->AddInstances(More, false, true, false);
 			bNew = true;
 		}
-		else if (T.Num() > 0)
+		const int32 N = M->GetInstanceCount();
+		if (T.Num() == 0 && LastKind.Num() == 0 && !bNew) { return; }   // nothing falls now, and nothing fell last frame
+		if (N > 0)
 		{
-			M->BatchUpdateInstancesTransforms(0, T, true, true, false);
+			TArray<FTransform> All = T;
+			if (All.Num() < N) { All.SetNum(N); for (int32 i = T.Num(); i < N; ++i) { All[i] = FTransform(FQuat::Identity, FVector(0.f, 0.f, -10000.f), FVector::ZeroVector); } }
+			M->BatchUpdateInstancesTransforms(0, All, true, true, false);
 		}
 		// the tint per instance only when it changed (it almost never does: a whole stream is water or cola)
 		if (Kind && M->NumCustomDataFloats > 0 && (bNew || LastKind != *Kind))
