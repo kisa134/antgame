@@ -67,6 +67,10 @@ UStaticMeshComponent* AddPart(AActor* Owner, USceneComponent* Parent, EAntShape 
 	UStaticMeshComponent* C = NewObject<UStaticMeshComponent>(Owner);
 	C->SetMobility(bStatic ? EComponentMobility::Static : EComponentMobility::Movable);
 	C->SetStaticMesh(ShapeMesh(Shape));
+	if (Shape == EAntShape::Cylinder && Map4Look::Enabled() && FMath::Max(Scale.X, Scale.Y) <= 0.09f && Scale.Z >= 4.f * FMath::Max(Scale.X, Scale.Y))
+	{
+		if (UStaticMesh* T = Map4Look::Prop(TEXT("SM_M4_Thread"))) { C->SetStaticMesh(T); C->ComponentTags.AddUnique(TEXT("M4Thread")); }   // map v4: a thread is a thread
+	}
 	C->SetupAttachment(Parent);
 	C->SetRelativeLocationAndRotation(Loc, Rot);
 	C->SetRelativeScale3D(Scale);
@@ -316,7 +320,26 @@ const FPart& Get(const TCHAR* Name)
 		}
 	}
 	FPart P;
-	const FString N(Name);
+	FString N(Name);
+	if (Map4Look::Enabled())
+	{
+		// map v4: the creature art the code always asked for, now made (Higgsfield bodies, Blender wings and legs)
+		static const TCHAR* const Alias[][2] =
+		{
+			{ TEXT("SM_Fly_Body"), TEXT("SM_M4_FlyBody") }, { TEXT("SM_Spider_Body"), TEXT("SM_M4_SpiderBody") },
+			{ TEXT("SM_Fly_Wing"), TEXT("SM_M4_Wing@FlyWing") },
+			{ TEXT("SM_Fly_LegUpper"), TEXT("SM_M4_LegSeg@FlyLeg") }, { TEXT("SM_Fly_LegLower"), TEXT("SM_M4_LegSeg@FlyLeg") },
+			{ TEXT("SM_Spider_LegUpper"), TEXT("SM_M4_LegSeg@SpiderLeg") }, { TEXT("SM_Spider_LegLower"), TEXT("SM_M4_LegSeg@SpiderLegDark") },
+		};
+		for (const auto& A : Alias)
+		{
+			if (N.Equals(A[0]))
+			{
+				const FPart Q = Get(A[1]);   // a copy: adding to the cache below may move its entries
+				return Cache.Add(Name, Q);
+			}
+		}
+	}
 	const FString Short = N.StartsWith(TEXT("SM_")) ? N.Mid(3) : N;
 	FString MeshName = N, LookName;
 	if (N.Split(TEXT("@"), &MeshName, &LookName)) {}
@@ -506,7 +529,7 @@ const TCHAR* FoodArtName(const FString& LootName)
 			{ TEXT("Попкорн"), TEXT("SM_M4_Popcorn") }, { TEXT("Зефирка"), TEXT("SM_M4_Zefir") }, { TEXT("Карамелька"), TEXT("SM_M4_Caramel") },
 			{ TEXT("Леденец"), TEXT("SM_M4_Lollipop") }, { TEXT("сгущёнки"), TEXT("SM_M4_CondensedMilk") }, { TEXT("Пачка печенья"), TEXT("SM_M4_BiscuitPack") },
 			{ TEXT("Хлебная крошка"), TEXT("SM_M4_Crumb@Toast") }, { TEXT("Крошка печенья"), TEXT("SM_M4_Crumb@Biscuit") }, { TEXT("Семечка"), TEXT("SM_M4_Droplet@Seed") },
-			{ TEXT("Макаронина"), TEXT("SM_M4_Macaroni") }, { TEXT("Горошина"), TEXT("SM_M4_Ball@Pea") }, { TEXT("Рисинка"), TEXT("SM_M4_Ball@Rice") },
+			{ TEXT("Макаронина"), TEXT("SM_M4_Macaroni") }, { TEXT("Горошина"), TEXT("SM_M4_Pea@Pea") }, { TEXT("Рисинка"), TEXT("SM_M4_Rice@Rice") },
 			{ TEXT("Кошачий корм"), TEXT("SM_M4_Pebble@Kibble") }, { TEXT("Собачий корм"), TEXT("SM_M4_Pebble@Kibble") }, { TEXT("Изюминка"), TEXT("SM_M4_Crumb@Raisin") },
 			{ TEXT("Хлопья"), TEXT("SM_M4_Speck@Cornflake") }, { TEXT("Орех в шоколаде"), TEXT("SM_M4_Pebble@ChocoNut") }, { TEXT("Чипсина"), TEXT("SM_M4_Speck@Crisps") },
 			{ TEXT("Шоколадный батончик"), TEXT("SM_Food_Chocolate") }, { TEXT("шоколадка"), TEXT("SM_Food_Chocolate") }, { TEXT("Плитка шоколада"), TEXT("SM_Food_Chocolate") },

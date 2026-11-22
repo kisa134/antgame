@@ -1,4 +1,5 @@
 ﻿#include "KitchenLoot.h"
+#include "Map4Look.h"
 #include "AntMess.h"
 #include "AntFx.h"
 #include "Components/StaticMeshComponent.h"
@@ -383,6 +384,7 @@ void AKitchenLoot::RefreshVisual()
 		bHasArt = false;
 		ArtOffset = FVector::ZeroVector;
 		Mesh->SetStaticMesh(AntKit::ShapeMesh((EAntShape)ShapeIndex));
+		if (bIsGear && Map4Look::Enabled() && Map4Look::Shape(0)) { if (UStaticMesh* Gem = Map4Look::Prop(TEXT("SM_M4_Gem"))) { Mesh->SetStaticMesh(Gem); } }   // map v4: gear is a cut gem in its rarity colour
 		Mesh->SetRelativeScale3D(bIsGear ? VisualScale : VisualScale * (GetRadius() * 2.f / FMath::Max(10.f, (float)VisualScale.GetMax() * 100.f)));
 		if (!MeshMID) { MeshMID = AntKit::Paint(Mesh, Col); }
 		else { MeshMID->SetVectorParameterValue(TEXT("Color"), Col); }
@@ -392,6 +394,7 @@ void AKitchenLoot::RefreshVisual()
 	const bool bShowBeam = (bIsGear && Gear.Rarity >= 1) || bTrophy;
 	const FLinearColor BeamCol = bTrophy ? FLinearColor(1.f, 0.8f, 0.2f) : Col;
 	Beam->SetStaticMesh(AntKit::ShapeMesh(EAntShape::Cylinder));
+	Beam->ComponentTags.AddUnique(TEXT("M4Fx"));   // a shaft of light
 	Beam->SetVisibility(bShowBeam);
 	if (!BeamMID) { BeamMID = AntKit::Paint(Beam, BeamCol); }
 	else { BeamMID->SetVectorParameterValue(TEXT("Color"), BeamCol); }
@@ -842,6 +845,7 @@ void AFoodCrumbs::Burst(const FLinearColor& InColor, int32 Count, float Size)
 		const FLinearColor C = InColor * FMath::FRandRange(0.7f, 1.1f);
 		UStaticMeshComponent* M = AntKit::AddPart(this, RootComponent, FMath::RandBool() ? EAntShape::Cube : EAntShape::Sphere,
 			FMath::VRand() * Size, FVector(Size * FMath::FRandRange(0.5f, 1.3f) / 100.f), C, FRotator(FMath::FRand() * 360.f, FMath::FRand() * 360.f, 0.f));
+		if (Map4Look::Enabled()) { if (UStaticMesh* Chip = Map4Look::Shape(M->GetStaticMesh() == AntKit::ShapeMesh(EAntShape::Cube) ? 6 : 7)) { M->SetStaticMesh(Chip); } M->ComponentTags.AddUnique(TEXT("M4Fx")); }   // chips and crumbs
 		M->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
 		M->SetCollisionObjectType(ECC_PhysicsBody);
 		M->SetCollisionResponseToAllChannels(ECR_Ignore);

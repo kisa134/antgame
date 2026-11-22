@@ -1,4 +1,5 @@
 ﻿#include "KitchenSlick.h"
+#include "Map4Look.h"
 #include "AntCharacter.h"
 #include "AntKitchenGameMode.h"
 #include "AntFx.h"
@@ -93,11 +94,13 @@ void AKitchenSlick::BeginPlay()
 	else
 	{
 		Pool = AntKit::AddPart(this, Root, EAntShape::Cylinder, FVector(0.f, 0.f, 1.f), FVector(1.f, 1.f, 0.02f), bOilLook ? FLinearColor(0.78f, 0.48f, 0.05f) : FLinearColor(0.35f, 0.55f, 0.8f));
+		Map4Look::Swap(Pool, TEXT("SM_M4_LiquidDisc"), bOilLook ? TEXT("Oil") : TEXT("Water"), TEXT("M4Fx"));
 		Pool->SetCastShadow(false);
 		MeshR = 50.f;
 	}
 	const bool bOil = Kind == SlickKind::Oil;
 	Sheen = AntKit::AddPart(this, Root, EAntShape::Cylinder, FVector(0.f, 0.f, 3.f), FVector(1.f, 1.f, 0.02f), FLinearColor::White);
+	if (Map4Look::Enabled() && Map4Look::Prop(TEXT("SM_M4_LiquidDisc"))) { Sheen->SetStaticMesh(Map4Look::Prop(TEXT("SM_M4_LiquidDisc"))); Sheen->ComponentTags.AddUnique(TEXT("M4Fx")); }
 	Sheen->SetCastShadow(false);
 	if (UMaterialInterface* Soft = LoadObject<UMaterialInterface>(nullptr, TEXT("/Engine/EngineDebugMaterials/M_SimpleUnlitTranslucent.M_SimpleUnlitTranslucent")))
 	{
@@ -279,6 +282,19 @@ void AKitchenSpillBottle::BuildLook()
 		P->SetCastShadow(true);
 		return P;
 	};
+	if (Map4Look::Enabled() && Map4Look::Prop(TEXT("SM_M4_PetBottle")))
+	{
+		// map v4: one modelled PET bottle (cap, label, clear body), climbable like the stack of cylinders was
+		if (UStaticMeshComponent* PB = Map4Look::AddProp(this, BodyRoot, TEXT("SM_M4_PetBottle"), FTransform(FRotator::ZeroRotator, FVector::ZeroVector, FVector(D / 36.f, D / 36.f, Height / 100.f)), true))
+		{
+			PB->SetCastShadow(true);
+			UMaterialInterface* Mi = nullptr;
+			if (const Map4Look::FLook* L = Map4Look::Named(bOil ? TEXT("Oil") : TEXT("PetClear"))) { Mi = Map4Look::Get(*L); }
+			if (Mi) { PB->SetMaterial(2, Mi); }
+			if (!bOil) { if (const Map4Look::FLook* L = Map4Look::Named(TEXT("Blue"))) { PB->SetMaterial(0, Map4Look::Get(*L)); } }
+		}
+		return;
+	}
 	Cyl(0.f, Height * 0.70f, D, Glass, true);
 	Cyl(Height * 0.24f, Height * 0.50f, D * 1.03f, Label, false);
 	Cyl(Height * 0.70f, Height * 0.80f, D * 0.78f, Glass, true);

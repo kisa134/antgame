@@ -98,8 +98,13 @@ for folder in sorted(glob.glob(os.path.join(SRC, "SM_*"))):
             e.set_editor_property("z", max(0.1, b.max.z - b.min.z))
             agg.set_editor_property("box_elems", [e])
             bs.set_editor_property("agg_geom", agg)
-        bs.set_editor_property("collision_trace_flag", unreal.CollisionTraceFlag.CTF_USE_COMPLEX_AS_SIMPLE if info.get("complex_simple") else unreal.CollisionTraceFlag.CTF_USE_SIMPLE_AND_COMPLEX)
-    if info.get("generic"):
+        # static props the ants climb: their own triangles; physics props and weapons: the simple body
+        PHYS = ("SM_M4_BottleCap", "SM_M4_Coin", "SM_M4_Thimble", "SM_M4_Grape", "SM_M4_Gem", "SM_M4_CarrotSlice", "SM_M4_BayLeaf", "SM_M4_Bat", "SM_M4_Pan", "SM_M4_Sausage")
+        cas = info.get("complex_simple", bool(info.get("slots")) and name not in PHYS)
+        bs.set_editor_property("collision_trace_flag", unreal.CollisionTraceFlag.CTF_USE_COMPLEX_AS_SIMPLE if cas else unreal.CollisionTraceFlag.CTF_USE_SIMPLE_AND_COMPLEX)
+    if info.get("slots"):
+        pass   # material slots named after the game's looks (Map4Look / KitchenArt::ApplyLook): the code assigns them
+    elif info.get("generic") or not tex:
         paint = unreal.load_asset("/Game/Map4/Materials/MI_M4_Paint")
         mesh.set_material(0, paint if paint else mi)
     else:

@@ -4,6 +4,9 @@
 #include "Materials/MaterialInterface.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Components/PrimitiveComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "GameFramework/Actor.h"
+#include "Engine/CollisionProfile.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "UObject/Package.h"
@@ -141,6 +144,20 @@ namespace
 		{ TEXT("@Silk"), TEXT("Enamel"), 600.000f, 1.000f, 1.000f, 1.000f, 0.500f, 0.000f, 0.000f, 0.200f, 0.000f, 0.000f, 0.000f, nullptr },
 		{ TEXT("@Water"), TEXT("Enamel"), 600.000f, 1.000f, 1.000f, 1.000f, 0.150f, -0.200f, 0.000f, 0.150f, 0.000f, 0.000f, 0.000f, nullptr },
 		{ TEXT("@Coil"), TEXT("Enamel"), 600.000f, 1.000f, 1.000f, 1.000f, 1.000f, 0.200f, 0.000f, 0.300f, 0.000f, 0.000f, 0.600f, TEXT("Surf_Metal") },
+		{ TEXT("Sausage"), TEXT("Leather"), 120.000f, 1.15f, 0.55f, 0.45f, 0.6f, -0.1f, 0.0f, 0.6f, 0.0f, 0.0f, 0.0f, nullptr },
+		{ TEXT("Grape"), TEXT("Enamel"), 200.000f, 0.48f, 0.72f, 0.26f, 0.5f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, nullptr },
+		{ TEXT("FlyWing"), TEXT("Enamel"), 200.000f, 0.78f, 0.84f, 0.9f, 0.25f, 0.0f, 0.0f, 0.3f, 0.0f, 0.0f, 0.05f, nullptr },
+		{ TEXT("FlyLeg"), TEXT("Leather"), 60.000f, 0.12f, 0.11f, 0.11f, 0.7f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, nullptr },
+		{ TEXT("SpiderLeg"), TEXT("Leather"), 60.000f, 0.75f, 0.5f, 0.32f, 0.9f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, nullptr },
+		{ TEXT("SpiderLegDark"), TEXT("Leather"), 60.000f, 0.4f, 0.27f, 0.17f, 0.9f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, nullptr },
+		{ TEXT("Meatball"), TEXT("Soil"), 80.000f, 0.95f, 0.58f, 0.42f, 0.8f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, nullptr },
+		{ TEXT("Carrot"), TEXT("Enamel"), 200.000f, 1.0f, 0.45f, 0.08f, 1.0f, 0.1f, 0.0f, 0.6f, 0.0f, 0.0f, 0.0f, nullptr },
+		{ TEXT("Soup"), TEXT("Enamel"), 400.000f, 0.95f, 0.6f, 0.22f, 0.2f, 0.0f, 0.0f, 0.2f, 0.0f, 0.0f, 0.0f, nullptr },
+		{ TEXT("Pizza"), TEXT("Cardboard"), 300.000f, 1.2f, 0.72f, 0.32f, 1.0f, -0.1f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, nullptr },
+		{ TEXT("Water"), TEXT("Enamel"), 600.000f, 0.35f, 0.55f, 0.8f, 0.1f, -0.2f, 0.0f, 0.1f, 0.0f, 0.0f, 0.0f, nullptr },
+		{ TEXT("Oil"), TEXT("Enamel"), 600.000f, 0.9f, 0.55f, 0.05f, 0.2f, -0.15f, 0.0f, 0.1f, 0.0f, 0.0f, 0.0f, nullptr },
+		{ TEXT("Burn"), TEXT("Soil"), 100.000f, 0.12f, 0.1f, 0.08f, 1.0f, 0.0f, 0.0f, 0.4f, 0.0f, 0.0f, 0.0f, nullptr },
+		{ TEXT("Spark"), TEXT("Enamel"), 600.000f, 1.0f, 0.95f, 0.5f, 1.0f, 0.0f, 0.0f, 0.2f, 0.0f, 0.0f, 6.0f, nullptr },
 		{ TEXT("@Seed"), TEXT("Enamel"), 120.000f, 0.20f, 0.19f, 0.17f, 1.0f, 0.25f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, nullptr },
 		{ TEXT("@Pea"), TEXT("Enamel"), 120.000f, 0.32f, 0.66f, 0.22f, 1.0f, 0.1f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, nullptr },
 		{ TEXT("@Rice"), TEXT("Concrete"), 60.000f, 1.30f, 1.28f, 1.20f, 1.0f, 0.0f, 0.0f, 0.6f, 0.0f, 0.0f, 0.0f, nullptr },
@@ -321,6 +338,61 @@ UStaticMesh* Prop(const TCHAR* Name)
 	UStaticMesh* M = LoadObject<UStaticMesh>(nullptr, *FString::Printf(TEXT("/Game/Map4/Props/%s/%s.%s"), Name, Name, Name), nullptr, LOAD_NoWarn | LOAD_Quiet);
 	if (M) { M->AddToRoot(); }
 	return Cache.Add(Name, M);
+}
+
+void ApplySlots(UStaticMeshComponent* C)
+{
+	const UStaticMesh* M = C ? C->GetStaticMesh() : nullptr;
+	if (!M) { return; }
+	const TArray<FStaticMaterial>& Slots = M->GetStaticMaterials();
+	for (int32 i = 0; i < Slots.Num(); ++i)
+	{
+		const FString S = Slots[i].MaterialSlotName.ToString();
+		const FLook* L = ForSlot(TEXT(""), 0, S);
+		if (!L) { L = Named(*S); }
+		if (L)
+		{
+			C->SetMaterial(i, Get(*L));
+			if (i == 0 && L->Step) { C->ComponentTags.AddUnique(FName(L->Step)); }
+		}
+	}
+}
+
+bool Swap(UStaticMeshComponent* C, const TCHAR* Name, const TCHAR* Look, const TCHAR* Tag)
+{
+	UStaticMesh* M = (C && Enabled()) ? Prop(Name) : nullptr;
+	if (!M) { return false; }
+	C->SetStaticMesh(M);
+	C->EmptyOverrideMaterials();
+	if (Look)
+	{
+		if (const FLook* L = Named(Look)) { C->SetMaterial(0, Get(*L)); }
+	}
+	else
+	{
+		ApplySlots(C);
+	}
+	if (Tag) { C->ComponentTags.AddUnique(FName(Tag)); }
+	return true;
+}
+
+UStaticMeshComponent* AddProp(AActor* Owner, USceneComponent* Parent, const TCHAR* Name, const FTransform& Relative, bool bSolid, const TCHAR* Look)
+{
+	UStaticMesh* M = (Owner && Enabled()) ? Prop(Name) : nullptr;
+	if (!M) { return nullptr; }
+	UStaticMeshComponent* C = NewObject<UStaticMeshComponent>(Owner);
+	C->SetMobility(EComponentMobility::Movable);
+	C->SetStaticMesh(M);
+	C->SetupAttachment(Parent ? Parent : Owner->GetRootComponent());
+	C->SetRelativeTransform(Relative);
+	if (bSolid) { C->SetCollisionProfileName(UCollisionProfile::BlockAll_ProfileName); }
+	else { C->SetCollisionEnabled(ECollisionEnabled::NoCollision); C->SetGenerateOverlapEvents(false); }
+	C->SetCanEverAffectNavigation(false);
+	if (Look) { if (const FLook* L = Named(Look)) { C->SetMaterial(0, Get(*L)); } }
+	else { ApplySlots(C); }
+	C->RegisterComponent();
+	Owner->AddInstanceComponent(C);
+	return C;
 }
 
 UStaticMesh* Shape(int32 Index)

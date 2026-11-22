@@ -149,7 +149,10 @@ int32 Audit(UWorld* W, bool bVerbose)
 				bShape = M->GetPathName().StartsWith(TEXT("/Engine/"));
 				// map v4's own base shapes: not engine placeholders, but still plain boxes / balls unless they are architecture
 				static const TCHAR* GenericNames[] = { TEXT("SM_M4_Box"), TEXT("SM_M4_Ball"), TEXT("SM_M4_Cyl"), TEXT("SM_M4_Cone"), TEXT("SM_M4_Plane") };
-				for (const TCHAR* G : GenericNames) { if (Mesh == G && !C->ComponentHasTag(TEXT("M4Skin"))) { bGeneric = true; } }
+				// skins of walls, particles (sprites, puffs, drops) and threads (silk, wires) are what they are
+				const bool bExempt = C->ComponentHasTag(TEXT("M4Skin")) || C->ComponentHasTag(TEXT("M4Fx")) || C->ComponentHasTag(TEXT("M4Thread")) || C->ComponentHasTag(TEXT("M4Arch"));
+				for (const TCHAR* G : GenericNames) { if (Mesh == G && !bExempt) { bGeneric = true; } }
+				if (C->ComponentHasTag(TEXT("M4Arch")) && Mesh.StartsWith(TEXT("SM_M4_"))) { bGeneric = true; }
 				for (int32 k = 0; k < S->GetNumMaterials(); ++k)
 				{
 					if (IsPlaceholderMaterial(S->GetMaterial(k))) { bFlat = true; }
@@ -166,7 +169,7 @@ int32 Audit(UWorld* W, bool bVerbose)
 			}
 			if (!bShape && !bFlat && !bProc && !bGeneric) { continue; }
 			const FVector Sz = C->Bounds.BoxExtent * 2.f;
-			const bool bArch = bGeneric && Sz.GetMax() > 1200.f && Sz.GetMin() < 260.f;   // walls, floors, ceilings, shelves: slabs
+			const bool bArch = bGeneric && (C->ComponentHasTag(TEXT("M4Arch")) || (Sz.GetMax() > 1200.f && Sz.GetMin() < 260.f));   // walls, floors, ceilings, shelves: slabs
 			Full.Add(FString::Printf(TEXT("%s,%s,%s,%s,%s,%.0f,%.0f,%.0f,%.0f,%.0f,%.0f,%s"), *A->GetClass()->GetName(), *A->GetName(), *C->GetName(), *Mesh,
 				bShape ? TEXT("shape") : bFlat ? TEXT("flat") : bProc ? TEXT("proc") : bArch ? TEXT("generic_arch") : TEXT("generic"), C->Bounds.Origin.X, C->Bounds.Origin.Y, C->Bounds.Origin.Z,
 				C->Bounds.BoxExtent.X * 2.f, C->Bounds.BoxExtent.Y * 2.f, C->Bounds.BoxExtent.Z * 2.f, *DistrictAt(C->Bounds.Origin)));
@@ -232,8 +235,9 @@ static TArray<AMap4Runner::FCam> AllCams()
 		{ TEXT("14_stenka"),   FVector(15200.f, -4800.f, 120.f),  FVector(19600.f, -8200.f, 2000.f),74.f },
 		{ TEXT("20_kitchen_overview"), FVector(6400.f, -4600.f, 3600.f), FVector(-1500.f, 2400.f, 1000.f), 80.f },
 		{ TEXT("21_living_overview"),  FVector(8000.f, 900.f, 3600.f),   FVector(16000.f, -6000.f, 900.f), 80.f },
-		{ TEXT("22_table_top"),  FVector(-1200.f, -1400.f, 1460.f), FVector(1500.f, 300.f, 1600.f), 74.f },
-		{ TEXT("23_worktop"),    FVector(-5800.f, 3400.f, 1770.f),  FVector(-200.f, 4300.f, 1900.f), 74.f },
+		{ TEXT("22_table_top"),  FVector(1000.f, -1900.f, 1480.f), FVector(-1200.f, 200.f, 1560.f), 74.f },
+		{ TEXT("23_worktop"),    FVector(-4300.f, 3200.f, 1800.f),  FVector(-1200.f, 4300.f, 1960.f), 74.f },
+		{ TEXT("24_fly_spider"), FVector(6300.f, 2200.f, 3400.f),  FVector(6990.f, 2600.f, 2880.f), 60.f },
 	};
 }
 

@@ -143,6 +143,16 @@ void AAntFxManager::Emit(const FAntFxBit& Bit)
 		Comps[Slot] = C;
 	}
 	UStaticMesh* Mesh = AntKit::ShapeMesh(Bit.Shape);
+	if (Map4Look::Enabled())
+	{
+		// map v4: puffs are clouds, solid bits are drops (bluish) or chips, flecks are flakes; rings and beams stay cylinders (glow)
+		const bool bBlue = Bit.Color.B > Bit.Color.R + 0.08f;
+		const int32 Want = Bit.Shape == EAntShape::Sphere ? (Bit.Look == EAntFxLook::Soft ? -1 : (bBlue || Bit.Look == EAntFxLook::Glow ? 5 : 7))
+			: Bit.Shape == EAntShape::Cube ? 6 : -2;
+		UStaticMesh* M4 = Want == -1 ? Map4Look::Prop(TEXT("SM_M4_Puff")) : Want >= 0 ? Map4Look::Shape(Want) : nullptr;
+		if (M4) { Mesh = M4; }
+		C->ComponentTags.AddUnique(TEXT("M4Fx"));
+	}
 	if (C->GetStaticMesh() != Mesh)
 	{
 		C->SetStaticMesh(Mesh);

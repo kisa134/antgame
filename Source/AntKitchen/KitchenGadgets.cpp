@@ -127,14 +127,16 @@ void AKitchenKnob::BeginPlay()
 		}
 	}
 	Soup = Part(Root, EAntShape::Cylinder, B + FVector(0.f, 0.f, 540.f), FVector(760.f, 760.f, 10.f), Hex(230, 150, 60), true);  // soup surface (walkable... and scalding)
-	Part(Root, EAntShape::Cylinder, B + FVector(180.f, -120.f, 545.f), FVector(160.f, 160.f, 8.f), Hex(240, 200, 90), false);    // a floating carrot
-	Part(Root, EAntShape::Cube, B + FVector(-220.f, 150.f, 545.f), FVector(140.f, 60.f, 8.f), Hex(120, 170, 60), false);         // a leaf
-	Part(Root, EAntShape::Cylinder, B + FVector(-380.f, 300.f, 900.f), FVector(60.f, 60.f, 700.f), Hex(190, 150, 100), true, FRotator(0.f, 30.f, 60.f));   // wooden spoon leaning in
+	Map4Look::Swap(Soup, TEXT("SM_M4_LiquidDisc"), TEXT("Soup"), TEXT("M4Fx"));
+	Map4Look::Swap(Part(Root, EAntShape::Cylinder, B + FVector(180.f, -120.f, 545.f), FVector(160.f, 160.f, 8.f), Hex(240, 200, 90), false), TEXT("SM_M4_CarrotSlice"), TEXT("Carrot"));    // a floating carrot
+	Map4Look::Swap(Part(Root, EAntShape::Cube, B + FVector(-220.f, 150.f, 545.f), FVector(140.f, 60.f, 8.f), Hex(120, 170, 60), false), TEXT("SM_M4_BayLeaf"), TEXT("LeafLight"));         // a leaf
+	Map4Look::Swap(Part(Root, EAntShape::Cylinder, B + FVector(-380.f, 300.f, 900.f), FVector(60.f, 60.f, 700.f), Hex(190, 150, 100), true, FRotator(0.f, 30.f, 60.f)), TEXT("SM_M4_WoodSpoon"));   // wooden spoon leaning in
 	for (int32 i = 0; i < 7; ++i)
 	{
 		const float A = i * 0.9f;
 		Bubbles.Add(Part(Root, EAntShape::Sphere, B + FVector(FMath::Cos(A) * 220.f, FMath::Sin(A) * 220.f, 548.f), FVector(50.f, 50.f, 40.f), Hex(245, 190, 110), false));
 		Bubbles.Last()->SetVisibility(false);
+		Map4Look::Swap(Bubbles.Last(), TEXT("SM_M4_Droplet"), TEXT("Soup"), TEXT("M4Fx"));
 	}
 	Glow = MakeLight(this, Root, B + FVector(0.f, 0.f, 120.f), 0.f, FLinearColor(1.f, 0.35f, 0.08f), 1100.f);
 	UsePointsLocal = { FVector(0.f, -120.f, 0.f), FVector(0.f, -60.f, -150.f) };
@@ -354,6 +356,19 @@ void AKitchenFan::BeginPlay()
 {
 	Super::BeginPlay();
 	// Base on the counter, pole, a head that sweeps left-right; it blows along the head's -Y.
+	if (Map4Look::Enabled() && Map4Look::Prop(TEXT("SM_M4_FanBase")))
+	{
+		// map v4: a modelled desk fan (base with its red button, chrome pole, motor, wire cage, three blades), same pivots
+		Map4Look::AddProp(this, Root, TEXT("SM_M4_FanBase"), FTransform::Identity, true);
+		Map4Look::AddProp(this, Root, TEXT("SM_M4_FanPole"), FTransform::Identity, true);
+		Head = AntKit::AddPivot(this, Root, FVector(0.f, 0.f, 480.f));
+		Map4Look::AddProp(this, Head, TEXT("SM_M4_FanMotor"), FTransform::Identity, true);
+		Map4Look::AddProp(this, Head, TEXT("SM_M4_FanCage"), FTransform::Identity, true);
+		Blades = AntKit::AddPivot(this, Head, FVector(0.f, -40.f, 0.f));
+		Map4Look::AddProp(this, Blades, TEXT("SM_M4_FanBlades"), FTransform::Identity, false);
+		UsePointsLocal = { FVector(0.f, -330.f, 0.f), FVector(-250.f, -200.f, 0.f), FVector(250.f, -200.f, 0.f) };
+		return;
+	}
 	Part(Root, EAntShape::Cylinder, FVector(0.f, 0.f, 20.f), FVector(380.f, 380.f, 40.f), DarkSteel, true);
 	Part(Root, EAntShape::Cube, FVector(0.f, -140.f, 60.f), FVector(120.f, 80.f, 40.f), Hex(200, 40, 40), true);    // the button
 	Part(Root, EAntShape::Cylinder, FVector(0.f, 0.f, 240.f), FVector(50.f, 50.f, 400.f), Steel, true);

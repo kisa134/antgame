@@ -1,4 +1,5 @@
 ﻿#include "AntWeapon.h"
+#include "Map4Look.h"
 #include "AntAudio.h"
 #include "AntWreck.h"
 #include "AntVersus.h"
@@ -583,7 +584,29 @@ void AHumanWeapon::Build()
 		Parts.Add(C);
 		return C;
 	};
-	if (Kind == Bat)
+	auto Model = [&](const TCHAR* Mesh, float Length, float StartX) -> bool
+	{
+		// map v4: a modelled weapon along +X from the grip (slots named after the looks)
+		UStaticMesh* M = Map4Look::Enabled() ? Map4Look::Prop(Mesh) : nullptr;
+		if (!M) { return false; }
+		const FBox B = M->GetBoundingBox();
+		const float S = Length / FMath::Max(1.f, (float)B.GetSize().X);
+		UStaticMeshComponent* C = NewObject<UStaticMeshComponent>(this);
+		C->SetStaticMesh(M);
+		C->SetupAttachment(Root);
+		C->SetRelativeTransform(FTransform(FRotator::ZeroRotator, FVector(StartX - B.Min.X * S, -B.GetCenter().Y * S, -B.GetCenter().Z * S), FVector(S)));
+		C->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		C->SetCastShadow(true);
+		C->RegisterComponent();
+		AddInstanceComponent(C);
+		KitchenArt::ApplyLook(C, Mesh, 0);
+		Parts.Add(C);
+		return true;
+	};
+	if (Kind == Bat && Model(TEXT("SM_M4_Bat"), 1700.f, -110.f)) {}
+	else if (Kind == Pan && Model(TEXT("SM_M4_Pan"), 1400.f, -60.f)) {}
+	else if (Kind == Sausage && Model(TEXT("SM_M4_Sausage"), 530.f, -55.f)) {}
+	else if (Kind == Bat)
 	{
 		const FLinearColor Ash(0.78f, 0.58f, 0.34f), Tape(0.05f, 0.05f, 0.06f);
 		Shape(EAntShape::Sphere, -110.f, -20.f, 85.f, Ash);           // the knob

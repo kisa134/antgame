@@ -1,4 +1,5 @@
 ﻿#include "KitchenEvents.h"
+#include "Map4Look.h"
 #include "AntRun.h"
 #include "AntCharacter.h"
 #include "AntMovementComponent.h"
@@ -43,6 +44,7 @@ void AKitchenNoiseBox::BeginPlay()
 	{
 		// A green start button on the microwave's front panel; reachable from the worktop under it and from the door.
 		Button = AntKit::AddPart(this, Root, EAntShape::Cylinder, FVector(0.f, -6.f, 0.f), FVector(0.5f, 0.5f, 0.12f), FLinearColor(0.2f, 0.85f, 0.3f), FRotator(0.f, 0.f, 90.f));
+		if (Button && Map4Look::Enabled() && Map4Look::Prop(TEXT("SM_M4_Button"))) { Button->SetStaticMesh(Map4Look::Prop(TEXT("SM_M4_Button"))); }   // keeps its green paint
 		UsePointsLocal.Add(FVector(0.f, -120.f, -230.f));
 		UsePointsLocal.Add(FVector(-200.f, -60.f, -120.f));
 	}
@@ -174,10 +176,12 @@ void ARobotVacuum::BeginPlay()
 	Body->SetStaticMesh(AntKit::ShapeMesh(EAntShape::Cylinder));
 	Body->SetWorldScale3D(FVector(Radius * 2.f / 100.f, Radius * 2.f / 100.f, Height / 100.f));
 	AntKit::Paint(Body, FLinearColor(0.08f, 0.08f, 0.09f));
+	Map4Look::Swap(Body, TEXT("SM_M4_RobotVacuum"));   // map v4: a modelled robot (bumper, lid, brushes)
 	UAntMovementComponent::MakeClimbable(Body);
 	// A raised sensor turret and a lamp, so its heading reads at a glance (unscaled sizes: the body is scaled).
-	AntKit::AddPart(this, Body, EAntShape::Cylinder, FVector(0.f, 0.f, 62.f), FVector(0.28f, 0.28f, 0.28f), FLinearColor(0.2f, 0.2f, 0.22f));
+	Map4Look::Swap(AntKit::AddPart(this, Body, EAntShape::Cylinder, FVector(0.f, 0.f, 62.f), FVector(0.28f, 0.28f, 0.28f), FLinearColor(0.2f, 0.2f, 0.22f)), TEXT("SM_M4_Button"), TEXT("BlackGlass"));
 	Lamp = AntKit::AddPart(this, Body, EAntShape::Cube, FVector(44.f, 0.f, 20.f), FVector(0.08f, 0.3f, 0.3f), FLinearColor(0.2f, 1.f, 0.4f));
+	if (Lamp && Map4Look::Enabled() && Map4Look::Prop(TEXT("SM_M4_Button"))) { Lamp->SetStaticMesh(Map4Look::Prop(TEXT("SM_M4_Button"))); Lamp->ComponentTags.AddUnique(TEXT("M4Fx")); }
 	if (Lamp && GetNetMode() != NM_DedicatedServer)
 	{
 		AntFx::MakeGlow(Lamp, FLinearColor(0.3f, 3.f, 0.8f));
@@ -301,6 +305,7 @@ void AKitchenFlood::BeginPlay()
 	if (GetNetMode() != NM_DedicatedServer)
 	{
 		Water = AntKit::AddPart(this, Root, EAntShape::Cylinder, FVector(0.f, 0.f, Depth * 0.5f), FVector(1.f, 1.f, Depth / 100.f), FLinearColor(0.35f, 0.6f, 0.95f));
+		if (Water && Map4Look::Enabled() && Map4Look::Prop(TEXT("SM_M4_LiquidDisc"))) { Water->SetStaticMesh(Map4Look::Prop(TEXT("SM_M4_LiquidDisc"))); Water->ComponentTags.AddUnique(TEXT("M4Fx")); }
 		if (Water)
 		{
 			Water->SetCastShadow(false);
@@ -394,5 +399,18 @@ void APizzaBox::BeginPlay()
 		AntKit::AddPart(this, Root, EAntShape::Cube, FVector(s * (Half - 10.f), 0.f, Thick + 35.f), FVector(20.f, Half * 2.f, 70.f) / 100.f, Card, FRotator::ZeroRotator, true);
 	}
 	// The pizza itself: a thin disc the slices lie on.
-	AntKit::AddPart(this, Root, EAntShape::Cylinder, FVector(0.f, 0.f, Thick + 6.f), FVector(Half * 1.7f, Half * 1.7f, 12.f) / 100.f, FLinearColor(0.86f, 0.62f, 0.3f), FRotator::ZeroRotator, true);
+	Map4Look::Swap(AntKit::AddPart(this, Root, EAntShape::Cylinder, FVector(0.f, 0.f, Thick + 6.f), FVector(Half * 1.7f, Half * 1.7f, 12.f) / 100.f, FLinearColor(0.86f, 0.62f, 0.3f), FRotator::ZeroRotator, true), TEXT("SM_M4_LiquidDisc"), TEXT("Pizza"));
+	if (Map4Look::Enabled())
+	{
+		// the box itself: cardboard sheets (a box made of boards is boxes by nature)
+		TInlineComponentArray<UStaticMeshComponent*> Sheets(this);
+		for (UStaticMeshComponent* S : Sheets)
+		{
+			if (S->GetStaticMesh() == AntKit::ShapeMesh(EAntShape::Cube))
+			{
+				if (const Map4Look::FLook* L = Map4Look::Named(TEXT("Cardboard"))) { S->SetMaterial(0, Map4Look::Get(*L)); }
+				S->ComponentTags.AddUnique(TEXT("M4Arch"));
+			}
+		}
+	}
 }

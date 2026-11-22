@@ -1,4 +1,5 @@
 ﻿#include "AntTrail.h"
+#include "Map4Look.h"
 #include "AntAudio.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
@@ -86,7 +87,8 @@ UInstancedStaticMeshComponent* AAntTrailNet::MakeWorkerPart(const TCHAR* Name, c
 	UInstancedStaticMeshComponent* C = NewObject<UInstancedStaticMeshComponent>(this, Name);
 	C->SetupAttachment(RootComponent);
 	C->SetMobility(EComponentMobility::Movable);
-	C->SetStaticMesh(Mesh ? Mesh : AntKit::ShapeMesh(EAntShape::Cube));
+	UStaticMesh* LegMesh = Map4Look::Enabled() ? Map4Look::Prop(TEXT("SM_M4_LegPair")) : nullptr;   // map v4: bent leg pairs, not bars
+	C->SetStaticMesh(Mesh ? Mesh : (LegMesh ? LegMesh : AntKit::ShapeMesh(EAntShape::Cube)));
 	C->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	C->SetGenerateOverlapEvents(false);
 	C->SetCanEverAffectNavigation(false);
@@ -149,14 +151,15 @@ void AAntTrailNet::BeginPlay()
 		if (bHasMaterial)
 		{
 			// The swarm's GPU material (it is made for instances): a flat glowing disc that does not move (speed 0).
-			UInstancedStaticMeshComponent* D = MakeWorkerPart(Name, FVector::ZeroVector, FVector(6.5f, 6.5f, 1.2f), 0.f, Color, AntKit::ShapeMesh(EAntShape::Sphere), nullptr);
+			UStaticMesh* DotMesh = Map4Look::Enabled() && Map4Look::Shape(8) ? Map4Look::Shape(8) : AntKit::ShapeMesh(EAntShape::Sphere);   // map v4: a drop of pheromone
+			UInstancedStaticMeshComponent* D = MakeWorkerPart(Name, FVector::ZeroVector, FVector(6.5f, 6.5f, Map4Look::Enabled() ? 30.f : 1.2f), 0.f, Color, DotMesh, nullptr);
 			if (MIDs.Num() > 0) { MIDs.Last()->SetVectorParameterValue(TEXT("Glow"), Color); }
 			return D;
 		}
 		UInstancedStaticMeshComponent* C = NewObject<UInstancedStaticMeshComponent>(this, Name);
 		C->SetupAttachment(RootComponent);
 		C->SetMobility(EComponentMobility::Movable);
-		C->SetStaticMesh(AntKit::ShapeMesh(EAntShape::Sphere));
+		C->SetStaticMesh(Map4Look::Enabled() && Map4Look::Shape(8) ? Map4Look::Shape(8) : AntKit::ShapeMesh(EAntShape::Sphere));
 		C->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		C->SetGenerateOverlapEvents(false);
 		C->SetCanEverAffectNavigation(false);
@@ -181,6 +184,7 @@ void AAntTrailNet::BeginPlay()
 	for (int32 i = 0; i < TrailLook::MaxFerriesDrawn; ++i)
 	{
 		UStaticMeshComponent* C = AntKit::AddPart(this, RootComponent, EAntShape::Sphere, FVector::ZeroVector, FVector(0.1f), FLinearColor::White);
+		if (Map4Look::Enabled() && Map4Look::Shape(7)) { C->SetStaticMesh(Map4Look::Shape(7)); }   // map v4: a crumb in the jaws
 		C->SetUsingAbsoluteLocation(true);
 		C->SetUsingAbsoluteRotation(true);
 		C->SetCastShadow(false);

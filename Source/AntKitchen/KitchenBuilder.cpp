@@ -658,6 +658,29 @@ UStaticMeshComponent* AKitchenBuilder::Part(EAntShape Shape, const FVector& Cent
 {
 	UStaticMeshComponent* C = AntKit::AddPart(this, Root, Shape, Center, Size / 100.f, Color, Rot, bCollide, true);
 	ApplySurface(C, Color);
+	if (C && Map4Look::Enabled())
+	{
+		// map v4: what the legacy builder pieces are by their proportions
+		FVector S = Size.GetAbs();
+		float Lo = S.GetMin(), Hi = S.GetMax(), Mid = S.X + S.Y + S.Z - Lo - Hi;
+		if (Shape == EAntShape::Cube && (Lo <= 45.f || Lo <= 0.2f * Mid))
+		{
+			C->ComponentTags.AddUnique(TEXT("M4Arch"));   // boards, sheets, slats, thresholds: flat by nature
+		}
+		else if (Shape == EAntShape::Cylinder && Size.Z <= 0.1f * FMath::Max(Size.X, Size.Y))
+		{
+			Map4Look::Swap(C, TEXT("SM_M4_LiquidDisc"), nullptr, TEXT("M4Fx"));   // a flat disc: a spill, a mark, a plate's shadow
+			ApplySurface(C, Color);
+		}
+		else if (Shape == EAntShape::Cylinder && Size.Z > 3.f * FMath::Max(Size.X, Size.Y) && Color.Equals(Hex(250, 245, 230), 0.01f))
+		{
+			Map4Look::Swap(C, TEXT("SM_M4_Candle"), TEXT("Bone"));
+		}
+		else if (Shape == EAntShape::Cylinder && Size.Z < Size.X && Color.Equals(Hex(190, 190, 180), 0.01f))
+		{
+			Map4Look::Swap(C, TEXT("SM_M4_Drain"));   // the mouse's bottle-cap table: a metal crown cap
+		}
+	}
 	return C;
 }
 
@@ -667,6 +690,11 @@ UStaticMeshComponent* AKitchenBuilder::Box(const FVector& Min, const FVector& Ma
 	if (Map4Look::Enabled() && Color.Equals(WallC, 0.002f))
 	{
 		WallSkins(Min, Max);
+	}
+	if (C && (Color.Equals(WallC, 0.002f) || Color.Equals(Ceiling, 0.002f) || Color.Equals(Hex(225, 215, 195), 0.002f) || Color.Equals(Hex(196, 152, 104), 0.002f)
+		|| Color.Equals(Hex(120, 95, 70), 0.002f) || Color.Equals(DarkDirt, 0.002f) || Color.Equals(Hex(150, 152, 150), 0.002f) || Color.Equals(TileB, 0.002f)))
+	{
+		C->ComponentTags.AddUnique(TEXT("M4Arch"));   // the shell: walls, ceilings, floors, the pit, ducts (slabs by nature)
 	}
 	return C;
 }
@@ -717,7 +745,32 @@ UStaticMeshComponent* AKitchenBuilder::Cyl(const FVector& Base, float Radius, fl
 UStaticMeshComponent* AKitchenBuilder::Ball(const FVector& Center, const FVector& Radii, const FLinearColor& Color)
 {
 	// Big blobs (mounds, pillows, bags) collide as a sphere of the smallest radius; crumbs and dust don't.
-	return Part(EAntShape::Sphere, Center, Radii * 2.f, FRotator::ZeroRotator, Color, Radii.GetMin() >= 100.f);
+	UStaticMeshComponent* C = Part(EAntShape::Sphere, Center, Radii * 2.f, FRotator::ZeroRotator, Color, Radii.GetMin() >= 100.f);
+	if (C && Map4Look::Enabled())
+	{
+		// map v4: what the blob is: a bag, a heap of earth, a dust bunny, a stain or a crumb
+		const FLinearColor H = Color.LinearRGBToHSV();
+		const float Lum = Color.GetLuminance();
+		const bool bFlat = Radii.Z < 0.35f * FMath::Min(Radii.X, Radii.Y);
+		const bool bEarth = Color.Equals(Dirt, 0.01f) || Color.Equals(DarkDirt, 0.01f) || (H.R < 40.f && H.G > 0.35f && H.B < 0.55f && Radii.GetMax() >= 120.f);
+		const TCHAR* MeshName = nullptr;
+		const TCHAR* LookName = nullptr;
+		if (bFlat) { MeshName = TEXT("SM_M4_Pheromone"); C->ComponentTags.AddUnique(TEXT("M4Fx")); }
+		else if (Lum > 0.5f && H.R > 30.f && H.R < 60.f && H.G > 0.55f) { MeshName = TEXT("SM_M4_Droplet"); LookName = TEXT("Spark"); C->ComponentTags.AddUnique(TEXT("M4Fx")); }   // a flame
+		else if (Lum < 0.03f && Radii.GetMax() >= 150.f) { MeshName = TEXT("SM_M4_TrashBag"); LookName = TEXT("TrashBag"); }
+		else if (bEarth) { MeshName = TEXT("SM_M4_Crumb"); LookName = TEXT("Soil"); }
+		else if (H.G < 0.18f && Lum > 0.15f && Lum < 0.6f) { MeshName = TEXT("SM_M4_DustBunny"); LookName = TEXT("Dust"); }
+		else { MeshName = TEXT("SM_M4_Crumb"); }
+		if (UStaticMesh* M = Map4Look::Prop(MeshName))
+		{
+			C->SetStaticMesh(M);
+			if (LookName)
+			{
+				if (const Map4Look::FLook* L = Map4Look::Named(LookName)) { C->SetMaterial(0, Map4Look::Get(*L)); }
+			}
+		}
+	}
+	return C;
 }
 
 void AKitchenBuilder::Doors(float X0, float X1, int32 Count, const FLinearColor& DoorColor, const FLinearColor& HandleColor)
@@ -1063,6 +1116,12 @@ void AKitchenBuilder::Build()
 	Fill->bAtmosphereSunLight = true;
 	Fill->VolumetricScatteringIntensity = 3.f;
 	Fill->LightSourceAngle = 1.2f;   // slightly soft shadow edges: cosier, and furniture shadows read as shade, not as holes
+	if (Map4Look::Enabled())
+	{
+		// map v4: contact shadows ground the small things (crumbs, screws, an ant's feet) at ant scale
+		Fill->ContactShadowLength = 0.04f;
+		Fill->ContactShadowLengthInWS = false;
+	}
 	Fill->RegisterComponent();
 	AddInstanceComponent(Fill);
 
@@ -1497,6 +1556,10 @@ void AKitchenBuilder::BuildSecrets()
 	// Cereal box on the counter (climbable, a prize on top).
 	{
 		UStaticMeshComponent* Shell = Box(FVector(-2700.f, 4150.f, 1710.f), FVector(-1800.f, 4650.f, 2030.f), Hex(230, 70, 40));
+		if (Map4Look::Swap(Shell, TEXT("SM_M4_CerealBox")) && Map4Look::Prop(TEXT("SM_M4_CerealBox")))
+		{
+			Shell->SetMaterial(0, Map4Look::Prop(TEXT("SM_M4_CerealBox"))->GetMaterial(0));   // its printed box (map v4)
+		}
 		if (AntArt::Dress(this, Root, TEXT("SM_CerealBox"), FVector(-2700.f, 4150.f, 1710.f), FVector(-1800.f, 4650.f, 2030.f), 90.f))
 		{
 			AntArt::HideAll({ Shell });
@@ -1507,7 +1570,11 @@ void AKitchenBuilder::BuildSecrets()
 	// Mouse hole (behind the fridge) and the room in the wall.
 	Ball(FVector(3880.f, 4999.f, 140.f), FVector(80.f, 4.f, 60.f), Black);
 	Box(FVector(3820.f, 4996.f, 0.f), FVector(3940.f, 5000.f, 140.f), Black, false);
-	Box(FVector(3550.f, 5250.f, 0.f), FVector(3800.f, 5500.f, 90.f), Hex(200, 50, 40));        // matchbox bed
+	if (UStaticMeshComponent* Mb = Box(FVector(3550.f, 5250.f, 0.f), FVector(3800.f, 5500.f, 90.f), Hex(200, 50, 40)))        // matchbox bed
+	{
+		Mb->ComponentTags.AddUnique(TEXT("M4Arch"));   // a matchbox is a box
+		if (const Map4Look::FLook* L = Map4Look::Enabled() ? Map4Look::Named(TEXT("Cardboard")) : nullptr) { Mb->SetMaterial(0, Map4Look::Get(*L, FLinearColor(1.1f, 0.35f, 0.3f))); }
+	}
 	Box(FVector(3560.f, 5260.f, 90.f), FVector(3790.f, 5490.f, 100.f), Hex(240, 230, 210), false);
 	Cyl(FVector(4100.f, 5150.f, 0.f), 70.f, 20.f, Hex(190, 190, 180));                          // bottle cap table
 	Cyl(FVector(3950.f, 5450.f, 0.f), 25.f, 120.f, Hex(250, 245, 230));                          // candle
@@ -1894,6 +1961,16 @@ AKitchenBuilder::FTimeOfDay AKitchenBuilder::TimeOfDay(int32 Index)
 			break;
 		}
 	}
+	if (Map4Look::Enabled() && Index == 1)
+	{
+		// map v4 evening: the same low sun, but whites stay warm white rather than orange (the wallpapers and wood carry the warmth)
+		T.SunColor = FLinearColor(1.f, 0.66f, 0.38f);
+		T.AmbColor = FLinearColor(1.f, 0.84f, 0.68f);
+		T.BounceColor = FLinearColor(1.f, 0.76f, 0.56f);
+		T.WindowColor = FLinearColor(1.f, 0.62f, 0.42f);
+		T.WhiteTemp = 7000.f;
+		T.ExposureBias = -0.1f;
+	}
 	return T;
 }
 
@@ -2050,6 +2127,16 @@ void AKitchenBuilder::ApplyLights()
 		G.AutoExposureBias = Tod.ExposureBias - (bMainOn ? 0.f : 0.7f);   // switch off: the room visibly drops, even by day
 		G.bOverride_WhiteTemp = true;
 		G.WhiteTemp = Tod.WhiteTemp;
+		if (Map4Look::Enabled())
+		{
+			// map v4 grade: soft ambient occlusion in the corners and under things, a touch of vignette, gentler saturation
+			G.bOverride_AmbientOcclusionIntensity = true; G.AmbientOcclusionIntensity = 0.65f;
+			G.bOverride_AmbientOcclusionRadius = true; G.AmbientOcclusionRadius = 120.f;
+			G.bOverride_VignetteIntensity = true; G.VignetteIntensity = 0.35f;
+			G.bOverride_ColorSaturation = true; G.ColorSaturation = FVector4(0.93f, 0.93f, 0.93f, 1.f);
+			G.bOverride_ColorContrast = true; G.ColorContrast = FVector4(1.04f, 1.04f, 1.04f, 1.f);
+			G.bOverride_BloomIntensity = true; G.BloomIntensity = 0.45f;
+		}
 	}
 	AntFx::SetAmbient(this, Tod.FxAmbient * (bMainOn ? 1.f : 0.7f), Tod.FxTint);
 }

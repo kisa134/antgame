@@ -1,4 +1,5 @@
 ﻿#include "KitchenInteractables.h"
+#include "Map4Look.h"
 #include "AntAudio.h"
 #include "AntFx.h"
 #include "AntFluidWorld.h"
@@ -1030,16 +1031,20 @@ void AKitchenPassage::BeginPlay()
 		}
 		break;
 	case EPassageLook::Drain:
-		Part(Root, EAntShape::Cylinder, FVector(0.f, 0.f, 1.f), FVector(150.f, 150.f, 4.f), Steel, false);
-		Part(Root, EAntShape::Cylinder, FVector(0.f, 0.f, 3.f), FVector(100.f, 100.f, 2.f), Black, false);
+		if (!Map4Look::Swap(Part(Root, EAntShape::Cylinder, FVector(0.f, 0.f, 1.f), FVector(150.f, 150.f, 4.f), Steel, false), TEXT("SM_M4_Drain")))
+		{
+			Part(Root, EAntShape::Cylinder, FVector(0.f, 0.f, 3.f), FVector(100.f, 100.f, 2.f), Black, false);
+		}
 		break;
 	case EPassageLook::Hole:
-		BoxPart(Root, FVector(0.f, -80.f, 0.f), FVector(4.f, 80.f, 120.f), Black, false);
-		Part(Root, EAntShape::Sphere, FVector(2.f, 0.f, 120.f), FVector(4.f, 160.f, 80.f), Black, false);
+		BoxPart(Root, FVector(0.f, -80.f, 0.f), FVector(4.f, 80.f, 120.f), Black, false)->ComponentTags.AddUnique(TEXT("M4Arch"));   // the dark of the hole
+		Part(Root, EAntShape::Sphere, FVector(2.f, 0.f, 120.f), FVector(4.f, 160.f, 80.f), Black, false)->ComponentTags.AddUnique(TEXT("M4Arch"));
 		break;
 	case EPassageLook::Pipe:
-		Part(Root, EAntShape::Cylinder, FVector(0.f, 0.f, 60.f), FVector(110.f, 110.f, 120.f), Hex(235, 235, 230), true);
-		Part(Root, EAntShape::Cylinder, FVector(0.f, 0.f, 121.f), FVector(80.f, 80.f, 2.f), Black, false);
+		if (!Map4Look::Swap(Part(Root, EAntShape::Cylinder, FVector(0.f, 0.f, 60.f), FVector(110.f, 110.f, 120.f), Hex(235, 235, 230), true), TEXT("SM_M4_PipeEnd")))
+		{
+			Part(Root, EAntShape::Cylinder, FVector(0.f, 0.f, 121.f), FVector(80.f, 80.f, 2.f), Black, false);
+		}
 		break;
 	}
 }
@@ -1251,13 +1256,14 @@ void AKitchenWire::BeginPlay()
 	Super::BeginPlay();
 	using namespace WireSpot;
 
-	BoxPart(Root, Outlet + FVector(-70.f, -12.f, -80.f), Outlet + FVector(70.f, 10.f, 80.f), Hex(230, 225, 210), true);
-	Part(Root, EAntShape::Sphere, Outlet + FVector(0.f, -12.f, -10.f), FVector(160.f, 4.f, 120.f), Hex(40, 30, 25), false);   // burn mark
+	Map4Look::Swap(BoxPart(Root, Outlet + FVector(-70.f, -12.f, -80.f), Outlet + FVector(70.f, 10.f, 80.f), Hex(230, 225, 210), true), TEXT("SM_M4_Socket"));
+	Map4Look::Swap(Part(Root, EAntShape::Sphere, Outlet + FVector(0.f, -12.f, -10.f), FVector(160.f, 4.f, 120.f), Hex(40, 30, 25), false), TEXT("SM_M4_Pheromone"), TEXT("Burn"), TEXT("M4Fx"));   // burn mark
 
 	auto Cable = [this](const FVector& A, const FVector& B, float Thick, const FLinearColor& C, bool bCollide)
 	{
 		const FVector D = B - A;
 		UStaticMeshComponent* M = Part(Root, EAntShape::Cylinder, (A + B) * 0.5f, FVector(Thick, Thick, (float)D.Size()), C, bCollide);
+		Map4Look::Swap(M, TEXT("SM_M4_Thread"), Thick > 10.f ? TEXT("Rubber") : TEXT("Brass"), TEXT("M4Thread"));   // map v4: a cable
 		M->SetWorldRotation(FRotationMatrix::MakeFromZ(D).ToQuat());
 		return M;
 	};
@@ -1280,6 +1286,7 @@ void AKitchenWire::BeginPlay()
 		for (int32 i = 0; i < 6; ++i)
 		{
 			UStaticMeshComponent* S = Part(Root, EAntShape::Sphere, End, FVector(14.f), FLinearColor(1.f, 0.95f, 0.5f), false);
+			Map4Look::Swap(S, TEXT("SM_M4_Droplet"), TEXT("Spark"), TEXT("M4Fx"));
 			S->SetVisibility(false);
 			S->SetCastShadow(false);
 			Sparks.Add(S);
@@ -1637,6 +1644,24 @@ void AKitchenProp::BeginPlay()
 	Mesh->SetStaticMesh(AntKit::ShapeMesh((EAntShape)ShapeIndex));
 	Mesh->SetWorldScale3D(Size / 100.f);
 	AntKit::Paint(Mesh, Color);
+	if (Map4Look::Enabled())
+	{
+		// map v4: what the junk is (by its old shape and colour): a bottle cap, a grape, a pea, a thimble, a sugar cube, a coin, a meatball
+		const EAntShape Sh = (EAntShape)ShapeIndex;
+		const TCHAR* Name = nullptr;
+		if (Sh == EAntShape::Cylinder) { Name = Color.R > 0.7f && Color.G < 0.3f ? TEXT("SM_M4_BottleCap") : (Size.Z < 20.f ? TEXT("SM_M4_Coin") : TEXT("SM_M4_Thimble")); }
+		else if (Sh == EAntShape::Sphere) { Name = Color.R > 0.8f ? TEXT("SM_M4_Pebble@Meatball") : (Size.X >= 80.f ? TEXT("SM_M4_Grape") : TEXT("SM_M4_Pea@Pea")); }
+		else if (Sh == EAntShape::Cube) { Name = TEXT("SM_Food_SugarCube"); }
+		const AntArt::FPart& P = Name ? AntArt::Get(Name) : AntArt::Get(TEXT(""));
+		if (P.IsValid())
+		{
+			Mesh->SetStaticMesh(P.Mesh);
+			const FVector E = P.Bounds.GetSize().ComponentMax(FVector(0.01f));
+			Mesh->SetWorldScale3D(FVector(Size.GetMax() / E.GetMax()));
+			if (FString(Name).Contains(TEXT("@")) || FString(Name).StartsWith(TEXT("SM_Food"))) { if (P.Material) { Mesh->SetMaterial(0, P.Material); } }
+			else { KitchenArt::ApplyLook(Mesh, Name, 0); }
+		}
+	}
 	Mesh->SetCollisionProfileName(TEXT("PhysicsActor"));
 	Mesh->SetSimulatePhysics(true);
 	Mesh->SetMassOverrideInKg(NAME_None, Mass, true);

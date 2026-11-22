@@ -208,6 +208,7 @@ void AAntMess::BuildLocal()
 	Specks->SetStaticMesh(Map4Look::Enabled() && Map4Look::Shape(4) ? Map4Look::Shape(4) : LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Plane.Plane")));
 	if (DropMat) { Specks->SetMaterial(0, DropMat); }
 	Specks->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	Specks->ComponentTags.AddUnique(TEXT("M4Fx"));   // camera-facing dust sprites
 	Specks->SetCastShadow(false);
 	Specks->bReceivesDecals = false;
 	Specks->SetCanEverAffectNavigation(false);

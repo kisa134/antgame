@@ -46,4 +46,10 @@ namespace Map4Look
 	ANTKITCHEN_API UStaticMesh* Shape(int32 Index);
 	/** A prop under /Game/Map4/Props/<Name>/<Name> (rooted, cached), or null. */
 	ANTKITCHEN_API UStaticMesh* Prop(const TCHAR* Name);
+	/** Gives each material slot of the component's mesh its look (slot names = look keys). */
+	ANTKITCHEN_API void ApplySlots(UStaticMeshComponent* C);
+	/** Puts prop Name on C (keeps its transform); Look (optional) paints slot 0; Tag marks it for the art audit. False if the prop is missing. */
+	ANTKITCHEN_API bool Swap(UStaticMeshComponent* C, const TCHAR* Name, const TCHAR* Look = nullptr, const TCHAR* Tag = nullptr);
+	/** A new component with prop Name under Parent at a relative transform (solid: blocks like the level, ants climb it). */
+	ANTKITCHEN_API UStaticMeshComponent* AddProp(AActor* Owner, USceneComponent* Parent, const TCHAR* Name, const FTransform& Relative, bool bSolid, const TCHAR* Look = nullptr);
 }

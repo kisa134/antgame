@@ -1,4 +1,5 @@
 ﻿#include "AntSwarm.h"
+#include "Map4Look.h"
 #include "AntRagdoll.h"
 #include "AntArmy.h"
 #include "AntRaid.h"
@@ -62,7 +63,8 @@ UInstancedStaticMeshComponent* AAntSwarm::MakePart(const TCHAR* Name, const FVec
 	UInstancedStaticMeshComponent* C = NewObject<UInstancedStaticMeshComponent>(this, Name);
 	C->SetupAttachment(RootComponent);
 	C->SetMobility(EComponentMobility::Movable);
-	C->SetStaticMesh(Mesh ? Mesh : AntKit::ShapeMesh(EAntShape::Cube));
+	UStaticMesh* M4 = (!Mesh && Map4Look::Enabled()) ? (LegMode > 0.f ? Map4Look::Prop(TEXT("SM_M4_LegPair")) : Map4Look::Shape(7)) : nullptr;   // map v4: bent legs, crumbs
+	C->SetStaticMesh(Mesh ? Mesh : (M4 ? M4 : AntKit::ShapeMesh(EAntShape::Cube)));
 	C->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	C->SetGenerateOverlapEvents(false);
 	C->SetCanEverAffectNavigation(false);
@@ -129,6 +131,7 @@ void AAntSwarm::BeginPlay()
 	for (int32 i = 0; i < 8; ++i)
 	{
 		UStaticMeshComponent* S = AntKit::AddPart(this, RootComponent, EAntShape::Cylinder, FVector::ZeroVector, FVector(1.f), FLinearColor(0.12f, 0.05f, 0.03f));
+		if (Map4Look::Enabled() && Map4Look::Shape(8)) { S->SetStaticMesh(Map4Look::Shape(8)); S->ComponentTags.AddUnique(TEXT("M4Fx")); }   // a splat
 		S->SetVisibility(false);
 		S->SetCastShadow(false);
 		Splats.Add(S);

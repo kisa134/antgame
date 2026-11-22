@@ -1,4 +1,5 @@
 ﻿#include "KitchenFixture.h"
+#include "Map4Look.h"
 #include "AntMess.h"
 #include "AntFluidWorld.h"
 #include "AntWreck.h"
@@ -452,7 +453,7 @@ void AKitchenFixture::Build()
 	{
 		// The toaster's crumb tray (the toaster itself is the builder's piece and its catapult gadget): slid out, it goes over the edge.
 		Body = AntKit::AddPart(this, Root, EAntShape::Cube, FVector(0.f, -360.f, 22.f), FVector(5.4f, 3.4f, 0.3f), FLinearColor(0.72f, 0.72f, 0.75f), FRotator::ZeroRotator, true, false);
-		if (Body) { Body->SetCollisionObjectType(ECC_WorldDynamic); }
+		if (Body) { Body->SetCollisionObjectType(ECC_WorldDynamic); Body->ComponentTags.AddUnique(TEXT("M4Arch")); if (const Map4Look::FLook* L = Map4Look::Enabled() ? Map4Look::Named(TEXT("Brushed")) : nullptr) { Body->SetMaterial(0, Map4Look::Get(*L)); } }
 	}
 	else if (Id == TEXT("upper_doors"))
 	{
