@@ -672,9 +672,9 @@ UStaticMeshComponent* AKitchenBuilder::Part(EAntShape Shape, const FVector& Cent
 			Map4Look::Swap(C, TEXT("SM_M4_LiquidDisc"), nullptr, TEXT("M4Fx"));   // a flat disc: a spill, a mark, a plate's shadow
 			ApplySurface(C, Color);
 		}
-		else if (Shape == EAntShape::Cylinder && Size.Z > 3.f * FMath::Max(Size.X, Size.Y) && Color.Equals(Hex(250, 245, 230), 0.01f))
+		else if (Shape == EAntShape::Cylinder && Size.Z > 2.f * FMath::Max(Size.X, Size.Y) && Color.Equals(Hex(250, 245, 230), 0.01f))
 		{
-			Map4Look::Swap(C, TEXT("SM_M4_Candle"), TEXT("Bone"));
+			Map4Look::Swap(C, TEXT("SM_M4_Candle"));   // (two slots: Bone wax, Plinth wick)
 		}
 		else if (Shape == EAntShape::Cylinder && Size.Z < Size.X && Color.Equals(Hex(190, 190, 180), 0.01f))
 		{
@@ -1329,6 +1329,32 @@ void AKitchenBuilder::BuildArt()
 	Box(FVector(-11000.f, -5200.f, -260.f), FVector(-9400.f, 5800.f, -200.f), Hex(110, 108, 102));
 	// The mop bucket is hollow now: the water in it is ours (wet zone in EnvironmentFor, a loot spot floats on it).
 	Cyl(FVector(6200.f, 3900.f, 600.f), 400.f, 40.f, Hex(150, 200, 255));
+	if (Map4Look::Enabled())
+	{
+		// map v4 set dressing: things of the family that tell the evening (each stands on whatever is under it; ants climb them)
+		struct FDress { const TCHAR* Name; float X, Y, Yaw; };
+		static const FDress Dress[] =
+		{
+			{ TEXT("SM_M4_BirthdayCake"), 3350.f, 4450.f, 200.f },   // the birthday cake, hidden by grandma on top of the fridge
+			{ TEXT("SM_M4_Teddy"), 16250.f, 380.f, 10.f },           // the kid's teddy on the sofa
+		};
+		for (const FDress& D : Dress)
+		{
+			FHitResult H;
+			const FVector Top(D.X, D.Y, 5300.f);
+			FCollisionQueryParams Q(SCENE_QUERY_STAT(M4Dress), true, this);
+			Q.bIgnoreTouches = true;
+			if (!GetWorld()->LineTraceSingleByChannel(H, Top, Top - FVector(0.f, 0.f, 5600.f), ECC_Visibility, FCollisionQueryParams(SCENE_QUERY_STAT(M4Dress), true)))
+			{
+				continue;
+			}
+			if (UStaticMeshComponent* C = Map4Look::AddProp(this, Root, D.Name, FTransform(FRotator(0.f, D.Yaw, 0.f), H.ImpactPoint - GetActorLocation(), FVector(KitchenArt::ImportScale)), true))
+			{
+				C->ComponentTags.AddUnique(TEXT("M4Dress"));
+				UE_LOG(LogTemp, Display, TEXT("M4DRESS %s on %s at (%.0f,%.0f,%.0f)"), D.Name, H.GetComponent() ? *H.GetComponent()->GetName() : TEXT("-"), H.ImpactPoint.X, H.ImpactPoint.Y, H.ImpactPoint.Z);
+			}
+		}
+	}
 }
 
 // ---------------------------------------------------------------------------------------------

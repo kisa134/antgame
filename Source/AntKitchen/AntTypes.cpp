@@ -533,10 +533,16 @@ const TCHAR* FoodArtName(const FString& LootName)
 			{ TEXT("Кошачий корм"), TEXT("SM_M4_Pebble@Kibble") }, { TEXT("Собачий корм"), TEXT("SM_M4_Pebble@Kibble") }, { TEXT("Изюминка"), TEXT("SM_M4_Crumb@Raisin") },
 			{ TEXT("Хлопья"), TEXT("SM_M4_Speck@Cornflake") }, { TEXT("Орех в шоколаде"), TEXT("SM_M4_Pebble@ChocoNut") }, { TEXT("Чипсина"), TEXT("SM_M4_Speck@Crisps") },
 			{ TEXT("Шоколадный батончик"), TEXT("SM_Food_Chocolate") }, { TEXT("шоколадка"), TEXT("SM_Food_Chocolate") }, { TEXT("Плитка шоколада"), TEXT("SM_Food_Chocolate") },
+			{ TEXT("крошка хлеба"), TEXT("SM_M4_Crumb@Toast") }, { TEXT("корм"), TEXT("SM_M4_Pebble@Kibble") },
+			// scattered loot is named in lower case (IgnoreCase folds only Latin letters)
+			{ TEXT("горошина"), TEXT("SM_M4_Pea@Pea") }, { TEXT("крошка печенья"), TEXT("SM_M4_Crumb@Biscuit") }, { TEXT("хлопья"), TEXT("SM_M4_Speck@Cornflake") },
+			{ TEXT("попкорн"), TEXT("SM_M4_Popcorn") }, { TEXT("чипсина"), TEXT("SM_M4_Speck@Crisps") }, { TEXT("семечка"), TEXT("SM_M4_Droplet@Seed") },
+			{ TEXT("изюминка"), TEXT("SM_M4_Crumb@Raisin") }, { TEXT("рисинка"), TEXT("SM_M4_Rice@Rice") }, { TEXT("макаронина"), TEXT("SM_M4_Macaroni") },
+			{ TEXT("хлебная крошка"), TEXT("SM_M4_Crumb@Toast") }, { TEXT("карамелька"), TEXT("SM_M4_Caramel") }, { TEXT("зефирка"), TEXT("SM_M4_Zefir") },
 		};
 		for (const auto& M : Map)
 		{
-			if (LootName.Contains(M[0]))
+			if (LootName.Contains(M[0], ESearchCase::IgnoreCase))   // (scattered loot is named in lower case: "горошина", "хлопья")
 			{
 				const FPart& P = Get(M[1]);
 				if (P.IsValid()) { return M[1]; }

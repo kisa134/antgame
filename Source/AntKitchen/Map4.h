@@ -39,6 +39,9 @@ public:
 	float CamAt = 0.f;
 	bool bShotTaken = false;
 	TWeakObjectPtr<AActor> CamActor;
+	bool bFps = false;           // "art fps": the same tour, 6 s per camera, frame times instead of pictures
+	TArray<float> FrameMs, AllMs;
+	float FpsFrom = 0.f;
 
 	// ---- collision test
 	struct FJob { FString Name; TArray<FVector> Pts; bool bDrop = true; };
@@ -55,6 +58,7 @@ public:
 	TArray<FWalker> Walkers;
 	int32 NextJob = 0;
 	bool bColl = false;
+	bool bTestsRan = false;      // a collision or Human test was started: -AntM4Quit ends the run once all are done
 	float CollStart = 0.f;
 	FString CollTag;
 	TArray<FString> Events;      // csv rows

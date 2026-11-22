@@ -154,9 +154,10 @@ float metal = saturate(r.b * MetalTex + Metal);
 return float3(ao, rough, metal);
 """
 
-def build_m4():
-    m = fresh(MAT, "M_M4")
+def build_m4(name="M_M4", two_sided=False):
+    m = fresh(MAT, name)
     m.set_editor_property("tangent_space_normal", False)
+    m.set_editor_property("two_sided", two_sided)
     X = -1500
     tc = tp(m, "C", TEX + "/T_M4_Oak_C", X, -600)
     tn = tp(m, "N", TEX + "/T_M4_Oak_N", X, -350, unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL)
@@ -204,8 +205,8 @@ def build_m4():
     MEL.connect_material_expressions(glow, "RGB", mul, "B")
     MEL.connect_material_property(mul, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
     MEL.recompile_material(m)
-    EAL.save_asset(MAT + "/M_M4")
-    unreal.log("M4MAT M_M4")
+    EAL.save_asset(MAT + "/" + name)
+    unreal.log("M4MAT " + name)
 
 def build_uv(name, two_sided=False):
     m = fresh(MAT, name)
@@ -254,6 +255,7 @@ def build_uv(name, two_sided=False):
     unreal.log("M4MAT " + name)
 
 build_m4()
+build_m4("M_M4_2S", True)   # cloth sheets, leaves, blades, wings: one layer of polygons seen from both sides
 
 def paint_instance():
     name = "MI_M4_Paint"
@@ -268,6 +270,7 @@ def paint_instance():
     EAL.save_asset(MAT + "/" + name)
     unreal.log("M4MAT " + name)
 paint_instance()
-build_uv("M_M4_UV")
-build_uv("M_M4_UV2", True)
+if os.environ.get("M4_ONLY_M4", "") != "1":   # (rebuilding the UV materials orphans the props' instances: re-import the props after)
+    build_uv("M_M4_UV")
+    build_uv("M_M4_UV2", True)
 unreal.log("M4_DONE")

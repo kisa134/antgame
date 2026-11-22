@@ -91,8 +91,8 @@ namespace
 		{ TEXT("Kerb"), TEXT("Concrete"), 300.000f, 0.920f, 0.900f, 0.860f, 1.000f, 0.050f, 0.000f, 1.000f, 0.100f, 0.000f, 0.000f, nullptr },
 		{ TEXT("Asphalt"), TEXT("Asphalt"), 700.000f, 1.000f, 1.000f, 1.000f, 1.000f, 0.000f, 0.000f, 1.000f, 0.000f, 0.000f, 0.000f, nullptr },
 		{ TEXT("RoadPaint"), TEXT("Enamel"), 600.000f, 0.930f, 0.910f, 0.820f, 1.000f, 0.450f, 0.000f, 1.000f, 0.000f, 0.000f, 0.000f, nullptr },
-		{ TEXT("GrassDark"), TEXT("Enamel"), 300.000f, 0.170f, 0.400f, 0.110f, 1.000f, 0.300f, 0.000f, 0.500f, 0.000f, 0.000f, 0.000f, TEXT("Surf_Grass") },
-		{ TEXT("Grass"), TEXT("Enamel"), 300.000f, 0.300f, 0.580f, 0.170f, 1.000f, 0.300f, 0.000f, 0.500f, 0.000f, 0.000f, 0.000f, TEXT("Surf_Grass") },
+		{ TEXT("GrassDark"), TEXT("Enamel"), 300.000f, 0.200f, 0.440f, 0.120f, 1.000f, 0.600f, 0.000f, 0.500f, 0.000f, 0.000f, 0.000f, TEXT("Surf_Grass") },
+		{ TEXT("Grass"), TEXT("Enamel"), 300.000f, 0.330f, 0.600f, 0.180f, 1.000f, 0.600f, 0.000f, 0.500f, 0.000f, 0.000f, 0.000f, TEXT("Surf_Grass") },
 		{ TEXT("LeafLight"), TEXT("Enamel"), 600.000f, 0.360f, 0.620f, 0.180f, 1.000f, 0.250f, 0.000f, 1.000f, 0.000f, 0.000f, 0.000f, nullptr },
 		{ TEXT("Siding"), TEXT("Siding"), 700.000f, 1.050f, 0.950f, 0.780f, 1.000f, 0.000f, 0.000f, 1.000f, 0.100f, 0.300f, 0.000f, nullptr },
 		{ TEXT("IceCream"), TEXT("Jersey"), 150.000f, 1.000f, 0.660f, 0.760f, 0.600f, 0.000f, 0.000f, 0.500f, 0.000f, 0.000f, 0.000f, nullptr },
@@ -181,6 +181,32 @@ namespace
 		return M;
 	}
 
+	UMaterialInterface* Base2S()
+	{
+		static UMaterialInterface* M = nullptr;
+		static bool bTried = false;
+		if (!bTried)
+		{
+			bTried = true;
+			M = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Map4/Materials/M_M4_2S.M_M4_2S"), nullptr, LOAD_NoWarn | LOAD_Quiet);
+			if (M) { M->AddToRoot(); }
+		}
+		return M;
+	}
+
+	/** Single-layer meshes (cloth sheets, blades of grass, leaves, wings): their look is drawn from both sides. */
+	UMaterialInterface* BaseFor(const FLook& L)
+	{
+		static const TCHAR* TwoSided[] = { TEXT("Grass"), TEXT("GrassDark"), TEXT("Leaf"), TEXT("LeafLight"), TEXT("Curtain"), TEXT("ClothCheck"), TEXT("FlyWing"),
+			TEXT("Tint/Enamel"), TEXT("Tint/Teal"), TEXT("Fabric"), TEXT("Paper"), TEXT("Photo"), TEXT("Dust") };
+		const TCHAR* Key = (L.Key && L.Key[0] == TEXT('@')) ? L.Key + 1 : L.Key;   // ('@Grass' is the builder's lawn)
+		for (const TCHAR* K : TwoSided)
+		{
+			if (Key && FCString::Stricmp(Key, K) == 0 && Base2S()) { return Base2S(); }
+		}
+		return Base();
+	}
+
 	UTexture* Tex(const TCHAR* Set, const TCHAR* Kind)
 	{
 		static TMap<FString, UTexture*> Cache;
@@ -243,7 +269,7 @@ UMaterialInterface* Get(const FLook& L, const FLinearColor& Color)
 	static TMap<FString, UMaterialInterface*> Cache;
 	const FString K = FString::Printf(TEXT("%s|%.3f,%.3f,%.3f"), L.Key, Color.R, Color.G, Color.B);
 	if (UMaterialInterface** F = Cache.Find(K)) { return *F; }
-	UMaterialInstanceDynamic* M = Base() ? UMaterialInstanceDynamic::Create(Base(), GetTransientPackage()) : nullptr;
+	UMaterialInstanceDynamic* M = BaseFor(L) ? UMaterialInstanceDynamic::Create(BaseFor(L), GetTransientPackage()) : nullptr;
 	if (M)
 	{
 		Fill(M, L, Color);
@@ -254,7 +280,7 @@ UMaterialInterface* Get(const FLook& L, const FLinearColor& Color)
 
 UMaterialInstanceDynamic* Own(const FLook& L, UObject* Outer, const FLinearColor& Color)
 {
-	UMaterialInstanceDynamic* M = Base() ? UMaterialInstanceDynamic::Create(Base(), Outer ? Outer : GetTransientPackage()) : nullptr;
+	UMaterialInstanceDynamic* M = BaseFor(L) ? UMaterialInstanceDynamic::Create(BaseFor(L), Outer ? Outer : GetTransientPackage()) : nullptr;
 	if (M) { Fill(M, L, Color); }
 	return M;
 }

@@ -28,8 +28,10 @@ for f in bm.faces:
     for l in f.loops:
         x, y, z = l.vert.co
         if n.z > 0.7: l[uvl].uv = (0.5 + x, 0.5 + (0.5 + y) * 0.5)          # front: top half of the atlas
-        elif n.z < -0.7: l[uvl].uv = (0.5 + x, (0.5 + y) * 0.25)          # back: a strip of the same art, darker
-        else: l[uvl].uv = (0.5 + (x if abs(n.y) > 0.5 else y), 0.25 + (0.5 + z) * 0.25)
+        elif n.z < -0.7: l[uvl].uv = (0.5 - x, (0.5 + y) * 0.25)          # back: a strip of the same art, darker
+        # sides: u runs to the viewer's right on every face, so the strip of lettering never reads mirrored
+        elif abs(n.y) > 0.5: l[uvl].uv = (0.5 - x if n.y > 0 else 0.5 + x, 0.25 + (0.5 + z) * 0.25)
+        else: l[uvl].uv = (0.5 + y if n.x > 0 else 0.5 - y, 0.25 + (0.5 + z) * 0.25)
 ob = obj(bm, "SM_M4_CerealBox")
 W = 1024
 art = load_rgb(os.path.join(LAB, "label_cereal.png"), W, W // 2)

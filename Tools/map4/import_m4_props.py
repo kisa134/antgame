@@ -28,6 +28,8 @@ def task(f, dest, name, opts=None):
 report = {}
 for folder in sorted(glob.glob(os.path.join(SRC, "SM_*"))):
     name = os.path.basename(folder)
+    if name.endswith("_Col"):
+        continue
     if only and name not in only:
         continue
     fbx = os.path.join(folder, name + ".fbx")
@@ -101,6 +103,26 @@ for folder in sorted(glob.glob(os.path.join(SRC, "SM_*"))):
         # static props the ants climb: their own triangles; physics props and weapons: the simple body
         PHYS = ("SM_M4_BottleCap", "SM_M4_Coin", "SM_M4_Thimble", "SM_M4_Grape", "SM_M4_Gem", "SM_M4_CarrotSlice", "SM_M4_BayLeaf", "SM_M4_Bat", "SM_M4_Pan", "SM_M4_Sausage")
         cas = info.get("complex_simple", bool(info.get("slots")) and name not in PHYS)
+        # dense generated models: a light copy of the surface (<Name>_Col.fbx, blender_col_proxy.py) is what collides
+        colf = os.path.join(folder, name + "_Col.fbx")
+        if os.path.exists(colf):
+            copts = unreal.FbxImportUI()
+            copts.set_editor_property("import_mesh", True)
+            copts.set_editor_property("import_materials", False)
+            copts.set_editor_property("import_textures", False)
+            copts.set_editor_property("mesh_type_to_import", unreal.FBXImportType.FBXIT_STATIC_MESH)
+            csm = copts.get_editor_property("static_mesh_import_data")
+            csm.set_editor_property("combine_meshes", True)
+            csm.set_editor_property("auto_generate_collision", False)
+            try:
+                csm.set_editor_property("build_nanite", False)
+            except Exception:
+                pass
+            col = task(colf, dest, name + "_Col", copts)
+            if col:
+                mesh.set_editor_property("complex_collision_mesh", col)
+                cas = True
+                unreal.log("M4PROP collision copy %s" % name)
         bs.set_editor_property("collision_trace_flag", unreal.CollisionTraceFlag.CTF_USE_COMPLEX_AS_SIMPLE if cas else unreal.CollisionTraceFlag.CTF_USE_SIMPLE_AND_COMPLEX)
     if info.get("slots"):
         pass   # material slots named after the game's looks (Map4Look / KitchenArt::ApplyLook): the code assigns them

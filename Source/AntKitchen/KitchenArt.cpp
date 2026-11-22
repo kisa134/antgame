@@ -258,7 +258,14 @@ UStaticMesh* Mesh(const TCHAR* Name)
 		return *Found;
 	}
 	const TCHAR* Dir = N.StartsWith(TEXT("SM_V3")) ? TEXT("LevelV3") : N.StartsWith(TEXT("SM_K_")) ? TEXT("Kitchen") : TEXT("Living");
-	UStaticMesh* M = LoadObject<UStaticMesh>(nullptr, *FString::Printf(TEXT("/Game/%s/%s/%s.%s"), Dir, *N, *N, *N), nullptr, LOAD_NoWarn | LOAD_Quiet);
+	UStaticMesh* M = nullptr;
+	if (Map4Look::Enabled())
+	{
+		// map v4: a generated replacement fitted to the same frame and footprint (SM_M4R_<name>), or a map v4 prop by name
+		M = Map4Look::Prop(*(TEXT("SM_M4R_") + N.Mid(3)));
+		if (!M && N.StartsWith(TEXT("SM_M4_"))) { M = Map4Look::Prop(*N); }
+	}
+	if (!M) { M = LoadObject<UStaticMesh>(nullptr, *FString::Printf(TEXT("/Game/%s/%s/%s.%s"), Dir, *N, *N, *N), nullptr, LOAD_NoWarn | LOAD_Quiet); }
 	if (M)
 	{
 		M->AddToRoot();
@@ -348,8 +355,8 @@ void ApplyLook(UStaticMeshComponent* C, const TCHAR* Name, int32 Index)
 		const FLook* L = FindLook(Name, Index, Slot);
 		if (!L)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("KitchenArt: no look for slot %s of %s"), *Slot, Name);
-			continue;
+			if (Slot != TEXT("M4Prop")) { UE_LOG(LogTemp, Warning, TEXT("KitchenArt: no look for slot %s of %s"), *Slot, Name); }
+			continue;   // (map v4 replacements carry their own textured material)
 		}
 		if (L->Kind == Driven)
 		{

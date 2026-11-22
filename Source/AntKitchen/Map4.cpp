@@ -3,6 +3,7 @@
 #include "AntCharacter.h"
 #include "AntMovementComponent.h"
 #include "HumanCharacter.h"
+#include "KitchenLoot.h"
 #include "EngineUtils.h"
 #include "Engine/World.h"
 #include "Engine/StaticMesh.h"
@@ -23,6 +24,9 @@
 #include "Misc/ScopeLock.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
+#include "Misc/App.h"
+#include "Engine/Engine.h"
+#include "Engine/GameViewportClient.h"
 #include "UnrealClient.h"
 #include "HAL/PlatformMisc.h"
 #include "Engine/OverlapResult.h"
@@ -170,7 +174,8 @@ int32 Audit(UWorld* W, bool bVerbose)
 			if (!bShape && !bFlat && !bProc && !bGeneric) { continue; }
 			const FVector Sz = C->Bounds.BoxExtent * 2.f;
 			const bool bArch = bGeneric && (C->ComponentHasTag(TEXT("M4Arch")) || (Sz.GetMax() > 1200.f && Sz.GetMin() < 260.f));   // walls, floors, ceilings, shelves: slabs
-			Full.Add(FString::Printf(TEXT("%s,%s,%s,%s,%s,%.0f,%.0f,%.0f,%.0f,%.0f,%.0f,%s"), *A->GetClass()->GetName(), *A->GetName(), *C->GetName(), *Mesh,
+			const AKitchenLoot* LootA = Cast<AKitchenLoot>(A);
+			Full.Add(FString::Printf(TEXT("%s,%s,%s,%s,%s,%.0f,%.0f,%.0f,%.0f,%.0f,%.0f,%s"), *A->GetClass()->GetName(), LootA ? *LootA->LootName.Replace(TEXT(","), TEXT(" ")) : *A->GetName(), *C->GetName(), *Mesh,
 				bShape ? TEXT("shape") : bFlat ? TEXT("flat") : bProc ? TEXT("proc") : bArch ? TEXT("generic_arch") : TEXT("generic"), C->Bounds.Origin.X, C->Bounds.Origin.Y, C->Bounds.Origin.Z,
 				C->Bounds.BoxExtent.X * 2.f, C->Bounds.BoxExtent.Y * 2.f, C->Bounds.BoxExtent.Z * 2.f, *DistrictAt(C->Bounds.Origin)));
 			const FString Key = FString::Printf(TEXT("%s|%s|%s"), *A->GetClass()->GetName(), *Stem(C->GetName()), *Mesh);
@@ -335,6 +340,14 @@ void AMap4Runner::BuildJobs(const FString& Kinds)
 		for (TActorIterator<AActor> It(W); It; ++It)
 		{
 			if (It->IsA<APawn>()) { continue; }
+			{
+				// living things and their bodies move: not surfaces to test
+				const FString Cls = It->GetClass()->GetName();
+				static const TCHAR* Skip[] = { TEXT("Npc"), TEXT("Human"), TEXT("Folk"), TEXT("Quad"), TEXT("Critter"), TEXT("Fly"), TEXT("Spider"), TEXT("Loot"), TEXT("Prop"), TEXT("Weapon"), TEXT("Wreck") };
+				bool bSkip = false;
+				for (const TCHAR* K : Skip) { if (Cls.Contains(K)) { bSkip = true; } }
+				if (bSkip || (It->GetAttachParentActor() && It->GetAttachParentActor()->IsA<APawn>())) { continue; }
+			}
 			TInlineComponentArray<UStaticMeshComponent*> Comps(*It);
 			for (UStaticMeshComponent* C : Comps)
 			{
@@ -435,6 +448,7 @@ void AMap4Runner::StartColl(int32 NumWalkers, const FString& Kinds, const FStrin
 	}
 	CollStart = GetWorld()->GetTimeSeconds();
 	bColl = true;
+	bTestsRan = true;
 	UE_LOG(LogTemp, Display, TEXT("M4COLL start: %d walkers, %d jobs"), Walkers.Num(), Jobs.Num());
 }
 
@@ -448,6 +462,7 @@ void AMap4Runner::NextFor(FWalker& Wk)
 		Ant->bDevGo = false;
 		return;
 	}
+	Ant->AdminFlags |= 1;   // god mode: the test is about surfaces, not about the burner or the Human
 	Wk.Job = NextJob++;
 	Wk.Pt = 1;
 	const FJob& J = Jobs[Wk.Job];
@@ -503,6 +518,7 @@ void AMap4Runner::StartHuman()
 			HStalls = HThrough = HReached = 0;
 			HThroughWhat.Reset();
 			bHuman = true;
+			bTestsRan = true;
 			UE_LOG(LogTemp, Display, TEXT("M4HUMAN start %d points"), HPts.Num());
 			return;
 		}
@@ -516,15 +532,35 @@ void AMap4Runner::Tick(float Dt)
 	APlayerController* PC = W->GetFirstPlayerController();
 	const float RealNow = W->GetRealTimeSeconds();
 	const float Now = W->GetTimeSeconds();
+	if (bTestsRan && !bColl && !bHuman && Cams.Num() == 0 && FParse::Param(FCommandLine::Get(), TEXT("AntM4Quit")))
+	{
+		bTestsRan = false;
+		UE_LOG(LogTemp, Display, TEXT("M4TESTS DONE"));
+		FPlatformMisc::RequestExit(false);
+	}
 
 	// ---- camera tour
+	if (bFps && CamIndex >= 0 && !bShotTaken && RealNow >= FpsFrom) { FrameMs.Add(FApp::GetDeltaTime() * 1000.f); }
 	if (Cams.Num() > 0 && PC)
 	{
 		if (CamIndex >= 0 && CamIndex < Cams.Num() && CamActor.IsValid() && PC->GetViewTarget() != CamActor.Get()) { PC->SetViewTarget(CamActor.Get()); }
 		if (PC->GetHUD()) { PC->GetHUD()->bShowHUD = false; }
 		if (RealNow >= CamAt)
 		{
-			if (!bShotTaken && CamIndex >= 0)
+			if (!bShotTaken && CamIndex >= 0 && bFps)
+			{
+				FrameMs.Sort();
+				float Sum = 0.f;
+				for (float F : FrameMs) { Sum += F; }
+				const float Avg = FrameMs.Num() ? Sum / FrameMs.Num() : 0.f;
+				const float Worst = FrameMs.Num() ? FrameMs[FMath::Min(FrameMs.Num() - 1, FMath::FloorToInt(FrameMs.Num() * 0.99f))] : 0.f;
+				UE_LOG(LogTemp, Display, TEXT("M4FPS cam=%s fps=%.1f ms=%.2f p99_ms=%.2f frames=%d"), *Cams[CamIndex].Name, Avg > 0.f ? 1000.f / Avg : 0.f, Avg, Worst, FrameMs.Num());
+				AllMs.Append(FrameMs);
+				FrameMs.Reset();
+				bShotTaken = true;
+				CamAt = RealNow;
+			}
+			else if (!bShotTaken && CamIndex >= 0)
 			{
 				const FString File = ShotDir / Cams[CamIndex].Name + TEXT(".png");
 				FScreenshotRequest::RequestScreenshot(File, false, false);
@@ -545,10 +581,25 @@ void AMap4Runner::Tick(float Dt)
 					PC->SetViewTarget(Cam);
 				}
 				bShotTaken = false;
-				CamAt = RealNow + 2.2f;
+				CamAt = RealNow + (bFps ? 6.f : 2.2f);
+				FpsFrom = RealNow + 1.5f;
+				FrameMs.Reset();
 			}
 			else
 			{
+				if (bFps)
+				{
+					AllMs.Sort();
+					float Sum = 0.f;
+					for (float F : AllMs) { Sum += F; }
+					const float Avg = AllMs.Num() ? Sum / AllMs.Num() : 0.f;
+					FVector2D Vp(0.f, 0.f);
+					if (GEngine && GEngine->GameViewport) { GEngine->GameViewport->GetViewportSize(Vp); }
+					UE_LOG(LogTemp, Display, TEXT("M4FPS ALL fps=%.1f ms=%.2f p99_ms=%.2f worst_ms=%.2f frames=%d res=%dx%d"), Avg > 0.f ? 1000.f / Avg : 0.f, Avg,
+						AllMs.Num() ? AllMs[FMath::Min(AllMs.Num() - 1, FMath::FloorToInt(AllMs.Num() * 0.99f))] : 0.f, AllMs.Num() ? AllMs.Last() : 0.f, AllMs.Num(),
+						(int32)Vp.X, (int32)Vp.Y);
+					bFps = false;
+				}
 				UE_LOG(LogTemp, Display, TEXT("M4SHOTS DONE %d"), Cams.Num());
 				Cams.Reset();
 				if (PC->GetPawn()) { PC->SetViewTarget(PC->GetPawn()); }
@@ -591,13 +642,17 @@ void AMap4Runner::Tick(float Dt)
 			AAntCharacter* Ant = Wk.Ant.Get();
 			if (!Ant || Ant->bDead)
 			{
-				if (Ant) { Event(TEXT("died"), Ant->GetActorLocation(), Wk.Job >= 0 ? Jobs[Wk.Job].Name : FString()); }
-				if (AController* C = Wk.Ctrl.Get())
+				if (Ant && Wk.Job >= 0) { Event(TEXT("died"), Ant->GetActorLocation(), Jobs[Wk.Job].Name); Wk.Job = -1; }
+				if (Now - Wk.LastCheck > 2.f)
 				{
-					if (AAntKitchenGameMode* GM = W->GetAuthGameMode<AAntKitchenGameMode>()) { GM->RestartPlayer(C); }
-					Wk.Ant = Cast<AAntCharacter>(C->GetPawn());
-					Wk.Job = -1;
-					if (Wk.Ant.IsValid()) { NextFor(Wk); }
+					Wk.LastCheck = Now;
+					if (AController* C = Wk.Ctrl.Get())
+					{
+						if (Ant && Ant->bDead) { C->UnPossess(); Ant->Destroy(); }
+						if (AAntKitchenGameMode* GM = W->GetAuthGameMode<AAntKitchenGameMode>()) { GM->RestartPlayer(C); }
+						AAntCharacter* NewAnt = Cast<AAntCharacter>(C->GetPawn());
+						if (NewAnt && !NewAnt->bDead) { Wk.Ant = NewAnt; }
+					}
 				}
 				bAnyBusy = true;
 				continue;
@@ -624,6 +679,23 @@ void AMap4Runner::Tick(float Dt)
 				Ant->bDevGo = true;
 			};
 			if (Dist < 55.f) { Advance(false); continue; }
+			{
+				// steer like a player: on a floor, walk at the foot of a wall first (pushing into it climbs it); on a wall or
+				// under a ceiling, straight at the point (the crawl lays the input onto the surface)
+				const UAntMovementComponent* AM = Ant->GetAntMovement();
+				const FVector SN = (AM && AM->IsCrawling()) ? AM->GetSurfaceNormal() : FVector::UpVector;
+				const float Rise = (float)(T.Z - L.Z);
+				const float Flat = FVector::Dist2D(T, L);
+				const FVector Into = (T - J.Pts[FMath::Max(0, Wk.Pt - 1)]).GetSafeNormal2D();   // towards the wall this leg climbs
+				if (SN.Z > 0.7f && Rise > 120.f && Rise > Flat * 0.5f)
+				{
+					Ant->DevGoTo = Flat > 25.f ? FVector(T.X, T.Y, L.Z + 40.f) : L + (Into.IsNearlyZero() ? FVector::ZeroVector : Into * 120.f) + FVector(0.f, 0.f, 40.f);
+				}
+				else
+				{
+					Ant->DevGoTo = T;
+				}
+			}
 			UCharacterMovementComponent* CM = Ant->GetCharacterMovement();
 			Wk.FallingFor = (CM && CM->IsFalling()) ? Wk.FallingFor + Dt : 0.f;
 			if (Wk.FallingFor > 4.f) { Event(TEXT("fall_long"), L, J.Name); Wk.FallingFor = 0.f; Advance(true); continue; }
@@ -632,7 +704,25 @@ void AMap4Runner::Tick(float Dt)
 			{
 				Wk.LastCheck = Now;
 				if (Dist < Wk.BestDist - 20.f) { Wk.BestDist = Dist; Wk.StallChecks = 0; }
-				else if (++Wk.StallChecks >= 7) { Event(TEXT("stall"), L, FString::Printf(TEXT("%s pt%d to (%.0f,%.0f,%.0f)"), *J.Name, Wk.Pt, T.X, T.Y, T.Z)); Advance(true); continue; }
+				else if (++Wk.StallChecks >= 7)
+				{
+					auto What = [](const FHitResult& Hh) -> FString
+					{
+						const UStaticMeshComponent* SM = Cast<UStaticMeshComponent>(Hh.GetComponent());
+						return SM && SM->GetStaticMesh() ? SM->GetStaticMesh()->GetName() : (Hh.GetComponent() ? Hh.GetComponent()->GetName() : FString(TEXT("-")));
+					};
+					const UAntMovementComponent* AM = Ant->GetAntMovement();
+					const FVector SN = AM ? AM->GetSurfaceNormal() : FVector::UpVector;
+					FHitResult Hu, Hf;
+					FCollisionQueryParams Qs(SCENE_QUERY_STAT(Map4Stall), true, Ant);
+					W->LineTraceSingleByChannel(Hu, L, L - SN * 60.f, ECC_Visibility, Qs);
+					const FVector Fw = FVector::VectorPlaneProject(T - L, SN).GetSafeNormal();
+					W->LineTraceSingleByChannel(Hf, L, L + Fw * 40.f, ECC_Visibility, Qs);
+					Event(TEXT("stall"), L, FString::Printf(TEXT("%s pt%d to (%.0f,%.0f,%.0f) on %s n(%.1f,%.1f,%.1f) front %s"), *J.Name, Wk.Pt, T.X, T.Y, T.Z,
+						Hu.bBlockingHit ? *What(Hu) : TEXT("air"), SN.X, SN.Y, SN.Z, Hf.bBlockingHit ? *What(Hf) : TEXT("open")));
+					Advance(true);
+					continue;
+				}
 				// embedded: the ant's centre inside something solid
 				FCollisionQueryParams Qp(SCENE_QUERY_STAT(Map4Embed), true, Ant);
 				TArray<FOverlapResult> Ov;
@@ -710,7 +800,20 @@ void AMap4Runner::Tick(float Dt)
 			else if (Now - HPtStart > 6.f)
 			{
 				++HStalls;
-				UE_LOG(LogTemp, Display, TEXT("M4HUMAN stall at (%.0f,%.0f) to point %d (%.0f,%.0f)"), L.X, L.Y, HPt, T.X, T.Y);
+				// what is in his way: his capsule swept 150 towards the point
+				FString Blocker = TEXT("-");
+				if (UCapsuleComponent* Cap = H->GetCapsuleComponent())
+				{
+					FHitResult Hb;
+					const FVector Dir2 = (T - L).GetSafeNormal2D();
+					FCollisionQueryParams Qb(SCENE_QUERY_STAT(Map4HumanBlock), false, H);
+					if (W->SweepSingleByChannel(Hb, L, L + Dir2 * 150.f, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeCapsule(Cap->GetScaledCapsuleRadius(), Cap->GetScaledCapsuleHalfHeight()), Qb) && Hb.GetComponent())
+					{
+						const UStaticMeshComponent* SM = Cast<UStaticMeshComponent>(Hb.GetComponent());
+						Blocker = FString::Printf(TEXT("%s (%s) z=%.0f"), SM && SM->GetStaticMesh() ? *SM->GetStaticMesh()->GetName() : *Hb.GetComponent()->GetName(), Hb.GetActor() ? *Hb.GetActor()->GetClass()->GetName() : TEXT("-"), Hb.ImpactPoint.Z);
+					}
+				}
+				UE_LOG(LogTemp, Display, TEXT("M4HUMAN stall at (%.0f,%.0f) to point %d (%.0f,%.0f) blocked by %s"), L.X, L.Y, HPt, T.X, T.Y, *Blocker);
 				Next(true);
 				return;
 			}
@@ -738,6 +841,7 @@ bool DevCommand(AAntKitchenGameMode* GM, const TArray<FString>& A)
 	{
 		const FString Sub = A[1].ToLower();
 		if (Sub == TEXT("audit")) { Audit(W, true); return true; }
+		if (Sub == TEXT("fps")) { AMap4Runner* Rn = Runner(W); Rn->StartTour(TEXT("fps"), A.IsValidIndex(2) ? A[2] : FString()); Rn->bFps = true; Rn->AllMs.Reset(); return true; }
 		if (Sub == TEXT("shots")) { Runner(W)->StartTour(A.IsValidIndex(2) ? A[2] : FString(TEXT("now")), A.IsValidIndex(3) ? A[3] : FString()); return true; }
 		return false;
 	}
