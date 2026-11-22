@@ -18,6 +18,7 @@
 #include "Engine/Texture.h"
 #include "Materials/MaterialInterface.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "Map4Look.h"
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -253,10 +254,10 @@ void AHumanCharacter::BuildHeldThings()
 		const FLinearColor Wood(0.55f, 0.36f, 0.18f), Straw(0.85f, 0.70f, 0.30f), Steel(0.75f, 0.76f, 0.80f), Plastic(0.90f, 0.25f, 0.30f);
 		SwatterPivot = AntKit::AddPivot(this, Segs[HumanSeg::HandR], Grip * K);
 		Add(SwatterPivot, EAntShape::Cylinder, FVector(480.f, 0.f, 0.f), FVector(34.f, 34.f, 1000.f), Steel, FRotator(90.f, 0.f, 0.f));   // the wire handle, along the hand's X like the Dad's newspaper
-		Add(SwatterPivot, EAntShape::Cube, FVector(1120.f, 0.f, 0.f), FVector(420.f, 30.f, 420.f), Plastic, FRotator::ZeroRotator);        // the flat head
+		Map4Look::Swap(Add(SwatterPivot, EAntShape::Cube, FVector(1120.f, 0.f, 0.f), FVector(420.f, 30.f, 420.f), Plastic, FRotator::ZeroRotator), TEXT("SM_M4_SwatterHead"));        // the flat head (map v4: a lattice)
 		BroomPivot = AntKit::AddPivot(this, Segs[HumanSeg::HandR], Grip * K);
 		Add(BroomPivot, EAntShape::Cylinder, FVector(820.f, 0.f, 0.f), FVector(60.f, 60.f, 2150.f), Wood, FRotator(90.f, 0.f, 0.f));
-		Add(BroomPivot, EAntShape::Cube, FVector(1900.f, 0.f, 0.f), FVector(230.f, 170.f, 760.f), Straw, FRotator::ZeroRotator);            // the bristles
+		Map4Look::Swap(Add(BroomPivot, EAntShape::Cube, FVector(1900.f, 0.f, 0.f), FVector(230.f, 170.f, 760.f), Straw, FRotator::ZeroRotator), TEXT("SM_M4_BroomHead"));            // the bristles (map v4: straw)
 		BroomPivot->SetVisibility(false, true);
 		for (int32 s = 0; s < 2; ++s)
 		{
@@ -268,6 +269,7 @@ void AHumanCharacter::BuildHeldThings()
 	}
 	// The towel he wipes a puddle with (after a fall), folded over the left palm.
 	TowelArt = AntKit::AddPart(this, Segs[HumanSeg::HandL], EAntShape::Cube, FVector(30.f, 40.f, -210.f) * K, FVector(420.f, 300.f, 40.f) * (K / 100.f), FLinearColor(0.85f, 0.9f, 0.98f), FRotator::ZeroRotator, false, false);
+	Map4Look::Swap(TowelArt, TEXT("SM_M4_Towel"));   // map v4: a folded towel
 	TowelArt->SetVisibility(false);
 	const AntArt::FPart& Paper = AntArt::Get(TEXT("SM_RolledNewspaper"));
 	if (Paper.IsValid())
@@ -308,6 +310,17 @@ void AHumanCharacter::BuildRoutineProps()
 	PropArt.Add(Add(HumanSeg::HandR, EAntShape::Cube, Grip + FVector(160.f, 0.f, -60.f), FVector(380.f, 220.f, 300.f), FLinearColor(0.2f, 0.55f, 0.3f), FRotator(-25.f, 0.f, 0.f)));   // 3 the watering can
 	PropArt.Add(Add(HumanSeg::HandL, EAntShape::Cube, FVector(30.f, 40.f, -260.f), FVector(380.f, 320.f, 20.f), FLinearColor(0.85f, 0.3f, 0.2f), FRotator::ZeroRotator));   // 4 the dustpan
 	PropArt.Add(Add(HumanSeg::HandR, EAntShape::Cylinder, Grip + FVector(0.f, 0.f, -60.f), FVector(20.f, 20.f, 160.f), FLinearColor(0.9f, 0.15f, 0.15f), FRotator::ZeroRotator));   // 5 the crayon
+	if (Map4Look::Enabled())
+	{
+		// map v4: the same things as models in the same frames (Tools/map4/blender_more3.py)
+		Map4Look::Swap(PropArt[0], TEXT("SM_M4_TrashBag"), TEXT("TrashBag"));
+		if (Map4Look::Swap(PropArt[1], TEXT("SM_M4_Ladle"))) { PropArt[1]->SetRelativeScale3D(PropArt[1]->GetRelativeScale3D() * FVector(150.f / 28.f, 150.f / 28.f, 1.f)); }   // a bowl wider than the handle
+		Map4Look::Swap(PropArt[2], TEXT("SM_M4_Phone"));
+		Map4Look::Swap(PropArt[3], TEXT("SM_M4_WateringCan"));
+		Map4Look::Swap(PropArt[4], TEXT("SM_M4_Dustpan"));
+		Map4Look::Swap(PropArt[5], TEXT("SM_M4_Crayon"));
+		for (UStaticMeshComponent* C : PropArt) { if (C) { C->ComponentTags.Remove(TEXT("M4Thread")); } }
+	}
 }
 
 void AHumanCharacter::ShowRoutineProps()

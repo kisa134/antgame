@@ -1354,7 +1354,7 @@ void AKitchenBuilder::BuildArt()
 			LampShades.Add(C);   // its shade (material 0) glows with the light switch like the old cylinders did
 		}
 		// Level v2, "ants only": threads and strings an ant walks along but the Human, grandma and the kid walk straight through.
-		static const TCHAR* const AntsOnly[] = { TEXT("SM_L_YarnBridge"), TEXT("SM_L_Garland"), TEXT("SM_K_ChiliString"), TEXT("SM_K_FlyPaper") };
+		static const TCHAR* const AntsOnly[] = { TEXT("SM_L_YarnBridge"), TEXT("SM_L_YarnThread"), TEXT("SM_L_Garland"), TEXT("SM_K_ChiliString"), TEXT("SM_K_FlyPaper") };   // (map v4: + the yarn thread: the Human stalled at grandma's thread)
 		for (const TCHAR* N : AntsOnly)
 		{
 			if (C && FCString::Strcmp(I.Name, N) == 0)

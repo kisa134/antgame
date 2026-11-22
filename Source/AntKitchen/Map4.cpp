@@ -308,6 +308,23 @@ void AMap4Runner::BuildJobs(const FString& Kinds)
 		}
 		return false;
 	};
+	// A lane an ant can walk end to end: nothing taller than 250 in the way (taller is furniture or the building: the
+	// "top" jobs climb those), and the end is not tucked under something (a cabinet's toe kick, a sofa's belly).
+	int32 Skipped = 0;
+	auto WalkLane = [&](const FVector& A, const FVector& B) -> bool
+	{
+		TArray<FHitResult> Hits;
+		W->SweepMultiByObjectType(Hits, A + FVector(0.f, 0.f, 15.f), B + FVector(0.f, 0.f, 15.f), FQuat::Identity, Obj, FCollisionShape::MakeSphere(18.f), Q);
+		for (const FHitResult& Hh : Hits)
+		{
+			const UPrimitiveComponent* C = Hh.GetComponent();
+			if (!C || Hh.ImpactNormal.Z > 0.6f) { continue; }
+			if (C->Bounds.GetBox().Max.Z - Hh.ImpactPoint.Z > 250.f) { return false; }
+		}
+		FHitResult Up;
+		if (W->LineTraceSingleByObjectType(Up, B + FVector(0.f, 0.f, 5.f), B + FVector(0.f, 0.f, 400.f), Obj, Q)) { return false; }
+		return true;
+	};
 	// Floors: rows across every district rectangle, 900 apart, low enough to stay under the furniture tops.
 	if (bAll || Kinds.Contains(TEXT("floor")))
 	{
@@ -327,6 +344,7 @@ void AMap4Runner::BuildJobs(const FString& Kinds)
 					const FVector2D P0 = bAlongX ? FVector2D(R.Min.X + 150.f, R.Min.Y + T * Sz.Y) : FVector2D(R.Min.X + T * Sz.X, R.Min.Y + 150.f);
 					const FVector2D P1 = bAlongX ? FVector2D(R.Max.X - 150.f, R.Min.Y + T * Sz.Y) : FVector2D(R.Min.X + T * Sz.X, R.Max.Y - 150.f);
 					if (!Ground(P0.X, P0.Y, 120.f, A) || !Ground(P1.X, P1.Y, 120.f, B)) { continue; }
+					if (!WalkLane(A, B)) { ++Skipped; continue; }
 					FJob J; J.Name = FString::Printf(TEXT("floor_%s_%d"), D.Id, Jobs.Num());
 					J.Pts = { A, B };
 					Jobs.Add(J);
@@ -379,12 +397,12 @@ void AMap4Runner::BuildJobs(const FString& Kinds)
 		{
 			const FVector2D C = (Rm.Min + Rm.Max) * 0.5f;
 			FHitResult Up;
-			const float CeilZ = W->LineTraceSingleByObjectType(Up, FVector(C.X, C.Y, 400.f), FVector(C.X, C.Y, 9000.f), Obj, Q) ? Up.ImpactPoint.Z : 5100.f;
+			const float CeilZ = W->LineTraceSingleByObjectType(Up, FVector(C.X, C.Y, 3600.f), FVector(C.X, C.Y, 9000.f), Obj, Q) ? Up.ImpactPoint.Z : 5100.f;   // (from 3600: from 400 it found the table's underside)
 			for (int32 Side = 0; Side < 4; ++Side)
 			{
 				const bool bX = Side < 2;   // walls at constant X (west/east) or constant Y
 				const float Len = bX ? Rm.Max.Y - Rm.Min.Y : Rm.Max.X - Rm.Min.X;
-				for (float s = 1200.f; s < Len - 600.f; s += 2600.f)
+				for (float s = 1200.f; s < Len - 600.f; s += 1300.f)
 				{
 					const float Along = (bX ? Rm.Min.Y : Rm.Min.X) + s;
 					// find the wall: a horizontal trace from 900 inside the room towards it, at 2300 (above the furniture)
@@ -397,6 +415,15 @@ void AMap4Runner::BuildJobs(const FString& Kinds)
 					const FVector WallP = Hw.ImpactPoint - D3 * 14.f;
 					FVector Floor;
 					if (!Ground(In.X + Dir2.X * 500.f, In.Y + Dir2.Y * 500.f, 200.f, Floor)) { continue; }
+					{
+						// bare wall: from the floor point straight to it at ant height, and down its face from 2300, nothing else
+						FHitResult Hb;
+						const FVector Face = Hw.ImpactPoint - D3 * 45.f;
+						const bool bLow = W->SweepSingleByObjectType(Hb, Floor + FVector(0.f, 0.f, 10.f), FVector(Face.X, Face.Y, Floor.Z + 10.f) + D3 * 60.f, FQuat::Identity, Obj, FCollisionShape::MakeSphere(15.f), Q)
+							&& FVector::Dist2D(Hb.ImpactPoint, Hw.ImpactPoint) > 80.f;
+						const bool bFace = W->SweepSingleByObjectType(Hb, FVector(Face.X, Face.Y, 2300.f), FVector(Face.X, Face.Y, Floor.Z + 300.f), FQuat::Identity, Obj, FCollisionShape::MakeSphere(25.f), Q);
+						if (bLow || bFace) { ++Skipped; continue; }
+					}
 					const FVector Side3 = bX ? FVector(0.f, 1.f, 0.f) : FVector(1.f, 0.f, 0.f);
 					FJob J; J.Name = FString::Printf(TEXT("wall_%s"), *DistrictAt(WallP));
 					J.Pts.Add(Floor);
@@ -416,7 +443,7 @@ void AMap4Runner::BuildJobs(const FString& Kinds)
 			}
 		}
 	}
-	UE_LOG(LogTemp, Display, TEXT("M4COLL %d jobs (%s)"), Jobs.Num(), *Kinds);
+	UE_LOG(LogTemp, Display, TEXT("M4COLL %d jobs (%s), %d floor lanes / wall spots skipped as furnished"), Jobs.Num(), *Kinds, Skipped);
 }
 
 void AMap4Runner::StartColl(int32 NumWalkers, const FString& Kinds, const FString& Tag)
@@ -512,6 +539,41 @@ void AMap4Runner::StartHuman()
 		{
 			It->bDevPuppet = true;
 			It->SetActorLocation(FVector(HPts[0].X, HPts[0].Y, It->GetActorLocation().Z), false, nullptr, ETeleportType::TeleportPhysics);
+			// plan the legs the way his own steering would: a leg his capsule cannot sweep straight gets one via point beside
+			// it (the furniture is where the seed put it); a stall then means a lane that looked clear and was not
+			{
+				UCapsuleComponent* Cap = It->GetCapsuleComponent();
+				const float Z = It->GetActorLocation().Z;
+				FCollisionQueryParams Qp(SCENE_QUERY_STAT(Map4HumanPlan), false, *It);
+				const FCollisionShape Sh = FCollisionShape::MakeCapsule(Cap->GetScaledCapsuleRadius() * 1.05f, Cap->GetScaledCapsuleHalfHeight() * 0.85f);
+				auto Clear = [&](const FVector& A, const FVector& B)
+				{
+					FHitResult Hh;
+					return !GetWorld()->SweepSingleByChannel(Hh, FVector(A.X, A.Y, Z + 40.f), FVector(B.X, B.Y, Z + 40.f), FQuat::Identity, ECC_Pawn, Sh, Qp);
+				};
+				TArray<FVector> Planned = { HPts[0] };
+				HMain.Reset();
+				HMain.Add(true);
+				int32 Vias = 0;
+				for (int32 i = 1; i < HPts.Num(); ++i)
+				{
+					const FVector A = Planned.Last(), B = HPts[i];
+					if (!Clear(A, B))
+					{
+						const FVector Mid = (A + B) * 0.5f;
+						const FVector Perp = FVector(-(B - A).Y, (B - A).X, 0.f).GetSafeNormal();
+						for (float Off : { 800.f, -800.f, 1500.f, -1500.f, 2200.f, -2200.f })
+						{
+							const FVector V = Mid + Perp * Off;
+							if (Clear(A, V) && Clear(V, B)) { Planned.Add(V); HMain.Add(false); ++Vias; break; }
+						}
+					}
+					Planned.Add(B);
+					HMain.Add(true);
+				}
+				HPts = Planned;
+				UE_LOG(LogTemp, Display, TEXT("M4HUMAN planned %d legs (%d via points round furniture)"), HPts.Num() - 1, Vias);
+			}
 			HPt = 1;
 			It->DevWalk = FVector(HPts[1].X, HPts[1].Y, 0.f);
 			HPtStart = HLastCheck = GetWorld()->GetTimeSeconds();
@@ -690,12 +752,25 @@ void AMap4Runner::Tick(float Dt)
 				const FVector Into = (T - J.Pts[FMath::Max(0, Wk.Pt - 1)]).GetSafeNormal2D();   // towards the wall this leg climbs
 				if (SN.Z > 0.7f && Rise > 120.f && Rise > Flat * 0.5f)
 				{
-					Ant->DevGoTo = Flat > 25.f ? FVector(T.X, T.Y, L.Z + 40.f) : L + (Into.IsNearlyZero() ? FVector::ZeroVector : Into * 120.f) + FVector(0.f, 0.f, 40.f);
+					Ant->DevGoTo = Flat > 90.f ? FVector(T.X, T.Y, L.Z + 40.f) : L + (Into.IsNearlyZero() ? FVector::ZeroVector : Into * 120.f) + FVector(0.f, 0.f, 40.f);   // (near the wall: into it, never back off a ledge)
 				}
 				else
 				{
 					Ant->DevGoTo = T;
 				}
+				// under something (a cabinet's overhang, a bag's belly) with the point below: let go, as a player presses Space
+				// (only low down: a floor within 300 under it; up on a ceiling the point below is on the wall, climb down to it)
+				auto FloorNear = [&](float Within)
+				{
+					FHitResult Hd;
+					FCollisionQueryParams Qd(SCENE_QUERY_STAT(Map4Drop), false, Ant);
+					return W->LineTraceSingleByObjectType(Hd, L - FVector(0.f, 0.f, 20.f), L - FVector(0.f, 0.f, Within), Obj, Qd) && Hd.ImpactNormal.Z > 0.7f;
+				};
+				if (AM && AM->IsCrawling() && SN.Z < -0.5f && T.Z < L.Z - 40.f && Now - Wk.PtStart > 1.f && FloorNear(300.f)) { if (Wk.JumpAt < 0.f) { Ant->Jump(); Wk.JumpAt = Now; } }
+				// on a wall that goes nowhere near the point below it: let go after a few seconds without progress
+				else if (AM && AM->IsCrawling() && FMath::Abs(SN.Z) < 0.4f && T.Z < L.Z - 120.f && Wk.StallChecks >= 3 && FloorNear(500.f)) { if (Wk.JumpAt < 0.f) { Ant->Jump(); Wk.JumpAt = Now; } }
+				if (Wk.JumpAt >= 0.f && Now - Wk.JumpAt > 0.25f) { Ant->StopJumping(); }
+				if (Wk.JumpAt >= 0.f && Now - Wk.JumpAt > 1.5f) { Wk.JumpAt = -1.f; }
 			}
 			UCharacterMovementComponent* CM = Ant->GetCharacterMovement();
 			Wk.FallingFor = (CM && CM->IsFalling()) ? Wk.FallingFor + Dt : 0.f;
@@ -764,14 +839,18 @@ void AMap4Runner::Tick(float Dt)
 				H->bDevPuppet = false;
 				FString What;
 				for (const FString& S : HThroughWhat) { What += S + TEXT(" "); }
-				UE_LOG(LogTemp, Display, TEXT("M4HUMAN DONE reached=%d stalls=%d walkthrough=%d (%s)"), HReached, HStalls, HThrough, *What);
+				int32 Mains = 0;
+				for (bool bM : HMain) { Mains += bM ? 1 : 0; }
+				UE_LOG(LogTemp, Display, TEXT("M4HUMAN DONE reached=%d of %d points stalls=%d walkthrough=%d (%s)"), HReached, FMath::Max(0, Mains - 1), HStalls, HThrough, *What);
 				return;
 			}
 			HPtStart = HLastCheck = Now;
 			HBest = 1.e9f;
+			HBlockedFor = 0.f;
+			HDetour = FVector::ZeroVector;
 			H->DevWalk = FVector(HPts[HPt].X, HPts[HPt].Y, 0.f);
 		};
-		if (Dist < 260.f) { ++HReached; Next(false); return; }
+		if (Dist < 260.f) { if (!HMain.IsValidIndex(HPt) || HMain[HPt]) { ++HReached; } Next(false); return; }
 		if (H->DevWalk.IsZero()) { H->DevWalk = FVector(T.X, T.Y, 0.f); }
 		if (Now - HLastCheck > 1.f)
 		{
@@ -797,8 +876,31 @@ void AMap4Runner::Tick(float Dt)
 					}
 				}
 			}
-			if (Dist < HBest - 60.f) { HBest = Dist; }
-			else if (Now - HPtStart > 6.f)
+			if (!HDetour.IsZero() && FVector::Dist2D(L, HDetour) < 250.f) { HDetour = FVector::ZeroVector; H->DevWalk = FVector(T.X, T.Y, 0.f); HBest = 1.e9f; }
+			if (Dist < HBest - 60.f) { HBest = Dist; HBlockedFor = 0.f; }
+			else { HBlockedFor += 1.f; }
+			if (HBlockedFor >= 2.f && Now - HPtStart <= 14.f)
+			{
+				// blocked: a side step past the obstacle (the free side by a capsule sweep), then on to the point
+				HBlockedFor = 0.f;
+				const FVector Dir2 = (T - L).GetSafeNormal2D();
+				const FVector Side(-Dir2.Y, Dir2.X, 0.f);
+				UCapsuleComponent* Cap = H->GetCapsuleComponent();
+				FCollisionQueryParams Qd(SCENE_QUERY_STAT(Map4HumanSide), false, H);
+				FVector Best = FVector::ZeroVector;
+				for (float Sgn : { 1.f, -1.f })
+				{
+					for (float Off : { 700.f, 1200.f })
+					{
+						const FVector P = L + Side * Sgn * Off + Dir2 * 400.f;
+						FHitResult Hs;
+						if (Cap && !W->SweepSingleByChannel(Hs, L, P, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeCapsule(Cap->GetScaledCapsuleRadius() * 0.9f, Cap->GetScaledCapsuleHalfHeight() * 0.9f), Qd)) { Best = P; break; }
+					}
+					if (!Best.IsZero()) { break; }
+				}
+				if (!Best.IsZero()) { HDetour = Best; H->DevWalk = FVector(Best.X, Best.Y, 0.f); HBest = 1.e9f; UE_LOG(LogTemp, Display, TEXT("M4HUMAN detour at (%.0f,%.0f)"), L.X, L.Y); }
+			}
+			else if (Now - HPtStart > 14.f)
 			{
 				++HStalls;
 				// what is in his way: his capsule swept 150 towards the point

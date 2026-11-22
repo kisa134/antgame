@@ -11,6 +11,7 @@
 #include "Engine/World.h"
 #include "Materials/MaterialInterface.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "Map4Look.h"
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/DamageType.h"
 #include "Kismet/GameplayStatics.h"
@@ -78,11 +79,43 @@ UMaterialInstanceDynamic* Material(const FNpcLook& L)
 	{
 		M = UMaterialInstanceDynamic::Create(Base, GetTransientPackage());
 		UTexture* T = L.Tex ? LoadObject<UTexture>(nullptr, *FString::Printf(TEXT("/Game/Textures/%s.%s"), L.Tex, L.Tex)) : nullptr;
+		FLinearColor Tint(L.R, L.G, L.B, 1.f);
+		float Size = L.Size;
+		if (Map4Look::Enabled())
+		{
+			// map v4 material pass: the residents' cloth gets the real weaves of the new set (grey copies, mean 0.30 like
+			// T_Fabric_Grey, so the colours stay as designed); fur and hair a soft boucle; skin and eyes stay clean paint
+			const FString Slot(L.Slot);
+			const TCHAR* Set = nullptr;
+			bool bWasPlain = false;
+			if (L.Tex && FCString::Strcmp(L.Tex, TEXT("T_Fabric_Grey")) == 0)
+			{
+				Set = (Slot.Contains(TEXT("Cardigan")) || Slot.Contains(TEXT("Slipper")) || Slot.Contains(TEXT("Sock"))) ? TEXT("KnitG")
+					: (Slot.Contains(TEXT("Skirt")) || Slot.Contains(TEXT("Shorts")) || Slot.Contains(TEXT("Blouse"))) ? TEXT("LinenG") : TEXT("JerseyG");
+			}
+			else if (!L.Tex && (Slot.StartsWith(TEXT("Fur")) || Slot.StartsWith(TEXT("Fawn")) || Slot.Equals(TEXT("DogWhite")) || Slot.StartsWith(TEXT("Hair"))))
+			{
+				Set = TEXT("BoucleG"); bWasPlain = true; Size = 140.f;
+			}
+			else if (!L.Tex && (Slot.Equals(TEXT("Stocking")) || Slot.Equals(TEXT("Sock")) || Slot.Equals(TEXT("Fluff"))))
+			{
+				Set = TEXT("KnitG"); bWasPlain = true; Size = 160.f;
+			}
+			if (Set)
+			{
+				const FString N = FString::Printf(TEXT("/Game/Map4/Textures/T_M4_%s_C.T_M4_%s_C"), Set, Set);
+				if (UTexture* T4 = LoadObject<UTexture>(nullptr, *N, nullptr, LOAD_NoWarn | LOAD_Quiet))
+				{
+					T = T4;
+					if (bWasPlain) { Tint = FLinearColor(L.R / 0.30f, L.G / 0.30f, L.B / 0.30f, 1.f); }
+				}
+			}
+		}
 		M->SetScalarParameterValue(TEXT("Mode"), T ? 0.f : 4.f);
-		M->SetScalarParameterValue(TEXT("TileSize"), FMath::Max(1.f, L.Size));
+		M->SetScalarParameterValue(TEXT("TileSize"), FMath::Max(1.f, Size > 0.f ? Size : 200.f));
 		M->SetScalarParameterValue(TEXT("Roughness"), L.Rough);
 		M->SetScalarParameterValue(TEXT("Metallic"), 0.f);
-		M->SetVectorParameterValue(TEXT("Tint"), FLinearColor(L.R, L.G, L.B, 1.f));
+		M->SetVectorParameterValue(TEXT("Tint"), Tint);
 		if (T)
 		{
 			M->SetTextureParameterValue(TEXT("Tex"), T);

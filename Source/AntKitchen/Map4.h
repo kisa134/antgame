@@ -53,6 +53,7 @@ public:
 		int32 Pt = 0;
 		float PtStart = 0.f, LastCheck = 0.f, BestDist = 1.e9f, FallingFor = 0.f;
 		int32 StallChecks = 0;
+		float JumpAt = -1.f;   // the harness let go of a surface (Jump) at this time
 	};
 	TArray<FJob> Jobs;
 	TArray<FWalker> Walkers;
@@ -68,7 +69,9 @@ public:
 	bool bHuman = false;
 	TArray<FVector> HPts;
 	int32 HPt = 0;
-	float HPtStart = 0.f, HBest = 1.e9f, HLastCheck = 0.f;
+	float HPtStart = 0.f, HBest = 1.e9f, HLastCheck = 0.f, HBlockedFor = 0.f;
+	FVector HDetour = FVector::ZeroVector;
+	TArray<bool> HMain;   // HPts[i] is one of the route's own points (not a via point the plan added)
 	int32 HStalls = 0, HThrough = 0, HReached = 0;
 	TSet<FString> HThroughWhat;
 

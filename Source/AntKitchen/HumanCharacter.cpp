@@ -69,7 +69,7 @@ AHumanCharacter::AHumanCharacter()
 
 	UCharacterMovementComponent* CM = GetCharacterMovement();
 	CM->MaxWalkSpeed = 720.f;
-	CM->MaxStepHeight = 250.f;
+	CM->MaxStepHeight = 400.f;   // map v4: ~21 cm, he steps over a toy, a cushion, a book ramp instead of stalling at it (was 250)
 	CM->JumpZVelocity = 0.f;
 	CM->NavAgentProps.bCanJump = false;
 	CM->bOrientRotationToMovement = false;
