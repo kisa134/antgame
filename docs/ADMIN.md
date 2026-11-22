@@ -77,3 +77,16 @@ FPS (`stat fps`), статистика кадра (`stat unit`), скрыть/п
 - **Масса тела x1 / x2** (`heavy mass K`, 0.25–5) — тяжелее разгоняется, тормозит и поворачивается, сильнее толкает мебель телом.
 - **Упасть (проверка)** (`heavy topple`) — падение на спину и подъём, как после лужи.
 - Для скриптов (`-AntDo`): `heavy move <вперёд> <вправо> <сек>` (как зажатые WASD), `heavy stop`, `heavy aim <yaw> [pitch]`, `heavy face x y`, `heavy sprint 1|0`, `heavy swing [заряд 0..1] [x y z]`, `heavy stomp [x y z]`, `heavy jump`, `heavy kick`, `heavy throw [yaw pitch]`, `heavy jolt K kind`, `heavy info`. Лог — строки `ANTHEAVY`.
+
+## Внутрь людей и ткань (`docs/FEATURES.md` раздел 33)
+
+**Вкладка NPC → «Внутрь»**
+- Меня — в ухо / нос / штанину / карман / тапок Человеку (`inside put human ear|nose|leg|pocket|slipper`), бабушке в пучок / ухо (`inside put gran bun|ear`), малышу в карман / за шиворот (`inside put kid pocket|collar`), Бадрику под ошейник (`inside put dog collar`). Если уже внутри кого-то — сначала вылезает.
+- 3 бота в штанины Человеку (`inside bots human leg 3` — он падает), 2 бота в ухо (`inside bots human ear 2`).
+- Укусить изнутри (`inside bite`), все внутри кусают (`inside bite all`), чихнуть (`inside sneeze` — реакция носа сейчас), хлопнуть себя по уху / [F] Человека (`inside swat human`), вылезти (`inside out`), кто где (`inside info`).
+- Ещё: `inside slap` (реакция уха сейчас), `inside react` (все реакции сейчас), `inside mark` (зелёные шарики на всех входах на 20 с), `inside cam <кто> <вход> [дист] [yaw] [высота] [fov]` / `inside camoff`, `inside shot имя` (Saved/Screenshots/inside).
+
+**Вкладка Мир → «Ткань»**
+- Дёрнуть скатерть (`cloth yank tablecloth 0 -1 60 3`: невидимая бригада 60 тянет край к −Y 3 с), 6 муравьёв тянут скатерть (`cloth crew tablecloth 6 0 -1 10`: 6 ботов встают у кромки и держат [E] 10 с), порвать у прицела (`cloth tear x y z 6`: ряд из 6 вырезанных клеток у ближайшей ткани).
+- Ветер вкл / выкл / из окна (`cloth wind 1|0|-1`), намочить скатерть (`cloth wet tablecloth 1`), сорвать штору (`cloth drop curtain`), стянуть плед (`cloth yank plaid 0 1 40 2`), сбросить ткань (`cloth reset` — всё заново по уровню), инфо и цена в лог (`cloth info`; `cloth cost` — цена каждые 2 с).
+- Ещё: `cloth <вид> …` — вид `tablecloth|long|curtain|curtain1..3|plaid|fort|sheet|N`; `cloth wake|rest`, `cloth bite x y z`, `cloth cam <вид> yaw дист высота [fov]`, `cloth shot имя` (Saved/Screenshots/cloth).

@@ -35,6 +35,8 @@ enum class EAntSfx : uint8
 	CatPurr, CatHiss, CatPounce, DogSnort, DogBark, DogSniff, DogEat, Broom, KidGiggle, KidShout, SpiderSkitter,
 	// ---- ambience beds and point sources
 	AmbFridge, AmbClock, AmbDrip, AmbDay, AmbEvening, AmbNight,
+	// ---- inside people (AntInside.h)
+	Sneeze, EarSlap, PocketRustle, Heartbeat,
 	Count
 };
 

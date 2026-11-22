@@ -39,6 +39,8 @@
 #include "HAL/IConsoleManager.h"
 #include "AntRun.h"
 #include "AntCarry.h"
+#include "AntCloth.h"
+#include "AntInside.h"
 #include "AntBody.h"
 #include "AntFilm.h"
 #include "AntSnowball.h"
@@ -1599,6 +1601,10 @@ void AAntCharacter::ServerInteract_Implementation()
 		ReleaseAnt(false);
 		return;
 	}
+	if (AntInside::OnInteract(this))
+	{
+		return;   // inside a resident: [E] crawls out (AntInside.h)
+	}
 	if (IsAttached())
 	{
 		return;
@@ -1767,6 +1773,11 @@ void AAntCharacter::ServerBite_Implementation()
 		return;
 	}
 	ServerNextBiteTime = Now + 0.55f;
+	if (AntInside::OnBite(this))
+	{
+		return;   // inside a resident: the bite is his (AntInside.h)
+	}
+	AntCloth::OnBite(this);   // cloth in front of the jaws gets a cut (AntCloth.h)
 	NoteBodyAct(AntAct::Bite, GetActorForwardVector(), 1.f);
 	AntSfx::Everyone(this, AntSfx::Bite, GetActorLocation(), FMath::FRandRange(0.9f, 1.2f));
 	const FVector Me = GetActorLocation();
@@ -2951,6 +2962,7 @@ void AAntCharacter::DoLink(const FVector& Aim)
 	}
 	if (NpcHold)
 	{
+		if (AntInside::OnStruggle(this)) { return; }   // inside a resident: wriggle out (AntInside.h)
 		NpcWorld::Struggle(this);   // whoever holds it may lose its grip
 		return;
 	}

@@ -48,6 +48,8 @@
 #include "Engine/OverlapResult.h"
 #include "NpcRoutine.h"
 #include "AntCarry.h"
+#include "AntCloth.h"
+#include "AntInside.h"
 #include "AntSnowball.h"
 
 namespace
@@ -308,6 +310,10 @@ void AAntKitchenGameMode::MakeNoise(const FVector& Loc, float Loud, uint8 Kind, 
 
 bool AAntKitchenGameMode::BestNoise(const FVector& From, FAntNoise& Out) const
 {
+	if (AntInside::DeafAt(GetWorld(), From))
+	{
+		return false;   // an ant in his ear: he hears nothing (AntInside.h)
+	}
 	const float Now = GetWorld()->GetTimeSeconds();
 	float Best = 0.3f;   // quieter than this (or too old) is not worth the walk
 	bool bFound = false;
@@ -1577,7 +1583,11 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 	}
 	if (Map4::DevCommand(this, A))
 	{
-		return;   // map v4: art audit | art shots <tag> [cams] | colltest [walkers] [kinds] [tag] | humantest (Map4.cpp)
+		return;   // map v4: art audit | art shots <tag> [cams] | art fps | colltest [walkers] [kinds] [tag] | humantest (Map4.cpp)
+	}
+	if (AntCloth::DevCommand(this, A) || AntInside::DevCommand(this, A))
+	{
+		return;   // cloth ..., inside ... (AntCloth.cpp, AntInside.cpp)
 	}
 	if (AntBodyRules::DevCommand(this, A))
 	{
