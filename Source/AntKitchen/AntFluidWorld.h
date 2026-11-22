@@ -203,6 +203,8 @@ private:
 	uint16 SnapSeq = 0;
 	struct FSnapIn { uint16 Seq = 0; int32 Parts = 0; int32 Got = 0; TArray<TArray<uint8>> Chunks; bool bHadFirst = false; };
 	TMap<uint8, FSnapIn> SnapIn;
+	struct FSnapOut { uint8 Basin = 0; uint16 Seq = 0; uint8 Part = 0; uint8 Parts = 0; TArray<uint8> Data; };
+	TArray<FSnapOut> SendQueue;
 	int32 SnapsRead = 0;
 public:
 	/** Client: a piece of the server's picture arrived (AAntFluidNet). */
