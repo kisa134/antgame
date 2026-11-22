@@ -23,6 +23,8 @@
 #include "EngineUtils.h"
 #include "Net/UnrealNetwork.h"
 #include "NpcRoutine.h"
+#include "AntCloth.h"
+#include "AntInside.h"
 
 // =============================================================================================
 // The held work: [E] together, strength sums (AKitchenInteractable's door rule), progress over time.
@@ -587,6 +589,10 @@ void AKitchenFixture::OnDone()
 		Spill(By);
 		OnRep_State();
 		return;
+	}
+	if (Id == TEXT("tablecloth") && AntCloth::Yank(this, -Dir, By))
+	{
+		return;   // real cloth (AntCloth.h): it is yanked towards the pullers and takes what stands on it by its own physics
 	}
 	if (Id == TEXT("tablecloth"))
 	{
@@ -1153,6 +1159,10 @@ void AKitchenFixture::ShowAfter()
 	bAfterShown = true;
 	const FString Id = FixId();
 	const FVector At(BreakAt.X, BreakAt.Y, BreakAt.Z);
+	if ((Id == TEXT("curtain_k") || Id == TEXT("tablecloth")) && State != Broken && AntCloth::ForFixture(this))
+	{
+		return;   // real cloth lies where it fell (its own heap is the cover: AntCloth.h)
+	}
 	auto Put = [this, &At](const TCHAR* Mesh, float Scale, float Yaw, const FVector& Off = FVector::ZeroVector, bool bSolid = false) -> UStaticMeshComponent*
 	{
 		const FTransform T(FRotator(0.f, BreakYaw + Yaw, 0.f), At + Off, FVector(Scale * KitchenArt::ImportScale));
@@ -1331,6 +1341,8 @@ void AKitchenFixture::KnockRiders(const FVector& Dir, AAntCharacter* By)
 void AKitchenFixture::ResetAll(UWorld* World)
 {
 	AntWreck::ResetAll(World);   // the wrecked furniture comes back with the fixtures (AntWreck.h)
+	AntCloth::ResetAll(World);   // the cloth adopts the respawned tablecloth / curtains a moment later (AntCloth.h)
+	AntInside::ResetAll(World);  // nobody inside anybody, the entry points on the residents again (AntInside.h)
 	AntWeapons::SpawnAll(World);   // and the Human's weapons lie in their places again (AntWeapon.h)
 	UAntFluidWorld::ResetAll(World);   // the flat is dry again, the tap shut (AntFluidWorld.h)
 	if (!World || !LevelV3::Enabled() || !LevelV3::FixturesOn())

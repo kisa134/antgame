@@ -173,6 +173,11 @@ namespace
 		D(AmbDay,      "A_AmbDay*1",                      0.55f, 0.00f, Att2D,    KAmb, 1, 0.f,   Count, 0.f, 0.f),
 		D(AmbEvening,  "A_AmbEvening*1",                  0.55f, 0.00f, Att2D,    KAmb, 1, 0.f,   Count, 0.f, 0.f),
 		D(AmbNight,    "A_AmbNight*1",                    0.6f, 0.00f, Att2D,     KAmb, 1, 0.f,   Count, 0.f, 0.f),
+		// ---- inside people
+		D(Sneeze,      "A_Sneeze*2",                      1.0f, 0.05f, AttHuge,   KVoice, 1, 1.00f, Count, 0.f, 0.4f),
+		D(EarSlap,     "A_EarSlap*2",                     1.0f, 0.06f, AttHuge,   KSfx, 2, 0.30f, Count, 0.f, 0.3f),
+		D(PocketRustle,"A_PocketRustle*2",                0.9f, 0.08f, AttMedium, KSfx, 2, 0.40f, Count, 0.f, 0.f),
+		D(Heartbeat,   "A_Heartbeat*1",                   0.8f, 0.02f, Att2D,     KSfx, 1, 0.30f, Count, 0.f, 0.f),
 	};
 #undef D
 	static_assert(UE_ARRAY_COUNT(Table) == (int32)EAntSfx::Count, "one AntAudio table row per EAntSfx, in order");
@@ -190,7 +195,8 @@ namespace
 		TEXT("SoftThud"), TEXT("SplatJam"), TEXT("SplatCream"), TEXT("ColaFizz"), TEXT("Crumbs"), TEXT("CurtainRustle"),
 		TEXT("SlipperSlap"), TEXT("HumanGrumble"), TEXT("HumanRoar"), TEXT("HumanSlip"), TEXT("BatWhoosh"), TEXT("BatImpact"), TEXT("HumanPickup"), TEXT("HumanSniff"),
 		TEXT("CatPurr"), TEXT("CatHiss"), TEXT("CatPounce"), TEXT("DogSnort"), TEXT("DogBark"), TEXT("DogSniff"), TEXT("DogEat"), TEXT("Broom"), TEXT("KidGiggle"), TEXT("KidShout"),
-		TEXT("SpiderSkitter"), TEXT("AmbFridge"), TEXT("AmbClock"), TEXT("AmbDrip"), TEXT("AmbDay"), TEXT("AmbEvening"), TEXT("AmbNight") };
+		TEXT("SpiderSkitter"), TEXT("AmbFridge"), TEXT("AmbClock"), TEXT("AmbDrip"), TEXT("AmbDay"), TEXT("AmbEvening"), TEXT("AmbNight"),
+		TEXT("Sneeze"), TEXT("EarSlap"), TEXT("PocketRustle"), TEXT("Heartbeat") };
 	static_assert(UE_ARRAY_COUNT(Names) == (int32)EAntSfx::Count, "one name per EAntSfx");
 
 	/** "A_Name*N S_Old" -> package paths (no probing for files that may not exist: a packaged build logs every miss). */

@@ -38,6 +38,7 @@
 #include "LevelV3.h"
 #include "NpcRoutine.h"
 #include "Misc/ScopeExit.h"
+#include "AntInside.h"
 
 namespace HumanLook
 {
@@ -520,6 +521,11 @@ void AHumanCharacter::TryShakeOff()
 	{
 		return;
 	}
+	if (AntInside::HumanSelfSwat(this))
+	{
+		ShakeReadyTime = Now + 2.f;
+		return;   // ants inside him: [F] swats at the ear, the nose, the leg, the pocket (AntInside.h)
+	}
 	ShakeReadyTime = Now + 6.f * (1.f - 0.15f * Rage);
 	MulticastShake();
 	if (bNewBody && !bStompPending)
@@ -942,6 +948,10 @@ FVector AHumanCharacter::GetStompPoint(int32 Leg) const
 
 bool AHumanCharacter::InCover(const UWorld* World, const FVector& P)
 {
+	if (AntInside::HiddenAt(World, P))
+	{
+		return true;   // inside somebody's ear, pocket, trouser leg (AntInside.h)
+	}
 	// Inside the fridge (and the gap under it), the oven, the cabinet under the sink.
 	if (FBox(FVector(2700.f, 3000.f, 0.f), FVector(4700.f, 4750.f, 3700.f)).IsInside(P)
 		|| FBox(FVector(-1500.f, 3000.f, 120.f), FVector(0.f, 4750.f, 1650.f)).IsInside(P)

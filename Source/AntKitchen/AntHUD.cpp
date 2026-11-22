@@ -36,6 +36,7 @@
 #include "AntAdmin.h"
 #include "AntUiStyle.h"
 #include "AntUiCanvas.h"
+#include "AntInside.h"
 
 namespace
 {
@@ -265,6 +266,7 @@ void AAntHUD::DrawHUD()
 	if (Raid) { DrawRaid(Raid, GS, Me); }
 	if (Raid) { AntRts::DrawHud(this, Canvas, PC); }   // the snowball: mass, picks, squad groups, selection (AntRts.cpp)
 	AntAdmin::DrawHud(this, Canvas, PC);   // the АДМИН badge, "show everyone" (AntAdmin.h)
+	AntInside::DrawHud(this, Canvas, PlayerOwner);   // inside a resident: the place, the keys, the warning; the Human's hints (AntInside.h)
 	DrawFeed(GS);
 	DrawToastsAndNumbers(PC);
 	DrawHelp(Me);

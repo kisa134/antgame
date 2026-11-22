@@ -1173,6 +1173,25 @@ void SAntAdminPanel::Rebuild()
 		Section(TEXT("У прицела"));
 		Btn(TEXT("Убить / нокаут"), RA(TEXT("killaim")), Danger);
 		Btn(TEXT("Оглушить"), RA(TEXT("stunaim")), Danger);
+		Section(TEXT("Внутрь (муравей в людях: [E] у входа, ЛКМ/ПКМ кусать изнутри, [E] вылезти)"));
+		Btn(TEXT("Меня — в ухо Человеку"), R(TEXT("inside put human ear")), Blue);
+		Btn(TEXT("Меня — в нос Человеку"), R(TEXT("inside put human nose")), Blue);
+		Btn(TEXT("Меня — в штанину"), R(TEXT("inside put human leg")), Blue);
+		Btn(TEXT("Меня — в карман Человеку"), R(TEXT("inside put human pocket")), Blue);
+		Btn(TEXT("Меня — в тапок Человеку"), R(TEXT("inside put human slipper")), Blue);
+		Btn(TEXT("Меня — бабушке в пучок"), R(TEXT("inside put gran bun")), Blue);
+		Btn(TEXT("Меня — бабушке в ухо"), R(TEXT("inside put gran ear")), Blue);
+		Btn(TEXT("Меня — малышу в карман"), R(TEXT("inside put kid pocket")), Blue);
+		Btn(TEXT("Меня — малышу за шиворот"), R(TEXT("inside put kid collar")), Blue);
+		Btn(TEXT("Меня — Бадрику под ошейник"), R(TEXT("inside put dog collar")), Blue);
+		Btn(TEXT("3 бота в штанины Человеку"), R(TEXT("inside bots human leg 3")), Danger);
+		Btn(TEXT("2 бота в ухо Человеку"), R(TEXT("inside bots human ear 2")), Danger);
+		Btn(TEXT("Укусить изнутри"), R(TEXT("inside bite")), Danger);
+		Btn(TEXT("Все внутри кусают"), R(TEXT("inside bite all")), Danger);
+		Btn(TEXT("Чихнуть (Человек)"), R(TEXT("inside sneeze")), Danger);
+		Btn(TEXT("Хлопнуть себя по уху / [F] Человека"), R(TEXT("inside swat human")));
+		Btn(TEXT("Вылезти"), R(TEXT("inside out")), On);
+		Btn(TEXT("Внутрь: кто где (в лог)"), R(TEXT("inside info")));
 		Section(TEXT("Распорядок дня (уровень v3)"));
 		Btn(TEXT("День"), R(TEXT("routine day")));
 		Btn(TEXT("Вечер"), R(TEXT("routine evening")));
@@ -1245,6 +1264,18 @@ void SAntAdminPanel::Rebuild()
 		Btn(TEXT("Слив забит (переполнится)"), R(TEXT("fluid drain 0")));
 		Btn(TEXT("Отладка воды (на экран)"), R(TEXT("fluid debug")));
 		Btn(TEXT("Вода: инфо (в лог)"), R(TEXT("fluid info")));
+		Section(TEXT("Ткань (скатерть, шторы, плед, шалаш: держать [E] у края, ПКМ — прогрызть)"));
+		Btn(TEXT("Дёрнуть скатерть"), R(TEXT("cloth yank tablecloth 0 -1 60 3")), Danger);
+		Btn(TEXT("6 муравьёв тянут скатерть"), R(TEXT("cloth crew tablecloth 6 0 -1 10")), Danger);
+		Btn(TEXT("Порвать у прицела"), [this]() { Run(TEXT("cloth tear ") + Aim() + TEXT(" 6")); }, Danger);
+		Btn(TEXT("Ветер вкл"), R(TEXT("cloth wind 1")), Blue);
+		Btn(TEXT("Ветер выкл"), R(TEXT("cloth wind 0")));
+		Btn(TEXT("Ветер: из окна (авто)"), R(TEXT("cloth wind -1")));
+		Btn(TEXT("Намочить скатерть"), R(TEXT("cloth wet tablecloth 1")));
+		Btn(TEXT("Сорвать штору"), R(TEXT("cloth drop curtain")), Danger);
+		Btn(TEXT("Стянуть плед"), R(TEXT("cloth yank plaid 0 1 40 2")), Danger);
+		Btn(TEXT("Сбросить ткань"), R(TEXT("cloth reset")), On);
+		Btn(TEXT("Ткань: инфо и цена (в лог)"), R(TEXT("cloth info")));
 	}
 	else if (Tab == 5)   // ---------------------------------------------------------------- raid
 	{
