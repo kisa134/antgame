@@ -16,6 +16,10 @@
 #include "InputCoreTypes.h"
 #include "HAL/PlatformTime.h"
 #include "Math/RandomStream.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
+#include "Misc/Paths.h"
+#include "UnrealClient.h"
 
 // The colony screen (AntColonyView.h). One cutaway of 1920x1080 "colony units", zoomed and panned into the screen; everything is
 // drawn on the Canvas from the textures under /Game/UI/Colony (docs/COLONY.md lists them), and falls back to flat shapes when a
@@ -1600,6 +1604,32 @@ void Draw(AHUD* Hud, UCanvas* Cv, AAntRaid* Raid, AAntGameState* GS, AAntPlayerC
 		AntUiCanvas::Rect(Cv, MX - 1.f, MY - 9.f, 3.f, 18.f, FLinearColor::White);
 	}
 	S.FrameMs = (float)((FPlatformTime::Seconds() - T0) * 1000.0);
+	// Tests on any machine (a client has no -AntDo): -AntColonyShots=12,20,30 -AntColonyShotName=client -> Saved/Screenshots/colony/client_N.png
+	{
+		static TArray<float> ShotsAt;
+		static FString ShotName;
+		static bool bParsed = false;
+		static int32 NextShot = 0;
+		if (!bParsed)
+		{
+			bParsed = true;
+			FString List;
+			if (FParse::Value(FCommandLine::Get(), TEXT("AntColonyShots="), List, false))
+			{
+				TArray<FString> Parts;
+				List.ParseIntoArray(Parts, TEXT(","));
+				for (const FString& P : Parts) { ShotsAt.Add(FCString::Atof(*P)); }
+			}
+			if (!FParse::Value(FCommandLine::Get(), TEXT("AntColonyShotName="), ShotName)) { ShotName = TEXT("view"); }
+		}
+		if (ShotsAt.IsValidIndex(NextShot) && S.Clock >= ShotsAt[NextShot])
+		{
+			const FString File = FPaths::ProjectSavedDir() / TEXT("Screenshots") / TEXT("colony") / FString::Printf(TEXT("%s_%d.png"), *ShotName, NextShot);
+			FScreenshotRequest::RequestScreenshot(File, true, false);
+			UE_LOG(LogTemp, Display, TEXT("ANTCOLONY shot %s (%s) | level %d, food %d, raids %d | %s"), *File, bHost ? TEXT("host") : TEXT("client"), AntColony::Level(N), N.Food, N.Raids, *DevStats());
+			++NextShot;
+		}
+	}
 	static double LastLog = 0.0;
 	if (T0 - LastLog > 10.0)
 	{
