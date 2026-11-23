@@ -20,8 +20,8 @@ namespace
 		{ TEXT("Трофейная"),     TEXT("trophies"), TEXT("Трофеи рейдов на стенах. Каждый висящий трофей: +2% к еде с рейда"),                    -1,               OwnTrophies, Pipe,  262.f, 716.f, 310.f, 208.f, 1, false, TEXT("Medal") },
 		{ TEXT("Мастерская сапёров"), TEXT("workshop"), TEXT("Инженеры: рычаги для дверей, длинные мосты, живые пандусы"),                    AntUp::Engineers, -1,          Wiring, 1660.f, 392.f, 310.f, 208.f, 0, true,  TEXT("Engineers") },
 		{ TEXT("Радиоточка"),    TEXT("radio"),    TEXT("«Гнездовое радио Щели»: сводки с фронта, приказы Королевы, летопись"),                  -1,               OwnRadio,    Wiring, 1660.f, 716.f, 310.f, 208.f, 1, false, TEXT("Radio") },
-		{ TEXT("Плац"),          TEXT("parade"),   TEXT("Разведчики учатся бегать, нюхать сладкое и ходить тихо. Рядом кошачий лаз"),             AntUp::Scouts,    -1,          Gap,   1460.f, 968.f, 320.f, 206.f, 1, true,  TEXT("Scouts") },
-		{ TEXT("Стена памяти"),  TEXT("memorial"), TEXT("Имена павших на коре. Королева помнит каждого"),                                         -1,               OwnMemorial, Gap,   1090.f, 972.f, 300.f, 200.f, 0, true,  TEXT("Stamp") },
+		{ TEXT("Плац"),          TEXT("parade"),   TEXT("Разведчики учатся бегать, нюхать сладкое и ходить тихо. Рядом кошачий лаз"),             AntUp::Scouts,    -1,          Gap,   1460.f, 904.f, 300.f, 190.f, 1, true,  TEXT("Scouts") },
+		{ TEXT("Стена памяти"),  TEXT("memorial"), TEXT("Имена павших на коре. Королева помнит каждого"),                                         -1,               OwnMemorial, Gap,   1090.f, 908.f, 286.f, 186.f, 0, true,  TEXT("Stamp") },
 	};
 
 	const FDigDef Digs[DigCount] =
@@ -64,9 +64,9 @@ namespace
 	};
 	constexpr int32 ThroneAt2 = 8;
 	constexpr int32 ThroneAt3 = 20;
-	// New chambers cost a little less than the old branches (120 / 300+2 / 650+5 and a pleased Queen).
-	const int32 OwnCost[MaxTier][3] = { { 100, 0, 0 }, { 220, 1, 0 }, { 450, 3, 60 } };
-	const int32 DigCosts[DigCount][2] = { { 80, 0 }, { 200, 0 }, { 350, 2 } };
+	// New chambers cost a little more than the old branches (120 / 300+2 / 650+5 and a pleased Queen): they come on top of the old economy.
+	const int32 OwnCost[MaxTier][3] = { { 150, 0, 0 }, { 400, 3, 0 }, { 800, 6, 60 } };
+	const int32 DigCosts[DigCount][2] = { { 120, 0 }, { 300, 1 }, { 500, 3 } };
 
 	const FTrophyDef Trophies_[] =
 	{
@@ -444,7 +444,8 @@ void Migrate(FAntNestState& S, int32 FromVersion)
 	{
 		Chronicle(S, FString::Printf(TEXT("Рейд %d: колония переехала в новый муравейник в щели. Все постройки на месте"), S.Raids));
 	}
-	UE_LOG(LogTemp, Display, TEXT("ANTCOLONY migrated a v%d colony: food %d split %d/%d/%d/%d, dug %d"), FromVersion, F, S.Stock[0], S.Stock[1], S.Stock[2], S.Stock[3], (int32)S.Dug);
+	static int32 Said = 0;   // (the main menu's summary reads the save too)
+	if (++Said <= 2) UE_LOG(LogTemp, Display, TEXT("ANTCOLONY migrated a v%d colony: food %d split %d/%d/%d/%d, dug %d"), FromVersion, F, S.Stock[0], S.Stock[1], S.Stock[2], S.Stock[3], (int32)S.Dug);
 }
 
 FString Info(const FAntNestState& S)

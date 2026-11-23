@@ -33,8 +33,8 @@ namespace AntColonyView
 	ANTKITCHEN_API void DevOpen(int32 Chamber);
 	/** Zoom 1..2.5 around a point of the cutaway (0..1 of its width and height). */
 	ANTKITCHEN_API void DevZoom(float Zoom, float X, float Y);
-	/** The Queen falls asleep now. */
-	ANTKITCHEN_API void DevSleep();
+	/** The Queen falls asleep now (false: wakes her and restarts the idle clock). */
+	ANTKITCHEN_API void DevSleep(bool bAsleep = true);
 	/** Jumps the post-raid show to a moment (seconds from its start); a negative value stops it. */
 	ANTKITCHEN_API void DevShowAt(float Seconds);
 	/** Frame time of the screen and what it drew, for the log. */

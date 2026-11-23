@@ -9,6 +9,8 @@
 #include "GameFramework/PlayerState.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
+#include "UnrealClient.h"
+#include "Misc/Paths.h"
 
 // The colony's part of the raid (AntColony.h, docs/COLONY.md): who brought what, the trophies, the fungus farm, the chronicle,
 // the summary for the personal layer (AntMetaBus), and the dev / admin commands "colony ...".
@@ -21,7 +23,8 @@ FAntRaidPlayerLine& AAntRaid::LineOf(const AAntCharacter* Ant)
 	{
 		L.Name = Name;
 		const APlayerState* PS = Ant ? Ant->GetPlayerState() : nullptr;
-		L.Id = (PS && PS->GetUniqueId().IsValid()) ? PS->GetUniqueId().ToString() : Name;
+		// The player's id in this session (the unique net id needs CoreOnline; the profile layer can map ids to accounts itself).
+		L.Id = PS ? FString::Printf(TEXT("player%d"), PS->GetPlayerId()) : Name;
 	}
 	return L;
 }
@@ -177,7 +180,7 @@ bool AAntRaid::ColonyCommand(const TArray<FString>& A)
 		if (Sub == TEXT("setall") && T == 0) { Nest.Dug = 0; }
 	}
 	else if (Sub == TEXT("up") && PC) { PlayerCommand(PC, AntRaidCmd::Chamber, ChamberOf(Arg), 0); bSave = false; }
-	else if (Sub == TEXT("mood")) { Nest.Mood = FMath::Clamp(Num(2, 50), 0, 100); }
+	else if (Sub == TEXT("mood")) { Nest.Mood = FMath::Clamp(Num(2, 50), 0, 100); AntColonyView::DevSleep(false); }
 	else if (Sub == TEXT("sim"))
 	{
 		// sim N [nobuild]: N raids played on paper, then the post-raid show of the last one
@@ -222,6 +225,15 @@ bool AAntRaid::ColonyCommand(const TArray<FString>& A)
 	else if (Sub == TEXT("close")) { AntColonyView::DevOpen(-1); bSave = false; }
 	else if (Sub == TEXT("zoom")) { AntColonyView::DevZoom(FCString::Atof(*Arg), A.IsValidIndex(3) ? FCString::Atof(*A[3]) : 0.5f, A.IsValidIndex(4) ? FCString::Atof(*A[4]) : 0.5f); bSave = false; }
 	else if (Sub == TEXT("sleep")) { AntColonyView::DevSleep(); bSave = false; }
+	else if (Sub == TEXT("quit")) { FPlatformMisc::RequestExit(false); return true; }   // tests
+	else if (Sub == TEXT("shot"))
+	{
+		// colony shot NAME: the screen with the HUD -> Saved/Screenshots/colony/NAME.png
+		const FString File = FPaths::ProjectSavedDir() / TEXT("Screenshots") / TEXT("colony") / (A.IsValidIndex(2) ? A[2] : FString(TEXT("shot"))) + TEXT(".png");
+		FScreenshotRequest::RequestScreenshot(File, true, false);
+		UE_LOG(LogTemp, Display, TEXT("ANTCOLONY shot %s | %s"), *File, *AntColonyView::DevStats());
+		bSave = false;
+	}
 	else { return false; }
 	if (bSave)
 	{

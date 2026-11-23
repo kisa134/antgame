@@ -268,7 +268,7 @@ QUEEN_FACES = ["Furious", "Grumpy", "Happy", "Delighted", "Sleeping"]
 def queen_body():
     """Her Sweetness, side view, facing right. Returns (all body objects, head colour material)."""
     objs = []
-    amber = stripes("Abdomen", (0.98, 0.66, 0.18), (0.62, 0.3, 0.05), scale=5.0)
+    amber = stripes("Abdomen", (0.95, 0.56, 0.12), (0.5, 0.22, 0.04), scale=1.6)
     chit = mat("Chitin", (0.55, 0.28, 0.08), rough=0.3, coat=0.7, sss=0.1)
     headm = mat("Head", (0.66, 0.36, 0.11), rough=0.3, coat=0.7, sss=0.12)
     leg = mat("Leg", (0.3, 0.14, 0.04), rough=0.4, coat=0.4)
@@ -295,7 +295,7 @@ def queen_body():
     pearl = mat("Pearl", (0.96, 0.94, 0.9), rough=0.12, coat=1.0)
     for i in range(7):
         t = -0.9 + i * 0.3
-        objs.append(sphere((0.5 + 0.05 * math.sin(t), -0.22 * math.cos(t) - 0.02, 1.05 - 0.16 * math.cos(t) + 0.05 * i * 0), 0.045, pearl, seg=16))
+        objs.append(sphere((0.5 + 0.12 * math.sin(t), -0.24 * math.cos(t) - 0.03, 1.12 + 0.1 * math.sin(t)), 0.05, pearl, seg=16))
     return objs, headm
 
 def queen_face(face, headm):
@@ -355,13 +355,13 @@ def queen_face(face, headm):
 def crown(kind):
     objs = []
     gold = mat("Gold", (1.0, 0.72, 0.22), rough=0.22, metal=1.0)
-    c = crimped_cap((0.72, 0.0, 1.74), 0.24, 0.15, gold, rot=(0.0, math.radians(-12), 0.0))
+    c = crimped_cap((0.72, 0.0, 1.76), 0.31, 0.17, gold, rot=(0.0, math.radians(-12), 0.0))
     objs.append(c)
     if kind == 3:
         for i, col in enumerate(((0.9, 0.1, 0.15), (0.15, 0.4, 0.95), (0.1, 0.75, 0.3), (0.9, 0.1, 0.15), (0.15, 0.4, 0.95))):
             a = math.radians(-120 + i * 60)
-            objs.append(sphere((0.72 + 0.25 * math.cos(a) * 0.95, -0.25 * abs(math.sin(a)) - 0.02, 1.74 + 0.02), 0.045, mat("Bead%d" % i, col, rough=0.1, coat=1.0, trans=0.3), seg=16))
-        objs.append(sphere((0.7, 0.0, 1.92), 0.07, mat("Pearl", (0.96, 0.94, 0.9), rough=0.12, coat=1.0)))
+            objs.append(sphere((0.72 + 0.32 * math.cos(a) * 0.95, -0.32 * abs(math.sin(a)) - 0.02, 1.78), 0.045, mat("Bead%d" % i, col, rough=0.1, coat=1.0, trans=0.3), seg=16))
+        objs.append(sphere((0.7, 0.0, 1.97), 0.08, mat("Pearl", (0.96, 0.94, 0.9), rough=0.12, coat=1.0)))
         # a cape of foil down her back
         bpy.ops.mesh.primitive_plane_add(size=1.0, location=(-0.3, 0.32, 1.0))
         cape = bpy.context.active_object
@@ -377,7 +377,7 @@ def build_queen(names):
         nm = "Queen_" + face
         if names and nm not in names:
             continue
-        reset(768, 768, 3.5, (0.0, 1.1), samples=64)
+        reset(768, 768, 3.9, (-0.2, 1.15), samples=64)
         queen_body_objs, headm = queen_body()
         queen_face(face, headm)
         render(nm)
@@ -385,7 +385,7 @@ def build_queen(names):
         nm = "Crown_%d" % kind
         if names and nm not in names:
             continue
-        reset(768, 768, 3.5, (0.0, 1.1), samples=64)
+        reset(768, 768, 3.9, (-0.2, 1.15), samples=64)
         body, headm = queen_body()
         queen_face("Happy", headm)
         for o in bpy.context.scene.objects:

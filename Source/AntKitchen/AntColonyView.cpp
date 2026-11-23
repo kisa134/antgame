@@ -212,6 +212,18 @@ namespace
 	void Dot(UCanvas* Cv, const FVector2D& P, float R, const FLinearColor& C, bool bAdd = false)
 	{
 		if (R <= 0.2f) { return; }
+		if (bAdd)
+		{
+			// Light: the glow texture is black outside its disc, so adding it leaves no square. Without it: no light at all.
+			if (UTexture2D* G = T(TEXT("Glow")))
+			{
+				FCanvasTileItem It(P - FVector2D(R, R), G->GetResource(), FVector2D(2.f * R, 2.f * R), FLinearColor(C.R * C.A, C.G * C.A, C.B * C.A, 1.f));
+				It.BlendMode = SE_BLEND_Additive;
+				Cv->DrawItem(It);
+				++St().Items;
+			}
+			return;
+		}
 		if (UTexture2D* D = T(TEXT("Dot")))
 		{
 			FCanvasTileItem It(P - FVector2D(R, R), D->GetResource(), FVector2D(2.f * R, 2.f * R), C);
@@ -342,10 +354,10 @@ namespace
 			if (EdgeOpen(N, e))
 			{
 				Line(Cv, A, B, 34.f * V.U, FLinearColor(0.11f, 0.055f, 0.025f, 0.95f));
-				Line(Cv, A, B, 24.f * V.U, FLinearColor(0.035f, 0.016f, 0.008f, 1.f));
-				Dot(Cv, A, 15.f * V.U, FLinearColor(0.035f, 0.016f, 0.008f, 1.f));
-				Dot(Cv, B, 15.f * V.U, FLinearColor(0.035f, 0.016f, 0.008f, 1.f));
-				Line(Cv, A + FVector2D(0.f, 9.f * V.U), B + FVector2D(0.f, 9.f * V.U), 3.f * V.U, FLinearColor(0.2f, 0.1f, 0.05f, 0.6f));   // the trodden floor
+				Line(Cv, A, B, 24.f * V.U, FLinearColor(0.16f, 0.085f, 0.045f, 1.f));
+				Dot(Cv, A, 15.f * V.U, FLinearColor(0.16f, 0.085f, 0.045f, 1.f));
+				Dot(Cv, B, 15.f * V.U, FLinearColor(0.16f, 0.085f, 0.045f, 1.f));
+				Line(Cv, A + FVector2D(0.f, 9.f * V.U), B + FVector2D(0.f, 9.f * V.U), 3.f * V.U, FLinearColor(0.3f, 0.17f, 0.09f, 0.7f));   // the trodden floor
 			}
 			else
 			{
@@ -482,7 +494,7 @@ namespace
 		{
 			const float Cap = 260.f * (1.f + Tier);
 			const FVector2D Spots[AntFoodKind::Count] = { In(D, 0.36f, 0.6f), In(D, 0.64f, 0.6f), In(D, 0.33f, 0.71f), In(D, 0.67f, 0.71f) };
-			for (int32 K = 0; K < AntFoodKind::Count; ++K) { DrawPile(Cv, V, Spots[K], K, ShownHeld(N, K), Cap, D.W * 0.24f); }
+			for (int32 K = 0; K < AntFoodKind::Count; ++K) { DrawPile(Cv, V, Spots[K], K, ShownHeld(N, K), Cap, D.W * 0.33f); }
 			// The jelly: a thimble on a shelf, the cake slice kept for the Queen.
 			const float JellyShown = FMath::Lerp((float)(St().ShowT >= 0.f ? St().ShowR.JellyBefore : N.Jelly), (float)N.Jelly, StageProgress(Stage::Haul));
 			if (JellyShown > 0.f)
@@ -826,7 +838,7 @@ namespace
 			EdgePath(A.Edge, P);
 			FVector2D Dir;
 			const FVector2D At = PathAt(P, A.bBack ? 1.f - A.T : A.T, &Dir);
-			DrawAnt(Cv, V, At, A.bBack ? -Dir : Dir, A.Size * (A.bShow ? 1.08f : 1.f), A.Phase, A.Carry);
+			DrawAnt(Cv, V, At, A.bBack ? -Dir : Dir, A.Size * (A.bShow ? 1.35f : 1.f), A.Phase, A.Carry);
 		}
 	}
 
@@ -1156,26 +1168,30 @@ namespace
 	void DrawBottom(UCanvas* Cv, const FAntNestState& N, const AAntRaid* Raid, float W, float H, float Fs, bool bHost)
 	{
 		FState& S = St();
-		const float BH = 112.f * Fs, Y = H - BH - 10.f * Fs;
-		// The chronicle on a strip of receipt paper.
-		const float PW = 760.f * Fs;
-		AntUiCanvas::Paper(Cv, 16.f * Fs, Y, PW, BH, true);
-		AntUiCanvas::Text(Cv, TEXT("ЛЕТОПИСЬ КОЛОНИИ"), 30.f * Fs, Y + 8.f * Fs, EFont::Display, 13.f * Fs, C::JamDeep);
-		for (int32 i = 0; i < 3; ++i)
+		// A strip of receipt paper: the chronicle's last line (the rest is in the radio's card and the save).
+		const float BH = 46.f * Fs, Y = H - BH - 6.f * Fs, PW = W * 0.56f;
+		AntUiCanvas::Paper(Cv, 14.f * Fs, Y, PW, BH, false);
+		AntUiCanvas::Text(Cv, TEXT("ЛЕТОПИСЬ"), 28.f * Fs, Y + 13.f * Fs, EFont::Display, 13.f * Fs, C::JamDeep);
+		const FString Last = N.Chronicle.Num() > 0 ? N.Chronicle.Last() : FString(TEXT("Пусто. Первая запись появится после первого рейда."));
+		AntUiCanvas::TextFit(Cv, Last, 128.f * Fs, Y + 13.f * Fs, PW - 128.f * Fs, EFont::Mono, 13.f * Fs, C::Graphite);
+		const FString Hint = !Raid->NestNote.IsEmpty() ? Raid->NestNote
+			: bHost ? FString(TEXT("Клик по залу — карточка и стройка · колесо — зум · тяни — двигать · пунктир — ещё не прорыто"))
+			: FString(TEXT("Колония хоста: строит он · клик по залу — карточка · колесо — зум · тяни — двигать"));
+		AntUiCanvas::Rect(Cv, PW + 26.f * Fs, Y, W - PW - 40.f * Fs, BH, FLinearColor(0.012f, 0.006f, 0.003f, 0.72f));
+		AntUiCanvas::Wrap(Cv, Hint, PW + 38.f * Fs, Y + 5.f * Fs, W - PW - 64.f * Fs, EFont::Body, 13.f * Fs, Raid->NestNote.IsEmpty() ? C::Muted : C::Jam, 2, 1.15f);
+		// What the mouse is on: a slip of paper by the cursor.
+		if (!S.Tip.IsEmpty() && S.Mouse.X >= 0.f)
 		{
-			const int32 Idx = N.Chronicle.Num() - 1 - i;
-			if (!N.Chronicle.IsValidIndex(Idx)) { break; }
-			AntUiCanvas::TextFit(Cv, N.Chronicle[Idx], 30.f * Fs, Y + (30.f + i * 24.f) * Fs, PW - 30.f * Fs, EFont::Mono, 13.f * Fs, WithA(C::Graphite, 1.f - i * 0.22f));
+			const float TW = 430.f * Fs, Pt = 14.f * Fs;
+			float X = S.Mouse.X + 22.f * Fs, TY = S.Mouse.Y + 20.f * Fs;
+			if (X + TW > W - 10.f) { X = S.Mouse.X - TW - 16.f * Fs; }
+			const float TH = AntUiCanvas::Wrap(Cv, S.Tip, -10000.f, -10000.f, TW - 24.f * Fs, EFont::Body, Pt, FLinearColor(0.f, 0.f, 0.f, 0.f), 8) + 18.f * Fs;
+			if (TY + TH > H - 8.f) { TY = S.Mouse.Y - TH - 14.f * Fs; }
+			AntUiCanvas::Rect(Cv, X + 4.f, TY + 5.f, TW, TH, FLinearColor(0.f, 0.f, 0.f, 0.35f));
+			AntUiCanvas::Rect(Cv, X, TY, TW, TH, C::Paper);
+			AntUiCanvas::Rect(Cv, X, TY, 4.f * Fs, TH, C::Amber);
+			AntUiCanvas::Wrap(Cv, S.Tip, X + 14.f * Fs, TY + 9.f * Fs, TW - 24.f * Fs, EFont::Body, Pt, C::Graphite, 8);
 		}
-		if (N.Chronicle.Num() == 0) { AntUiCanvas::Text(Cv, TEXT("Пусто. Первая запись появится после первого рейда."), 30.f * Fs, Y + 32.f * Fs, EFont::Mono, 13.f * Fs, C::Graphite); }
-		// What the mouse is on.
-		const float TX = PW + 36.f * Fs;
-		AntUiCanvas::Rect(Cv, TX, Y, W - TX - 16.f * Fs, BH, FLinearColor(0.012f, 0.006f, 0.003f, 0.8f));
-		const FString Tip = !S.Tip.IsEmpty() ? S.Tip
-			: !Raid->NestNote.IsEmpty() ? Raid->NestNote
-			: bHost ? FString(TEXT("Наведите мышь на зал: что в нём и что даёт. Клик — карточка зала и стройка. Колесо — приблизить, тяни мышью — двигать. Пунктир — ходы, которые ещё не прорыты."))
-			: FString(TEXT("Колония хоста: строит и решает он. Наведите мышь на зал — что в нём и что даёт. Колесо — приблизить, тяни — двигать."));
-		AntUiCanvas::Wrap(Cv, Tip, TX + 14.f * Fs, Y + 12.f * Fs, W - TX - 46.f * Fs, EFont::Body, 15.f * Fs, C::Sugar, 4);
 	}
 }
 
@@ -1185,7 +1201,7 @@ namespace
 	FBox2D DrawSheet(UCanvas* Cv, const FAntNestState& N, AAntPlayerController* PC, float W, float H, float Fs, bool bHost)
 	{
 		FState& S = St();
-		const float PW = 520.f * Fs, PX = W - PW - 22.f * Fs, PY = 104.f * Fs, PH = H - PY - 140.f * Fs;
+		const float PW = 520.f * Fs, PX = W - PW - 22.f * Fs, PY = 104.f * Fs, PH = H - PY - 70.f * Fs;
 		const FBox2D Box(FVector2D(PX, PY), FVector2D(PX + PW, PY + PH));
 		AntUiCanvas::Paper(Cv, PX, PY, PW, PH, true);
 		if (Btn(Cv, TEXT("×"), PX + PW - 52.f * Fs, PY + 12.f * Fs, 40.f * Fs, 36.f * Fs, true, TEXT("Закрыть"), Fs)) { S.Open = -1; S.bClick = false; }
@@ -1235,7 +1251,7 @@ namespace
 		Y += 4.f * Fs;
 		// What the room holds.
 		const float Pt = 13.f * Fs;
-		auto Row = [&](const FString& L, const FLinearColor& Col) { AntUiCanvas::TextFit(Cv, L, X, Y, TW, EFont::Mono, Pt, Col); Y += Pt * 1.45f; };
+		auto Row = [&](const FString& L, const FLinearColor& Col) { AntUiCanvas::TextFit(Cv, L, X, Y, TW, EFont::Body, Pt, Col); Y += Pt * 1.4f; };
 		switch (c)
 		{
 		case AntColony::Throne:
@@ -1375,7 +1391,7 @@ void DevZoom(float Zoom, float X, float Y)
 	S.ZoomGoal = S.Zoom = FMath::Clamp(Zoom, 1.f, 2.5f);
 	S.CenterGoal = S.Center = FVector2D(X * WW, Y * WH);
 }
-void DevSleep() { St().SleepAt = St().Clock; }
+void DevSleep(bool bAsleep) { St().SleepAt = bAsleep ? St().Clock : -1.f; St().LastInput = St().Clock; }
 void DevShowAt(float Seconds) { DevShowWant = Seconds < 0.f ? -1.f : Seconds; }
 FString DevStats()
 {
@@ -1512,7 +1528,7 @@ void Draw(AHUD* Hud, UCanvas* Cv, AAntRaid* Raid, AAntGameState* GS, AAntPlayerC
 	// ---- where the mouse is: the sheets first, then the cutaway
 	const bool bSheet = S.Open >= 0 && !bShowing;
 	const float SheetX = W - 542.f * Fs;
-	const bool bOverUi = Mouse.Y < 84.f * Fs || Mouse.Y > H - 132.f * Fs || (bSheet && Mouse.X > SheetX) || bShowing;
+	const bool bOverUi = Mouse.Y < 84.f * Fs || Mouse.Y > H - 56.f * Fs || (bSheet && Mouse.X > SheetX) || bShowing;
 	const int32 HoverC = bOverUi ? -1 : ChamberAt(V.World(Mouse), N);
 
 	// ---- the cutaway
