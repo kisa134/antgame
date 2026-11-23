@@ -90,3 +90,13 @@ FPS (`stat fps`), статистика кадра (`stat unit`), скрыть/п
 - Дёрнуть скатерть (`cloth yank tablecloth 0 -1 60 3`: невидимая бригада 60 тянет край к −Y 3 с), 6 муравьёв тянут скатерть (`cloth crew tablecloth 6 0 -1 10`: 6 ботов встают у кромки и держат [E] 10 с), порвать у прицела (`cloth tear x y z 6`: ряд из 6 вырезанных клеток у ближайшей ткани).
 - Ветер вкл / выкл / из окна (`cloth wind 1|0|-1`), намочить скатерть (`cloth wet tablecloth 1`), сорвать штору (`cloth drop curtain`), стянуть плед (`cloth yank plaid 0 1 40 2`), сбросить ткань (`cloth reset` — всё заново по уровню), инфо и цена в лог (`cloth info`; `cloth cost` — цена каждые 2 с).
 - Ещё: `cloth <вид> …` — вид `tablecloth|long|curtain|curtain1..3|plaid|fort|sheet|N`; `cloth wake|rest`, `cloth bite x y z`, `cloth cam <вид> yaw дист высота [fov]`, `cloth shot имя` (Saved/Screenshots/cloth).
+
+## Материалы и цепные реакции (`docs/MATERIALS.md`, `docs/FEATURES.md` раздел 37)
+
+**Вкладка Мир → «Реакции: материалы и цепочки 2.0»**
+- Кнопка на каждую цепочку C7–C22 (`chain C7` … `chain C22`): перечница, мука, лёд → КЗ, рогатка, горох, шоколад на батарее, тостер → тост → перец, книги-домино, микроволновка, посудомойка → КЗ, робот-пылесос, ментос → страйк, губка → тарелка, шарик → потолок, сахар → муха, провод → КЗ. Каждая стартует с первого шага, дальше — настоящие системы.
+- У прицела: облако перца (`rx cloud pepper x y z 900`), облако муки (`rx cloud flour x y z 1100`), 8 кубиков льда (`rx ice x y z 8`), 20 горошин (`rx peas x y z 20`), шоколадка (`rx choc x y z`), сахар (`rx sugar x y z`).
+- Свет: короткое замыкание у удлинителя (`power short`), выбить пробки (`power off`), включить (`power on`).
+- Жар: все источники горячие / всё холодное / как в игре (`heat on|off|auto`).
+- Папа ослеп на 5 с (`rx blind`), папа чихает (`rx sneeze dad`), материал у прицела (`mat info`: всё о предмете и о том, из чего он), сбросить предметы (`rx reset`), инфо и цена в лог (`rx info`, `rx cost`).
+- Командная строка, ещё: `mat list|get <имя>|at x y z dx dy dz|dump [config]|reload`, `power unplug|info`, `rx sneeze gran|kid|dog|cat`, `rx prop <вид> force|reset|level K`, `rx tp <вид>`, `rx bots N x y z`, `rx dad|walk|free|dogto|noise …`, `rx cam …|camcat|camdog|camdad|camoff|shot <имя>|quit`. Лог — `ANTREACT`, `ANTCHAIN`, `ANTMAT`.

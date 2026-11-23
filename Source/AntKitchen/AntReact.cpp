@@ -1001,6 +1001,7 @@ void AAntReactNet::TickMicrowave(float Dt)
 		AntAudio::Everyone(this, EAntSfx::MicroBeep, At, 1.f);
 		Noise(W, At, 0.75f, AntNoise::Microwave, this, MicroBy.Get());
 		++MicroBeeps;
+		if (const AHumanCharacter* DH = Dad(W)) { if (MicroBeeps % 3 == 1) { UE_LOG(LogTemp, Display, TEXT("ANTREACT microwave beeps (%d): the Dad is %.0f away"), MicroBeeps, FVector::Dist2D(DH->GetActorLocation(), Spot::MicroButton)); } }
 		MicroBeepAt = Now + (MicroBeeps % 3 == 0 ? 8.f : 0.6f);
 		if (MicroBeeps == 3 && LevelV3::IsHome(LevelV3::Grandma)) { Say(W, NpcRoutine::Gran, TEXT("Что там пищит? Сынок, микроволновка!")); }
 		if (MicroBeeps > 60) { MicroBeepAt = -1.f; }
@@ -1008,8 +1009,7 @@ void AAntReactNet::TickMicrowave(float Dt)
 	if (MicroBeepAt > 0.f)
 	{
 		AHumanCharacter* H = Dad(W);
-		if (H && MicroBeeps % 3 == 1) { UE_LOG(LogTemp, Display, TEXT("ANTREACT microwave beeps (%d): the Dad is %.0f away"), MicroBeeps, FVector::Dist2D(H->GetActorLocation(), Spot::MicroButton)); }
-		if (H && FVector::Dist2D(H->GetActorLocation(), Spot::MicroButton) < 1300.f)
+		if (H && FVector::Dist2D(H->GetActorLocation(), Spot::MicroButton) < 1650.f)   // (at the worktop: it is 1700 deep)
 		{
 			MicroBeepAt = -1.f;
 			H->PlayReach(Spot::MicroButton);
