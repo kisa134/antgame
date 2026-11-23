@@ -101,7 +101,24 @@ struct FAntNestState
 	UPROPERTY() int32 Wipes = 0;
 	UPROPERTY() int32 BestHaul = 0;
 
+	// ---- v2: the colony as a place (AntColony.h, docs/COLONY.md)
+	/** Food by kind (AntFoodKind): the same total as Food, kept in step by AntColony::Sync. */
+	UPROPERTY() TArray<int32> Stock;
+	/** Tunnels dug: a bit per AntColony::EDig. */
+	UPROPERTY() uint8 Dug = 0;
+	/** Tiers of the new chambers (AntColony::EOwn: fungus farm, trophy hall, radio, wall of memory), 0..3. */
+	UPROPERTY() TArray<uint8> Own;
+	/** Trophies won (AntColony::Trophy indices), in the order they came. */
+	UPROPERTY() TArray<uint8> Trophies;
+	/** «Летопись колонии»: the last lines, newest last. */
+	UPROPERTY() TArray<FString> Chronicle;
+	/** The colony's own list of the fallen ("name|raid|cause"), for the wall when the roster has none. */
+	UPROPERTY() TArray<FString> Fallen;
+	/** Food the fungus farm has grown, all told. */
+	UPROPERTY() int32 Grown = 0;
+
 	int32 Tier_(uint8 Branch) const { return Up.IsValidIndex(Branch) ? Up[Branch] : 0; }
+	int32 Own_(uint8 Room) const { return Own.IsValidIndex(Room) ? Own[Room] : 0; }
 };
 
 namespace AntNest
@@ -133,6 +150,8 @@ namespace AntNest
 	/** True if a valid save (or its backup) was read. Otherwise S is a fresh colony. OutNote says what happened. */
 	ANTKITCHEN_API bool Load(FAntNestState& S, FString* OutNote = nullptr);
 	ANTKITCHEN_API bool Save(const FAntNestState& S);
+	/** Tests of the migration: writes S as an old (v1) save, with nothing of the colony's v2 keys, and drops the backup. */
+	ANTKITCHEN_API bool SaveAsV1(const FAntNestState& S);
 	/** Moves the save and its backup aside (colony.old) so that the next Load starts a fresh colony. */
 	ANTKITCHEN_API void Reset();
 	/** One line for the main menu, or empty when there is no colony yet. */

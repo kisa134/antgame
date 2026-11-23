@@ -2,6 +2,7 @@
 #include "AntUiStyle.h"
 #include "AntUiCanvas.h"
 #include "AntRaid.h"
+#include "AntColonyView.h"
 #include "AntNest.h"
 #include "AntRun.h"
 #include "AntGameState.h"
@@ -222,6 +223,11 @@ void AAntHUD::DrawNest(AAntRaid* Raid, AAntGameState* GS)
 			}
 			if (NestHover(PX(X), PY(14.f), 232.f * U, 76.f * U)) { NestTip = Chips[i].Tip; }
 		}
+	}
+	if (NestBtn(TEXT("МУРАВЕЙНИК  [Tab]"), PX(372.f), PY(18.f), 214.f * U, 44.f * U, true, TEXT("Колония в разрезе: залы, Королева, кладовые, трофеи, летопись"), false, 1.05f)
+		|| (PC && PC->WasInputKeyJustPressed(EKeys::Tab)))
+	{
+		AntColonyView::SetOn(true);
 	}
 	if (bHost)
 	{

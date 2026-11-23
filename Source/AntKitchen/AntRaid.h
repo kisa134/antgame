@@ -4,6 +4,7 @@
 #include "GameFramework/Info.h"
 #include "Engine/NetSerialization.h"
 #include "AntNest.h"
+#include "AntMetaBus.h"
 #include "AntRaid.generated.h"
 
 class AAntKitchenGameMode;
@@ -27,7 +28,9 @@ namespace AntRaidEnd { enum : uint8 { None, Left, Timeout, Wiped }; }
 /** What a player asks of the raid (AAntPlayerController::ServerRaid). */
 namespace AntRaidCmd
 {
-	enum : uint8 { Leave, Ready, Start, Buy, Squad, Tool, Mod, Tier, Contract, Larva, Workers, NewColony, UseTool, SquadOrder, Skip, Seed };
+	enum : uint8 { Leave, Ready, Start, Buy, Squad, Tool, Mod, Tier, Contract, Larva, Workers, NewColony, UseTool, SquadOrder, Skip, Seed,
+		/** The colony screen (AntColony): dig a tunnel (A = AntColony::EDig), build a chamber up (A = AntColony::EChamber). */
+		Dig, Chamber };
 }
 
 /** Values of AAntGameState::Phase the raid adds (0 is "playing"; 1-3 are the old ends of a round). */
@@ -62,6 +65,22 @@ struct FAntRaidResult
 	UPROPERTY() int32 Seed = -1;          // level v3: the raid seed (-1: level v2)
 	UPROPERTY() FString SeedText;
 	UPROPERTY() TArray<FString> Story;
+	// ---- the colony's post-raid show (AntColonyView)
+	/** Food that came home by kind (AntFoodKind), and the stores by kind before it came. */
+	UPROPERTY() TArray<int32> Kinds;
+	UPROPERTY() TArray<int32> StockBefore;
+	UPROPERTY() int32 JellyBefore = 0;
+	/** Trophies hung this raid (AntColony::Trophy indices). */
+	UPROPERTY() TArray<uint8> NewTrophies;
+	/** The fungus farm's harvest. */
+	UPROPERTY() int32 Grown = 0;
+	UPROPERTY() int32 GrownJelly = 0;
+	/** The chronicle's line about this raid. */
+	UPROPERTY() FString Chronicle;
+	/** Highlights the colony knows itself, "TITLE|line" (the personal layer adds its own through AntMetaBus). */
+	UPROPERTY() TArray<FString> Heroes;
+	/** Raid played on paper (admin / dev "colony sim"). */
+	UPROPERTY() bool bSimulated = false;
 };
 
 /**
@@ -125,6 +144,8 @@ public:
 	UPROPERTY(Replicated) uint8 SpecialsLeft = 0;
 	/** What the next raid costs at the door (one-raid boosts, the tools in everybody's pockets), for the nest screen. */
 	UPROPERTY(Replicated) int32 StartCost = 0;
+	/** Bumped when the colony screen should play its post-raid show (a raid ended, a raid on paper, the admin's replay). */
+	UPROPERTY(Replicated) uint8 ColonyShow = 0;
 
 	// ---- the rival clan (AntClan.h)
 	UPROPERTY() AAntClan* Clan = nullptr;
@@ -207,6 +228,15 @@ private:
 	TSet<TWeakObjectPtr<AController>> ExitOk;
 	TWeakObjectPtr<AController> ExitStarter;
 	int32 Deaths = 0;
+	// The colony (AntColony): what came home by kind, who did what (for AntMetaBus), trophies earned on the way.
+	int32 RaidKinds[AntFoodKind::Count] = { 0, 0, 0, 0 };
+	TMap<FString, FAntRaidPlayerLine> RaidLines;
+	FAntRaidPlayerLine& LineOf(const AAntCharacter* Ant);
+	TArray<uint8> RaidTrophies;
+	bool bCakeWasInHill = false;
+	/** Server: the colony's part of the end of a raid (trophies, fungus farm, chronicle, heroes, the summary on the meta bus). */
+	void ColonyAfterRaid(FAntRaidResult& R, uint8 How);
+	bool ColonyCommand(const TArray<FString>& Args);
 	int32 TrophiesHome = 0;
 	int32 SpecialsHome = 0;
 	bool bCakeLifted = false;

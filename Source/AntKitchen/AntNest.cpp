@@ -1,5 +1,6 @@
 ﻿#include "AntNest.h"
 #include "AntRun.h"
+#include "AntColony.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "Misc/Crc.h"
@@ -100,6 +101,9 @@ void Fresh(FAntNestState& S)
 {
 	S = FAntNestState();
 	S.Up.Init(0, AntUp::Count);
+	S.Stock.Init(0, AntFoodKind::Count);
+	S.Own.Init(0, AntColony::OwnCount);
+	S.Version = AntColony::SaveVersion;
 }
 
 int32 SquadCap(const FAntNestState& S)
@@ -128,6 +132,12 @@ bool CanBuy(const FAntNestState& S, uint8 Branch, FString* Why)
 {
 	if (Branch >= AntUp::Count)
 	{
+		return false;
+	}
+	if (!AntColony::BranchOpen(S, Branch))
+	{
+		const AntColony::FChamberDef& C = AntColony::Def(AntColony::ChamberOfBranch(Branch));
+		if (Why) { *Why = FString::Printf(TEXT("сначала прорыть %s (%s)"), AntColony::Dig((uint8)C.Dig).Name, AntColony::Dig((uint8)C.Dig).Toward); }
 		return false;
 	}
 	const int32 Have = S.Tier_(Branch);
@@ -166,6 +176,7 @@ bool Buy(FAntNestState& S, uint8 Branch)
 	S.Food -= D.Food;
 	S.Jelly -= D.Jelly;
 	S.Up[Branch]++;
+	AntColony::Sync(S);
 	return true;
 }
 
@@ -197,14 +208,14 @@ FString BackupPath() { return FPaths::ProjectSavedDir() / TEXT("Nest") / TEXT("c
 
 namespace
 {
-	constexpr int32 SaveVersion = 1;
+	constexpr int32 SaveVersion = AntColony::SaveVersion;   // 2: the colony as a place (AntColony keys); 1 is read and migrated
 
 	FString Encode(const FAntNestState& S)
 	{
 		FString Up;
 		for (int32 i = 0; i < AntUp::Count; ++i) { Up += FString::Printf(TEXT("%s%d"), i ? TEXT(",") : TEXT(""), (int32)S.Tier_((uint8)i)); }
 		FString T = FString::Printf(TEXT("antnest=%d\nfood=%d\njelly=%d\nlarvae=%d\nworkers=%d\nmood=%d\nup=%s\nmaxtier=%d\ntier=%d\nraids=%d\ncakes=%d\ncakesatmax=%d\nwipes=%d\nbesthaul=%d\n"),
-			SaveVersion, S.Food, S.Jelly, S.Larvae, S.Workers, S.Mood, *Up, S.MaxTier, S.Tier, S.Raids, S.CakesHome, S.CakesAtMax, S.Wipes, S.BestHaul);
+			SaveVersion, S.Food, S.Jelly, S.Larvae, S.Workers, S.Mood, *Up, S.MaxTier, S.Tier, S.Raids, S.CakesHome, S.CakesAtMax, S.Wipes, S.BestHaul) + AntColony::EncodeKeys(S);
 		return T + FString::Printf(TEXT("sum=%u\n"), FCrc::StrCrc32(*T));
 	}
 
@@ -255,6 +266,7 @@ namespace
 			Up->ParseIntoArray(Parts, TEXT(","));
 			for (int32 i = 0; i < AntUp::Count && i < Parts.Num(); ++i) { S.Up[i] = (uint8)FMath::Clamp(FCString::Atoi(*Parts[i]), 0, AntUp::MaxTier); }
 		}
+		AntColony::DecodeKeys(KV, Ver, S);   // v2 keys, or a v1 colony migrated
 		return true;
 	}
 
@@ -305,6 +317,17 @@ bool Save(const FAntNestState& S)
 		FM.Copy(*BackupPath(), *Path, true);
 	}
 	return FM.Move(*Path, *Tmp, true);
+}
+
+bool SaveAsV1(const FAntNestState& S)
+{
+	FString Up;
+	for (int32 i = 0; i < AntUp::Count; ++i) { Up += FString::Printf(TEXT("%s%d"), i ? TEXT(",") : TEXT(""), (int32)S.Tier_((uint8)i)); }
+	const FString T = FString::Printf(TEXT("antnest=1\nfood=%d\njelly=%d\nlarvae=%d\nworkers=%d\nmood=%d\nup=%s\nmaxtier=%d\ntier=%d\nraids=%d\ncakes=%d\ncakesatmax=%d\nwipes=%d\nbesthaul=%d\n"),
+		S.Food, S.Jelly, S.Larvae, S.Workers, S.Mood, *Up, S.MaxTier, S.Tier, S.Raids, S.CakesHome, S.CakesAtMax, S.Wipes, S.BestHaul);
+	IFileManager::Get().MakeDirectory(*FPaths::GetPath(SavePath()), true);
+	IFileManager::Get().Delete(*BackupPath());
+	return FFileHelper::SaveStringToFile(T + FString::Printf(TEXT("sum=%u\n"), FCrc::StrCrc32(*T)), *SavePath(), FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
 }
 
 void Reset()

@@ -1,4 +1,5 @@
 ﻿#include "AntHUD.h"
+#include "AntColonyView.h"
 #include "AntUiStyle.h"
 #include "AntUiCanvas.h"
 #include "AntRaid.h"
@@ -274,7 +275,9 @@ void AAntHUD::DrawRaid(AAntRaid* Raid, AAntGameState* GS, APawn* Me)
 
 	if (Raid->Phase == AntRaidPhase::Nest)
 	{
-		DrawNest(Raid, GS);
+		// The colony («Муравейник», AntColonyView) or the planning sheet (ШТАБ); [Tab] switches.
+		if (AntColonyView::IsOn()) { AntColonyView::Draw(this, Canvas, Raid, GS, PC); }
+		else { DrawNest(Raid, GS); }
 		return;
 	}
 	if (Raid->Phase == AntRaidPhase::Results)
