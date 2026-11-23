@@ -44,7 +44,7 @@ public:
 	float FpsFrom = 0.f;
 
 	// ---- collision test
-	struct FJob { FString Name; TArray<FVector> Pts; bool bDrop = true; };
+	struct FJob { FString Name; TArray<FVector> Pts; bool bDrop = true; FVector WallDir = FVector::ZeroVector; };   // WallDir: into the wall a wall/ceiling job climbs
 	struct FWalker
 	{
 		TWeakObjectPtr<AAntCharacter> Ant;
@@ -53,7 +53,10 @@ public:
 		int32 Pt = 0;
 		float PtStart = 0.f, LastCheck = 0.f, BestDist = 1.e9f, FallingFor = 0.f;
 		int32 StallChecks = 0;
-		float JumpAt = -1.f;   // the harness let go of a surface (Jump) at this time
+		float JumpAt = -1.f;
+		bool bWasCrawling = false;
+		FString LastSurface;
+		float LastNz = 1.f;   // the harness let go of a surface (Jump) at this time
 	};
 	TArray<FJob> Jobs;
 	TArray<FWalker> Walkers;

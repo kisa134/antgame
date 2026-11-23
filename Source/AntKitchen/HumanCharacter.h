@@ -199,6 +199,7 @@ public:
 	 *  (LevelV2::CoverAt). His AI does not pick such an ant; his stomp, floor slap and newspaper do not hurt it. */
 	static bool InCover(const UWorld* World, const FVector& P);
 	bool bLetThrough = false;
+	float StepOverAt = 1.f;
 	FVector DevWalk = FVector::ZeroVector;
 	float DevWalkScale = 1.f;
 	virtual void DevAct(const FString& What, const FVector& Target);

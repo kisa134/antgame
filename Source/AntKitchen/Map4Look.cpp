@@ -9,6 +9,9 @@
 #include "GameFramework/Actor.h"
 #include "Engine/CollisionProfile.h"
 #include "Misc/CommandLine.h"
+#include "Components/BoxComponent.h"
+#include "EngineUtils.h"
+#include "Engine/World.h"
 #include "Misc/Parse.h"
 #include "UObject/Package.h"
 
@@ -452,6 +455,49 @@ UStaticMesh* Shape(int32 Index)
 	static const TCHAR* Names[] = { TEXT("SM_M4_Box"), TEXT("SM_M4_Ball"), TEXT("SM_M4_Cyl"), TEXT("SM_M4_Cone"), TEXT("SM_M4_Plane"), TEXT("SM_M4_Droplet"),
 		TEXT("SM_M4_Speck"), TEXT("SM_M4_Crumb"), TEXT("SM_M4_Pheromone"), TEXT("SM_M4_Pebble") };
 	return Prop(Names[FMath::Clamp(Index, 0, (int32)UE_ARRAY_COUNT(Names) - 1)]);
+}
+
+
+int32 BoxWallFlats(UWorld* W)
+{
+	// Thin things on walls (framed photos, the calendar, a drawing, outlets): their bevelled edges, seen from an ant climbing
+	// the wall, are 45-degree slivers it lost its grip on (map v4 collision test: falls under every frame). Each gets a plain
+	// box around it for queries (the ants, the Human); the mesh keeps its own collision for physics when it falls.
+	static const TCHAR* Names[] = { TEXT("SM_M4R_V3_PictureFrame"), TEXT("SM_V3_PictureFrame"), TEXT("SM_M4R_K_Calendar"), TEXT("SM_K_Calendar"),
+		TEXT("SM_M4R_V3_KidDrawing"), TEXT("SM_V3_KidDrawing"), TEXT("SM_V3_Outlet"), TEXT("SM_K_Clock") };
+	if (!W || !Enabled()) { return 0; }
+	int32 Added = 0;
+	for (TActorIterator<AActor> It(W); It; ++It)
+	{
+		TArray<UStaticMeshComponent*> Ms;
+		It->GetComponents<UStaticMeshComponent>(Ms);
+		for (UStaticMeshComponent* C : Ms)
+		{
+			if (!C || !C->GetStaticMesh() || C->ComponentHasTag(TEXT("M4FlatBoxed")) || !C->IsCollisionEnabled()) { continue; }
+			const FString N = C->GetStaticMesh()->GetName();
+			bool bHit = false;
+			for (const TCHAR* K : Names) { if (N == K) { bHit = true; break; } }
+			if (!bHit) { continue; }
+			const FBox Mb = C->GetStaticMesh()->GetBoundingBox();
+			UBoxComponent* B = NewObject<UBoxComponent>(*It);
+			B->SetupAttachment(C);
+			B->SetRelativeLocation(Mb.GetCenter());
+			B->SetBoxExtent(Mb.GetExtent() + FVector(0.05f));   // (in the mesh's space: the component's scale applies)
+			B->SetCollisionObjectType(ECC_WorldStatic);
+			B->SetCollisionResponseToAllChannels(ECR_Block);
+			B->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
+			B->SetCollisionResponseToChannel(ECC_Visibility, ECR_Ignore);
+			B->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+			B->SetHiddenInGame(true);
+			B->SetCanEverAffectNavigation(false);
+			B->ComponentTags.Add(TEXT("AntDebug"));
+			B->RegisterComponent();
+			C->ComponentTags.Add(TEXT("M4FlatBoxed"));
+			++Added;
+		}
+	}
+	if (Added) { UE_LOG(LogTemp, Display, TEXT("M4FLATBOX %d wall flats boxed"), Added); }
+	return Added;
 }
 
 }

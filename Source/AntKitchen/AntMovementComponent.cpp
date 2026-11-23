@@ -326,7 +326,13 @@ void UAntMovementComponent::PhysCrawl(float DeltaTime)
 		SafeMoveUpdatedComponent(Delta, Rot, true, Hit);
 		if (Hit.IsValidBlockingHit())
 		{
-			const FVector HN = Hit.Normal;
+			// the face hit, not the capsule's contact normal: at a corner (wall to ceiling, wall to a shelf's underside) the
+			// contact normal is a 45-degree blend, and a crawl along a blended normal lost both faces and fell (map v4 test)
+			FVector HN = Hit.Normal;
+			if (!Hit.ImpactNormal.IsNearlyZero() && FVector::DotProduct(Hit.ImpactNormal, Hit.Normal) > 0.5f)
+			{
+				HN = Hit.ImpactNormal.GetSafeNormal();
+			}
 			const bool bNewPlane = FVector::DotProduct(HN, N) < 0.7f;
 			if (bNewPlane && !bNoClimb && IsStickable(Hit) && FVector::DotProduct(InDir, -HN) > 0.25f)
 			{
@@ -343,7 +349,16 @@ void UAntMovementComponent::PhysCrawl(float DeltaTime)
 	// 3. Stay glued to the surface, or wrap around a convex edge.
 	const FVector Loc = UpdatedComponent->GetComponentLocation();
 	FHitResult G;
-	if (TraceSurface(Loc + N * 2.f, Loc - N * (R + 28.f * AntKit::AntShrink), G) && IsStickable(G))
+	// a thin ray first; then a small ball along the same line, which also finds the narrow bevel of a frame, an outlet or
+	// a wall-to-ceiling corner that a ray slips past (map v4 test: ants dropped off walls at such corners)
+	bool bGlued = TraceSurface(Loc + N * 2.f, Loc - N * (R + 28.f * AntKit::AntShrink), G) && IsStickable(G);
+	if (!bGlued && !bNoClimb)
+	{
+		FCollisionQueryParams Ps(SCENE_QUERY_STAT(AntCrawlBall), false, CharacterOwner);
+		bGlued = GetWorld()->SweepSingleByObjectType(G, Loc + N * 2.f, Loc - N * (R + 20.f * AntKit::AntShrink), FQuat::Identity, SurfaceObjects(), FCollisionShape::MakeSphere(R * 0.6f), Ps)
+			&& IsStickable(G) && FVector::DotProduct(G.ImpactNormal, N) > 0.3f;
+	}
+	if (bGlued)
 	{
 		if (FVector::DotProduct(G.ImpactNormal, N) > 0.3f)
 		{
@@ -374,6 +389,26 @@ void UAntMovementComponent::PhysCrawl(float DeltaTime)
 				N = NewN;
 				bWrapped = true;
 				SetCrawlBase(W.GetComponent(), W.BoneName);
+			}
+		}
+		if (!bWrapped && !bNoClimb)
+		{
+			// still a blended corner normal: the real face lies along its strongest axis (wall or ceiling); hold on to that
+			const FVector A = FVector(FMath::Abs(N.X) >= FMath::Abs(N.Y) && FMath::Abs(N.X) >= FMath::Abs(N.Z) ? FMath::Sign(N.X) : 0.f,
+				FMath::Abs(N.Y) > FMath::Abs(N.X) && FMath::Abs(N.Y) >= FMath::Abs(N.Z) ? FMath::Sign(N.Y) : 0.f,
+				FMath::Abs(N.Z) > FMath::Abs(N.X) && FMath::Abs(N.Z) > FMath::Abs(N.Y) ? FMath::Sign(N.Z) : 0.f);
+			FHitResult G2;
+			if (!A.IsNearlyZero() && FVector::DotProduct(A, N) < 0.97f && TraceSurface(Loc + A * 2.f, Loc - A * (R + 34.f * AntKit::AntShrink), G2) && IsStickable(G2))
+			{
+				N = G2.ImpactNormal.GetSafeNormal();
+				const float Gap = (float)FVector::DotProduct(Loc - G2.ImpactPoint, N) - R - 0.5f;
+				if (Gap > 0.2f)
+				{
+					FHitResult H3;
+					SafeMoveUpdatedComponent(-N * Gap, Rot, true, H3);
+				}
+				SetCrawlBase(G2.GetComponent(), G2.BoneName);
+				bWrapped = true;
 			}
 		}
 		if (!bWrapped)

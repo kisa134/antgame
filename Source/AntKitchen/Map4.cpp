@@ -421,11 +421,13 @@ void AMap4Runner::BuildJobs(const FString& Kinds)
 						const FVector Face = Hw.ImpactPoint - D3 * 45.f;
 						const bool bLow = W->SweepSingleByObjectType(Hb, Floor + FVector(0.f, 0.f, 10.f), FVector(Face.X, Face.Y, Floor.Z + 10.f) + D3 * 60.f, FQuat::Identity, Obj, FCollisionShape::MakeSphere(15.f), Q)
 							&& FVector::Dist2D(Hb.ImpactPoint, Hw.ImpactPoint) > 80.f;
-						const bool bFace = W->SweepSingleByObjectType(Hb, FVector(Face.X, Face.Y, 2300.f), FVector(Face.X, Face.Y, Floor.Z + 300.f), FQuat::Identity, Obj, FCollisionShape::MakeSphere(25.f), Q);
+						const bool bFace = W->SweepSingleByObjectType(Hb, FVector(Face.X, Face.Y, CeilZ - 250.f), FVector(Face.X, Face.Y, Floor.Z + 300.f), FQuat::Identity, Obj, FCollisionShape::MakeSphere(25.f), Q)
+							|| W->SweepSingleByObjectType(Hb, FVector(Face.X, Face.Y, CeilZ - 250.f) + (bX ? FVector(0.f, 900.f, 0.f) : FVector(900.f, 0.f, 0.f)), FVector(Face.X, Face.Y, Floor.Z + 300.f) + (bX ? FVector(0.f, 900.f, 0.f) : FVector(900.f, 0.f, 0.f)), FQuat::Identity, Obj, FCollisionShape::MakeSphere(25.f), Q);   // (the whole height, both columns the job climbs)
 						if (bLow || bFace) { ++Skipped; continue; }
 					}
 					const FVector Side3 = bX ? FVector(0.f, 1.f, 0.f) : FVector(1.f, 0.f, 0.f);
 					FJob J; J.Name = FString::Printf(TEXT("wall_%s"), *DistrictAt(WallP));
+					J.WallDir = D3;
 					J.Pts.Add(Floor);
 					J.Pts.Add(FVector(WallP.X, WallP.Y, 2300.f));
 					J.Pts.Add(FVector(WallP.X, WallP.Y, 2300.f) + Side3 * 900.f);
@@ -495,6 +497,7 @@ void AMap4Runner::NextFor(FWalker& Wk)
 	Wk.Pt = 1;
 	const FJob& J = Jobs[Wk.Job];
 	Ant->ApplyTeleport(J.Pts[0] + FVector(0.f, 0.f, 10.f));
+	Wk.bWasCrawling = false;
 	const float Now = GetWorld()->GetTimeSeconds();
 	Wk.PtStart = Wk.LastCheck = Now;
 	Wk.BestDist = 1.e9f;
@@ -545,11 +548,15 @@ void AMap4Runner::StartHuman()
 				UCapsuleComponent* Cap = It->GetCapsuleComponent();
 				const float Z = It->GetActorLocation().Z;
 				FCollisionQueryParams Qp(SCENE_QUERY_STAT(Map4HumanPlan), false, *It);
-				const FCollisionShape Sh = FCollisionShape::MakeCapsule(Cap->GetScaledCapsuleRadius() * 1.05f, Cap->GetScaledCapsuleHalfHeight() * 0.85f);
+				// the body from 150 above the floor up (a toy track, a cushion, a high chair's foot bar count; a crumb does not)
+				for (const auto& Ig : Cap->GetMoveIgnoreComponents()) { Qp.AddIgnoredComponent(Ig); }   // what he walks through (yarn, garland)
+				const float HH = Cap->GetScaledCapsuleHalfHeight();
+				const FCollisionShape Sh = FCollisionShape::MakeCapsule(Cap->GetScaledCapsuleRadius() * 1.1f, HH * 0.5f + 40.f);
+				const float Zc = Z - HH * 0.5f + 150.f;
 				auto Clear = [&](const FVector& A, const FVector& B)
 				{
 					FHitResult Hh;
-					return !GetWorld()->SweepSingleByChannel(Hh, FVector(A.X, A.Y, Z + 40.f), FVector(B.X, B.Y, Z + 40.f), FQuat::Identity, ECC_Pawn, Sh, Qp);
+					return !GetWorld()->SweepSingleByChannel(Hh, FVector(A.X, A.Y, Zc), FVector(B.X, B.Y, Zc), FQuat::Identity, ECC_Pawn, Sh, Qp);
 				};
 				TArray<FVector> Planned = { HPts[0] };
 				HMain.Reset();
@@ -562,7 +569,7 @@ void AMap4Runner::StartHuman()
 					{
 						const FVector Mid = (A + B) * 0.5f;
 						const FVector Perp = FVector(-(B - A).Y, (B - A).X, 0.f).GetSafeNormal();
-						for (float Off : { 800.f, -800.f, 1500.f, -1500.f, 2200.f, -2200.f })
+						for (float Off : { 800.f, -800.f, 1500.f, -1500.f, 2200.f, -2200.f, 3000.f, -3000.f })
 						{
 							const FVector V = Mid + Perp * Off;
 							if (Clear(A, V) && Clear(V, B)) { Planned.Add(V); HMain.Add(false); ++Vias; break; }
@@ -737,7 +744,7 @@ void AMap4Runner::Tick(float Dt)
 				Wk.BestDist = 1.e9f;
 				Wk.StallChecks = 0;
 				if (Wk.Pt >= J.Pts.Num()) { Wk.Job = -1; Ant->bDevGo = false; return; }
-				if (bTeleport) { Ant->ApplyTeleport(T + FVector(0.f, 0.f, 10.f)); }
+				if (bTeleport) { Ant->ApplyTeleport(T + FVector(0.f, 0.f, 10.f)); Wk.bWasCrawling = false; }   // (a drop after a teleport is no fall off a surface)
 				Ant->DevGoTo = J.Pts[Wk.Pt];
 				Ant->bDevGo = true;
 			};
@@ -749,10 +756,15 @@ void AMap4Runner::Tick(float Dt)
 				const FVector SN = (AM && AM->IsCrawling()) ? AM->GetSurfaceNormal() : FVector::UpVector;
 				const float Rise = (float)(T.Z - L.Z);
 				const float Flat = FVector::Dist2D(T, L);
-				const FVector Into = (T - J.Pts[FMath::Max(0, Wk.Pt - 1)]).GetSafeNormal2D();   // towards the wall this leg climbs
+				FVector Into = (T - J.Pts[FMath::Max(0, Wk.Pt - 1)]).GetSafeNormal2D();   // towards the wall this leg climbs
+				if (Into.IsNearlyZero() || (!J.WallDir.IsZero() && FVector::DotProduct(Into, J.WallDir) < 0.3f)) { Into = J.WallDir; }   // a straight-up leg: into the job's wall
 				if (SN.Z > 0.7f && Rise > 120.f && Rise > Flat * 0.5f)
 				{
 					Ant->DevGoTo = Flat > 90.f ? FVector(T.X, T.Y, L.Z + 40.f) : L + (Into.IsNearlyZero() ? FVector::ZeroVector : Into * 120.f) + FVector(0.f, 0.f, 40.f);   // (near the wall: into it, never back off a ledge)
+				}
+				else if (SN.Z < -0.6f && Rise > 60.f && Flat < 200.f && !J.WallDir.IsZero())
+				{
+					Ant->DevGoTo = L - J.WallDir * 200.f;   // under a shelf on the wall with the point above: out round its edge
 				}
 				else
 				{
@@ -773,12 +785,34 @@ void AMap4Runner::Tick(float Dt)
 				if (Wk.JumpAt >= 0.f && Now - Wk.JumpAt > 1.5f) { Wk.JumpAt = -1.f; }
 			}
 			UCharacterMovementComponent* CM = Ant->GetCharacterMovement();
+			{
+				const UAntMovementComponent* AMf = Ant->GetAntMovement();
+				const bool bCrawl = AMf && AMf->IsCrawling();
+				if (bCrawl)
+				{
+					const UPrimitiveComponent* Rc = AMf->GetRiddenComponent();
+					const UStaticMeshComponent* Sm = Cast<UStaticMeshComponent>(Rc);
+					Wk.LastNz = (float)AMf->GetSurfaceNormal().Z;
+					Wk.LastSurface = FString::Printf(TEXT("%s n%s"), Sm && Sm->GetStaticMesh() ? *Sm->GetStaticMesh()->GetName() : (Rc ? *Rc->GetName() : TEXT("-")), *AMf->GetSurfaceNormal().ToCompactString());
+				}
+				else if (Wk.bWasCrawling && CM && CM->IsFalling() && Wk.JumpAt < 0.f && Now > Ant->DevGoJumpAt + 0.3f && L.Z > 150.f && Wk.LastNz < 0.6f)   // (lost a wall or a ceiling; walking off a ledge is no fault)
+				{
+					Event(TEXT("fell"), L, FString::Printf(TEXT("%s pt%d off %s"), *J.Name, Wk.Pt, *Wk.LastSurface));
+				}
+				Wk.bWasCrawling = bCrawl;
+			}
 			Wk.FallingFor = (CM && CM->IsFalling()) ? Wk.FallingFor + Dt : 0.f;
 			if (Wk.FallingFor > 4.f) { Event(TEXT("fall_long"), L, J.Name); Wk.FallingFor = 0.f; Advance(true); continue; }
 			if (L.Z < -400.f) { Event(TEXT("under"), L, J.Name); Advance(true); continue; }
 			if (Now - Wk.LastCheck >= 1.f)
 			{
 				Wk.LastCheck = Now;
+				if (&Wk == &Walkers[0] && J.Name.StartsWith(TEXT("ceil")) && FParse::Param(FCommandLine::Get(), TEXT("AntM4Trace")))
+				{
+					const UAntMovementComponent* AMt = Ant->GetAntMovement();
+					UE_LOG(LogTemp, Display, TEXT("M4TRACE %s pt%d L=(%.0f,%.0f,%.0f) T=(%.0f,%.0f,%.0f) go=(%.0f,%.0f,%.0f) n=%s v=%.0f mode=%d crawl=%d speed=%.0f"), *J.Name, Wk.Pt, L.X, L.Y, L.Z, T.X, T.Y, T.Z,
+						Ant->DevGoTo.X, Ant->DevGoTo.Y, Ant->DevGoTo.Z, AMt ? *AMt->GetSurfaceNormal().ToCompactString() : TEXT("-"), Ant->GetVelocity().Size(), CM ? (int32)CM->MovementMode : -1, AMt && AMt->IsCrawling() ? 1 : 0, AMt ? AMt->GetMaxSpeed() : 0.f);
+				}
 				if (Dist < Wk.BestDist - 20.f) { Wk.BestDist = Dist; Wk.StallChecks = 0; }
 				else if (++Wk.StallChecks >= 7)
 				{
@@ -866,7 +900,7 @@ void AMap4Runner::Tick(float Dt)
 					for (const FOverlapResult& O : Ov)
 					{
 						UPrimitiveComponent* C = O.GetComponent();
-						if (C && C->GetCollisionResponseToChannel(ECC_Pawn) == ECR_Block)
+						if (C && C->GetCollisionResponseToChannel(ECC_Pawn) == ECR_Block && !Cap->GetMoveIgnoreComponents().Contains(C))   // (not what he is meant to pass: yarn, toy track)
 						{
 							++HThrough;
 							const UStaticMeshComponent* SM = Cast<UStaticMeshComponent>(C);
@@ -887,14 +921,19 @@ void AMap4Runner::Tick(float Dt)
 				const FVector Side(-Dir2.Y, Dir2.X, 0.f);
 				UCapsuleComponent* Cap = H->GetCapsuleComponent();
 				FCollisionQueryParams Qd(SCENE_QUERY_STAT(Map4HumanSide), false, H);
+				if (Cap) { for (const auto& Ig : Cap->GetMoveIgnoreComponents()) { Qd.AddIgnoredComponent(Ig); } }
 				FVector Best = FVector::ZeroVector;
 				for (float Sgn : { 1.f, -1.f })
 				{
-					for (float Off : { 700.f, 1200.f })
+					for (float Off : { 700.f, 1200.f, 1800.f })
 					{
-						const FVector P = L + Side * Sgn * Off + Dir2 * 400.f;
+						for (float Fwd : { 400.f, 0.f, -400.f })
+						{
+						const FVector P = L + Side * Sgn * Off + Dir2 * Fwd;
 						FHitResult Hs;
 						if (Cap && !W->SweepSingleByChannel(Hs, L, P, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeCapsule(Cap->GetScaledCapsuleRadius() * 0.9f, Cap->GetScaledCapsuleHalfHeight() * 0.9f), Qd)) { Best = P; break; }
+						}
+						if (!Best.IsZero()) { break; }
 					}
 					if (!Best.IsZero()) { break; }
 				}

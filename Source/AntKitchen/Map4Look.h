@@ -49,6 +49,8 @@ namespace Map4Look
 	/** Gives each material slot of the component's mesh its look (slot names = look keys). */
 	ANTKITCHEN_API void ApplySlots(UStaticMeshComponent* C);
 	/** Puts prop Name on C (keeps its transform); Look (optional) paints slot 0; Tag marks it for the art audit. False if the prop is missing. */
+	/** Plain query boxes round the thin things on walls (frames, calendar, drawing, outlets): ants hold on to them. */
+	ANTKITCHEN_API int32 BoxWallFlats(class UWorld* W);
 	ANTKITCHEN_API bool Swap(UStaticMeshComponent* C, const TCHAR* Name, const TCHAR* Look = nullptr, const TCHAR* Tag = nullptr);
 	/** A new component with prop Name under Parent at a relative transform (solid: blocks like the level, ants climb it). */
 	ANTKITCHEN_API UStaticMeshComponent* AddProp(AActor* Owner, USceneComponent* Parent, const TCHAR* Name, const FTransform& Relative, bool bSolid, const TCHAR* Look = nullptr);

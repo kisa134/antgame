@@ -20,6 +20,7 @@
 #include "Components/SpotLightComponent.h"
 #include "Components/PostProcessComponent.h"
 #include "Components/BoxComponent.h"
+#include "AntWreck.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "AntFx.h"
@@ -1295,6 +1296,31 @@ bool AKitchenBuilder::LetThrough(ACharacter* Big)
 	return false;
 }
 
+void AKitchenBuilder::LetStepOver(ACharacter* Big)
+{
+	// map v4: low soft or toy things a grown man steps over or onto without a thought (the kid's car track, a floor
+	// cushion, knocked loose or not): his capsule passes them (the collision test had him stalled at both)
+	UCapsuleComponent* Cap = Big ? Big->GetCapsuleComponent() : nullptr;
+	if (!Cap || !Big->GetWorld())
+	{
+		return;
+	}
+	static const TCHAR* Names[] = { TEXT("SM_K_CarTrack"), TEXT("SM_V3_FloorCushion"), TEXT("SM_L_TrainTrack"), TEXT("SM_M4R_L_TrainTrack") };
+	auto Consider = [&](AActor* A)
+	{
+		TArray<UStaticMeshComponent*> Ms;
+		A->GetComponents<UStaticMeshComponent>(Ms);
+		for (UStaticMeshComponent* C : Ms)
+		{
+			if (!C || !C->GetStaticMesh()) { continue; }
+			const FString N = C->GetStaticMesh()->GetName();
+			for (const TCHAR* K : Names) { if (N == K) { Cap->IgnoreComponentWhenMoving(C, true); break; } }
+		}
+	};
+	for (TActorIterator<AKitchenBuilder> It(Big->GetWorld()); It; ++It) { Consider(*It); }
+	for (TActorIterator<AAntWreckBody> It(Big->GetWorld()); It; ++It) { Consider(*It); }
+}
+
 UPrimitiveComponent* AKitchenBuilder::FindArt(const UWorld* World, const TCHAR* MeshName)
 {
 	for (TActorIterator<AKitchenBuilder> It(World); It; ++It)
@@ -1398,6 +1424,43 @@ void AKitchenBuilder::BuildArt()
 				C->ComponentTags.AddUnique(TEXT("M4Dress"));
 				UE_LOG(LogTemp, Display, TEXT("M4DRESS %s on %s at (%.0f,%.0f,%.0f)"), D.Name, H.GetComponent() ? *H.GetComponent()->GetName() : TEXT("-"), H.ImpactPoint.X, H.ImpactPoint.Y, H.ImpactPoint.Z);
 			}
+		}
+		// The cornice: its carved cove (many small facets in the corner) stopped the ants between the wall and the ceiling
+		// (map v4 collision test: 25 stalls, the same in v3). It keeps its look; ants and everything else collide with a
+		// plain 45-degree wedge filling the same corner, so wall -> cove -> ceiling is two clean turns.
+		{
+			TArray<UStaticMeshComponent*> Ms;
+			GetComponents<UStaticMeshComponent>(Ms);
+			int32 Wedges = 0;
+			for (UStaticMeshComponent* C : Ms)
+			{
+				if (!C || !C->GetStaticMesh() || C->GetStaticMesh()->GetName() != TEXT("SM_V3_Cornice")) { continue; }
+				const FVector Sc = C->GetComponentScale().GetAbs();
+				const FBox Mb = C->GetStaticMesh()->GetBoundingBox();
+				const float Len = (float)(Mb.GetSize().X * Sc.X);
+				const float H = (float)FMath::Max(Mb.GetSize().Z * Sc.Z, Mb.Max.Y * Sc.Y);   // the cove's drop on the wall / reach on the ceiling
+				if (Len < 50.f || H < 10.f) { continue; }
+				UBoxComponent* Wd = NewObject<UBoxComponent>(this);
+				Wd->SetupAttachment(Root);
+				// (centre 10 uu into the corner, so both tips sit inside the wall and the ceiling: no knife-edge sliver at either
+				// joint for a crawling ant to slip off; map v4 test: falls where the ceiling met the tip)
+				Wd->SetWorldLocationAndRotation(C->GetComponentLocation() + C->GetComponentQuat().RotateVector(FVector(Mb.GetCenter().X * Sc.X, -10.f / FMath::Max(0.01f, (float)Sc.Y), 10.f / FMath::Max(0.01f, (float)Sc.Z)) * FVector(1.f, Sc.Y, Sc.Z)),
+					C->GetComponentQuat() * FQuat(FVector::ForwardVector, FMath::DegreesToRadians(45.f)));
+				Wd->SetBoxExtent(FVector(Len * 0.5f, H * 0.7071f, H * 0.7071f));
+				Wd->SetCollisionObjectType(ECC_WorldStatic);
+				Wd->SetCollisionResponseToAllChannels(ECR_Block);
+				Wd->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
+				Wd->SetCollisionResponseToChannel(ECC_Visibility, ECR_Ignore);
+				Wd->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+				Wd->SetHiddenInGame(true);
+				Wd->SetCanEverAffectNavigation(false);
+				Wd->ComponentTags.Add(TEXT("AntDebug"));
+				Wd->RegisterComponent();
+				AddInstanceComponent(Wd);
+				C->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+				++Wedges;
+			}
+			UE_LOG(LogTemp, Display, TEXT("M4CORNICE %d cornices collide as a 45-degree wedge"), Wedges);
 		}
 		// the fly paper over the table reads as fly paper: a few flies stuck to the strip (dressing, no collision)
 		for (UPrimitiveComponent* Ap : AntsOnlyParts)
@@ -2282,6 +2345,12 @@ void AKitchenBuilder::UpdateMounds(float Dt)
 void AKitchenBuilder::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	FlatBoxTimer -= DeltaSeconds;
+	if (FlatBoxTimer <= 0.f)
+	{
+		FlatBoxTimer = 5.f;   // map v4: frames and outlets of new or reset fixtures get their grip box too
+		Map4Look::BoxWallFlats(GetWorld());
+	}
 	if (GetNetMode() != NM_DedicatedServer)
 	{
 		UpdateMounds(DeltaSeconds);

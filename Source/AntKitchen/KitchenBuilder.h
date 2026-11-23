@@ -74,6 +74,8 @@ public:
 	/** Level v2: makes a big walker's capsule pass through the "ants only" pieces (the yarn bridge, the garland, the chili
 	 *  string, the fly ribbon). False while the kitchen is not built yet on this machine: call again. */
 	static bool LetThrough(class ACharacter* Big);
+	/** map v4: the Human's capsule passes the toy tracks and floor cushions (he steps over them). Call now and then. */
+	static void LetStepOver(class ACharacter* Big);
 	/** The first placed piece of the modelled flat with this mesh (its component), or null. */
 	static UPrimitiveComponent* FindArt(const UWorld* World, const TCHAR* MeshName);
 	/** Level v3: puts the districts of the current seed (LevelV3::Current) into the world, on this machine. */
@@ -189,6 +191,7 @@ private:
 	FTimeOfDay TodFrom;
 	bool bMainOn = true;
 	float DripTimer = 1.f;       // cosmetic: the drip into the puddle behind the fridge
+	float FlatBoxTimer = 1.f;
 	float DripRipple = -1.f;
 	float SprinkleTimer = 0.f;   // cosmetic: the yard sprinkler's jet (level v2)
 

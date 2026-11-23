@@ -1330,7 +1330,7 @@ void AAntCharacter::Tick(float DeltaSeconds)
 					{
 						Flat += FVector::VectorPlaneProject(FVector::UpVector, DevN).GetSafeNormal() * 1.5f;   // a face in the way: over it
 					}
-					else if (DevN.Z < 0.5f && (Dir | DevN) > 0.6f && DevGoTo.Z < GetActorLocation().Z + 30.f && !Carrying && GetWorld()->GetTimeSeconds() > DevGoJumpAt)
+					else if (DevN.Z < 0.5f && (Dir | DevN) > 0.6f && DevGoTo.Z < GetActorLocation().Z - 60.f && !Carrying && GetWorld()->GetTimeSeconds() > DevGoJumpAt)   // (strictly below: a point level with the ant out on the ceiling is reached over the corner, not by a leap; map v4 test)
 					{
 						// the point is straight off this wall, level with the ant or lower: push off it (Space), as a player would
 						DevGoJumpAt = GetWorld()->GetTimeSeconds() + 0.8f;

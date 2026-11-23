@@ -1210,6 +1210,12 @@ void AHumanCharacter::Tick(float DeltaSeconds)
 	{
 		bLetThrough = AKitchenBuilder::LetThrough(this);   // level v2: he walks through the yarn, the garland and the other "ants only" pieces
 	}
+	StepOverAt -= DeltaSeconds;
+	if (StepOverAt <= 0.f && GetClass() == AHumanCharacter::StaticClass())
+	{
+		StepOverAt = 2.f;
+		AKitchenBuilder::LetStepOver(this);   // map v4: toy tracks and cushions, also once knocked loose
+	}
 
 	if (HasAuthority())
 	{
