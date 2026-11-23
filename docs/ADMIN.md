@@ -1,4 +1,4 @@
-# Админ-режим (v12)
+﻿# Админ-режим (v12)
 
 Код: `Source/AntKitchen/AntAdmin.h/.cpp` (панель, команды сервера, бейдж, метки «показать всех»), правки в `AntPlayerController.*` (F10, `ServerAdmin`), `AntCharacter.*` (флаги админа), `AntKitchenGameMode.h` (`AdminCommand`), `AntHUD.cpp` (бейдж), `LevelV3.*` (время суток поверх сида). Строки лога: `ANTADMIN`.
 
@@ -59,6 +59,15 @@
 - Режим «Против»: Человеком играет клиент / хост / ИИ (`versus start …`).
 - Показать всех (`reveal`): метки сквозь стены над Человеком, семьёй, питомцами, рыжими, тортом и крупной едой, с расстоянием.
 - Гнездо: еда +500, желе +100, личинки 10.
+
+### Колония (Муравейник, `docs/COLONY.md`)
+- Экран: открыть муравейник (`colony view`), штаб — старый планшет (`colony sheet`), повторить шоу после рейда (`colony show`), Королева засыпает (`colony sleep`), инфо в лог (`colony info`).
+- Ресурсы: еда +500 (поровну на сорта), сахар / белок / жир / крошки +200 (`colony give sugar 200` …), молочко +10, личинки +3, рабочие +20, трофей случайный / все / убрать (`colony give trophy random|all|none`).
+- Залы и ходы бесплатно: прорыть все ходы (`colony dig all`), все залы I / II / III (`colony setall N`), снести всё (`colony setall 0`); по одному — `colony set <зал> <ярус>`, за еду как хост — `colony up <зал>`, `colony dig buy <0..2>`.
+- Настроение Королевы: 10 / 40 / 70 / 95 (`colony mood N`).
+- Рейды на бумаге (доход, Королева, трофеи, жадная стройка, затем шоу): +1, +5, +15 (`colony sim N`), +1 без стройки (`colony sim 1 nobuild`).
+- Сброс колонии (старая — `colony.old`), запись как старое сохранение v1 и перечитать (тест миграции: `colony v1save`, `colony reload`).
+- Тесты: `colony open <зал>|100+ход`, `colony zoom Z X Y`, `colony showat T`, `colony shot NAME` (в `Saved/Screenshots/colony`), `colony quit`.
 
 ### Экран (только эта машина)
 FPS (`stat fps`), статистика кадра (`stat unit`), скрыть/показать HUD, режим съёмки (F8), свободная камера (съёмка + F5), скриншот (`HighResShot 1`, файлы в `Saved/Screenshots`).

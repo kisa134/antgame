@@ -33,6 +33,7 @@
 #include "TimerManager.h"
 #include "NpcRoutine.h"
 #include "AntSnowball.h"
+#include "AntColony.h"
 
 namespace
 {
@@ -111,6 +112,7 @@ void AAntRaid::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetime
 	DOREPLIFETIME(AAntRaid, Stolen);
 	DOREPLIFETIME(AAntRaid, SpecialsLeft);
 	DOREPLIFETIME(AAntRaid, StartCost);
+	DOREPLIFETIME(AAntRaid, ColonyShow);
 }
 
 AAntRaid* AAntRaid::Get(const UWorld* World)
@@ -228,6 +230,7 @@ void AAntRaid::ServerInit(AAntKitchenGameMode* InGM)
 
 void AAntRaid::SaveNest()
 {
+	AntColony::Sync(Nest);
 	const bool bOk = AntNest::Save(Nest);
 	UE_LOG(LogTemp, Display, TEXT("ANTNEST save %s: food %d jelly %d larvae %d workers %d mood %d raids %d -> %s"), bOk ? TEXT("ok") : TEXT("FAILED"),
 		Nest.Food, Nest.Jelly, Nest.Larvae, Nest.Workers, Nest.Mood, Nest.Raids, *AntNest::SavePath());
@@ -518,6 +521,10 @@ void AAntRaid::OnWorldReset()
 	Story.Reset();
 	Variety.Reset();
 	Deaths = 0;
+	FMemory::Memzero(RaidKinds);
+	RaidLines.Reset();
+	RaidTrophies.Reset();
+	bCakeWasInHill = false;
 	TrophiesHome = 0;
 	SpecialsHome = 0;
 	bCakeLifted = false;
@@ -691,6 +698,7 @@ bool AAntRaid::OnClanCakeHome(AKitchenLoot* C)
 	const float Window = TierDef().Window * FMath::Clamp((CakeLeft - 40) / 60.f, 0.05f, 1.f);
 	CakeWindowEnds = S->GetServerWorldTimeSeconds() + Window;
 	Cake = AntCake::InHill;
+	bCakeWasInHill = true;
 	CakeLoc = Top;
 	bCakeKnown = true;
 	GHillOpen = true;
@@ -1043,12 +1051,26 @@ bool AAntRaid::OnDelivered(uint8 Team, AKitchenLoot* Food, const TArray<AAntChar
 	}
 	Variety.Add(Food->LootName);
 	FString Names;
+	int32 NumCarriers = 0;
 	for (const AAntCharacter* A : Carriers)
 	{
-		if (A) { Names += (Names.IsEmpty() ? TEXT("") : TEXT(", ")) + A->GetDisplayName(); }
+		if (A) { Names += (Names.IsEmpty() ? TEXT("") : TEXT(", ")) + A->GetDisplayName(); ++NumCarriers; }
 	}
+	// The colony: what kind of food it was and who brought it (the cake's value is counted at the end, by the tier).
+	const uint8 Kind = AntColony::KindOf(Food->LootName);
+	auto Credit = [&](int32 Amount, const TCHAR* Feat)
+	{
+		for (const AAntCharacter* A : Carriers)
+		{
+			if (!A) { continue; }
+			FAntRaidPlayerLine& L = LineOf(A);
+			L.Food[Kind] += Amount / FMath::Max(1, NumCarriers);
+			if (Feat) { L.Feats.AddUnique(Feat); }
+		}
+	};
 	if (Food->bMain)
 	{
+		Credit(0, TEXT("cake_home"));
 		Cake = AntCake::Home;
 		bCakeKnown = true;
 		GHillOpen = false;
@@ -1065,9 +1087,11 @@ bool AAntRaid::OnDelivered(uint8 Team, AKitchenLoot* Food, const TArray<AAntChar
 	{
 		++TrophiesHome;
 		RaidJelly += 1;
+		const FString TN = Food->LootName.ToLower();
+		RaidTrophies.AddUnique(TN.Contains(TEXT("мишк")) ? 6 : TN.Contains(TEXT("шоколад")) ? 7 : TN.Contains(TEXT("сыр")) ? 8 : 255);
 		Note(FString::Printf(TEXT("%s — целый трофей «%s»: %s"), *Clock(), *Food->LootName, *Names));
 	}
-	Value = FMath::RoundToInt(Value * TierDef().LootMul);
+	Value = FMath::RoundToInt(Value * TierDef().LootMul * AntColony::LootBonus(Nest));
 	if (Food->Special != 0)
 	{
 		++SpecialsHome;
@@ -1084,7 +1108,10 @@ bool AAntRaid::OnDelivered(uint8 Team, AKitchenLoot* Food, const TArray<AAntChar
 		Say(FString::Printf(TEXT("ОСОБАЯ НАХОДКА ДОМА: %s — %s"), *Food->LootName, *What), RaidGold);
 		Note(FString::Printf(TEXT("%s — особая находка «%s»: %s"), *Clock(), *Food->LootName, *Names));
 		UE_LOG(LogTemp, Display, TEXT("ANTRAID special find home: %d «%s» (%s) by %s"), (int32)Food->Special, *Food->LootName, *What, *Names);
+		RaidTrophies.AddUnique(9);
 	}
+	RaidKinds[Kind] += Value;
+	Credit(Value, Food->bTrophy ? TEXT("trophy_home") : Food->Special != 0 ? TEXT("special_home") : nullptr);
 	return false;
 }
 
@@ -1097,6 +1124,7 @@ void AAntRaid::OnBodyHome(AController* BodyOwner, const FString& Name, const TAr
 	}
 	Note(FString::Printf(TEXT("%s — %s донёс тело до гнезда: %s спасён"), *Clock(), Names.IsEmpty() ? TEXT("кто-то") : *Names, *Name));
 	AntSquad::OnBodyHome(BodyOwner);   // what is left of his squad is his again
+	for (const AAntCharacter* A : Carriers) { if (A) { LineOf(A).Rescues++; } }
 }
 
 void AAntRaid::OnPlayerDied(AAntCharacter* Ant, const FString& How)
@@ -1106,6 +1134,8 @@ void AAntRaid::OnPlayerDied(AAntCharacter* Ant, const FString& How)
 		return;
 	}
 	++Deaths;
+	LineOf(Ant).Deaths++;
+	AntColony::AddFallen(Nest, Ant->GetDisplayName(), RaidNo, How);
 	AntSquad::OnCommanderDied(Ant);   // half of his squad scatter, the rest wait by the body
 	const FString Place = PlaceName(Ant->GetActorLocation());
 	Note(FString::Printf(TEXT("%s — %s %s%s"), *Clock(), *Ant->GetDisplayName(), *How, Place.IsEmpty() ? TEXT("") : *FString::Printf(TEXT(" (%s)"), *Place)));
@@ -1115,7 +1145,7 @@ int32 AAntRaid::ContractBonus(uint8 OrderId)
 {
 	RaidJelly += 1;
 	Note(FString::Printf(TEXT("%s — контракт Королевы: %s"), *Clock(), AntOrder::Name(OrderId)));
-	return FMath::RoundToInt(40.f * TierDef().LootMul);
+	return AntColony::OrderFood(Nest, FMath::RoundToInt(40.f * TierDef().LootMul));
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1210,7 +1240,10 @@ void AAntRaid::BuildResult(uint8 How)
 	R.Tier = Tier;
 	R.Banked = S->TeamScore;
 	const bool bWiped = How == AntRaidEnd::Wiped;
-	R.Kept = bWiped ? R.Banked / 2 : R.Banked;
+	R.Kept = bWiped ? FMath::RoundToInt(R.Banked * AntColony::WipeKeep(Nest)) : R.Banked;
+	AntColony::Sync(Nest);
+	R.StockBefore = Nest.Stock;
+	R.JellyBefore = Nest.Jelly;
 	R.Ask = S->TargetScore;
 	R.Jelly = bWiped ? 0 : RaidJelly;
 	R.Cake = Cake;
@@ -1227,13 +1260,25 @@ void AAntRaid::BuildResult(uint8 How)
 	Mood += R.ContractsDone * 4;
 	Mood += Variety.Num() >= 10 ? 6 : Variety.Num() >= 6 ? 3 : 0;
 	Mood += TrophiesHome * 2 + SpecialsHome * 2 + (bWiped ? 0 : MoodGift);
-	Mood -= FMath::Min(8, Deaths * 2);
+	Mood -= AntColony::DeathMood(Nest, Deaths);
 	Mood -= bWiped ? 14 : 0;
+	Mood += AntColony::MoodPerRaid(Nest);
 	Nest.Mood = FMath::Clamp(Nest.Mood + Mood, 0, 100);
 	R.MoodAfter = Nest.Mood;
 
-	// The stores.
-	Nest.Food += R.Kept;
+	// The stores, by kind: what the carriers brought, the cake (sugar), the rest (orders, refunds, untracked) as crumbs.
+	{
+		int32 K[AntFoodKind::Count];
+		FMemory::Memcpy(K, RaidKinds, sizeof(K));
+		if (Cake == AntCake::Home) { K[AntFoodKind::Sugar] += FMath::Max(0, R.Banked - K[0] - K[1] - K[2] - K[3]); }
+		int32 Tracked = K[0] + K[1] + K[2] + K[3];
+		if (Tracked < R.Banked) { K[AntFoodKind::Crumbs] += R.Banked - Tracked; Tracked = R.Banked; }
+		R.Kinds.SetNumZeroed(AntFoodKind::Count);
+		int32 Given = 0;
+		for (int32 k = 0; k < AntFoodKind::Count; ++k) { R.Kinds[k] = Tracked > 0 ? (int32)((int64)K[k] * R.Kept / Tracked) : 0; Given += R.Kinds[k]; }
+		R.Kinds[AntFoodKind::Crumbs] += R.Kept - Given;
+		for (int32 k = 0; k < AntFoodKind::Count; ++k) { AntColony::AddFood(Nest, (uint8)k, R.Kinds[k]); }
+	}
 	Nest.Jelly += R.Jelly;
 	Nest.Larvae = FMath::Clamp(S->Larvae, 0, AntNest::MaxLarvae);
 	R.LarvaeLeft = Nest.Larvae;
@@ -1249,6 +1294,7 @@ void AAntRaid::BuildResult(uint8 How)
 		R.QueenAte = Nest.Food * 15 / 100;
 		Nest.Food -= R.QueenAte;
 	}
+	R.LarvaeLaid += (Nest.Own_(AntColony::OwnMemorial) >= 3 && Deaths > 0) ? 1 : 0;   // the guard of honour
 	if (Nest.Larvae + R.LarvaeLaid < 1) { R.LarvaeLaid = 1; }   // never a dead end
 	Nest.Larvae = FMath::Min(AntNest::MaxLarvae, Nest.Larvae + R.LarvaeLaid);
 	Nest.Workers = FMath::Min(AntNest::MaxWorkers, Nest.Workers + R.WorkersHatched);
@@ -1270,6 +1316,7 @@ void AAntRaid::BuildResult(uint8 How)
 	else if (How == AntRaidEnd::Wiped) { R.Story.Add(FString::Printf(TEXT("%s — живых не осталось. Красные вынесли из кладовой %d"), *Clock(), R.Banked - R.Kept)); }
 	else { R.Story.Add(FString::Printf(TEXT("%s — время вышло, вход запечатан"), *Clock())); }
 	while (R.Story.Num() > 9) { R.Story.RemoveAt(R.Story.Num() / 2); }   // keep the beginning and the end
+	ColonyAfterRaid(R, How);
 	Result = R;
 	UE_LOG(LogTemp, Display, TEXT("ANTRAID end %d: how %d, banked %d kept %d ask %d, jelly %d, cake %d, deaths %d, contracts %d/%d, variety %d, mood %d -> %d, larvae left %d +%d, workers +%d, queen ate %d, new tier %d"),
 		RaidNo, (int32)How, R.Banked, R.Kept, R.Ask, R.Jelly, (int32)R.Cake, R.Deaths, R.ContractsDone, R.ContractsTaken, Variety.Num(), R.MoodBefore, R.MoodAfter, R.LarvaeLeft, R.LarvaeLaid,
@@ -1383,8 +1430,6 @@ void AAntRaid::PlayerCommand(AAntPlayerController* PC, uint8 Cmd, int32 A, int32
 			CountStartCost();
 		}
 		break;
-	case AntRaidCmd::Buy:
-	case AntRaidCmd::Mod:
 	case AntRaidCmd::Seed:
 		// Level v3, the host in the nest: "play seed N" (A >= 0) or a new random one (A < 0).
 		if (Phase == AntRaidPhase::Nest && bHost && LevelV3::Enabled())
@@ -1397,6 +1442,10 @@ void AAntRaid::PlayerCommand(AAntPlayerController* PC, uint8 Cmd, int32 A, int32
 			PC->ClientToast(TEXT("Сид выбирает хост"));
 		}
 		break;
+	case AntRaidCmd::Buy:
+	case AntRaidCmd::Mod:
+	case AntRaidCmd::Dig:
+	case AntRaidCmd::Chamber:
 	case AntRaidCmd::Tier:
 	case AntRaidCmd::Contract:
 	case AntRaidCmd::Larva:
@@ -1421,6 +1470,43 @@ void AAntRaid::PlayerCommand(AAntPlayerController* PC, uint8 Cmd, int32 A, int32
 				const AntUp::FDef& D = AntUp::Def((uint8)A, Nest.Tier_((uint8)A));
 				Say(FString::Printf(TEXT("ПОСТРОЕНО: %s %d — «%s». %s"), AntUp::BranchName((uint8)A), (int32)Nest.Tier_((uint8)A), D.Name, D.Text), RaidGold);
 				UE_LOG(LogTemp, Display, TEXT("ANTNEST built branch %d tier %d «%s»: food %d jelly %d left"), A, (int32)Nest.Tier_((uint8)A), D.Name, Nest.Food, Nest.Jelly);
+				const uint8 Room = AntColony::ChamberOfBranch((uint8)A);
+				AntColony::Chronicle(Nest, FString::Printf(TEXT("Рейд %d: построено — %s %d «%s»"), Nest.Raids, AntColony::Def(Room).Name, (int32)Nest.Tier_((uint8)A), D.Name));
+				SaveNest();
+			}
+			else
+			{
+				PC->ClientToast(FString::Printf(TEXT("Не построить: %s"), *Why));
+			}
+		}
+		else if (Cmd == AntRaidCmd::Dig)
+		{
+			FString Why;
+			if (AntColony::CanDig(Nest, (uint8)FMath::Clamp(A, 0, 255), &Why))
+			{
+				AntColony::DoDig(Nest, (uint8)A);
+				const AntColony::FDigDef& D = AntColony::Dig((uint8)A);
+				AntColony::Chronicle(Nest, FString::Printf(TEXT("Рейд %d: прорыт %s — %s. %s"), Nest.Raids, D.Name, D.Toward, D.Text));
+				Say(FString::Printf(TEXT("ПРОРЫТ %s (%s): %s"), D.Name, D.Toward, D.Text), RaidGold);
+				UE_LOG(LogTemp, Display, TEXT("ANTCOLONY dug %d %s: food %d jelly %d left"), A, D.Name, Nest.Food, Nest.Jelly);
+				SaveNest();
+			}
+			else
+			{
+				PC->ClientToast(FString::Printf(TEXT("Не прорыть: %s"), *Why));
+			}
+		}
+		else if (Cmd == AntRaidCmd::Chamber)
+		{
+			FString Why;
+			const uint8 C = (uint8)FMath::Clamp(A, 0, 255);
+			if (C < AntColony::Count && AntColony::CanUpgrade(Nest, C, &Why))
+			{
+				AntColony::Upgrade(Nest, C);
+				const int32 T = AntColony::TierOf(Nest, C);
+				AntColony::Chronicle(Nest, FString::Printf(TEXT("Рейд %d: построено — %s %d «%s»"), Nest.Raids, AntColony::Def(C).Name, T, *AntColony::TierName(C, T)));
+				Say(FString::Printf(TEXT("ПОСТРОЕНО: %s %d — «%s». %s"), AntColony::Def(C).Name, T, *AntColony::TierName(C, T), *AntColony::TierText(C, T)), RaidGold);
+				UE_LOG(LogTemp, Display, TEXT("ANTCOLONY built %s tier %d: food %d jelly %d left, level %d"), AntColony::Def(C).Id, T, Nest.Food, Nest.Jelly, AntColony::Level(Nest));
 				SaveNest();
 			}
 			else
@@ -1463,6 +1549,7 @@ void AAntRaid::PlayerCommand(AAntPlayerController* PC, uint8 Cmd, int32 A, int32
 		{
 			AntNest::Reset();   // the old colony is kept aside as colony.old
 			AntNest::Fresh(Nest);
+			AntColony::Chronicle(Nest, TEXT("Основана Великая Колония Щели. Королева-Мать заняла земляной трон"));
 			Result = FAntRaidResult();
 			NestNote = TEXT("Новая колония. Старая лежит рядом с сохранением как colony.old");
 			SaveNest();
@@ -1650,6 +1737,10 @@ bool AAntRaid::DevCommand(const TArray<FString>& A)
 		}
 		else { return false; }
 		return true;
+	}
+	if (Op == TEXT("colony"))
+	{
+		return ColonyCommand(A);
 	}
 	if (Op == TEXT("nest"))
 	{
