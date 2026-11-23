@@ -18,4 +18,5 @@ void AAntPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME(AAntPlayerState, Charges1);
 	DOREPLIFETIME(AAntPlayerState, bNestReady);
 	DOREPLIFETIME(AAntPlayerState, bHome);
+	DOREPLIFETIME(AAntPlayerState, Loadout);
 }

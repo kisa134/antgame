@@ -45,6 +45,8 @@
 #include "AntFilm.h"
 #include "AntSnowball.h"
 #include "AntTrail.h"
+#include "AntFighter.h"
+#include "AntCosmetics.h"
 
 AAntCharacter::AAntCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<UAntMovementComponent>(ACharacter::CharacterMovementComponentName))
@@ -119,6 +121,12 @@ void AAntCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	DOREPLIFETIME(AAntCharacter, DeathKind);
 	DOREPLIFETIME(AAntCharacter, DeathDir);
 	DOREPLIFETIME(AAntCharacter, GrippedBy);
+	DOREPLIFETIME(AAntCharacter, VetName);
+	DOREPLIFETIME(AAntCharacter, VetRank);
+	DOREPLIFETIME(AAntCharacter, VetTraits);
+	DOREPLIFETIME(AAntCharacter, VetDoctrine);
+	DOREPLIFETIME(AAntCharacter, Emote);
+	DOREPLIFETIME(AAntCharacter, EmoteAt);
 	DOREPLIFETIME(AAntCharacter, Pulling);
 	DOREPLIFETIME(AAntCharacter, StuckTo);
 	DOREPLIFETIME(AAntCharacter, StuckLeg);
@@ -179,7 +187,7 @@ float AAntCharacter::GetStrength() const
 		return 100000.f;   // admin: carries anything alone
 	}
 	const float S = StrengthOverride >= 0.f ? StrengthOverride : GetClassDef().Strength;
-	return ((Team == 0 && Creature == 0 && AntCard::Has(this, AntCard::Jaws)) ? S * 1.25f : S) * AntSnowball::CarryMul(this);
+	return ((Team == 0 && Creature == 0 && AntCard::Has(this, AntCard::Jaws)) ? S * 1.25f : S) * AntSnowball::CarryMul(this) * AntFighter::Mul(this, AntStat::Strength);
 }
 
 float AAntCharacter::AcidCost() const
@@ -189,7 +197,7 @@ float AAntCharacter::AcidCost() const
 		return 0.f;
 	}
 	const float Cost = Weapon.bWeb ? 18.f : 7.f + Weapon.Damage * 0.25f;
-	return ((Team == 0 && AntCard::Has(this, AntCard::Acid)) ? Cost * 0.65f : Cost) * AntSnowball::AcidMul(this);
+	return ((Team == 0 && AntCard::Has(this, AntCard::Acid)) ? Cost * 0.65f : Cost) * AntSnowball::AcidMul(this) * AntFighter::Mul(this, AntStat::AcidCost);
 }
 
 float AAntCharacter::DashCooldown() const
@@ -198,7 +206,7 @@ float AAntCharacter::DashCooldown() const
 	{
 		return 0.15f;
 	}
-	return (Team == 0 && AntCard::Has(this, AntCard::Spring)) ? 1.f : 1.6f;
+	return ((Team == 0 && AntCard::Has(this, AntCard::Spring)) ? 1.f : 1.6f) * AntFighter::Mul(this, AntStat::DashCd);
 }
 
 void AAntCharacter::OnRep_BodyAct()
@@ -259,6 +267,7 @@ void AAntCharacter::BeginPlay()
 	OnRep_Weapon();
 	ApplyClassStats();
 	ApplyCameraLook();
+	AntCosmetics::Attach(this);   // helmets, insignia, shell colour, emotes (AntCosmetics.h)
 }
 
 void AAntCharacter::PawnClientRestart()
@@ -301,12 +310,12 @@ void AAntCharacter::ApplyClassStats()
 {
 	const FAntClassDef& D = GetClassDef();
 	const float Frac = MaxHealth > 0.f ? Health / MaxHealth : 1.f;
-	MaxHealth = HealthOverride > 0.f ? HealthOverride : D.Health;
+	MaxHealth = (HealthOverride > 0.f ? HealthOverride : D.Health) * AntFighter::Mul(this, AntStat::Health);   // perks, a veteran's rank (AntFighter.h)
 	if (HasAuthority())
 	{
 		Health = FMath::Clamp(Frac, 0.05f, 1.f) * MaxHealth;
 	}
-	GetCharacterMovement()->JumpZVelocity = D.JumpZ * 0.9f * JumpK;
+	GetCharacterMovement()->JumpZVelocity = D.JumpZ * 0.9f * JumpK * AntFighter::Mul(this, AntStat::Jump);
 	if (VisualRoot)
 	{
 		VisualRoot->SetRelativeScale3D(FVector(D.BodyScale * AntScale * ExtraScale));
@@ -351,7 +360,7 @@ void AAntCharacter::ServerSetClass_Implementation(uint8 NewClass)
 {
 	if (!bDead)
 	{
-		SetClass((EAntClass)FMath::Min<uint8>(NewClass, 3), false);
+		SetClass((EAntClass)FMath::Min<uint8>(NewClass, 4), false);   // 4: the Sapper (AntFighter.h)
 	}
 }
 
@@ -370,13 +379,16 @@ void AAntCharacter::TickNurse(float Dt)
 	const float Step = NurseTimer;
 	NurseTimer = 0.f;
 	const float Boost = (Team == 0 && AntCard::Has(this, AntCard::Nurse)) ? 1.6f : 1.f;
+	const float RadiusK = AntFighter::Mul(this, AntStat::HealRadius), RateK = AntFighter::Mul(this, AntStat::HealRate);   // perks (AntFighter.h)
 	for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
 	{
 		AAntCharacter* A = *It;
 		if (A && !A->bDead && A->Team == Team && A->Health < A->MaxHealth
-			&& FVector::Dist(A->GetActorLocation(), GetActorLocation()) < D.HealRadius * Boost)
+			&& FVector::Dist(A->GetActorLocation(), GetActorLocation()) < D.HealRadius * Boost * RadiusK)
 		{
-			A->Health = FMath::Min(A->MaxHealth, A->Health + D.HealPerSec * Boost * Step * (A == this ? 0.5f : 1.f));
+			const float Before = A->Health;
+			A->Health = FMath::Min(A->MaxHealth, A->Health + D.HealPerSec * Boost * RateK * Step * (A == this ? 0.5f : 1.f));
+			if (HasAuthority()) { AntFighter::OnHealed(this, A, A->Health - Before); }
 		}
 	}
 }
@@ -601,6 +613,7 @@ void AAntCharacter::OnRep_BodyColor()
 		Tint = FMath::Lerp(FLinearColor::White, BodyColor / MaxC, 0.7f) * 1.3f;
 	}
 	Tint *= MessTint;   // a coat of jam or cream (AntMess.cpp)
+	Tint *= ShellTint;  // the shell colour the player picked (AntCosmetics.cpp)
 	for (UMaterialInstanceDynamic* M : ArtMIDs)
 	{
 		if (M) { M->SetVectorParameterValue(TEXT("Tint"), Tint); }
@@ -1049,12 +1062,19 @@ void AAntCharacter::TickTrail()
 	}
 }
 
+void AAntCharacter::SetTrailTint(const FLinearColor& C)
+{
+	if (TrailTint.Equals(C, 0.002f)) { return; }
+	TrailTint = C;
+	for (UStaticMeshComponent* D : TrailDots) { if (D) { AntKit::Paint(D, C); } }
+}
+
 void AAntCharacter::UpdateTrailDots()
 {
 	const int32 Want = bDead ? 0 : TrailPoints.Num();
 	while (TrailDots.Num() < Want)
 	{
-		UStaticMeshComponent* D = AntKit::AddPart(this, RootComponent, EAntShape::Sphere, FVector::ZeroVector, FVector(0.12f), FLinearColor(0.3f, 1.f, 0.35f));
+		UStaticMeshComponent* D = AntKit::AddPart(this, RootComponent, EAntShape::Sphere, FVector::ZeroVector, FVector(0.12f), TrailTint);   // the trail colour (AntCosmetics.cpp)
 		D->SetUsingAbsoluteLocation(true);
 		D->SetUsingAbsoluteRotation(true);
 		D->SetCastShadow(false);
@@ -1249,6 +1269,7 @@ void AAntCharacter::ApplyEnvironment(const FAntEnv& Env, float Dt)
 		E.Flags |= AntStatus::Staggered;
 	}
 	StatusFlags = E.Flags;
+	AntFighter::OnEnv(this, (StatusFlags & AntStatus::Drowning) != 0);   // «Утонул и выплыл» (AntFighter.h)
 
 	float Dps = E.Dps;
 	const TCHAR* Cause = *E.Cause;
@@ -2130,6 +2151,11 @@ float AAntCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEv
 		NoteBodyAct(AntAct::Flinch, GetActorLocation() - From, FMath::Min(1.f, DamageAmount / 40.f));
 		return 0.f;
 	}
+	if (AntFighter::VetDodge(this, DamageCauser, DamageAmount))
+	{
+		return 0.f;   // «ветеран тапка», «счастливчик» (AntFighter.h)
+	}
+	DamageAmount *= AntFighter::Mul(this, AntStat::DamageTaken);   // perks and the «Черепаха» doctrine
 	const float Actual = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 	if (Actual <= 0.f)
 	{
@@ -2264,6 +2290,10 @@ FString AAntCharacter::GetDisplayName() const
 	{
 		return PS->GetPlayerName();
 	}
+	if (!VetName.IsEmpty())
+	{
+		return VetName;   // a squad veteran (AntFighter.h)
+	}
 	return Creature == 1 ? TEXT("Муха") : Creature == 2 ? TEXT("Паук") : TEXT("Муравей");
 }
 
@@ -2316,6 +2346,7 @@ void AAntCharacter::UpdateSpeed()
 	float Mult = 1.f - 0.1f * NumLostLegs();   // every torn-off leg costs speed
 	if (!Carrying && Team == 0 && Creature == 0 && AntCard::Has(this, AntCard::Legs)) { Mult *= 1.15f; }
 	Mult *= AntSnowball::SpeedMul(this);
+	Mult *= AntFighter::SpeedMul(this);   // perks, a veteran's quirks, the squad's doctrine (AntFighter.h)
 	if (HasStatus(AntStatus::Sticky)) { Mult *= 0.35f; }
 	if (HasStatus(AntStatus::Wet)) { Mult *= 0.7f; }
 	if (Temperature < 8.f)
@@ -2830,6 +2861,7 @@ void AAntCharacter::SetNpcHold(USceneComponent* Comp, const FVector& LocalPoint)
 		if (HoldingAnt) { ReleaseAnt(false); }
 		if (HeldBy && IsValid(HeldBy)) { HeldBy->ReleaseAnt(false); }
 		if (Chain) { Chain->Leave(this); }
+		AntFighter::OnNpcHold(this, Comp->GetOwner());   // «Облизан Слюнявым Танком», «В лапе Тихой Лапы» (AntFighter.h)
 	}
 	NpcHold = Comp;
 	NpcHoldAt = LocalPoint;

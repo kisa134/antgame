@@ -26,6 +26,8 @@ public:
 	/** Level v3: the raid's quiet start (he is not after the ants yet): only his routine and his mess (the phone on the sofa...). */
 	bool bQuiet = false;
 	virtual void UpdateControlRotation(float DeltaTime, bool bUpdatePawn = true) override;
+	/** The ant he is after right now (the fighter's "distraction" feat, AntFighter.cpp). */
+	AAntCharacter* ChaseTarget() const { return Target.Get(); }
 
 private:
 	AAntCharacter* PickTarget(const AHumanCharacter* H) const;

@@ -51,6 +51,7 @@
 #include "AntCloth.h"
 #include "AntInside.h"
 #include "AntSnowball.h"
+#include "AntFighter.h"
 
 namespace
 {
@@ -1557,6 +1558,10 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 	{
 		return;   // the pets and the family: cat ..., dog ..., gran ..., kid ..., npclevel N (CritterBrain.cpp)
 	}
+	if (AntFighter::DevCommand(this, A))
+	{
+		return;   // fighter ..., vet ... (the profile, medals, cosmetics, squad veterans: AntFighter.cpp, AntVeterans.cpp)
+	}
 	if (AntMess::DevCommand(this, A))
 	{
 		return;   // mess stain|test|break|splat|burst|jamwalk|walk|dust|stir|clean|fill|hide|cost|profilegpu|info (AntMess.cpp); before NpcRoutine: its bare "mess" would swallow these
@@ -1662,7 +1667,7 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 			}
 		}
 	}
-	else if (Op == TEXT("caste") && Me) { Me->SetClass((EAntClass)FMath::Clamp((int32)Num(1), 0, 3), true); }
+	else if (Op == TEXT("caste") && Me) { Me->SetClass((EAntClass)FMath::Clamp((int32)Num(1), 0, 4), true); }
 	else if (Op == TEXT("bots") && Me)
 	{
 		// Brings N ally bots right next to the player (they help with a door when they stand at it with empty jaws).

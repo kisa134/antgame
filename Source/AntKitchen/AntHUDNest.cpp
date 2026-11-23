@@ -12,6 +12,8 @@
 #include "Engine/Engine.h"
 #include "Engine/Font.h"
 #include "InputCoreTypes.h"
+#include "AntFighter.h"
+#include "AntFighterUi.h"
 
 // The nest between raids: one screen, drawn on the Canvas, worked with the mouse (and [Enter]).
 // Left: what the last raid brought, the Queen and her orders, the brood. Middle: the six branches. Right: the next raid -
@@ -166,6 +168,7 @@ void AAntHUD::DrawNest(AAntRaid* Raid, AAntGameState* GS)
 	}
 	NestMouse = FVector2D(MX, MY);
 	NestTip.Reset();
+	if (AntFighterUi::IsOpen()) { bNestClick = false; }   // the fighter's screen lies over the nest (AntFighterUi.h)
 	auto Send = [&](uint8 Cmd, int32 A, int32 B) { if (PC) { PC->ServerRaid(Cmd, A, B); } };
 	auto Panel = [&](float X, float Y, float PW, float PH, const TCHAR* Title)
 	{
@@ -515,7 +518,7 @@ void AAntHUD::DrawNest(AAntRaid* Raid, AAntGameState* GS)
 			: bHost ? FString(TEXT("В РЕЙД  [Enter]")) : bReady ? FString(TEXT("ГОТОВ — ждём хоста")) : FString(TEXT("ГОТОВ  [Enter]"));
 		const bool bGo = NestBtn(Label, PX(1312.f), PY(912.f), 578.f * U, 104.f * U, true,
 			bHost ? TEXT("Начать рейд. С несколькими игроками: 3 с, если все готовы, иначе 20 с. Ещё раз — отменить") : TEXT("Отметить, что готов. Рейд начинает хост"), bReady && !bHost, 1.9f);
-		const bool bEnter = PC && PC->WasInputKeyJustPressed(EKeys::Enter);
+		const bool bEnter = PC && PC->WasInputKeyJustPressed(EKeys::Enter) && !AntFighterUi::IsOpen();
 		if (bGo || bEnter)
 		{
 			if (bHost) { Send(AntRaidCmd::Ready, 1, 0); Send(AntRaidCmd::Start, 0, 0); }

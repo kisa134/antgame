@@ -23,6 +23,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "UnrealClient.h"
 #include "Misc/Paths.h"
+#include "AntFighter.h"
 
 // =============================================================================================
 // Tuning (all in one place; -AntCarryK=, -AntCarryBrake= ... override for experiments)
@@ -784,6 +785,7 @@ void FAntCarrySolver::RunOver(AKitchenLoot* L, float Speed)
 			FAntCarryState& S = St(L);
 			if (S.Mates.Num() > 0) { S.NextBark = 0.f; SayBark(L, S, B_RunOver, 0, 1.2f); }
 			A->Toast(FString::Printf(TEXT("«%s» переехал тебя!"), *L->LootName));
+			AntFighter::OnRunOver(A);   // «Переехан своими» (AntFighter.h)
 		}
 	}
 }

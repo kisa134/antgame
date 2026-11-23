@@ -303,14 +303,15 @@ namespace AntUi
 		case 1: return TEXT("Portraits/T_UI_PorZhvalov");
 		case 2: return TEXT("Portraits/T_UI_PorUsik");
 		case 3: return TEXT("Portraits/T_UI_PorTikhon");
+		case 4: return TEXT("Portraits/T_UI_PorVintik");   // Сапёр Винтик (AntFighter.h)
 		default: return TEXT("Portraits/T_UI_PorGruzd");
 		}
 	}
 
 	const FString& CasteName(int32 Caste)
 	{
-		static const TCHAR* Keys[4] = { TEXT("caste.worker"), TEXT("caste.soldier"), TEXT("caste.scout"), TEXT("caste.barrel") };
-		return L(Keys[FMath::Clamp(Caste, 0, 3)]);
+		static const TCHAR* Keys[5] = { TEXT("caste.worker"), TEXT("caste.soldier"), TEXT("caste.scout"), TEXT("caste.barrel"), TEXT("caste.sapper") };
+		return L(Keys[FMath::Clamp(Caste, 0, 4)]);
 	}
 
 	const TCHAR* IconForLabel(const FString& Label)

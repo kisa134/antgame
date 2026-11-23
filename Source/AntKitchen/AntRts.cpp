@@ -29,6 +29,7 @@
 #include "Misc/Paths.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
+#include "AntFighter.h"
 
 namespace
 {
@@ -87,6 +88,7 @@ void AAntSquadBot::Tick(float DeltaSeconds)
 		Shoot(Ant, DeltaSeconds);
 		return;
 	}
+	AntVets::Tick(Ant, DeltaSeconds);   // a veteran's quirks of the moment: the coward and the cat (AntFighter.h)
 	ThinkTimer -= DeltaSeconds;
 	if (ThinkTimer <= 0.f)
 	{
@@ -135,10 +137,12 @@ void AAntSquadBot::ThinkRts(AAntCharacter* Ant, float Dt)
 	bCarryWithPlayer = false;
 	bHauling = false;
 	const int32 N = FMath::Max(1, P->Squad.Num());
-	auto Ring = [this, N](const FVector& C, float R0)
+	// The squad's doctrine (AntFighter.h): «Клин» close behind, «Рассыпной» spread wide, «Черепаха» huddled.
+	const float Spread = Ant->VetDoctrine == AntDoctrine::Loose ? 2.2f : Ant->VetDoctrine == AntDoctrine::Turtle ? 0.6f : Ant->VetDoctrine == AntDoctrine::Wedge ? 0.75f : 1.f;
+	auto Ring = [this, N, Spread](const FVector& C, float R0)
 	{
 		const float Ang = Slot * 2.39996f;
-		const float R = R0 + FMath::Sqrt((float)(Slot % N + 1)) * 26.f;
+		const float R = (R0 + FMath::Sqrt((float)(Slot % N + 1)) * 26.f) * Spread;
 		return C + FVector(FMath::Cos(Ang) * R, FMath::Sin(Ang) * R, 0.f);
 	};
 	auto Fight = [&](const FVector& Around, float Range) -> bool

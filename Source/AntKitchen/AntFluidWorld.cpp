@@ -36,6 +36,7 @@
 #include "HAL/PlatformTime.h"
 #include "Async/ParallelFor.h"
 #include "RHI.h"
+#include "AntFighter.h"
 
 using namespace AntFluid;
 
@@ -2026,6 +2027,7 @@ void UAntFluidWorld::TickGame(float Dt)
 		NpcRoutine::Say(W, NpcRoutine::Dad, Lines[FMath::RandRange(0, 2)]);
 		if (AKitchenFaucet* F = Faucet.Get()) { F->Alarm(); }
 		UE_LOG(LogTemp, Display, TEXT("ANTFLUID the floor floods (%.1f l): the Dad goes to shut the tap"), LitresIn(1));
+		AntFighter::OnFlood();   // «Водопроводчик» (AntFighter.h)
 	}
 
 	if (bDebug && GameClock >= DebugAt && GEngine)

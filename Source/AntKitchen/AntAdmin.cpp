@@ -46,6 +46,7 @@
 #include "Widgets/Text/STextBlock.h"
 #include "InputCoreTypes.h"
 #include "CanvasItem.h"
+#include "AntFighter.h"
 
 // =============================================================================================
 // The replicated state
@@ -1307,6 +1308,23 @@ void SAntAdminPanel::Rebuild()
 		Btn(TEXT("Еда +500"), R(TEXT("nest food 500")));
 		Btn(TEXT("Желе +100"), R(TEXT("nest jelly 100")));
 		Btn(TEXT("Личинки 10"), R(TEXT("nest larvae 10")));
+		Section(TEXT("Боец (мой профиль; «all» в команде — всем)"));
+		Btn(TEXT("Опыт +500"), R(TEXT("fighter xp 500")), On);
+		Btn(TEXT("Звание: Сержант"), R(TEXT("fighter rank 3")));
+		Btn(TEXT("Звание: Герой Щели"), R(TEXT("fighter rank 7")));
+		Btn(TEXT("Все медали и облик"), R(TEXT("fighter unlockall")), On);
+		Btn(TEXT("Медаль «Был чихнут»"), R(TEXT("fighter feat sneezed")));
+		Btn(TEXT("Сбросить профиль"), R(TEXT("fighter reset")), Danger);
+		Btn(TEXT("Профиль: инфо (в лог)"), R(TEXT("fighter info")));
+		Section(TEXT("Ветераны отряда (казарма хоста)"));
+		Btn(TEXT("+3 ветерана"), R(TEXT("vet add 3")), On);
+		Btn(TEXT("+1 опытный (старшина)"), R(TEXT("vet add 1 900")), On);
+		Btn(TEXT("Взять всех в мой отряд"), R(TEXT("vet autodraft")));
+		Btn(TEXT("Убить первого ветерана"), R(TEXT("vet kill 0 приказ сверху")), Danger);
+		Btn(TEXT("Вернуть последнего павшего"), R(TEXT("vet revive")), Blue);
+		Btn(TEXT("Ветераны к прицелу"), R(TEXT("vet near")));
+		Btn(TEXT("Список (в лог)"), R(TEXT("vet list")));
+		Btn(TEXT("Очистить казарму и стену"), R(TEXT("vet clear")), Danger);
 	}
 	else   // ---------------------------------------------------------------- screen
 	{

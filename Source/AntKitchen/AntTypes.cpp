@@ -270,7 +270,7 @@ float WeaponDps(const FAntWeapon& W)
 
 const FAntClassDef& ClassDef(EAntClass C)
 {
-	static FAntClassDef Defs[4];
+	static FAntClassDef Defs[5];
 	static bool bInit = false;
 	if (!bInit)
 	{
@@ -279,8 +279,9 @@ const FAntClassDef& ClassDef(EAntClass C)
 		Defs[1] = { TEXT("Солдат"), 20.f, 170.f, 0.85f, 560.f, 1.5f, 1.2f, 0.f, 0.f };
 		Defs[2] = { TEXT("Разведчик"), 7.f, 70.f, 1.35f, 950.f, 0.85f, 0.85f, 0.f, 0.f };
 		Defs[3] = { TEXT("Бочка"), 10.f, 110.f, 0.95f, 600.f, 0.8f, 1.05f, 300.f, 7.f };
+		Defs[4] = { TEXT("Сапёр"), 11.f, 95.f, 1.0f, 600.f, 0.9f, 0.95f, 0.f, 0.f };   // fasteners x1.5, cloth x1.5 (AntFighter.cpp)
 	}
-	return Defs[FMath::Clamp((int32)C, 0, 3)];
+	return Defs[FMath::Clamp((int32)C, 0, 4)];
 }
 
 FLinearColor TeamColor(uint8 Team, int32 Index)

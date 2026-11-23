@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
 #include "Engine/NetSerialization.h"
+#include "AntFighter.h"
 #include "AntPlayerController.generated.h"
 
 struct FAntToast
@@ -98,6 +99,14 @@ public:
 	UFUNCTION(Exec) void Grab();
 	UFUNCTION(Server, Reliable) void ServerGrab();
 	UFUNCTION(Server, Reliable) void ServerAddBot(int32 Team, int32 Count);
+
+	/** The fighter (AntFighter.h): this player's loadout from his profile; the server's word back (XP, a medal, admin); the draft. */
+	UFUNCTION(Server, Reliable) void ServerFighter(const FAntLoadout& L);
+	UFUNCTION(Client, Reliable) void ClientFighter(uint8 Kind, int32 A, int32 B, const FString& Text);
+	UFUNCTION(Server, Reliable) void ServerVeteran(uint8 Cmd, int32 A, int32 B);
+	/** [N] the emote picked in the profile (0: that one; else the item). */
+	UFUNCTION(Server, Reliable) void ServerEmote(uint8 Id);
+	void DoEmote();
 
 	/** Admin mode (AntAdmin.h): F10 shows / hides the panel (solo and the host only). */
 	void ToggleAdmin();

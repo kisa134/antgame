@@ -33,6 +33,7 @@
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "Net/UnrealNetwork.h"
+#include "AntFighter.h"
 
 float UAntInsideCamMod::Shake = 0.f;
 float UAntInsideCamMod::Blur = 0.f;
@@ -352,6 +353,7 @@ bool AAntInsideNet::Enter(AAntCharacter* Ant, AActor* Host, uint8 Def, bool bFor
 	const FString Hint = D.Spot == Pocket && S.Loot ? FString::Printf(TEXT(" Тут %s — вылезешь с ней!"), *FString(LootName(S.Loot)).ToLower()) : FString();
 	Ant->Toast(FString::Printf(TEXT("Ты %s у %s! [ЛКМ/ПКМ] кусать · [E] вылезти.%s"), D.Ru, WhoGen(D.Who), *Hint));
 	UE_LOG(LogTemp, Display, TEXT("ANTINSIDE %s enters the %s of %s (def %d, %d there now)%s"), *Ant->GetDisplayName(), D.Place, *Host->GetName(), Def, CountIn(Host, D.Spot), S.Loot ? *FString::Printf(TEXT(", finds loot %d"), S.Loot) : TEXT(""));
+	AntFighter::OnInside(Ant, D.Spot == Ear ? 1 : 0, 0);   // XP, «Побывал в ухе» (AntFighter.h)
 	return true;
 }
 
@@ -402,7 +404,12 @@ void AAntInsideNet::Exit(int32 i, uint8 Mode, const FVector& Vel, float Damage, 
 			if (Mode == 0) { A->GrabLoot(L); }
 			A->Toast(FString::Printf(TEXT("Украл из кармана: %s!"), *D.Name));
 			UE_LOG(LogTemp, Display, TEXT("ANTINSIDE %s steals %s out of the pocket (%s)"), *A->GetDisplayName(), *D.Name, Mode == 0 ? TEXT("in the jaws") : TEXT("it falls out with him"));
+			AntFighter::OnInside(A, 0, 1);   // «Украл из кармана Гиганта»
 		}
+	}
+	if (Why && FCString::Strcmp(Why, TEXT("чих")) == 0)
+	{
+		AntFighter::OnInside(A, 0, 2);   // «Был чихнут» (AntFighter.h)
 	}
 	if (Mode == 1)
 	{
@@ -494,7 +501,7 @@ void AAntInsideNet::ServerSlot(int32 i, float Now)
 	}
 	const AntInside::FSpotDef& D = AntInside::Defs()[S.Def];
 	AHumanCharacter* H = Cast<AHumanCharacter>(Host);
-	const float T = Now - S.Since;
+	const float T = (Now - S.Since) / FMath::Max(0.2f, AntFighter::Mul(A, AntStat::InsideTime));   // «Ушной агент», «Ухогрыз»: they notice later (AntFighter.h)
 	if (S.ReactAt > 0.f && Now >= S.ReactAt)
 	{
 		React(i, Now);
@@ -718,6 +725,7 @@ void AAntInsideNet::OnBite(int32 i)
 	AntAudio::Everyone(this, EAntSfx::Bite, A->GetActorLocation(), 1.f);
 	AntAudio::Excite(this, 0.25f, A->GetActorLocation());
 	UE_LOG(LogTemp, Display, TEXT("ANTINSIDE %s bites the %s of %s from inside (bite %d)"), *A->GetDisplayName(), D.Place, *Host->GetName(), S.Bites);
+	if (D.Spot == Bun) { AntFighter::OnInside(A, 0, 3); }   // «Довёл бабушку до вязания» (AntFighter.h)
 	switch (D.Spot)
 	{
 	case Ear:

@@ -48,6 +48,7 @@ enum class EAntClass : uint8
 	Soldier,    // Солдат: tanky, hits hard
 	Scout,      // Разведчик: fast, jumps high, weak
 	Nurse,      // Бочка: heals nearby allies
+	Sapper,     // Сапёр: fasteners, cloth, the inside of people (docs/FIGHTER.md)
 };
 
 struct FAntClassDef
