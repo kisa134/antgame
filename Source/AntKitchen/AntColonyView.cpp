@@ -256,7 +256,7 @@ namespace
 	FVector2D In(const AntColony::FChamberDef& D, float FX, float FY) { return FVector2D(D.X + (FX - 0.5f) * D.W, D.Y + (FY - 0.5f) * D.H); }
 
 	/** A worker ant seen from the side, walking along Dir. Everything procedural: three body blobs, three legs that step, antennae. */
-	void DrawAnt(UCanvas* Cv, const FView& V, const FVector2D& At, FVector2D Dir, float Size, float Phase, int8 Carry, const FLinearColor& Body = FLinearColor(0.045f, 0.022f, 0.012f, 1.f))
+	void DrawAnt(UCanvas* Cv, const FView& V, const FVector2D& At, FVector2D Dir, float Size, float Phase, int8 Carry, const FLinearColor& Body = FLinearColor(0.045f, 0.022f, 0.012f, 1.f), float LoadK = 1.f)
 	{
 		const float L = 15.f * Size * V.U;   // body length in pixels
 		if (L < 2.5f) { return; }
@@ -283,12 +283,12 @@ namespace
 		Dot(Cv, Abd, 0.25f * L, Body);
 		Dot(Cv, Tho, 0.15f * L, Body);
 		Dot(Cv, Head, 0.18f * L, Body);
-		Dot(Cv, Abd - Side * 0.08f * L - Dir * 0.04f * L, 0.09f * L, FLinearColor(0.55f, 0.32f, 0.16f, 0.55f));   // the shine
+		if (L > 14.f) { Dot(Cv, Abd - Side * 0.08f * L - Dir * 0.04f * L, 0.09f * L, FLinearColor(0.4f, 0.22f, 0.1f, 0.45f)); }   // the shine
 		const float W1 = FMath::Sin(Phase * 1.3f) * 0.08f * L;
 		Line(Cv, Head + Dir * 0.08f * L, Head + Dir * 0.3f * L - Side * (0.28f * L + W1), Th * 0.8f, Leg);
 		if (Carry >= 0)
 		{
-			Dot(Cv, Head + Dir * 0.22f * L - Side * 0.32f * L, 0.2f * L, KindColor(Carry));
+			{ FLinearColor LC = KindColor(Carry) * LoadK; LC.A = 1.f; Dot(Cv, Head + Dir * 0.22f * L - Side * 0.32f * L, 0.2f * L, LC); }
 		}
 	}
 
@@ -829,11 +829,28 @@ namespace
 		}
 	}
 
-	void DrawAnts(UCanvas* Cv, const FView& V)
+	/** A tunnel that climbs (more up than across): its ants walk behind the chamber pictures, so they never cross the Queen or the stores. */
+	bool IsShaft(int32 E)
+	{
+		const FVector2D A = NodePos(Edges[E].A), B = NodePos(Edges[E].B);
+		return FMath::Abs(B.Y - A.Y) > FMath::Abs(B.X - A.X);
+	}
+
+	/** bShafts: the ants of the climbing tunnels (drawn before the chambers, small, dark, no load); otherwise the rest. */
+	void DrawAnts(UCanvas* Cv, const FView& V, bool bShafts)
 	{
 		for (const FWalker& A : St().Ants)
 		{
-			if (A.Delay > 0.f) { continue; }
+			if (A.Delay > 0.f || IsShaft(A.Edge) != bShafts) { continue; }
+			if (bShafts)
+			{
+				FVector2D P[4];
+				EdgePath(A.Edge, P);
+				FVector2D Dir;
+				const FVector2D At = PathAt(P, A.bBack ? 1.f - A.T : A.T, &Dir);
+				DrawAnt(Cv, V, At, A.bBack ? -Dir : Dir, A.Size * 0.78f, A.Phase, A.bShow ? A.Carry : -1, FLinearColor(0.03f, 0.014f, 0.008f, 1.f), 0.6f);   // the show's carriers keep a muted load
+				continue;
+			}
 			FVector2D P[4];
 			EdgePath(A.Edge, P);
 			FVector2D Dir;
@@ -1335,7 +1352,7 @@ namespace
 			if (AntColony::IsDug(N, d)) { continue; }
 			FVector2D P[4];
 			EdgePath(DigEdge[d], P);
-			const FVector2D Mid = V.S((P[1] + P[2]) * 0.5f);
+			FVector2D Mid = V.S((P[1] + P[2]) * 0.5f);
 			int32 F, J;
 			AntColony::DigCost(N, F, J);
 			const FString L1 = FString::Printf(TEXT("КОПАТЬ: %s"), AntColony::Dig(d).Toward);
@@ -1343,6 +1360,7 @@ namespace
 			const float Pt = FMath::Clamp(11.f * V.U, 9.f, 18.f);
 			const FVector2D M = AntUiCanvas::TextSize(Cv, L1, EFont::Bold, Pt);
 			const float TW = M.X + 20.f, TH = M.Y * 2.3f + 10.f;
+			Mid.X = FMath::Clamp(Mid.X, TW * 0.5f + 8.f, V.W - TW * 0.5f - 8.f);
 			const bool bHot = bMouseFree && Hot(Mid.X - TW * 0.5f, Mid.Y - TH * 0.5f, TW, TH);
 			const float Flash = St().FlashDig == d && St().ShowT >= 0.f ? Pulse(7.f) : 0.f;
 			AntUiCanvas::Rect(Cv, Mid.X - TW * 0.5f + 3.f, Mid.Y - TH * 0.5f + 4.f, TW, TH, FLinearColor(0.f, 0.f, 0.f, 0.4f));
@@ -1535,6 +1553,7 @@ void Draw(AHUD* Hud, UCanvas* Cv, AAntRaid* Raid, AAntGameState* GS, AAntPlayerC
 	TickAnts(N, Dt);
 	DrawBackground(Cv, V, N);
 	DrawTunnels(Cv, V, N, -1);
+	DrawAnts(Cv, V, true);   // the shafts: behind the chambers
 	for (uint8 c = 0; c < AntColony::Count; ++c)
 	{
 		const float Flash = (bShowing && S.FlashChamber == c && CurrentStage() && CurrentStage()->Kind == Stage::Build) ? Pulse(7.f) : 0.f;
@@ -1542,7 +1561,7 @@ void Draw(AHUD* Hud, UCanvas* Cv, AAntRaid* Raid, AAntGameState* GS, AAntPlayerC
 	}
 	for (uint8 c = 0; c < AntColony::Count; ++c) { DrawContents(Cv, V, N, Raid, c); }
 	DrawQueen(Cv, V, N, bShowing ? S.ShowR : Raid->Result);
-	DrawAnts(Cv, V);
+	DrawAnts(Cv, V, false);
 	for (uint8 c = 0; c < AntColony::Count; ++c) { DrawLabel(Cv, V, N, c, HoverC == c || S.Open == c, bHost && AntColony::CanUpgrade(N, c)); }
 	const int32 HotDig = DrawDigTags(Cv, V, N, Fs, !bOverUi);
 	DrawMotes(Cv, V, Dt);
