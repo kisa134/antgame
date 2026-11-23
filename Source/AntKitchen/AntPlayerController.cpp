@@ -31,6 +31,7 @@
 #include "GameFramework/HUD.h"
 #include "AntSnowball.h"
 #include "AntRts.h"
+#include "AntFighter.h"
 
 void AAntPlayerController::BeginPlay()
 {
@@ -308,6 +309,7 @@ void AAntPlayerController::SetupInputComponent()
 	InputComponent->BindKey(EKeys::B, IE_Pressed, this, &AAntPlayerController::SquadHold);
 	InputComponent->BindKey(EKeys::Five, IE_Pressed, this, &AAntPlayerController::UseTool0);
 	InputComponent->BindKey(EKeys::Six, IE_Pressed, this, &AAntPlayerController::UseTool1);
+	InputComponent->BindKey(EKeys::N, IE_Pressed, this, &AAntPlayerController::DoEmote);   // the emote (AntFighter.h)
 	// The card vote, for players without an ant right now (the ant routes its own 1-3 keys here while a vote is on).
 	InputComponent->BindKey(EKeys::One, IE_Pressed, this, &AAntPlayerController::Vote1);
 	InputComponent->BindKey(EKeys::Two, IE_Pressed, this, &AAntPlayerController::Vote2);

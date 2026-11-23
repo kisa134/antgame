@@ -33,6 +33,7 @@
 #include "TimerManager.h"
 #include "AntSnowball.h"
 #include "AntRts.h"
+#include "AntFighter.h"
 
 namespace GMColors
 {
@@ -1036,6 +1037,7 @@ void AAntKitchenGameMode::OnFoodDelivered(uint8 Team, AKitchenLoot* Food, const 
 		AController* BodyOwner = Food->BodyOf.Get();
 		const FString Name = Food->LootName.Replace(TEXT("Тело: "), TEXT(""));
 		if (bRaid && Raid) { Raid->OnBodyHome(BodyOwner, Name, Carriers); }
+		AntFighter::OnBodyHome(BodyOwner, Carriers);   // rescues (AntFighter.h)
 		for (AAntCharacter* A : Carriers)
 		{
 			if (AAntPlayerState* PS = A ? A->GetPlayerState<AAntPlayerState>() : nullptr) { PS->BodiesHome++; }
@@ -1090,6 +1092,7 @@ void AAntKitchenGameMode::OnFoodDelivered(uint8 Team, AKitchenLoot* Food, const 
 	{
 		Raid->OnDelivered(Team, Food, Carriers, Value);   // the tier's price, the cake, what the Queen thinks of it
 		if (Team == 0) { AntSnowball::OnDelivered(this, Food, Carriers, Value); }   // the in-raid snowball's mass (AntSnowball.h)
+		if (Team == 0) { AntFighter::OnDelivered(Food, Carriers, Value); }   // each carrier's share, the cake (AntFighter.h)
 	}
 	if (Team == 0)
 	{
@@ -1131,6 +1134,7 @@ void AAntKitchenGameMode::OnAntKilled(AAntCharacter* Ant, AController* Killer, A
 	{
 		return;
 	}
+	AntFighter::OnAntKilled(Ant, Killer, Causer);   // kills, deaths, a veteran to the wall (AntFighter.h)
 	if (AntRts::OnSquadBotKilled(Ant))
 	{
 		return;   // a squad ant of the snowball raid: gone for good, no respawn, no kill feed line (AntRts.cpp)

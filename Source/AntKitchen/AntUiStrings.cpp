@@ -69,6 +69,7 @@ namespace
 		{ TEXT("caste.soldier"), TEXT("Солдат"), TEXT("Soldier") },
 		{ TEXT("caste.scout"), TEXT("Разведчик"), TEXT("Scout") },
 		{ TEXT("caste.barrel"), TEXT("Бочка"), TEXT("Barrel") },
+		{ TEXT("caste.sapper"), TEXT("Сапёр"), TEXT("Sapper") },
 		// ---- lobby
 		{ TEXT("lobby.title"), TEXT("СБОР ОТРЯДА"), TEXT("SQUAD MUSTER") },
 		{ TEXT("lobby.solo"), TEXT("Одиночная игра"), TEXT("Solo game") },

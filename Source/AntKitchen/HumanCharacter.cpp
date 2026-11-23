@@ -39,6 +39,7 @@
 #include "NpcRoutine.h"
 #include "Misc/ScopeExit.h"
 #include "AntInside.h"
+#include "AntFighter.h"
 
 namespace HumanLook
 {
@@ -1032,6 +1033,7 @@ void AHumanCharacter::DoStompImpact()
 				Ant->Toast(TEXT("Ударная волна выбила груз!"));
 			}
 			UE_LOG(LogTemp, Display, TEXT("ANTSHOCK %s thrown by the stomp shockwave (%.0f from the slipper)"), *Ant->GetDisplayName(), D2);
+			AntFighter::OnStompNear(Ant, false);   // «Пережил Розовую Плиту» (AntFighter.h)
 		}
 	}
 }

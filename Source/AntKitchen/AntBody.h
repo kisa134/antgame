@@ -203,6 +203,8 @@ public:
 	FString Describe() const;
 	FVector HeadLocation() const;
 	bool Snapshot(FAntBodySnapshot& Out) const;
+	/** A rigid piece: 0 thorax, 1 head, 2 jaw, 3 petiole, 4 gaster (cosmetics hang on them, AntCosmetics.cpp). */
+	UStaticMeshComponent* GetPiece(int32 Which) const { return Which == 0 ? Thorax : Which == 1 ? Head : Which == 2 ? Jaw : Which == 3 ? Petiole : Which == 4 ? Gaster : nullptr; }
 
 	/** Dev: hold the pose (contact sheets). */
 	bool bDevFreeze = false;

@@ -99,3 +99,19 @@ FPS (`stat fps`), статистика кадра (`stat unit`), скрыть/п
 - Дёрнуть скатерть (`cloth yank tablecloth 0 -1 60 3`: невидимая бригада 60 тянет край к −Y 3 с), 6 муравьёв тянут скатерть (`cloth crew tablecloth 6 0 -1 10`: 6 ботов встают у кромки и держат [E] 10 с), порвать у прицела (`cloth tear x y z 6`: ряд из 6 вырезанных клеток у ближайшей ткани).
 - Ветер вкл / выкл / из окна (`cloth wind 1|0|-1`), намочить скатерть (`cloth wet tablecloth 1`), сорвать штору (`cloth drop curtain`), стянуть плед (`cloth yank plaid 0 1 40 2`), сбросить ткань (`cloth reset` — всё заново по уровню), инфо и цена в лог (`cloth info`; `cloth cost` — цена каждые 2 с).
 - Ещё: `cloth <вид> …` — вид `tablecloth|long|curtain|curtain1..3|plaid|fort|sheet|N`; `cloth wake|rest`, `cloth bite x y z`, `cloth cam <вид> yaw дист высота [fov]`, `cloth shot имя` (Saved/Screenshots/cloth).
+
+## Боец и ветераны (вкладка «Рейд», `docs/FEATURES.md` раздел 35, `docs/FIGHTER.md`)
+
+**«Боец»** (по умолчанию — свой профиль хоста; последним словом можно дать имя игрока или `all`)
+- Опыт +500 (`fighter xp 500 [кто]`), звание Сержант / Герой Щели (`fighter rank 3|7 [кто]`), все медали и облик (`fighter unlockall [кто]`),
+  медаль «Был чихнут» (`fighter feat sneezed [кто]`; любая медаль по ключу или номеру — `fighter feat slipper`), сбросить профиль (`fighter reset [кто]`),
+  инфо в лог (`fighter info`).
+- Ещё: `fighter perk <каста 0-4> <ярус 0-2> <0|1|2> [кто]`, `fighter cosm <слот 0-9> <предмет> [кто]`, `fighter caste <0-4> [кто]`, `fighter emote <1-4> [кто]`,
+  `fighter screen <0 закрыть|1 профиль|2 казарма> [вкладка 0-3] [кто]`, `fighter mul [кто]` (все множители перков и итоговые сила/скорость/здоровье — в лог),
+  `fighter stomp [hit]` (как будто тапок упал рядом), `fighter summary` (сводка рейда сейчас), `fighter hl` (итоги и стена памяти в лог).
+
+**«Ветераны отряда»** (казарма хоста)
+- +3 ветерана (`vet add 3`; `vet add N опыт биты-причуд`), +1 опытный (`vet add 1 900` — старшина), взять всех в мой отряд (`vet autodraft [кто]`),
+  убить первого (`vet kill first [причина]` — вышедшего в рейд убивает в квартире, иначе сразу на стену; `vet kill <id|имя> [причина]`),
+  вернуть последнего павшего (`vet revive [имя]`), ветераны к прицелу (`vet near`), список в лог (`vet list`), очистить казарму и стену (`vet clear`).
+- Ещё: `vet draft <id|имя> [кто]`, `vet undraft <id|имя>`, `vet doctrine <0-3> [кто]`, `vet xp <id|имя> N`, `vet spawn` (выпустить записанных сейчас).

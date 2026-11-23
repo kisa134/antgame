@@ -294,6 +294,31 @@ public:
 	FString LastHazard;
 	float LastHazardTime = -100.f;
 
+	// ---- The fighter (AntFighter.h): a squad veteran's name, rank and quirks; the emote; the cosmetic tints ----
+	/** "Ефрейтор Изюм": a squad veteran (empty: none). Shown over him on aim. */
+	UPROPERTY(Replicated) FString VetName;
+	UPROPERTY(Replicated) uint8 VetRank = 0;
+	/** AntTrait bits. */
+	UPROPERTY(Replicated) uint8 VetTraits = 0;
+	/** AntDoctrine of his squad. */
+	UPROPERTY(Replicated) uint8 VetDoctrine = 0;
+	/** The emote playing (AntCosm emote item) and the server time it started. */
+	UPROPERTY(Replicated) uint8 Emote = 0;
+	UPROPERTY(Replicated) float EmoteAt = -100.f;
+	/** Server: the roster id of the veteran this squad ant is (-1: none). */
+	int32 VetId = -1;
+	bool bFighterLuckUsed = false;
+	bool bFighterWasDrowning = false;
+	float FighterChased = 0.f;
+	bool Has(int32 Trait) const { return (VetTraits & (1 << Trait)) != 0; }
+	/** Perks and quirks changed: max health, jump, speed again. */
+	void RefreshStats() { ApplyClassStats(); UpdateSpeed(); }
+	/** Cosmetics (AntCosmetics.cpp): the shell colour on top of the colony's, the colour of his own pheromone trail. Local. */
+	FLinearColor ShellTint = FLinearColor::White;
+	FLinearColor TrailTint = FLinearColor(0.3f, 1.f, 0.35f);
+	void RefreshBodyColor() { OnRep_BodyColor(); }
+	void SetTrailTint(const FLinearColor& C);
+
 protected:
 	virtual void MoveForward(float Value);
 	virtual void MoveRight(float Value);

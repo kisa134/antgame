@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerState.h"
 #include "AntTypes.h"
+#include "AntFighter.h"
 #include "AntPlayerState.generated.h"
 
 UCLASS()
@@ -32,6 +33,8 @@ public:
 	UPROPERTY(Replicated) bool bNestReady = false;
 	/** Inside a nest entrance right now (the leaving countdown counts these). */
 	UPROPERTY(Replicated) bool bHome = true;
+	/** The fighter (AntFighter.h): rank, XP, perks, medals, cosmetics. Sent by his own machine from the local profile. */
+	UPROPERTY(Replicated) FAntLoadout Loadout;
 
 	// Server only: what this ant did this shift, for the awards at the end of it.
 	int32 Squashed = 0;       // flattened by the slipper or a paw

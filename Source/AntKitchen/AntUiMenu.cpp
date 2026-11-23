@@ -202,7 +202,7 @@ namespace
 		UFunction* Fn = Ant ? Ant->FindFunction(TEXT("ServerSetClass")) : nullptr;
 		if (Fn)
 		{
-			struct { uint8 NewClass; } Params{ (uint8)FMath::Clamp(Caste, 0, 3) };
+			struct { uint8 NewClass; } Params{ (uint8)FMath::Clamp(Caste, 0, 4) };
 			Ant->ProcessEvent(Fn, &Params);
 		}
 	}
@@ -1047,14 +1047,14 @@ void SAntUiMenu::PaintLobby(FUiDraw& D) const
 		const int32 Caste = Me ? (int32)Me->AntClass : 0;
 		const int32 Id = AddItem(DC, TEXT("l.caste"), RX + 20.f, 228.f, 460.f, 64.f, Me != nullptr, [WPC, Caste]()
 		{
-			SetCaste(WPC.Get(), (Caste + 1) % 4);
+			SetCaste(WPC.Get(), (Caste + 1) % 5);
 		}, [WPC, Caste](int32 Dir)
 		{
-			SetCaste(WPC.Get(), (Caste + Dir + 4) % 4);
+			SetCaste(WPC.Get(), (Caste + Dir + 5) % 5);
 		});
 		const float K = Ease(Anim(Id));
 		DC.RRect(RX + 20.f, 228.f, 460.f, 64.f, 8.f, FMath::Lerp(WithA(C::Cocoa, 0.6f), WithA(C::Cocoa, 1.f), K));
-		DC.Box(RX + 28.f, 232.f, 56.f, 56.f, IconBrush(Caste == 1 ? TEXT("Soldier") : Caste == 2 ? TEXT("Scout") : Caste == 3 ? TEXT("Barrel") : TEXT("Forager")), FLinearColor::White);
+		DC.Box(RX + 28.f, 232.f, 56.f, 56.f, IconBrush(Caste == 1 ? TEXT("Soldier") : Caste == 2 ? TEXT("Scout") : Caste == 3 ? TEXT("Barrel") : Caste == 4 ? TEXT("Wrench") : TEXT("Forager")), FLinearColor::White);
 		DC.Text(TEXT("‹"), RX + 100.f, 236.f, EFont::Display, 28.f, WithA(C::Amber, 0.5f + 0.5f * K));
 		DC.Text(CasteName(Caste), RX + 270.f, 244.f, EFont::Bold, 24.f, FMath::Lerp(C::Sugar, C::Honey, K), 1);
 		DC.Text(TEXT("›"), RX + 450.f, 236.f, EFont::Display, 28.f, WithA(C::Amber, 0.5f + 0.5f * K));

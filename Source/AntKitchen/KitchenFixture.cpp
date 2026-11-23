@@ -26,6 +26,7 @@
 #include "NpcRoutine.h"
 #include "AntCloth.h"
 #include "AntInside.h"
+#include "AntFighter.h"
 
 // =============================================================================================
 // The held work: [E] together, strength sums (AKitchenInteractable's door rule), progress over time.
@@ -87,7 +88,8 @@ bool AKitchenHeld::TryOpenByPull()
 	}
 	PullMissing = 0;
 	// Seconds at exactly Need; more strength, faster (at most three times); loose: twice as fast.
-	const float Rate = FMath::Min(3.f, Have / FMath::Max(1.f, Need)) * (bLoose ? 2.f : 1.f) / FMath::Max(0.2f, Seconds);
+	const float Rate = FMath::Min(3.f, Have / FMath::Max(1.f, Need)) * (bLoose ? 2.f : 1.f) / FMath::Max(0.2f, Seconds)
+		* AntFighter::HeldMul(First, this);   // the Sapper caste and its perks (AntFighter.h)
 	Progress = FMath::Min(1.f, Progress + Rate * Dt);
 	if (Progress >= 1.f)
 	{
@@ -296,6 +298,7 @@ void AKitchenFastener::OnDone()
 	OffAt = GetWorld()->GetGameState() ? GetWorld()->GetGameState()->GetServerWorldTimeSeconds() : GetWorld()->GetTimeSeconds();
 	const TConstArrayView<FLevelV3FastenerDef> All = LevelV3::Fasteners();
 	UE_LOG(LogTemp, Display, TEXT("ANTFIX fastener %s off (%s) by %s"), All.IsValidIndex(Def) ? All[Def].Id : TEXT("?"), *DoorNoun(), DoneBy.IsValid() ? *DoneBy->GetDisplayName() : TEXT("-"));
+	AntFighter::OnFastener(DoneBy.Get());   // XP and «Отвёрточник» (AntFighter.h)
 	if (AAntKitchenGameMode* GM = GMOf(GetWorld()))
 	{
 		GM->MakeNoise(GetActorLocation(), 0.15f, AntNoise::Crash, this, DoneBy.Get());
@@ -583,6 +586,7 @@ void AKitchenFixture::OnDone()
 		Dir = FVector(0.f, -1.f, 0.f);   // the tray slides out of the front of the toaster and on over the worktop's edge
 	}
 	UE_LOG(LogTemp, Display, TEXT("ANTFIX %s: work done by %s"), *Id, By ? *By->GetDisplayName() : TEXT("-"));
+	AntFighter::OnFixtureWork(Id, By);   // XP, «Сорвал скатерть» (AntFighter.h)
 	if (Id == TEXT("gift") || Id == TEXT("trolley") || Id == TEXT("toybox"))
 	{
 		OpenLid();

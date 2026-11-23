@@ -34,6 +34,7 @@
 #include "NpcRoutine.h"
 #include "AntSnowball.h"
 #include "AntColony.h"
+#include "AntFighter.h"
 
 namespace
 {
@@ -572,6 +573,7 @@ void AAntRaid::StartSquads()
 	{
 		// The snowball raid: everybody goes out alone; squads and workers come from the picks (AntSnowball.h).
 		AntSnowball::OnRaidStart(this);
+		AntFighter::OnRaidStart(this);   // the tally; drafted veterans join their squads (AntFighter.h)
 		SpawnGuards();
 		SaveNest();
 		return;
@@ -852,6 +854,7 @@ void AAntRaid::RaidSecond()
 	const uint8 Stage = Left <= 30.f ? 3 : Left <= T.Final ? 2 : Gone >= Quiet ? 1 : 0;
 	GM->RunTick();   // greed, the event, who is shut in the fridge, what the Human is up to
 	AntSnowball::RaidSecond(this);   // picks, squad tasks, the timeline
+	AntFighter::RaidSecond(this);   // cake seconds, the Giant's chase, doctrines, the flood (AntFighter.h)
 	if (S->Phase != 0 || !InRaid())
 	{
 		return;
@@ -1160,6 +1163,7 @@ void AAntRaid::EndRaid(uint8 How)
 		return;
 	}
 	Phase = AntRaidPhase::Results;   // first: what follows may kill ants, and their deaths must not end the raid again
+	AntFighter::OnRaidEnding(this, How);   // which squad ants (veterans) are alive, before they go (AntFighter.h)
 	AntSnowball::OnRaidEnd(this);   // squad ants and trails go; the story gets each player's snowball
 	int32 Home = 0;
 	FString Away;
@@ -1322,6 +1326,7 @@ void AAntRaid::BuildResult(uint8 How)
 		RaidNo, (int32)How, R.Banked, R.Kept, R.Ask, R.Jelly, (int32)R.Cake, R.Deaths, R.ContractsDone, R.ContractsTaken, Variety.Num(), R.MoodBefore, R.MoodAfter, R.LarvaeLeft, R.LarvaeLaid,
 		R.WorkersHatched, R.QueenAte, R.NewTier);
 	SaveNest();
+	// The meta bus (AntMetaBus.h): ColonyAfterRaid above fires OnRaidSummary exactly once (v14: the fighter's fallback fire is gone).
 }
 
 void AAntRaid::PhaseSecond()
