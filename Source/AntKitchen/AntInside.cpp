@@ -1681,3 +1681,27 @@ bool AntInside::DevCommand(AAntKitchenGameMode* GM, const TArray<FString>& A)
 	}
 	return true;
 }
+
+void AAntInsideNet::ForceSneeze(AActor* Host)
+{
+	UWorld* W = GetWorld();
+	if (!Host || !HasAuthority()) { return; }
+	const FVector Fwd = HeadFwd(Host);
+	StartFx(Host, AntInsideFx::Sneeze, 0.9f);
+	StartFx(Host, AntInsideFx::EyesWater, 4.5f);
+	SayFor(W, Host, TEXT("А-а-а… АПЧХИ!"));
+	AntAudio::Everyone(this, EAntSfx::Sneeze, Host->GetActorLocation() + FVector(0.f, 0.f, 500.f), 1.f);
+	if (AAntKitchenGameMode* GM = GMOf(W)) { GM->MakeNoise(Host->GetActorLocation(), 0.7f, AntNoise::Scream, Host, nullptr); }
+	if (AHumanCharacter* H = Cast<AHumanCharacter>(Host))
+	{
+		Unseat(H);
+		H->Jolt(-Fwd, 1.f, 1);
+	}
+	int32 N = 0;
+	const FVector Vel = Fwd * 2300.f + FVector(0.f, 0.f, 1200.f);
+	for (int32 k = Slots.Num() - 1; k >= 0; --k)
+	{
+		if (Slots[k].Host == Host && AntInside::Defs().IsValidIndex(Slots[k].Def) && AntInside::Defs()[Slots[k].Def].Spot == AntInsideSpot::Nose) { Exit(k, 1, Vel, 0.f, TEXT("чих от перца")); ++N; }
+	}
+	UE_LOG(LogTemp, Display, TEXT("ANTINSIDE %s SNEEZES (pepper): %d ants shot out of the nose"), *Host->GetName(), N);
+}

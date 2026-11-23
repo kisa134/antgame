@@ -264,6 +264,8 @@ public:
 	virtual void AffectAnt(AAntCharacter* Ant, FAntEnv& Env) const override;
 
 	UPROPERTY(Replicated) bool bArmed = false;
+	/** Server: armed without an ant (the chain C13, dev). */
+	void ForceArm();
 
 	static FBox Slots();
 

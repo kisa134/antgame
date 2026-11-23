@@ -1,4 +1,5 @@
 ﻿#include "HumanAIController.h"
+#include "AntReact.h"
 #include "AntWeapon.h"
 #include "AntSquad.h"
 #include "HumanCharacter.h"
@@ -55,6 +56,10 @@ AAntCharacter* AHumanAIController::PickTarget(const AHumanCharacter* H) const
 	const FVector Me = H->GetActorLocation();
 	const FVector Eyes = Me + FVector(0.f, 0.f, H->GetSimpleCollisionHalfHeight() * 0.8f);
 	const bool bDark = !AKitchenSwitch::AreLightsOn(GetWorld());
+	if (AntReact::IsBlind(H))
+	{
+		return nullptr;   // flour in his eyes (AntReact.h): he sees nothing for a while
+	}
 	for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
 	{
 		AAntCharacter* Ant = *It;
@@ -82,7 +87,9 @@ AAntCharacter* AHumanAIController::PickTarget(const AHumanCharacter* H) const
 			continue;
 		}
 		float Score = FVector::Dist2D(Me, AL);
-		if (bDark && Score > (Ant->IsCarrying() ? 3200.f : 2200.f) * Notice)
+		const bool bWhite = AntReact::IsFloured(Ant);   // white with flour: seen from further, and in the dark too
+		if (bWhite) { Score -= 1800.f; }
+		if (bDark && !bWhite && Score > (Ant->IsCarrying() ? 3200.f : 2200.f) * Notice)
 		{
 			continue;   // lights are off: only notices ants close by
 		}
@@ -375,7 +382,11 @@ void AHumanAIController::Tick(float DeltaSeconds)
 	const float TargetDist = T ? (float)FVector::Dist2D(T->GetActorLocation(), MyLoc) : 1.e9f;
 	const bool bHotChase = T && T->IsCarrying() && TargetDist < 2600.f;
 	bool bBusy = false;
-	if (GM && !bHotChase)
+	// on his way to the breaker in the dark (AntReact.h): noises can wait
+	const NpcRoutine::FMess* GoingTo = ReactStage > 0 && ReactMess >= 0 ? NpcRoutine::GetMess(ReactMess) : nullptr;
+	const bool bToBreaker = GoingTo && GoingTo->Kind == NpcRoutine::Power && !GoingTo->bDone;
+	if (bToBreaker) { bInvestigating = false; }
+	if (GM && !bHotChase && !bToBreaker)
 	{
 		if (!bInvestigating && GM->BestNoise(MyLoc, Noise))
 		{
@@ -1003,6 +1014,16 @@ bool AHumanAIController::TickReact(AHumanCharacter* H, float Dt)
 		EndReact(!M || M->bDone ? TEXT("someone cleaned it") : TEXT("gave up"));
 		return false;
 	}
+	if (ReactStage > 0 && M && M->Kind != Power)
+	{
+		// the lights went out (AntReact.h): the breaker comes before any mop
+		FMess* P = FindJob(W, Dad, Me, 1.e9f);
+		if (P && P->Kind == Power && P->Id != M->Id)
+		{
+			EndReact(TEXT("the lights went out"));
+			return false;
+		}
+	}
 	auto SetStage = [&](uint8 Stage)
 	{
 		ReactStage = Stage;
@@ -1036,11 +1057,11 @@ bool AHumanAIController::TickReact(AHumanCharacter* H, float Dt)
 			return true;
 		}
 		FMess* J = FindJob(W, Dad, Me, 14000.f);
-		if (J && (J->bSeen[Dad] || Now - J->Time < 120.f))   // seen, or heard come down in the last two minutes: he knows
+		if (J && (J->bSeen[Dad] || Now - J->Time < 120.f || J->Kind == Power))   // seen, or heard come down in the last two minutes: he knows (a blackout: everybody knows)
 		{
 			M = J;
 			ReactMess = J->Id;
-			ReactGiveUp = Now + 75.f;
+			ReactGiveUp = Now + (J->Kind == Power ? 170.f : 75.f);   // the breaker is a long walk away
 			Claim(J->Id, Dad);
 			BreakRoutine(H, TEXT("a job"));
 			ReactMess = J->Id;
@@ -1109,7 +1130,14 @@ bool AHumanAIController::TickReact(AHumanCharacter* H, float Dt)
 		{
 			return true;
 		}
-		if (M->Kind == Fallen || M->Kind == Drawing)
+		if (M->Kind == Power || M->Kind == Pickup)
+		{
+			// the breaker box up on the hall wall / the peas all over the floor (AntReact.h)
+			const AActor* Src = M->Src.Get();
+			if (M->Kind == Power) { H->PlayBusy(HumanBusy::Fix, Src ? Src->GetActorLocation() : Loc + FVector(0.f, 0.f, 2600.f)); ReactAt = Now + 5.f; }
+			else { H->PlayBusy(HumanBusy::Rummage, Loc); ReactAt = Now + 7.f; }
+		}
+		else if (M->Kind == Fallen || M->Kind == Drawing)
 		{
 			const AActor* Src = M->Src.Get();
 			H->PlayBusy(HumanBusy::Fix, Src ? Src->GetActorLocation() + FVector(0.f, 0.f, 300.f) : Loc);

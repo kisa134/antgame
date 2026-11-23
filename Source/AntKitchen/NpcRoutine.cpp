@@ -15,6 +15,7 @@
 #include "EngineUtils.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
+#include "AntReact.h"
 
 namespace NpcRoutine
 {
@@ -312,7 +313,7 @@ void SetHallDoor(UWorld* W, float Open)
 
 const TCHAR* MessName(uint8 Kind)
 {
-	static const TCHAR* const N[] = { TEXT("spill"), TEXT("shards"), TEXT("fallen"), TEXT("yarn"), TEXT("drawing") };
+	static const TCHAR* const N[] = { TEXT("spill"), TEXT("shards"), TEXT("fallen"), TEXT("yarn"), TEXT("drawing"), TEXT("power"), TEXT("pickup") };
 	return Kind < NumMess ? N[Kind] : TEXT("?");
 }
 
@@ -355,7 +356,7 @@ bool IsJob(const UWorld* W, uint8 Who, const FMess& M)
 	{
 	case Gran: return M.Kind == Spill || M.Kind == Shards || M.Kind == Yarn;
 	case Kid: return M.Kind == Drawing;
-	case Dad: return M.Kind == Fallen || ((M.Kind == Spill || M.Kind == Shards) && (!bGran || Now - M.Time > 60.f)) || (M.Kind == Drawing && !bKid);
+	case Dad: return M.Kind == Fallen || M.Kind == Power || M.Kind == Pickup || ((M.Kind == Spill || M.Kind == Shards) && (!bGran || Now - M.Time > 60.f)) || (M.Kind == Drawing && !bKid);
 	default: return false;
 	}
 }
@@ -370,7 +371,7 @@ FMess* FindJob(const UWorld* W, uint8 Who, const FVector& From, float Range)
 		{
 			continue;
 		}
-		const float D = (float)FVector::Dist2D(From, M.Loc);
+		const float D = M.Kind == Power ? 0.f : (float)FVector::Dist2D(From, M.Loc);   // the breaker: wherever he is, he goes
 		if (D < BestD)
 		{
 			BestD = D;
@@ -412,6 +413,10 @@ void Finish(UWorld* W, int32 Id, uint8 Who)
 	{
 		S->StartWipe(1.f);
 	}
+	else
+	{
+		AntReact::OnTidied(W, M->Src.Get(), M->Kind, Who);   // the chains' mess (AntReact.h): the breaker, the peas, the flour, the vase...
+	}
 	// A broken jar is two jobs (the shards and the jam): one clean-up does both.
 	for (FMess& O : GMess)
 	{
@@ -438,6 +443,15 @@ FString Mutter(uint8 Who, uint8 Kind, int32 Salt)
 		{ TEXT("Кто ж мне вязание распустил..."), TEXT("Петли спустились, ох..."), TEXT("Сейчас смотаю.") },
 		{ TEXT("Рисуночек упал."), TEXT("Сейчас повешу, внучек."), TEXT("Ох, сквозняк.") },
 	};
+	if (Kind == Power || Kind == Pickup)
+	{
+		static const TCHAR* const P[2][2][3] =
+		{
+			{ { TEXT("Пробки выбило... Где фонарик?"), TEXT("Опять автомат вышибло!"), TEXT("Сейчас, сейчас, к щитку...") }, { TEXT("Ой, темно-то как..."), TEXT("Свет отключили?"), TEXT("Сынок, свет!") } },
+			{ { TEXT("Горох по всему полу!"), TEXT("Кто рассыпал горох?!"), TEXT("Сейчас соберу...") }, { TEXT("Горошек рассыпали..."), TEXT("Ох, горошинки..."), TEXT("Не наступите на горох!") } },
+		};
+		return P[Kind == Power ? 0 : 1][Who == Gran ? 1 : 0][FMath::Abs(Salt) % 3];
+	}
 	static const TCHAR* const KidLines[3] = { TEXT("Мой рисунок!"), TEXT("Эй! Это мой Бадрик!"), TEXT("Папа, рисунок упал!") };
 	const int32 k = FMath::Abs(Salt) % 3;
 	const uint8 Kd = FMath::Min<uint8>(Kind, NumMess - 1);
@@ -458,6 +472,7 @@ FVector ToolFor(uint8 Who, uint8 Kind, FString& OutName)
 	}
 	if (Kind == Spill) { OutName = TEXT("полотенце"); const FVector T = Art(TEXT("SM_K_Towel"), FVector(-750.f, 2853.f, 0.f)); return FVector(T.X, FMath::Min((float)T.Y, 3000.f) - 550.f, 0.f); }
 	if (Kind == Shards) { OutName = TEXT("совок и веник"); const FVector T = Art(TEXT("SM_K_Dustpan"), FVector(-6250.f, -700.f, 0.f)); return FVector(T.X + 650.f, T.Y, 0.f); }
+	if (Kind == Power || Kind == Pickup) { OutName = Kind == Power ? TEXT("фонарик (в кармане)") : TEXT("руки"); return FVector::ZeroVector; }
 	if (Kind == Fallen) { OutName = TEXT("отвёртку"); return FVector(2200.f, 2400.f, 0.f); }   // the top drawer by the fridge
 	OutName = TEXT("скотч");
 	return FVector(2200.f, 2400.f, 0.f);

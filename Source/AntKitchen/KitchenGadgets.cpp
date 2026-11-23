@@ -15,6 +15,7 @@
 #include "Net/UnrealNetwork.h"
 #include "EngineUtils.h"
 #include "Engine/World.h"
+#include "AntReact.h"
 
 namespace
 {
@@ -65,7 +66,7 @@ bool AKitchenKnob::IsBurnerOn(UWorld* World)
 {
 	for (TActorIterator<AKitchenKnob> It(World); It; ++It)
 	{
-		if (It->bOn) { return true; }
+		if (It->bOn && AntReact::HasPower(World)) { return true; }   // an electric stove: no power, no heat (AntReact.h)
 	}
 	return false;
 }
@@ -167,7 +168,7 @@ void AKitchenKnob::Tick(float Dt)
 	Anim += Dt;
 	if (HasAuthority())
 	{
-		Boil = FMath::Clamp(Boil + (bOn ? Dt / 25.f : -Dt / 12.f), 0.f, 1.f);
+		Boil = FMath::Clamp(Boil + ((bOn && AntReact::HasPower(this)) ? Dt / 25.f : -Dt / 12.f), 0.f, 1.f);
 	}
 	if (Knob && bKnobArt)
 	{

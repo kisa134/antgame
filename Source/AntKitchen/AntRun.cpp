@@ -45,6 +45,7 @@
 #include "KitchenSlick.h"
 #include "AntFilm.h"
 #include "AntMess.h"
+#include "AntReact.h"
 #include "Engine/OverlapResult.h"
 #include "NpcRoutine.h"
 #include "AntCarry.h"
@@ -1568,6 +1569,10 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 	if (AntSnowball::DevCommand(this, A))
 	{
 		return;   // snow ..., trail ..., rts ..., perf ..., squad+ ... (AntSnowball.cpp)
+	}
+	if (AntReact::DevCommand(this, A))
+	{
+		return;   // materials and chain reactions 2.0: chain C7..C22 | mat info|list|dump | react ... | power ... | heat ... (AntReact.cpp, before the raid: its "chain" knows only C1..C6)
 	}
 	if (Raid && Raid->DevCommand(A))
 	{

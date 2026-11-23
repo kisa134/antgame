@@ -89,6 +89,8 @@ public:
 	/** The Human (a player in versus) swats at himself: [F]. True if somebody was inside him. */
 	bool SelfSwat(class AHumanCharacter* H);
 	int32 SlotOf(const AAntCharacter* Ant) const;
+	/** Server: Host sneezes now (pepper in the air, AntReact.h): the sneeze of the nose, with whatever is in the nose shot out. */
+	void ForceSneeze(AActor* Host);
 	int32 CountIn(const AActor* Host, uint8 Spot) const;
 	float NetNow() const;
 

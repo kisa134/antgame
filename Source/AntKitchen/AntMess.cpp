@@ -69,18 +69,21 @@ namespace
 		/* Drag      */ { FLinearColor(0.5f, 0.4f, 0.3f), FLinearColor(0.55f, 0.45f, 0.35f), 0.70f, 0.8f, 0.f, 0.01f, 0.08f, 0.5f, 0.2f, 0.f, false },
 		/* Juice     */ { FLinearColor(0.55f, 0.45f, 0.15f), FLinearColor(0.75f, 0.70f, 0.40f), 0.04f, 0.40f, 0.1f, 0.02f, 0.06f, 0.6f, 0.28f, 150.f, false },
 		/* Sugar     */ { FLinearColor(0.97f, 0.97f, 0.97f), FLinearColor(0.95f, 0.95f, 0.95f), 0.30f, 0.30f, 0.f, 0.12f, 0.02f, 1.f, 1.f, 0.f, false },
+		/* Flour     */ { FLinearColor(0.95f, 0.94f, 0.90f), FLinearColor(0.92f, 0.91f, 0.87f), 0.90f, 0.95f, 0.f, 0.05f, 0.18f, 0.95f, 0.55f, 0.f, false },
+		/* Pepper    */ { FLinearColor(0.16f, 0.12f, 0.08f), FLinearColor(0.30f, 0.24f, 0.17f), 0.85f, 0.90f, 0.f, 0.04f, 0.10f, 0.9f, 0.5f, 0.f, false },
 	};
 
 	const FKindLook& Look(uint8 K) { return GKinds[FMath::Min<int32>(K, MessKind::Count - 1)]; }
 
 	// How runny a splat is: 1 a thin liquid (a spiky crown, drops thrown far), 0 a thick one (round lobes, a few fat drops).
-	const float GSpike[MessKind::Count] = { 0.25f, 0.12f, 1.f, 0.8f, 0.08f, 1.f, 0.5f, 1.f, 0.3f, 1.f, 1.f, 1.f, 0.9f, 1.f };
+	const float GSpike[MessKind::Count] = { 0.25f, 0.12f, 1.f, 0.8f, 0.08f, 1.f, 0.5f, 1.f, 0.3f, 1.f, 1.f, 1.f, 0.9f, 1.f, 1.f, 1.f };
 
 	uint8 DefaultShape(uint8 Kind)
 	{
 		switch (Kind)
 		{
-		case MessKind::Crumbs: case MessKind::Sugar: return MessShape::Crumbs;
+		case MessKind::Crumbs: case MessKind::Sugar: case MessKind::Pepper: return MessShape::Crumbs;
+		case MessKind::Flour: return MessShape::Pool;
 		case MessKind::Scratch: return MessShape::Scratch;
 		case MessKind::Print: return MessShape::Print;
 		case MessKind::Drag: return MessShape::Smear;
@@ -676,7 +679,7 @@ uint8 AAntMess::StainUnder(const FVector& P, float Margin, FLinearColor* OutColo
 	for (int32 i = Decals.Num() - 1; i >= 0; --i)
 	{
 		const FDecal& D = Decals[i];
-		if (D.Id < 0 || D.FadeOut >= 0.f || (!IsSticky(D.Kind) && D.Kind != MessKind::Mud && D.Kind != MessKind::Water && D.Kind != MessKind::Crumbs && D.Kind != MessKind::Sugar))
+		if (D.Id < 0 || D.FadeOut >= 0.f || (!IsSticky(D.Kind) && D.Kind != MessKind::Mud && D.Kind != MessKind::Water && D.Kind != MessKind::Crumbs && D.Kind != MessKind::Sugar && D.Kind != MessKind::Flour && D.Kind != MessKind::Pepper))
 		{
 			continue;
 		}
@@ -1218,7 +1221,7 @@ void AAntMess::TickAnts(float Dt)
 		if (K != 255)
 		{
 			const bool bCoat = K == MessKind::Jam || K == MessKind::Honey || K == MessKind::Cream || K == MessKind::Chocolate;
-			DirtyAnt(A, K, K == MessKind::Crumbs || K == MessKind::Sugar ? Col * 1.1f : Col, K == MessKind::Water ? 0.5f : 1.f, bCoat ? 0.35f : 0.f);
+			DirtyAnt(A, K, K == MessKind::Crumbs || K == MessKind::Sugar || K == MessKind::Flour ? Col * 1.1f : Col, K == MessKind::Water ? 0.5f : 1.f, bCoat ? 0.35f : 0.f);
 		}
 	}
 	for (int32 i = Dirt.Num() - 1; i >= 0; --i)
@@ -1247,7 +1250,7 @@ void AAntMess::TickAnts(float Dt)
 			const float Sd = (D.Step++ % 2) ? 1.f : -1.f;
 			const float Yaw = FMath::RadiansToDegrees(FMath::Atan2(Fw.Y, Fw.X));
 			const FKindLook& L = Look(D.FeetKind);
-			const bool bDry = D.FeetKind == MessKind::Crumbs || D.FeetKind == MessKind::Sugar || D.FeetKind == MessKind::Mud;
+			const bool bDry = D.FeetKind == MessKind::Crumbs || D.FeetKind == MessKind::Sugar || D.FeetKind == MessKind::Mud || D.FeetKind == MessKind::Flour || D.FeetKind == MessKind::Pepper;
 			const float Dot = Len * (bDry ? 0.06f : 0.075f) * (0.6f + 0.4f * D.Feet);
 			const FVector Feet[3] = { G + Fw * Len * 0.32f + Rt * Sd * Len * 0.34f, G - Rt * Sd * Len * 0.4f, G - Fw * Len * 0.34f + Rt * Sd * Len * 0.36f };
 			for (const FVector& F0 : Feet)
@@ -1521,7 +1524,7 @@ namespace
 {
 	uint8 KindByName(const FString& S)
 	{
-		static const TCHAR* Names[MessKind::Count] = { TEXT("jam"), TEXT("honey"), TEXT("cola"), TEXT("oil"), TEXT("cream"), TEXT("crumbs"), TEXT("mud"), TEXT("water"), TEXT("choc"), TEXT("scratch"), TEXT("print"), TEXT("drag"), TEXT("juice"), TEXT("sugar") };
+		static const TCHAR* Names[MessKind::Count] = { TEXT("jam"), TEXT("honey"), TEXT("cola"), TEXT("oil"), TEXT("cream"), TEXT("crumbs"), TEXT("mud"), TEXT("water"), TEXT("choc"), TEXT("scratch"), TEXT("print"), TEXT("drag"), TEXT("juice"), TEXT("sugar"), TEXT("flour"), TEXT("pepper") };
 		for (int32 i = 0; i < MessKind::Count; ++i) { if (S.Equals(Names[i], ESearchCase::IgnoreCase)) { return (uint8)i; } }
 		return S.IsNumeric() ? (uint8)FMath::Clamp(FCString::Atoi(*S), 0, MessKind::Count - 1) : (uint8)MessKind::Jam;
 	}
