@@ -1216,6 +1216,28 @@ void SAntAdminPanel::Rebuild()
 		Btn(TEXT("Вечер"), R(TEXT("routine evening")));
 		Btn(TEXT("Ночь"), R(TEXT("routine night")));
 		Btn(TEXT("Как в сиде"), R(TEXT("tod -1")));
+		Section(TEXT("ТВ (гостиная; муравьи жмут кнопки пульта на журнальном столике)"));
+		Btn(TEXT("ТВ вкл"), R(TEXT("tv on")), On);
+		Btn(TEXT("ТВ выкл"), R(TEXT("tv off")));
+		Btn(TEXT("ТВ: по распорядку"), R(TEXT("tv auto")));
+		Btn(TEXT("Следующий канал"), R(TEXT("tv next")), Blue);
+		{
+			static const TCHAR* Ch[][2] = { { TEXT("0"), TEXT("Мультик") }, { TEXT("1"), TEXT("Природа") }, { TEXT("2"), TEXT("Новости") }, { TEXT("3"), TEXT("Футбол") }, { TEXT("4"), TEXT("Реклама") },
+				{ TEXT("5"), TEXT("Кулинария") }, { TEXT("6"), TEXT("Детский") }, { TEXT("7"), TEXT("Птицы") }, { TEXT("8"), TEXT("Нет сигнала") } };
+			for (const auto& C : Ch) { Btn(C[1], R(FString(TEXT("tv ch ")) + C[0])); }
+		}
+		for (const TCHAR* V : { TEXT("2"), TEXT("5"), TEXT("10") }) { Btn(FString(TEXT("Громкость ")) + V, R(FString(TEXT("tv vol ")) + V)); }
+		Btn(TEXT("ТВ: инфо (в лог)"), R(TEXT("tv info")));
+		Section(TEXT("Жизнь квартиры"));
+		Btn(TEXT("Робот-пылесос"), R(TEXT("life vacuum")), Danger);
+		Btn(TEXT("Пылесос стоп"), R(TEXT("life vacuum stop")));
+		Btn(TEXT("Посудомойка"), R(TEXT("life wash")));
+		Btn(TEXT("Дождь"), R(TEXT("life weather 1")), Blue);
+		Btn(TEXT("Снег"), R(TEXT("life weather 2")), Blue);
+		Btn(TEXT("Ясно"), R(TEXT("life weather 0")));
+		Btn(TEXT("Погода по сиду"), R(TEXT("life weather auto")));
+		Btn(TEXT("Голубь: когда (в лог)"), R(TEXT("life pigeon")));
+		Btn(TEXT("Жизнь: инфо (в лог)"), R(TEXT("life info")));
 		Section(TEXT("Уровень"));
 		Btn(TEXT("Новый сид + перезапуск"), R(TEXT("restart")), Danger);
 		Btn(TEXT("Перезапуск уровня"), R(TEXT("restart")), Danger);
