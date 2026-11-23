@@ -25,6 +25,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
 #include "EngineUtils.h"
+#include "AntReact.h"
 #include "Engine/World.h"
 
 namespace InteractColors
@@ -983,6 +984,10 @@ void AKitchenSwitch::OnRep_Lights()
 
 bool AKitchenSwitch::AreLightsOn(const UWorld* World)
 {
+	if (!AntReact::HasPower(World))
+	{
+		return false;   // the breaker tripped (AntReact.h): every lamp is out whatever the switch says
+	}
 	for (TActorIterator<AKitchenSwitch> It(World); It; ++It)
 	{
 		return It->bLightsOn;
@@ -1128,6 +1133,12 @@ bool AKitchenToaster::CanInteract(const AAntCharacter* Ant) const
 	return !bArmed && (!HasAuthority() || Now() >= ReadyAt);
 }
 
+void AKitchenToaster::ForceArm()
+{
+	bArmed = true;
+	PopAt = Now() + 1.8f;
+}
+
 FString AKitchenToaster::GetPrompt(const AAntCharacter* Ant) const
 {
 	return TEXT("Нажать рычаг тостера (катапульта!)");
@@ -1137,6 +1148,11 @@ void AKitchenToaster::Interact(AAntCharacter* Ant)
 {
 	if (!CanInteract(Ant))
 	{
+		return;
+	}
+	if (!AntReact::HasPower(this))
+	{
+		Ant->Toast(TEXT("Тостер без света не работает: выбило пробки"));
 		return;
 	}
 	bArmed = true;
@@ -1175,6 +1191,7 @@ void AKitchenToaster::Pop()
 	bArmed = false;
 	ReadyAt = Now() + 6.f;
 	MulticastPop();
+	AntReact::OnToasterPop(this);   // C13: wound right down by three ants, the toast flies across the kitchen (AntReact.h)
 	AntSfx::Everyone(this, AntSfx::Toaster, FVector(-6000.f, 4200.f, 1900.f), 1.f);
 	if (AAntKitchenGameMode* NoiseGM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
 	{

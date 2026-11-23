@@ -39,6 +39,7 @@
 #include "AntInside.h"
 #include "AntFighter.h"
 #include "AntFighterUi.h"
+#include "AntReact.h"
 
 namespace
 {
@@ -271,6 +272,7 @@ void AAntHUD::DrawHUD()
 	AntAdmin::DrawHud(this, Canvas, PC);   // the АДМИН badge, "show everyone" (AntAdmin.h)
 	AntFighterUi::DrawRaid(this, Canvas, PC);   // medal toasts; the profile's own tick (AntFighterUi.h)
 	AntInside::DrawHud(this, Canvas, PlayerOwner);   // inside a resident: the place, the keys, the warning; the Human's hints (AntInside.h)
+	AntReact::DrawHud(this, Canvas, PlayerOwner);    // flour in the eyes, a powder cloud round the camera, the blackout line (AntReact.h)
 	DrawFeed(GS);
 	DrawToastsAndNumbers(PC);
 	DrawHelp(Me);

@@ -37,6 +37,8 @@ enum class EAntSfx : uint8
 	AmbFridge, AmbClock, AmbDrip, AmbDay, AmbEvening, AmbNight,
 	// ---- inside people (AntInside.h)
 	Sneeze, EarSlap, PocketRustle, Heartbeat,
+	// ---- materials and chain reactions (AntReact.h)
+	PowerDown, PowerUp, BreakerClick, MicroBeep, FlourWhoosh, SlingTwang, StaticCrackle, IceClink,
 	Count
 };
 

@@ -35,7 +35,7 @@ class AAntKitchenGameMode;
 
 namespace MessKind
 {
-	enum : uint8 { Jam, Honey, Cola, Oil, Cream, Crumbs, Mud, Water, Chocolate, Scratch, Print, Drag, Juice, Sugar, Count };
+	enum : uint8 { Jam, Honey, Cola, Oil, Cream, Crumbs, Mud, Water, Chocolate, Scratch, Print, Drag, Juice, Sugar, Flour, Pepper, Count };   // Flour, Pepper: the powders of AntReact
 }
 
 namespace MessShape

@@ -115,3 +115,12 @@ FPS (`stat fps`), статистика кадра (`stat unit`), скрыть/п
   убить первого (`vet kill first [причина]` — вышедшего в рейд убивает в квартире, иначе сразу на стену; `vet kill <id|имя> [причина]`),
   вернуть последнего павшего (`vet revive [имя]`), ветераны к прицелу (`vet near`), список в лог (`vet list`), очистить казарму и стену (`vet clear`).
 - Ещё: `vet draft <id|имя> [кто]`, `vet undraft <id|имя>`, `vet doctrine <0-3> [кто]`, `vet xp <id|имя> N`, `vet spawn` (выпустить записанных сейчас).
+## Материалы и цепные реакции (`docs/MATERIALS.md`, `docs/FEATURES.md` раздел 37)
+
+**Вкладка Мир → «Реакции: материалы и цепочки 2.0»**
+- Кнопка на каждую цепочку C7–C22 (`chain C7` … `chain C22`): перечница, мука, лёд → КЗ, рогатка, горох, шоколад на батарее, тостер → тост → перец, книги-домино, микроволновка, посудомойка → КЗ, робот-пылесос, ментос → страйк, губка → тарелка, шарик → потолок, сахар → муха, провод → КЗ. Каждая стартует с первого шага, дальше — настоящие системы.
+- У прицела: облако перца (`rx cloud pepper x y z 900`), облако муки (`rx cloud flour x y z 1100`), 8 кубиков льда (`rx ice x y z 8`), 20 горошин (`rx peas x y z 20`), шоколадка (`rx choc x y z`), сахар (`rx sugar x y z`).
+- Свет: короткое замыкание у удлинителя (`power short`), выбить пробки (`power off`), включить (`power on`).
+- Жар: все источники горячие / всё холодное / как в игре (`heat on|off|auto`).
+- Папа ослеп на 5 с (`rx blind`), папа чихает (`rx sneeze dad`), материал у прицела (`mat info`: всё о предмете и о том, из чего он), сбросить предметы (`rx reset`), инфо и цена в лог (`rx info`, `rx cost`).
+- Командная строка, ещё: `mat list|get <имя>|at x y z dx dy dz|dump [config]|reload`, `power unplug|info`, `rx sneeze gran|kid|dog|cat`, `rx prop <вид> force|reset|level K`, `rx tp <вид>`, `rx bots N x y z`, `rx dad|walk|free|dogto|noise …`, `rx cam …|camcat|camdog|camdad|camoff|shot <имя>|quit`. Лог — `ANTREACT`, `ANTCHAIN`, `ANTMAT`.

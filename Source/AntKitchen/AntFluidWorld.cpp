@@ -37,6 +37,7 @@
 #include "Async/ParallelFor.h"
 #include "RHI.h"
 #include "AntFighter.h"
+#include "AntReact.h"
 
 using namespace AntFluid;
 
@@ -822,10 +823,8 @@ namespace
 		if (const AKitchenLoot* L = Cast<AKitchenLoot>(A))
 		{
 			// by what it is: sugar, cheese, grapes, coins, jam go down; crumbs, bread, cereal, chips, crackers ride on top
-			static const TCHAR* Heavy[] = { TEXT("сахар"), TEXT("сыр"), TEXT("виноград"), TEXT("монет"), TEXT("варень"), TEXT("мёд"), TEXT("мед"), TEXT("конфет"), TEXT("шоколад"), TEXT("орех"), TEXT("мяс"), TEXT("колбас") };
-			const FString N = L->LootName.ToLower();
-			for (const TCHAR* H : Heavy) { if (N.Contains(H)) { return 0.6f; } }
-			return 1.5f;
+			// the material table (AntMaterials.cpp, Config/AntMaterials.json): density decides
+			return AntMaterials::FloatOf(L->LootName);
 		}
 		return 1.2f;
 	}

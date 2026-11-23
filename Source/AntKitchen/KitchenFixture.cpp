@@ -27,6 +27,7 @@
 #include "AntCloth.h"
 #include "AntInside.h"
 #include "AntFighter.h"
+#include "AntReact.h"
 
 // =============================================================================================
 // The held work: [E] together, strength sums (AKitchenInteractable's door rule), progress over time.
@@ -1350,6 +1351,7 @@ void AKitchenFixture::ResetAll(UWorld* World)
 	AntInside::ResetAll(World);  // nobody inside anybody, the entry points on the residents again (AntInside.h)
 	AntWeapons::SpawnAll(World);   // and the Human's weapons lie in their places again (AntWeapon.h)
 	UAntFluidWorld::ResetAll(World);   // the flat is dry again, the tap shut (AntFluidWorld.h)
+	AntReact::ResetAll(World);   // power on, no clouds, the reactive objects of the chains C7..C22 in their places (AntReact.h)
 	if (!World || !LevelV3::Enabled() || !LevelV3::FixturesOn())
 	{
 		return;

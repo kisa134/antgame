@@ -38,6 +38,7 @@
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "InputCoreTypes.h"
+#include "AntReact.h"
 
 // ============================================================================ settings (console variables, saved in GameUserSettings.ini [AntAudio])
 static TAutoConsoleVariable<float> CVarMaster(TEXT("ant.Audio.Master"), 1.f, TEXT("Master volume 0..1"));
@@ -178,6 +179,15 @@ namespace
 		D(EarSlap,     "A_EarSlap*2",                     1.0f, 0.06f, AttHuge,   KSfx, 2, 0.30f, Count, 0.f, 0.3f),
 		D(PocketRustle,"A_PocketRustle*2",                0.9f, 0.08f, AttMedium, KSfx, 2, 0.40f, Count, 0.f, 0.f),
 		D(Heartbeat,   "A_Heartbeat*1",                   0.8f, 0.02f, Att2D,     KSfx, 1, 0.30f, Count, 0.f, 0.f),
+		// ---- materials and chain reactions (AntReact.h; made by Tools/chains/make_chain_sfx.py)
+		D(PowerDown,   "A_PowerDown*1",                   1.0f, 0.02f, AttHuge,   KSfx, 1, 1.00f, Count, 0.f, 0.5f),
+		D(PowerUp,     "A_PowerUp*1",                     0.8f, 0.02f, AttHuge,   KSfx, 1, 1.00f, Count, 0.f, 0.f),
+		D(BreakerClick,"A_BreakerClick*2",                1.0f, 0.05f, AttLarge,  KSfx, 2, 0.20f, Count, 0.f, 0.f),
+		D(MicroBeep,   "A_MicroBeep*1",                   0.9f, 0.00f, AttHuge,   KSfx, 1, 0.25f, Count, 0.f, 0.f),
+		D(FlourWhoosh, "A_FlourWhoosh*2",                 1.0f, 0.06f, AttLarge,  KSfx, 2, 0.30f, Count, 0.f, 0.3f),
+		D(SlingTwang,  "A_SlingTwang*2",                  1.0f, 0.08f, AttLarge,  KSfx, 2, 0.20f, Count, 0.f, 0.2f),
+		D(StaticCrackle,"A_StaticCrackle*2",              0.8f, 0.10f, AttMedium, KSfx, 3, 0.10f, Count, 0.f, 0.f),
+		D(IceClink,    "A_IceClink*2",                    0.9f, 0.08f, AttMedium, KSfx, 2, 0.10f, Count, 0.f, 0.f),
 	};
 #undef D
 	static_assert(UE_ARRAY_COUNT(Table) == (int32)EAntSfx::Count, "one AntAudio table row per EAntSfx, in order");
@@ -196,7 +206,8 @@ namespace
 		TEXT("SlipperSlap"), TEXT("HumanGrumble"), TEXT("HumanRoar"), TEXT("HumanSlip"), TEXT("BatWhoosh"), TEXT("BatImpact"), TEXT("HumanPickup"), TEXT("HumanSniff"),
 		TEXT("CatPurr"), TEXT("CatHiss"), TEXT("CatPounce"), TEXT("DogSnort"), TEXT("DogBark"), TEXT("DogSniff"), TEXT("DogEat"), TEXT("Broom"), TEXT("KidGiggle"), TEXT("KidShout"),
 		TEXT("SpiderSkitter"), TEXT("AmbFridge"), TEXT("AmbClock"), TEXT("AmbDrip"), TEXT("AmbDay"), TEXT("AmbEvening"), TEXT("AmbNight"),
-		TEXT("Sneeze"), TEXT("EarSlap"), TEXT("PocketRustle"), TEXT("Heartbeat") };
+		TEXT("Sneeze"), TEXT("EarSlap"), TEXT("PocketRustle"), TEXT("Heartbeat"),
+		TEXT("PowerDown"), TEXT("PowerUp"), TEXT("BreakerClick"), TEXT("MicroBeep"), TEXT("FlourWhoosh"), TEXT("SlingTwang"), TEXT("StaticCrackle"), TEXT("IceClink") };
 	static_assert(UE_ARRAY_COUNT(Names) == (int32)EAntSfx::Count, "one name per EAntSfx");
 
 	/** "A_Name*N S_Old" -> package paths (no probing for files that may not exist: a packaged build logs every miss). */
@@ -1253,7 +1264,7 @@ void UAntAudioSubsystem::TickAmbience(float Dt)
 	}
 	if (FridgeHum)
 	{
-		FridgeHum->SetVolumeMultiplier(FMath::Max(0.0001f, Table[(int32)EAntSfx::AmbFridge].Vol * Amb * (bNest ? 0.3f : 1.f)));
+		FridgeHum->SetVolumeMultiplier(FMath::Max(0.0001f, Table[(int32)EAntSfx::AmbFridge].Vol * Amb * (bNest ? 0.3f : 1.f) * (AntReact::HasPower(this) ? 1.f : 0.f)));   // the breaker tripped: the fridge falls silent (AntReact.h)
 	}
 	if (ClockTick)
 	{

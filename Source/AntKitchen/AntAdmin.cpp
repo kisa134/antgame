@@ -1251,6 +1251,30 @@ void SAntAdminPanel::Rebuild()
 			{ TEXT("C4"), TEXT("Кола → лужа") }, { TEXT("C5"), TEXT("Шарик") }, { TEXT("C6"), TEXT("Спица → шарф") } };
 		for (const auto& C : Chains) { Btn(C[1], R(FString(TEXT("chain ")) + C[0]), Danger); }
 		Btn(TEXT("Всё сразу (хаос)"), R(TEXT("state chaos")), Danger);
+		Section(TEXT("Реакции: материалы и цепочки 2.0 (docs/MATERIALS.md)"));
+		static const TCHAR* Chains2[][2] = { { TEXT("C7"), TEXT("C7 Перечница → чих") }, { TEXT("C8"), TEXT("C8 Мука → белая мгла") }, { TEXT("C9"), TEXT("C9 Лёд → лужа → КЗ") },
+			{ TEXT("C10"), TEXT("C10 Рогатка → на стол") }, { TEXT("C11"), TEXT("C11 Горох → папа падает") }, { TEXT("C12"), TEXT("C12 Шоколад на батарее") },
+			{ TEXT("C13"), TEXT("C13 Тостер → тост → перец") }, { TEXT("C14"), TEXT("C14 Книги-домино → ваза") }, { TEXT("C15"), TEXT("C15 Микроволновка пищит") },
+			{ TEXT("C16"), TEXT("C16 Посудомойка → вода → КЗ") }, { TEXT("C17"), TEXT("C17 Робот-пылесос") }, { TEXT("C18"), TEXT("C18 Ментос → страйк") },
+			{ TEXT("C19"), TEXT("C19 Губка → тарелка") }, { TEXT("C20"), TEXT("C20 Шарик → потолок") }, { TEXT("C21"), TEXT("C21 Сахар → муха") }, { TEXT("C22"), TEXT("C22 Провод → КЗ") } };
+		for (const auto& C : Chains2) { Btn(C[1], R(FString(TEXT("chain ")) + C[0]), Danger); }
+		Btn(TEXT("Облако перца у прицела"), [this]() { Run(TEXT("rx cloud pepper ") + Aim() + TEXT(" 900")); }, Danger);
+		Btn(TEXT("Облако муки у прицела"), [this]() { Run(TEXT("rx cloud flour ") + Aim() + TEXT(" 1100")); }, Danger);
+		Btn(TEXT("Лёд (8 кубиков) у прицела"), [this]() { Run(TEXT("rx ice ") + Aim() + TEXT(" 8")); });
+		Btn(TEXT("Горох (20) у прицела"), [this]() { Run(TEXT("rx peas ") + Aim() + TEXT(" 20")); });
+		Btn(TEXT("Шоколадка у прицела"), [this]() { Run(TEXT("rx choc ") + Aim()); });
+		Btn(TEXT("Сахар у прицела"), [this]() { Run(TEXT("rx sugar ") + Aim()); });
+		Btn(TEXT("Короткое замыкание (удлинитель)"), R(TEXT("power short")), Danger);
+		Btn(TEXT("Свет: выбить пробки"), R(TEXT("power off")), Danger);
+		Btn(TEXT("Свет: включить"), R(TEXT("power on")), On);
+		Btn(TEXT("Жар: все источники горячие"), R(TEXT("heat on")), Danger);
+		Btn(TEXT("Жар: всё холодное"), R(TEXT("heat off")), Blue);
+		Btn(TEXT("Жар: как в игре"), R(TEXT("heat auto")));
+		Btn(TEXT("Папа ослеп (мука, 5 с)"), R(TEXT("rx blind")));
+		Btn(TEXT("Папа чихает"), R(TEXT("rx sneeze dad")));
+		Btn(TEXT("Материал у прицела (mat info)"), R(TEXT("mat info")));
+		Btn(TEXT("Реакции: сбросить предметы"), R(TEXT("rx reset")), On);
+		Btn(TEXT("Реакции: инфо и цена (в лог)"), [this]() { Run(TEXT("rx info")); Run(TEXT("rx cost")); });
 		Section(TEXT("Вода (настоящая жидкость, docs/FEATURES.md §29)"));
 		Btn(TEXT("Кран вкл"), R(TEXT("fluid tap on 5")), Blue);
 		Btn(TEXT("Кран сильно"), R(TEXT("fluid tap on 14")), Blue);

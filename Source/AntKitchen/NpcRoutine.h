@@ -75,7 +75,7 @@ namespace NpcRoutine
 	ANTKITCHEN_API void SetHallDoor(UWorld* W, float Open);
 
 	// ---- mess
-	enum EMess : uint8 { Spill, Shards, Fallen, Yarn, Drawing, NumMess };
+	enum EMess : uint8 { Spill, Shards, Fallen, Yarn, Drawing, Power, Pickup, NumMess };   // Power: the breaker tripped (the Dad walks to the box in the hall); Pickup: peas all over the floor (AntReact)
 	struct FMess
 	{
 		int32 Id = 0;
