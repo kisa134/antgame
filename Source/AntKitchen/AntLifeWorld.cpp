@@ -389,10 +389,14 @@ void AAntLifeWorld::BuildOutside()
 	if (UStaticMeshComponent* Road = FindArt(TEXT("SM_S_Road"), FVector(-13800.f, -4400.f, -260.f), 6000.f))
 	{
 		const FBox Rb = Road->Bounds.GetBox();
-		const bool bAlongY = Rb.GetSize().Y >= Rb.GetSize().X;
+		// The street runs along the house wall, never across the flat: its direction is perpendicular to the line from the road to the flat (around the world origin),
+		// not taken from the road piece's shape (a near-square piece made the cars drive straight through the kitchen).
+		const FVector2D ToFlat = FVector2D(-Rb.GetCenter().X, -Rb.GetCenter().Y).GetSafeNormal();
+		const bool bAlongY = FMath::Abs(ToFlat.X) >= FMath::Abs(ToFlat.Y);
 		const float Lane = bAlongY ? Rb.Min.X + Rb.GetSize().X * 0.25f : Rb.Min.Y + Rb.GetSize().Y * 0.25f;
 		RoadA = bAlongY ? FVector(Lane, Rb.Min.Y - 20000.f, Rb.Max.Z) : FVector(Rb.Min.X - 20000.f, Lane, Rb.Max.Z);
 		RoadB = bAlongY ? FVector(Lane, Rb.Max.Y + 20000.f, Rb.Max.Z) : FVector(Rb.Max.X + 20000.f, Lane, Rb.Max.Z);
+		UE_LOG(LogTemp, Display, TEXT("ANTLIFE street: road %s, cars from %s to %s"), *Rb.ToString(), *RoadA.ToString(), *RoadB.ToString());
 		if (UStaticMeshComponent* Car = FindArt(TEXT("SM_S_Car"), FVector(-13550.f, 50.f, -230.f), 8000.f))
 		{
 			// the parked car and its wheels: copied as one moving group
