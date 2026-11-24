@@ -153,7 +153,7 @@ namespace
 		{ TEXT("Видишь? Носят сами. Ты теперь начальство."), TEXT("See? They haul it themselves. You're management now."), 0 },
 
 		{ TEXT("Твой отряд. Зажми [Caps Lock] — появится курсор. Обведи всех рамкой [ЛКМ]."), TEXT("Your squad. Hold [Caps Lock] for a cursor. Box-select them with [LMB]."), 0 },
-		{ TEXT("А теперь [ПКМ] по сыру: тащите сыр!"), TEXT("Now [RMB] on the cheese: haul the cheese!"), 0 },
+		{ TEXT("Смотри на сыр и жми [Q]: отряд потащит! (Или [ПКМ] по сыру, пока зажат Caps Lock.)"), TEXT("Look at the cheese and press [Q]: the squad hauls it! (Or [RMB] on it while holding Caps Lock.)"), 0 },
 		{ TEXT("Сыр в гнезде. Командир из тебя получится."), TEXT("Cheese is home. You'll make a commander."), 0 },
 
 		{ TEXT("Полка висит на шурупах. Держи [E] на шурупе — напарник поможет, одному не открутить."), TEXT("The shelf hangs on screws. Hold [E] on a screw — your partner helps, one ant can't do it."), 0 },
@@ -257,7 +257,7 @@ namespace
 			  S{ TEXT("Рабочие несут крошки"), TEXT("Workers haul crumbs"), TEXT(""), 3, true } }));
 		T.Add(Add(TEXT("rts"), 1, AntTut::Core, TEXT("Командир"), TEXT("Commander"), 110.f, 120,
 			{ S{ TEXT("Выдели отряд"), TEXT("Select the squad"), TEXT("Caps Lock+ЛКМ|Caps Lock+LMB"), 1, false },
-			  S{ TEXT("Прикажи: тащите сыр"), TEXT("Order: haul the cheese"), TEXT("ПКМ|RMB"), 1, false },
+			  S{ TEXT("Прикажи: тащите сыр"), TEXT("Order: haul the cheese"), TEXT("Q|Q"), 1, false },
 			  S{ TEXT("Сыр — в гнезде"), TEXT("Cheese is home"), TEXT(""), 1, true } }));
 		T.Add(Add(TEXT("fasteners"), 2, AntTut::Core, TEXT("Шурупы и банки"), TEXT("Screws and Jars"), 110.f, 120,
 			{ S{ TEXT("Открути шурупы полки"), TEXT("Undo the shelf screws"), TEXT("E"), 2, true },
@@ -2073,7 +2073,7 @@ void AAntTutorial::AutoPlayFor(int32 Idx, float Dt)
 			break;
 		}
 		if (!Me->Carrying) { if (AKitchenLoot* L = Nearest(Name)) { if (FVector::Dist(L->GetActorLocation(), Me->GetActorLocation()) < 70.f || (bTick && BeatClock > 25.f)) { Stop(); if (FVector::Dist(L->GetActorLocation(), Me->GetActorLocation()) > 70.f) { Me->ApplyTeleport(L->GetActorLocation() + FVector(-40.f, 0.f, 20.f)); } if (bTick) { Log(FString::Printf(TEXT("grab %s: %s"), Name, Me->GrabLoot(L) ? TEXT("ok") : TEXT("refused"))); } } else { Go(L->GetActorLocation()); } } }
-		else { GoHome(); if (bTick && BeatNo == BFinale && BeatClock > 30.f) { const FVector Pn = Me->GetActorLocation(); const FVector Dir = (FVector(Me->DevGoTo) - Pn).GetSafeNormal2D(); Me->ApplyTeleport(Pn + Dir * 700.f + FVector(0.f, 0.f, 30.f)); Log(TEXT("the walker is stuck with the cake: a hop towards the nest")); } }
+		else { GoHome(); if (BeatNo == BFinale && BeatClock > 30.f) { P.Aux += Dt; if (P.Aux > 4.f) { P.Aux = 0.f; AKitchenLoot* Ck = Me->Carrying; const FVector Pn = Me->GetActorLocation(); const FVector Dir = (FVector(Me->DevGoTo) - Pn).GetSafeNormal2D(); const FVector To = Pn + Dir * 700.f + FVector(0.f, 0.f, 30.f); Me->LetGo(); if (Ck) { Ck->SetActorLocation(To + FVector(0.f, 0.f, 20.f), false, nullptr, ETeleportType::TeleportPhysics); } Me->ApplyTeleport(To); if (Ck) { Me->GrabLoot(Ck); } Log(TEXT("the walker is stuck with the cake: the squad drags it a few metres towards the nest")); } } }
 		break;
 	}
 	case BTrail:
@@ -2306,13 +2306,24 @@ namespace
 		}
 		return W;
 	}
+	float KeyCapsW(UCanvas* Cv, const TCHAR* Keys, float Pt)
+	{
+		if (!Keys || !*Keys) { return 0.f; }
+		FString K(Keys), Ru, En;
+		if (K.Split(TEXT("|"), &Ru, &En)) { K = AntUi::Lang() == 1 ? En : Ru; }
+		TArray<FString> Parts;
+		K.ParseIntoArray(Parts, TEXT("+"));
+		float W = 0.f;
+		for (const FString& Pp : Parts) { W += TextSize(Cv, Pp, EFont::Bold, Pt * GK).X + 20.f * GK; }
+		return W;
+	}
 	FString Speaker(uint8 Voice)
 	{
 		return Voice == 1 ? AntTut::Tx(TEXT("Гнездовое радио Щели"), TEXT("Nest Radio")) : Voice == 2 ? AntTut::Tx(TEXT("Королева"), TEXT("The Queen")) : AntTut::Tx(TEXT("Сержант Жвалов"), TEXT("Sergeant Zhvalov"));
 	}
 	const TCHAR* Portrait(uint8 Voice) { return Voice == 2 ? TEXT("Portraits/T_UI_PorQueen") : Voice == 1 ? TEXT("Icons/T_UI_Icon_Radio") : TEXT("Portraits/T_UI_PorZhvalov"); }
 
-	struct FLocalSeen { int16 Line = -1; float LineAt = 0.f; uint8 Phase = 255; uint8 Beat = 255; float PayAt = -100.f; float ChapterAt = -100.f; bool bSaved = false; float DoneAt = -1.f; bool bLeft = false; };
+	struct FLocalSeen { int16 Line = -1; float LineAt = 0.f; uint8 Phase = 255; uint8 Beat = 255; float PayAt = -100.f; float ChapterAt = -100.f; bool bSaved = false; float DoneAt = -1.f; bool bLeft = false; int32 StepId = -1; int32 LastSum = -1; float StepAt = 0.f; float ProgAt = 0.f; };
 	TMap<TWeakObjectPtr<APlayerController>, FLocalSeen> GSeen;
 
 	/** The graduation's pages 1..3 (page 0 is the rank and the medal): the Queen's gift, the caste perk, what opens now. */
@@ -2512,6 +2523,34 @@ namespace AntTut
 			}
 		}
 
+		// ---- the big key glyph: the key a step needs, large and pulsing, at the moment it is needed (and again after 8 s without progress)
+		if (!bFull && T->Phase == AAntTutorial::Play)
+		{
+			const FAntTutPlayer* Me2 = T->Find(PC->PlayerState);
+			int32 Cur = -1, Sum = 0;
+			for (int32 s = 0; s < B.Steps.Num(); ++s)
+			{
+				const int32 Hv = Me2 && Me2->Count.IsValidIndex(s) ? Me2->Count[s] : 0;
+				Sum += Hv;
+				if (Cur < 0 && Hv < B.Steps[s].Need) { Cur = s; }
+			}
+			const int32 SId = (int32)T->BeatNo * 16 + FMath::Max(Cur, 0);
+			if (SId != Seen.StepId) { Seen.StepId = SId; Seen.StepAt = Now; Seen.ProgAt = Now; Seen.LastSum = Sum; }
+			if (Sum != Seen.LastSum) { Seen.LastSum = Sum; Seen.ProgAt = Now; }
+			const bool bShowKey = Cur >= 0 && B.Steps[Cur].Keys && *B.Steps[Cur].Keys && (Now - Seen.StepAt < 9.f || Now - Seen.ProgAt > 8.f);
+			if (bShowKey)
+			{
+				const float Pu = 0.5f + 0.5f * FMath::Sin(Now * 6.f);
+				const float Pt = 40.f;
+				const float KW = KeyCapsW(Cv, B.Steps[Cur].Keys, Pt);
+				const FString What = Tx(B.Steps[Cur].Ru, B.Steps[Cur].En);
+				const float BW = FMath::Max(KW, 420.f * K) + 90.f * K, BH = 150.f * K, BX = SW * 0.5f - BW * 0.5f, BY = SH * 0.58f;
+				Glass(Cv, BX, BY, BW, BH, 0.85f);
+				Frame(Cv, BX, BY, BW, BH, (2.f + 3.f * Pu) * K, WithA(C::Amber, 0.45f + 0.55f * Pu));
+				KeyCaps(Cv, B.Steps[Cur].Keys, SW * 0.5f - KW * 0.5f, BY + 16.f * K, Pt);
+				Text(Cv, What, SW * 0.5f, BY + BH - 46.f * K, EFont::Bold, 26.f * K, C::Honey, 1);
+			}
+		}
 		// ---- timers: the finale's last light, holding out under the table, the free range
 		{
 			float Ends = T->TimerEnds;
