@@ -1,0 +1,178 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://playtestkit.local/schema/event.schema.json",
+  "title": "PlaytestKit event schema v1",
+  "description": "Engine-agnostic playtest telemetry. Three shapes: `event` (the logical full event), `line` (what an SDK writes to events.jsonl: the session-level fields are hoisted out), `batch` (what is POSTed to the ingest endpoint: header + lines). A consumer can always rebuild the full event = batch header fields + line.",
+  "$defs": {
+    "build": {
+      "type": "object",
+      "required": ["version", "platform"],
+      "properties": {
+        "version": { "type": "string", "description": "Human build label, e.g. DistV14 / 0.14.2" },
+        "git_sha": { "type": "string" },
+        "platform": { "type": "string", "examples": ["Windows", "WebGL", "Android", "Browser"] },
+        "config": { "type": "string", "examples": ["Development", "Shipping", "Debug", "Release"] }
+      },
+      "additionalProperties": true
+    },
+    "player": {
+      "type": "object",
+      "required": ["anon_id"],
+      "properties": {
+        "anon_id": { "type": "string", "minLength": 8, "maxLength": 64, "description": "Random id generated on first launch and kept locally. Never derived from name, e-mail, MAC or machine name." },
+        "role": { "enum": ["solo", "host", "client"] },
+        "steam": { "type": "string", "description": "OPTIONAL. Salted hash of the Steam id (first 8 bytes of SHA1, hex). Only when the project opts in." }
+      }
+    },
+    "pos": {
+      "type": "object",
+      "required": ["x", "y", "z"],
+      "properties": { "x": { "type": "number" }, "y": { "type": "number" }, "z": { "type": "number" } },
+      "description": "World units of the engine (UE: cm). The analysis config of the project maps them to a top-down image."
+    },
+    "ctx": {
+      "type": "object",
+      "properties": {
+        "map": { "type": "string" },
+        "mode": { "type": "string", "description": "game mode / difficulty / tutorial / versus ..." },
+        "role": { "enum": ["solo", "host", "client"], "description": "role at the moment of the event (it can change inside a session)" },
+        "seed": { "type": "integer" },
+        "raid_no": { "type": "integer", "description": "round / run / attempt number inside the session" },
+        "tier": { "type": "integer", "description": "difficulty tier / level of threat" },
+        "time_of_day": { "type": "string" },
+        "players_count": { "type": "integer" },
+        "pos": { "$ref": "#/$defs/pos" },
+        "fps": { "type": "number" },
+        "extra": { "type": "object", "description": "project-specific context (kept as is)" }
+      },
+      "additionalProperties": false
+    },
+    "line": {
+      "type": "object",
+      "required": ["seq", "t", "name", "cat"],
+      "properties": {
+        "seq": { "type": "integer", "minimum": 1, "description": "Strictly increasing inside a session; (session_id, seq) is the idempotency key." },
+        "t": { "type": "integer", "minimum": 0, "description": "Monotonic milliseconds since session start (survives clock changes)." },
+        "ts": { "type": "string", "format": "date-time", "description": "UTC ISO-8601 with milliseconds. Optional on breadcrumbs: derive it from session.started + t." },
+        "name": { "type": "string", "pattern": "^[a-z][a-z0-9_]{1,47}$" },
+        "cat": { "type": "string", "pattern": "^[a-z][a-z0-9_]{1,23}$" },
+        "props": { "type": "object", "description": "Event payload; see the standard events below. Keep it flat and small (<2 KB)." },
+        "ctx": { "$ref": "#/$defs/ctx" }
+      },
+      "additionalProperties": false
+    },
+    "event": {
+      "allOf": [
+        { "$ref": "#/$defs/line" },
+        {
+          "type": "object",
+          "required": ["schema_v", "project", "build", "session_id", "player", "ts"],
+          "properties": {
+            "schema_v": { "const": 1 },
+            "project": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,39}$" },
+            "build": { "$ref": "#/$defs/build" },
+            "session_id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{8,64}$" },
+            "player": { "$ref": "#/$defs/player" }
+          }
+        }
+      ]
+    },
+    "session_meta": {
+      "type": "object",
+      "description": "session.json written by the SDK next to events.jsonl; sent once in the first batch.",
+      "required": ["schema_v", "project", "build", "session_id", "player", "started"],
+      "properties": {
+        "schema_v": { "const": 1 },
+        "project": { "type": "string" },
+        "build": { "$ref": "#/$defs/build" },
+        "session_id": { "type": "string" },
+        "player": { "$ref": "#/$defs/player" },
+        "started": { "type": "string", "format": "date-time" },
+        "ended": { "type": ["string", "null"], "format": "date-time" },
+        "kit_version": { "type": "string" },
+        "flags": { "type": "string", "description": "command-line flag NAMES only (no values)" },
+        "counters": { "type": "object" }
+      },
+      "additionalProperties": true
+    }
+  },
+  "oneOf": [
+    {
+      "title": "batch",
+      "type": "object",
+      "required": ["schema_v", "project", "session_id", "events"],
+      "properties": {
+        "schema_v": { "const": 1 },
+        "project": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,39}$" },
+        "session_id": { "type": "string" },
+        "offset": { "type": "integer", "description": "byte offset of the first line in the SDK's file (debugging only)" },
+        "session": { "oneOf": [{ "$ref": "#/$defs/session_meta" }, { "type": "null" }], "description": "present in the first batch of a session" },
+        "events": { "type": "array", "maxItems": 600, "items": { "$ref": "#/$defs/line" } }
+      }
+    }
+  ],
+  "x-standard-events": {
+    "_doc": "Names are lower_snake. cat defaults to the part of the name before the first underscore. props listed here are the contract; extra props are allowed.",
+    "session": {
+      "session_start": { "kit_version": "string", "machine": "{os,cpu,cores,gpu,ram_gb,engine}", "cmd_flags": "string", "upload": "bool" },
+      "session_end": { "reason": "quit|crash_recovered|timeout", "seconds": "number", "events": "int", "dropped": "int", "log_errors": "int", "log_warnings": "int" },
+      "consent": { "accepted": "bool", "v": "int" }
+    },
+    "level": {
+      "level_start": { "map": "string", "load_ms": "number", "role": "string", "res": "WxH" },
+      "level_end": { "map": "string", "seconds": "number", "next": "string" }
+    },
+    "progress": {
+      "objective_start": { "id": "string", "attempt": "int?" },
+      "objective_complete": { "id": "string", "seconds": "number", "retries": "int?" },
+      "objective_fail": { "id": "string", "reason": "string", "seconds": "number?" },
+      "progress_step": { "id": "string", "value": "number?" },
+      "tutorial_step_start": { "id": "string", "no": "int", "chapter": "int?" },
+      "tutorial_step_complete": { "id": "string", "no": "int", "seconds": "number", "par": "number?", "retries": "int?", "assists": "int?" },
+      "tutorial_step_fail": { "id": "string", "no": "int", "seconds": "number" },
+      "tutorial_step_skip": { "id": "string", "no": "int", "seconds": "number" },
+      "tutorial_assist": { "id": "string", "no": "int" }
+    },
+    "combat": {
+      "death": { "cause": "string", "killer": "string?", "by": "string?", "lethal": "bool?", "life_seconds": "number?", "carrying": "string?" },
+      "kill": { "victim": "string", "weapon": "string?" },
+      "damage": { "amount": "number", "src": "string" }
+    },
+    "economy": {
+      "economy_source": { "item": "string", "amount": "number", "src": "string" },
+      "economy_sink": { "item": "string", "amount": "number", "sink": "string" }
+    },
+    "ui": {
+      "ui_screen": { "screen": "string", "from": "string?", "seconds_prev": "number?" },
+      "setting_change": { "key": "string", "from": "string?", "to": "string" }
+    },
+    "perf": {
+      "perf_sample": { "fps_avg": "number", "fps_min": "number", "fps_p1": "number", "frame_ms": "number", "frame_ms_p99": "number", "gpu_ms": "number", "game_ms": "number", "render_ms": "number", "mem_mb": "number", "hitches": "int", "hitch_worst_ms": "number", "log_errors": "int", "log_warnings": "int", "ptk_ms_avg": "number", "ptk_track_us": "number", "role": "string" }
+    },
+    "hitch": { "hitch": { "ms": "number", "loading": "bool" } },
+    "net": {
+      "net_sample": { "role": "string", "conns": "int", "ping_avg": "number", "ping_max": "number", "pings": "number[]", "loss_in_pct": "number", "loss_out_pct": "number", "in_kbps": "number", "out_kbps": "number", "snaps": "int", "net_errors": "int" },
+      "net_snap": { "dist": "number", "expected": "number" },
+      "net_join_attempt": {}, "net_join_ok": { "ms": "number" }, "net_join_fail": { "type": "string", "msg": "string" }, "net_error": { "type": "string", "msg": "string" },
+      "player_join": { "from": "int", "to": "int" }, "player_leave": { "from": "int", "to": "int" }
+    },
+    "breadcrumb": { "breadcrumb": { "v": "number (speed)" }, "_note": "every 2 s; compact ctx (map, raid_no, pos); the basis of heatmaps and paths" },
+    "error": {
+      "error": { "log_cat": "string", "msg": "string" },
+      "crash": { "fatal": "bool", "msg": "string", "recent": "string[]" }
+    },
+    "marker": {
+      "marker": { "tag": "bug|confusing|boring|fun|<custom>", "text": "string", "shot": "file name", "perf30": "[{t,fps,p1,ms,gpu}]", "recent": "string[] (last events before the marker)" },
+      "marker_shot": { "marker_seq": "int", "file": "string", "ok": "bool" },
+      "marker_note": { "marker_seq": "int", "tag": "string", "text": "string" }
+    },
+    "survey": {
+      "survey_show": { "survey_id": "string", "reason": "string" },
+      "survey_ask": { "survey_id": "micro", "qid": "string", "text": "string" },
+      "survey_answer": { "survey_id": "string", "qid": "string", "type": "scale|choice|text", "value": "string", "num": "number", "text": "string (type=text)" },
+      "survey_submit": { "survey_id": "string", "seconds": "number" },
+      "survey_skip": { "survey_id": "string", "qid": "string?", "why": "skipped|timeout" }
+    },
+    "custom": { "_doc": "anything else: name it <area>_<what>. Document the project's own events in <project>/analysis config + docs." }
+  }
+}

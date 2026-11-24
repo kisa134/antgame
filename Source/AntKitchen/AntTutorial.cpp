@@ -1,4 +1,5 @@
 ﻿#include "AntTutorial.h"
+#include "AntPlaytest.h"
 #include "AntKitchenGameMode.h"
 #include "AntGameState.h"
 #include "AntPlayerState.h"
@@ -1694,6 +1695,7 @@ void AAntTutorial::Telemetry(const TCHAR* What)
 	const FString Row = FString::Printf(TEXT("%s,%s,%d,%s,%s,%.1f,%.0f,%d,%d,%d,%d,%d"), *Session, *FDateTime::Now().ToString(TEXT("%H:%M:%S")), (int32)BeatNo, B.Id, What, BeatClock, B.Par,
 		BeatRetries, BeatAssists, bSkipped ? 1 : 0, Players.Num(), TeamXp);
 	UE_LOG(LogTemp, Display, TEXT("ANTTUT telemetry %s"), *Row);
+	AntPlaytest::OnTutorialTelemetry(What, B.Id, (int32)BeatNo, BeatClock, B.Par, BeatRetries, BeatAssists, Players.Num());   // PlaytestKit
 	const FString Dir = FPaths::ProjectSavedDir() / (AntTut::IsDemo() ? TEXT("Demo") : TEXT("Tutorial"));
 	const FString Path = Dir / TEXT("telemetry.csv");
 	IFileManager::Get().MakeDirectory(*Dir, true);

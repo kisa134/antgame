@@ -1,4 +1,5 @@
 ﻿#include "AntUiMenu.h"
+#include "AntPlaytest.h"
 #include "AntUiStyle.h"
 #include "AntUiSound.h"
 #include "AntSession.h"
@@ -241,6 +242,7 @@ UAntSession* SAntUiMenu::Session() const
 
 void SAntUiMenu::Go(uint8 NewScreen)
 {
+	AntPlaytest::OnUiScreen(Screen, NewScreen);   // PlaytestKit
 	if (NewScreen == AntUiScreen::Settings && Screen != AntUiScreen::Settings)
 	{
 		ReturnTo = Screen;
@@ -854,7 +856,7 @@ void SAntUiMenu::PaintMain(FUiDraw& D) const
 	}
 	MenuButton(DC, TEXT("m.settings"), L(TEXT("main.settings")), BX, Slide(Y), [Self]() { Self->Go(AntUiScreen::Settings); }); Y += Step;
 	MenuButton(DC, TEXT("m.credits"), L(TEXT("main.credits")), BX, Slide(Y), [Self]() { Self->Go(AntUiScreen::Credits); }); Y += Step;
-	MenuButton(DC, TEXT("m.quit"), L(TEXT("main.quit")), BX, Slide(Y), [WPC]() { if (WPC.IsValid()) { UKismetSystemLibrary::QuitGame(WPC.Get(), WPC.Get(), EQuitPreference::Quit, false); } });
+	MenuButton(DC, TEXT("m.quit"), L(TEXT("main.quit")), BX, Slide(Y), [WPC]() { if (WPC.IsValid() && AntPlaytest::InterceptQuit(WPC.Get())) { return; } if (WPC.IsValid()) { UKismetSystemLibrary::QuitGame(WPC.Get(), WPC.Get(), EQuitPreference::Quit, false); } });
 
 	// A receipt pinned at the bottom right: the colony, the best run, Steam.
 	{
@@ -1154,6 +1156,7 @@ void SAntUiMenu::SettingsApply()
 	EditUi.Save();
 	EditUi.Apply(PC.Get());
 	if (bGfx) { EditGfx.Apply(); }
+	AntPlaytest::OnSettingsApplied(SavedUi, EditUi, SavedGfx, EditGfx);   // PlaytestKit
 	SavedUi = EditUi;
 	SavedGfx = EditGfx;
 	AntUiSound(EAntUiSound::Stamp, PC.Get());

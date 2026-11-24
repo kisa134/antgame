@@ -1,0 +1,29 @@
+{
+  "project": "ant-kitchen",
+  "title": "Ant Kitchen — отчёт по плейтесту",
+  "map": {
+    "image": "maps/ant_kitchen_topdown.png",
+    "world": {"x0": -7500, "x1": 7500, "y0": -5300, "y1": 5900},
+    "note": "world X/Y are Unreal units; make_topdown_ant_kitchen.py writes the exact transform to maps/ant_kitchen_topdown.json and it overrides this block when present",
+    "grid_uu": 150
+  },
+  "funnel": {
+    "event": "tutorial",
+    "note": "Steps come from the adapter events: tutorial_* (beat_start/beat_done) with props.beat/beat_no/seconds/par",
+    "steps_from": ["tutorial_beat_start", "tutorial_beat_done"],
+    "fallback_events": ["objective_start", "objective_complete", "objective_fail"]
+  },
+  "hypotheses": [
+    {"id": "H1", "text": "Новичок проходит туториал меньше чем за 12 минут и не застревает на одном бите дольше 2x par", "metric": "tutorial_total_s", "target_max": 720},
+    {"id": "H2", "text": "Медианный FPS у хоста >= 60, p1 >= 40", "metric": "fps_p50", "target_min": 60},
+    {"id": "H3", "text": "Смертей на рейд не больше 3 в среднем", "metric": "deaths_per_raid", "target_max": 3},
+    {"id": "H4", "text": "Игра понравилась: overall >= 7, play_again = да у >= 70%", "metric": "overall", "target_min": 7}
+  ],
+  "death_causes_ru": {"human": "Человек", "spray": "Спрей", "fall": "Падение", "drown": "Вода", "trap": "Ловушка", "pet": "Питомец", "fire": "Огонь", "wipe": "Вайп"},
+  "feature_events": ["carry_event", "trail_place", "order_issue", "upgrade_pick", "colony_action", "chain_start", "fighter_profile"],
+  "bug_tags": ["bug"],
+  "good_tags": ["fun"],
+  "bad_tags": ["boring", "confusing"],
+  "perf": {"fps_good": 60, "fps_ok": 30, "hitch_ms": 100},
+  "areas_for_hitches": 600
+}

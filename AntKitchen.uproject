@@ -32,6 +32,10 @@
 			"Enabled": false
 		},
 		{
+			"Name": "PlaytestKit",
+			"Enabled": true
+		},
+		{
 			"Name": "NiagaraFluids",
 			"Enabled": true
 		}

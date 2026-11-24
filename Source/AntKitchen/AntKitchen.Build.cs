@@ -10,7 +10,7 @@ public class AntKitchen : ModuleRules
 
 		PublicDependencyModuleNames.AddRange(new string[]
 		{
-			"Core", "CoreUObject", "Engine", "InputCore", "AIModule", "NetCore", "PhysicsCore", "OnlineSubsystem", "OnlineSubsystemUtils", "Slate", "SlateCore", "ProceduralMeshComponent", "Niagara", "RenderCore", "RHI", "MoviePlayer", "Chaos", "Json", "JsonUtilities", "CoreOnline", "MediaAssets", "Media", "AudioMixer"
+			"Core", "CoreUObject", "Engine", "InputCore", "AIModule", "NetCore", "PhysicsCore", "OnlineSubsystem", "OnlineSubsystemUtils", "Slate", "SlateCore", "ProceduralMeshComponent", "Niagara", "RenderCore", "RHI", "MoviePlayer", "Chaos", "Json", "JsonUtilities", "CoreOnline", "MediaAssets", "Media", "AudioMixer", "PlaytestKit"
 		});
 		DynamicallyLoadedModuleNames.Add("OnlineSubsystemSteam");
 	}

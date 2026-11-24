@@ -1,4 +1,5 @@
 ﻿#include "AntKitchenGameMode.h"
+#include "AntPlaytest.h"
 #include "HumanAIController.h"
 #include "NpcRoutine.h"
 #include "AntCharacter.h"
@@ -1150,6 +1151,7 @@ void AAntKitchenGameMode::OnAntKilled(AAntCharacter* Ant, AController* Killer, A
 	{
 		return;
 	}
+	AntPlaytest::OnDeath(Ant, Killer, Causer);   // PlaytestKit (AntPlaytest.cpp)
 	AntFighter::OnAntKilled(Ant, Killer, Causer);   // kills, deaths, a veteran to the wall (AntFighter.h)
 	AntTut::Note(this, AntTut::EvKill, Killer ? Killer->GetPawn() : nullptr, Ant);
 	if (AntRts::OnSquadBotKilled(Ant))

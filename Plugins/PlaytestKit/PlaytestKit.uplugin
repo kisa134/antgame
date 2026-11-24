@@ -1,0 +1,19 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "PlaytestKit",
+	"Description": "Universal playtest analytics: events (JSONL + HTTPS ingest), markers (F7), micro-surveys, post-session survey, perf/net samples, breadcrumbs. Engine-agnostic schema v1, see PlaytestKit/docs/PLAYTEST_SYSTEM.md.",
+	"Category": "Analytics",
+	"CreatedBy": "BADRIK",
+	"CanContainContent": false,
+	"IsBetaVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "PlaytestKit",
+			"Type": "Runtime",
+			"LoadingPhase": "PreDefault"
+		}
+	]
+}
