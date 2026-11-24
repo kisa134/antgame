@@ -146,7 +146,8 @@ void StartVacuum(UWorld* W, float LifeSeconds)
 {
 	if (!W || W->GetNetMode() == NM_Client) { return; }
 	for (TActorIterator<ARobotVacuum> It(W); It; ++It) { It->Life = FMath::Max(It->Life, LifeSeconds); return; }
-	FTransform TM(FRotator(0.f, 160.f, 0.f), FVector(5300.f, -3600.f, ARobotVacuum::Height * 0.5f + 2.f));
+	// out of the living room door, along the kid's crumb trail towards the high chair (it sweeps the trail first)
+	FTransform TM(FRotator(0.f, 137.f, 0.f), FVector(6650.f, -3650.f, ARobotVacuum::Height * 0.5f + 2.f));
 	if (ARobotVacuum* V = W->SpawnActorDeferred<ARobotVacuum>(ARobotVacuum::StaticClass(), TM, nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn))
 	{
 		V->Life = LifeSeconds;

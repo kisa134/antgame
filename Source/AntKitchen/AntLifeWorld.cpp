@@ -669,6 +669,8 @@ void AAntLifeWorld::BuildRoomLife()
 void AAntLifeWorld::BuildDisplays()
 {
 	UMaterialInterface* M = LifeMat(TEXT("M_Life_Display"));
+	UE_LOG(LogTemp, Display, TEXT("ANTLIFE displays: material %d microwave %d freezer door %d"), M != nullptr,
+		FindArt(TEXT("SM_K_Microwave"), FVector(1850.f, 4440.f, 1710.f), 2000.f) != nullptr, FindArt(TEXT("SM_K_Fridge_DoorFreezer"), FVector(4700.f, 3100.f, 2500.f), 3000.f) != nullptr);
 	if (!M) { return; }
 	// ---- the microwave's clock (the BlackGlass panel, SM_K_Microwave cm: x -27.4..-17.9, the face at y 23.7, top part)
 	if (UStaticMeshComponent* Mw = FindArt(TEXT("SM_K_Microwave"), FVector(1850.f, 4440.f, 1710.f), 2000.f))
@@ -677,13 +679,14 @@ void AAntLifeWorld::BuildDisplays()
 		if (UStaticMeshComponent* Q = Mesh(TEXT("SM_Life_Quad"), FTransform::Identity, nullptr, false, Mw))
 		{
 			const FQuat Rq = Facing(FVector(0.f, 1.f, 0.f), FVector::UpVector);
-			Q->SetRelativeTransform(FTransform(Rq, FVector(-22.65f, 23.82f, 27.6f), FVector(0.085f, 0.032f, 1.f)));
+			Q->SetRelativeTransform(FTransform(Rq, FVector(-22.65f, 23.82f, 27.6f), FVector(0.085f, -0.032f, 1.f)));   // -Y: a render target's rows run top-down
 			MicrowaveMid = UMaterialInstanceDynamic::Create(M, this);
 			MicrowaveMid->SetTextureParameterValue(TEXT("Tex"), MicrowaveRT);
 			MicrowaveMid->SetScalarParameterValue(TEXT("Bright"), 3.f);
 			Q->SetMaterial(0, MicrowaveMid);
 			Q->SetCastShadow(false);
 			Q->ComponentTags.Add(TEXT("M4Skin"));
+			UE_LOG(LogTemp, Display, TEXT("ANTLIFE microwave display at %s facing %s size %s"), *Q->GetComponentLocation().ToString(), *Q->GetUpVector().ToString(), *Q->Bounds.BoxExtent.ToString());
 		}
 	}
 	// ---- the fridge's little panel on the freezer door (temperatures)
@@ -701,13 +704,14 @@ void AAntLifeWorld::BuildDisplays()
 		FVector N = FVector::ZeroVector; N[Ax] = LocalOut[Ax] > 0.f ? 1.f : -1.f;
 		if (UStaticMeshComponent* Q = Mesh(TEXT("SM_Life_Quad"), FTransform::Identity, nullptr, false, Fd))
 		{
-			Q->SetRelativeTransform(FTransform(Facing(N, FVector::UpVector), Face, FVector(0.11f, 0.055f, 1.f)));
+			Q->SetRelativeTransform(FTransform(Facing(N, FVector::UpVector), Face, FVector(0.11f, -0.055f, 1.f)));
 			FridgeMid = UMaterialInstanceDynamic::Create(M, this);
 			FridgeMid->SetTextureParameterValue(TEXT("Tex"), FridgeRT);
 			FridgeMid->SetScalarParameterValue(TEXT("Bright"), 2.5f);
 			Q->SetMaterial(0, FridgeMid);
 			Q->SetCastShadow(false);
 			Q->ComponentTags.Add(TEXT("M4Skin"));
+			UE_LOG(LogTemp, Display, TEXT("ANTLIFE fridge display at %s facing %s size %s"), *Q->GetComponentLocation().ToString(), *Q->GetUpVector().ToString(), *Q->Bounds.BoxExtent.ToString());
 		}
 	}
 }
@@ -859,7 +863,7 @@ void AAntLifeWorld::BuildMicro()
 		{ TEXT("hair_cat"), TEXT("SM_Life_HairTuft"), TEXT("Dust"), 0.f, false, nullptr },
 		{ TEXT("nail"), TEXT("SM_Life_NailClip"), nullptr, 0.f, false, nullptr },
 		{ TEXT("spider"), TEXT("SM_Life_DeadSpider"), nullptr, 0.f, false, nullptr },
-		{ TEXT("tie"), TEXT("SM_Life_CableTie"), nullptr, 0.f, false, nullptr },
+		{ TEXT("tie"), TEXT("SM_Life_CableTie"), TEXT("PlasticBlue"), 0.f, false, nullptr },   // its own material is flat paint (art audit)
 		{ TEXT("gum"), TEXT("SM_Life_Gum"), nullptr, 0.f, false, nullptr },
 		{ TEXT("shaving"), TEXT("SM_Life_Shaving"), nullptr, 0.f, false, nullptr },
 		{ TEXT("star"), TEXT("SM_Life_Sticker"), nullptr, 0.f, false, nullptr },
@@ -1275,6 +1279,39 @@ void AAntLifeWorld::TickRoom(float Dt, float Now)
 	}
 	const bool bWash = Tv && Tv->WashStart > 0.f && (Now - Tv->WashStart < 75.f || Now - Tv->WashStart < 100000.f && Tv->bWashForced);
 	const int32 Tod = AntLife::Tod();
+	// the robot vacuum sweeps the floor's micro crumbs as it passes (cosmetic: the same on every machine, it follows the replicated robot)
+	VacuumClock += Dt;
+	if (VacuumClock > 0.2f)
+	{
+		VacuumClock = 0.f;
+		int32 Swept = 0;
+		for (TActorIterator<ARobotVacuum> It(W); It; ++It)
+		{
+			const FVector V = It->GetActorLocation();
+			for (UInstancedStaticMeshComponent* I : Isms)
+			{
+				if (!I || !I->GetStaticMesh()) { continue; }
+				const FString M = I->GetStaticMesh()->GetName();
+				if (M != TEXT("SM_M4_Crumb") && M != TEXT("SM_M4_Speck") && M != TEXT("SM_M4_Rice") && M != TEXT("SM_M4_Pea") && M != TEXT("SM_M4_Popcorn")
+					&& M != TEXT("SM_M4_DustBunny") && M != TEXT("SM_Life_HairTuft") && M != TEXT("SM_Life_Shaving")) { continue; }
+				for (int32 n = 0; n < I->GetInstanceCount(); ++n)
+				{
+					FTransform T;
+					if (!I->GetInstanceTransform(n, T, true) || T.GetScale3D().X < 0.001f) { continue; }
+					const FVector P = T.GetLocation();
+					if (P.Z > V.Z + 60.f || P.Z < V.Z - ARobotVacuum::Height || FVector::Dist2D(P, V) > ARobotVacuum::Radius + 10.f) { continue; }
+					T.SetScale3D(FVector(0.0001f));
+					I->UpdateInstanceTransform(n, T, true, true, false);
+					++Swept;
+				}
+			}
+		}
+		if (Swept > 0)
+		{
+			VacuumSwept += Swept;
+			UE_LOG(LogTemp, Display, TEXT("ANTLIFE vacuum swept %d floor crumbs (total %d)"), Swept, VacuumSwept);
+		}
+	}
 	// steam
 	for (FSteam& S : Steams)
 	{

@@ -278,4 +278,6 @@ private:
 	UPROPERTY() TArray<UInstancedStaticMeshComponent*> Isms;
 	UPROPERTY() TArray<UMaterialInstanceDynamic*> PrintMids;
 	float AwakeRange = 9000.f;
+	float VacuumClock = 0.f;
+	int32 VacuumSwept = 0;
 };
