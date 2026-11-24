@@ -1,4 +1,4 @@
-﻿<#
+<#
  Publish a playtest build as a GitHub prerelease with everything the Ant Kitchen Launcher needs:
    AntKitchen-<tag-suffix>.zip   game (top folder Windows\, Saved excluded)
    <zip>.sha256                  "<hex>  <filename>"
@@ -43,7 +43,9 @@ foreach ($n in 'AntKitchenLauncher.exe', 'launcher-version.txt') {
   $p = Join-Path $Launcher $n
   if (Test-Path $p) { $files += (Resolve-Path $p).Path } else { Write-Warning "launcher asset missing: $p (run Tools\launcher\build.ps1)" }
 }
-gh release view $Tag -R $Repo 2>$null | Out-Null
+# gh writes to stderr (e.g. 'release not found'): with Stop that would end the script, exit codes are checked instead
+$ErrorActionPreference = 'Continue'
+gh release view $Tag -R $Repo 2>&1 | Out-Null
 if ($LASTEXITCODE -eq 0) {
   gh release upload $Tag @files -R $Repo --clobber
 } else {
