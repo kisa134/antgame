@@ -58,3 +58,16 @@
 ## Дейли
 
 Раз в день — комментарий в задаче **Daily** в Jira: вчера / сегодня / блокеры. Claude может написать его сам в конце сессии по коммитам и задачам.
+
+## Карта проекта (обязательно для агентов)
+
+Вся игра разложена в живую карту: системы, фичи, персонажи, ассеты по частям (219 карточек Meshy), файлы, документы, статусы.
+Источник правды: `project/map/*.yaml` и `project/map/assets_bible.json`. Сводка для чтения: `project/map/SUMMARY.md` (читай её в начале работы, чтобы не терять контекст).
+Интерактивная страница (артефакт claude.ai): https://claude.ai/artifact/8rs9aDgofMHhTbwH2vu8Y5
+
+После изменения систем, ассетов или статусов:
+1. Поправь ручные данные: `project/map/systems.yaml` (системы и статусы), `manual.yaml` (решения, люди), `overrides.yaml` (точечные правки узла: status, owner, note).
+2. `python Tools/projectmap/build_map.py` (нужен pyyaml; обновляет `map.json` и `SUMMARY.md`).
+3. Закоммить `project/map/`, затем перепубликовать страницу: `data/map.json` артефакта = `project/map/map.json` (исходник страницы: `Tools/projectmap/viewer/index.html`).
+4. Правки Юры со страницы лежат в базе артефакта, коллекция `edits`: прочитай, сохрани как JSON и влей через `python Tools/projectmap/apply_edits.py edits.json`.
+Статусы систем: idea / designed / in-progress / in-game / polished / blocked / deprecated. Статусы ассетов: idea / prompt-ready / generated / imported / in-game / approved.

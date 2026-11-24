@@ -1,0 +1,10 @@
+# Ручные правки карты. Сюда сливаются правки из интерактивной страницы (Tools/projectmap/apply_edits.py).
+# nodes:
+#   <id узла>: {status: ..., owner: ..., summary: ..., note: "...", tasks: [{text: ..., done: false}]}
+# add_nodes: [{id, type, name, area, parent, status, summary}]
+# add_edges: [{from, to, kind}]
+# remove: [id, ...]
+nodes: {}
+add_nodes: []
+add_edges: []
+remove: []
