@@ -765,3 +765,21 @@ v12 = `code/ANT-heist-core` (уровень v3 с распорядком) + пе
 стружка от карандаша, наклейки, дорожка крошек малыша, слюни у миски, граффити красных «ЩЕЛЬ — НАША!», кофейные кольца, кошачьи царапины.
 
 Команды: `tv on|off|auto|ch N|next|vol N|press B|info`, `life vacuum|wash|weather N|pigeon|info`; админка: «Мир» → «ТВ», «Жизнь квартиры».
+
+## 39. Система плейтестов PlaytestKit (24.11.2026, ветка `code/ANT-playtest`)
+
+Универсальная система сбора данных плейтестов: плагин UE5 `Plugins/PlaytestKit` (не знает про игру), адаптер игры `Source/AntKitchen/AntPlaytest.cpp/.h`, схема `PlaytestKit/schema/`, бэкенд `PlaytestKit/backend/` (Supabase, не развёрнут), анализ `PlaytestKit/analysis/` (Python, один HTML-отчёт). Полное описание процесса (гипотезы, метрики, протокол, опросы, триаж, приватность): `PlaytestKit/docs/PLAYTEST_SYSTEM.md`.
+
+**Что собирается само.** События в `Saved/Playtest/<сессия>/events.jsonl` (JSON Lines, `{seq,t,ts,name,cat,props,ctx}`): сессия и железо, смена карты и время загрузки, `perf_sample` раз в 5 с (fps avg/p1/min, game/render/gpu мс, память), `net_sample` (пинг, потери, kbps), `hitch` (>100 мс), `breadcrumb` раз в 2 с (путь по карте), `crash`/`ensure` со сбросом на диск, счётчики ошибок лога. От игры (через адаптер): `death` (причина, убийца, позиция), перенос добычи и экономика (`carry_event`, `economy_source`), рейды (`raid_start/end/summary`, цель, прогресс), телеметрия туториала (`tutorial_step_*`), экраны меню и смена настроек, бойцы (`fighter_profile`), игровые лог-теги (ANTDEATH, ANTCARRY, ANTCHAIN и др.) как события с лимитом частоты. Контекст каждого события: карта, роль (host/client/solo), режим (tutorial/raid/nest/results), номер рейда, тир, сид, время суток, позиция.
+
+**Что делает игрок.** F7: маркер с четырьмя кнопками (bug / confusing / boring / fun), Enter добавляет комментарий; к маркеру прикладываются скриншот (без оверлея), последние 30 с perf и хвост событий. Микро-вопрос после дебрифа каждые N рейдов (`ant.ptk.survey_every`, по умолчанию 2), пост-опрос (overall 1-10 и «сыграл бы ещё» обязательны, сложность, лучший/худший момент, что непонятно, оценки фич из `SurveyFeatures`) после дебрифа и при выходе из главного меню (`m.quit`). Первый запуск показывает окно согласия; «Нет» = ничего не пишется.
+
+**Хранение и отправка.** Локально кольцевое (лимиты `MaxLocalMB`, `MaxLocalSessions`, `MaxSessionMB`); отправка выключена, пока пуст `Endpoint` (`Config/DefaultPlaytestKit.ini` или `-PTKEndpoint= -PTKKey=`): батчи gzip, повтор с паузой, офлайн-очередь, идемпотентность по `(session_id, seq)`. Без бэкенда: `PlaytestKit/tools/collect_playtest.ps1` собирает папки тестера в zip. Бэкенд (миграция, Edge Function `ingest`, шаги деплоя): `PlaytestKit/backend/README.md`.
+
+**Анонимность.** Случайный `anon_id` (не из железа и не из аккаунта), Steam ID не собирается (по желанию соленый хэш), из командной строки пишутся только имена флагов. Только для внутренних тестеров.
+
+**Консоль и флаги.** `ptk.status`, `ptk.marker <тег> [текст]`, `ptk.ask`, `ptk.survey`, `ptk.openmarker`, `ptk.track`, `ptk.flush`, `ptk.selftest [N]`, `ptk.consent yes|no`, `ptk.quit`, `ptk.testensure`, `ptk.testcrash`. Флаги: `-PTKOff` (всё выключено), `-PTKConsent=yes|no`, `-PTKEndpoint=`, `-PTKKey=`, `-PTKScript="сек:команда;..."` (автотесты), `-PTKMarkerKey=`.
+
+**Отчёт.** `python PlaytestKit/analysis/ptk_report.py <папка|zip|supabase> --config PlaytestKit/analysis/projects/ant-kitchen.json --out report.html`: обзор, гипотезы, воронка туториала (отвал, время на шаг к par), смерти и heatmap поверх плана квартиры (`make_topdown_ant_kitchen.py` строит его из `docs/level/level_v3.json`), кривая сложности по рейдам, экономика, маркеры со скриншотами, опросы, фичи, perf и карта фризов, кооп (пинг/потери), топ багов. Установка: `pip install --user pandas numpy matplotlib`.
+
+**Проверено (24.11.2026).** Сборка `AntKitchen` и `AntKitchenEditor` без ошибок; сессии off-screen (туториал `-AntTutAuto`, рейд, соло); маркеры со скриншотами, микро-опрос и пост-опрос через `-PTKScript`; 2 копии по `127.0.0.1:7809` (хост видит 1 соединение, у клиента пинг 20-30 мс, обрыв при выходе хоста записан как `net_error`); крэш и ensure записаны на диск; отчёт строится из реальных сессий; накладные расходы плагина измеряются им самим (`ptk_ms_avg` в `perf_sample`), цифры в `STATUS.md`.

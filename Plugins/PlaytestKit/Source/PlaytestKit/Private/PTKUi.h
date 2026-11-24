@@ -28,6 +28,8 @@ public:
 
 	void Tick(double Now);
 	void CloseAll();
+	/** Loads the fonts / glyph shaping the overlays use, at startup, so the first F7 or survey does not hitch (~0.9 s measured on the first Cyrillic text). */
+	void PreWarm();
 	/** True: the key is consumed (the game does not see it). */
 	bool HandleKey(const FKeyEvent& E);
 

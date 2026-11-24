@@ -528,5 +528,9 @@ void UPlaytestKitSubsystem::RegisterConsoleOnce()
 	Reg(TEXT("ptk.flush"), TEXT("write files and try an upload now"), [](const TArray<FString>&) { if (UPlaytestKitSubsystem* S = Get()) { S->FlushNow(); } });
 	Reg(TEXT("ptk.selftest"), TEXT("ptk.selftest [count]: cost of Track()"), [](const TArray<FString>& A) { if (UPlaytestKitSubsystem* S = Get()) { S->SelfTest(A.Num() ? FCString::Atoi(*A[0]) : 5000); } });
 	Reg(TEXT("ptk.openmarker"), TEXT("open the F7 overlay"), [](const TArray<FString>&) { if (UPlaytestKitSubsystem* S = Get()) { S->OpenMarkerOverlay(); } });
+#if !UE_BUILD_SHIPPING
+	Reg(TEXT("ptk.testensure"), TEXT("fire an ensure() to test the crash/ensure hook"), [](const TArray<FString>&) { ensureMsgf(false, TEXT("PTK test ensure: this is intentional")); });
+	Reg(TEXT("ptk.testcrash"), TEXT("CRASH the game on purpose to test the crash hook"), [](const TArray<FString>&) { volatile int32* P = nullptr; *P = 1; });
+#endif
 	Reg(TEXT("ptk.quit"), TEXT("flush and exit the game (automation: -PTKScript=\"90:quit\")"), [](const TArray<FString>&) { if (UPlaytestKitSubsystem* S = Get()) { S->FlushNow(); } FPlatformMisc::RequestExit(false); });
 }

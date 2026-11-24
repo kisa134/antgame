@@ -176,6 +176,7 @@ void UPlaytestKitSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	const bool bHasSlate = FSlateApplication::IsInitialized() && !IsRunningDedicatedServer();
 	if (bHasSlate)
 	{
+		Ui->PreWarm();
 		Input = MakeShared<FPTKInputProcessor>(this);
 		FSlateApplication::Get().RegisterInputPreProcessor(Input, 0);
 	}
@@ -240,14 +241,14 @@ void UPlaytestKitSubsystem::Deinitialize()
 {
 	if (!bEnded)
 	{
-		bEnded = true;
 		if (bActive)
-		{
+		{   // session_end must be tracked BEFORE bEnded is set (Track() refuses events after the end)
 			Track(TEXT("session_end"), FPTKProps().S("reason", TEXT("quit")).N("seconds", FPlatformTime::Seconds() - StartSecs).I("events", EventCount).I("dropped", Dropped)
 				.I("log_errors", LogCap ? LogCap->Errors.load() : 0).I("log_warnings", LogCap ? LogCap->Warnings.load() : 0).N("ptk_track_us", TrackN ? TrackUsSum / TrackN : 0.0), TEXT("session"));
 			FlushFile();
 			WriteSessionJson(true);
 		}
+		bEnded = true;
 	}
 	FTSTicker::GetCoreTicker().RemoveTicker(TickHandle);
 	UnbindDelegates();
@@ -494,6 +495,8 @@ void UPlaytestKitSubsystem::OnEnsureStatic()
 void UPlaytestKitSubsystem::WriteCrash(bool bFatal)
 {
 	if (!bActive || !Writer) { return; }
+	static bool bFatalWritten = false;   // the engine can call the system-error handler twice while dying: one crash event per session
+	if (bFatal) { if (bFatalWritten) { return; } bFatalWritten = true; }
 	FString Msg;
 	AppendEsc(Msg, FString(GErrorHist).Left(1200));
 	FString L;

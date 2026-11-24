@@ -4,6 +4,8 @@
 #include "Engine/GameViewportClient.h"
 #include "GameFramework/PlayerController.h"
 #include "Framework/Application/SlateApplication.h"
+#include "Rendering/SlateRenderer.h"
+#include "Fonts/FontMeasure.h"
 #include "Styling/CoreStyle.h"
 #include "Widgets/SBoxPanel.h"
 #include "Widgets/SOverlay.h"
@@ -92,6 +94,18 @@ void FPTKUi::CloseAll()
 	MarkerStep = 0;
 	Sv.Reset();
 	LeaveUiMode();
+}
+
+void FPTKUi::PreWarm()
+{
+	if (!FSlateApplication::IsInitialized()) { return; }
+	TSharedRef<FSlateFontMeasure> M = FSlateApplication::Get().GetRenderer()->GetFontMeasureService();
+	static const TCHAR* Sample = TEXT("Aa Bb 0123 Аа Бб Рейд Опрос — 1/5 F7 [Enter]");
+	for (int32 Size : { 13, 14, 15, 16, 18, 20, 24 })
+	{
+		M->Measure(FString(Sample), Font(Size, false));
+		M->Measure(FString(Sample), Font(Size, true));
+	}
 }
 
 void FPTKUi::Tick(double Now)
