@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """Ant Kitchen Launcher - backend (pywebview + requests). Portable paths, Windows-first."""
-import os, sys, json, time, threading, shutil, zipfile, hashlib, subprocess, webbrowser, re, shlex, datetime, tempfile, collections
+import io, struct, zlib, os, sys, json, time, threading, shutil, zipfile, hashlib, subprocess, webbrowser, re, shlex, datetime, tempfile, collections
 
 try:
     import requests
 except Exception:  # pragma: no cover
     requests = None
 
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 REPO = "kisa134/antgame"
 API_URL = os.environ.get("AK_API") or "https://api.github.com/repos/%s/releases?per_page=30" % REPO
 ZIP_RE = re.compile(r"^AntKitchen-playtest-.*\.zip$")
@@ -41,6 +41,10 @@ def default_root():
     if IS_MAC:
         return os.path.expanduser("~/Library/Application Support/AntKitchen")
     return os.path.expanduser("~/.local/share/AntKitchen")
+
+
+def fmt_mb(b):
+    return "%.0f МБ" % (b / 1e6)
 
 
 def lp(p):
@@ -176,6 +180,66 @@ def vcrt_ok():
         return False
 
 
+class _Cancel(Exception):
+    pass
+
+
+def _range(url, a, b, tries=4):
+    last = None
+    for i in range(tries):
+        try:
+            r = requests.get(url, headers=dict(UA, Range="bytes=%d-%d" % (a, b)), timeout=(15, 40))
+            if r.status_code != 206:
+                raise IOError("HTTP %d (Range)" % r.status_code)
+            return r.content
+        except (requests.RequestException, IOError) as e:
+            last = e
+            time.sleep(1 + i)
+    raise last
+
+
+class RangeFile(io.RawIOBase):
+    """Read-only file object over HTTP Range requests: lets zipfile read the central directory of a remote zip."""
+    def __init__(self, url, size):
+        self.url, self.size, self.pos = url, size, 0
+
+    def seekable(self):
+        return True
+
+    def readable(self):
+        return True
+
+    def tell(self):
+        return self.pos
+
+    def seek(self, off, whence=0):
+        self.pos = off if whence == 0 else (self.pos + off if whence == 1 else self.size + off)
+        return self.pos
+
+    def read(self, n=-1):
+        if n < 0 or self.pos + n > self.size:
+            n = self.size - self.pos
+        if n <= 0:
+            return b""
+        d = _range(self.url, self.pos, self.pos + n - 1)
+        self.pos += len(d)
+        return d
+
+    def readall(self):
+        return self.read(-1)
+
+
+def file_crc(path):
+    c = 0
+    with open(path, "rb") as f:
+        while True:
+            b = f.read(8 << 20)
+            if not b:
+                break
+            c = zlib.crc32(b, c)
+    return c & 0xFFFFFFFF
+
+
 # ---------------------------------------------------------------- API
 class Core:
     def __init__(self):
@@ -198,6 +262,7 @@ class Core:
         self.launching_until = 0
         self.selfupd = {"available": False, "version": "", "url": "", "busy": False}
         self.notice = ""
+        self.delta_info = None
         try:
             with open(os.path.join(cfg_dir(), "releases_cache.json"), "r", encoding="utf-8") as f:
                 self.releases = json.load(f)
@@ -492,6 +557,22 @@ class Core:
         try:
             part, final = self._part_paths(rel)
             have = os.path.getsize(part) if os.path.exists(part) else 0
+            old = self.cfg.get("installed")
+            if old and old != tag and not have and not os.path.exists(final) and os.path.exists(os.path.join(self.build_dir(old), ".complete")) \
+                    and not os.environ.get("AK_NODELTA"):
+                try:
+                    if self._delta(rel, old):
+                        self._activate(tag)
+                        self._set_task(phase="done", pct=100, msg="Готово (дельта-обновление)")
+                        return
+                except _Cancel:
+                    shutil.rmtree(lp(self.build_dir(tag) + ".partial"), ignore_errors=True)
+                    self.task = None
+                    return
+                except Exception:
+                    shutil.rmtree(lp(self.build_dir(tag) + ".partial"), ignore_errors=True)
+                self.stop_flag = None
+                self._set_task(phase="download", pct=0, msg="Скачиваем полную сборку…")
             if not os.path.exists(final):
                 need = int(z["size"] * 3.2) - have
                 free = shutil.disk_usage(self.root()).free
@@ -625,6 +706,117 @@ class Core:
         os.replace(tmp, dest)
         with open(os.path.join(dest, ".complete"), "w", encoding="utf-8") as f:
             json.dump({"tag": tag, "time": time.time()}, f)
+
+    def _delta(self, rel, old):
+        """Delta update: read the remote zip central directory via HTTP Range, reuse unchanged files from the old build
+        (hardlink), fetch only changed members. Returns True on success, False if not worthwhile."""
+        z = rel["zip"]
+        tag = rel["tag"]
+        self._set_task(phase="verify", msg="Сравниваем с установленной версией…", pct=0)
+        zf = zipfile.ZipFile(RangeFile(z["url"], z["size"]))
+        infos = [i for i in zf.infolist() if not i.is_dir()]
+        oldroot = self.build_dir(old)
+        reuse, fetch = [], []
+        for n, i in enumerate(infos):
+            if self.stop_flag == "cancel":
+                raise _Cancel()
+            op = os.path.join(oldroot, *i.filename.split("/"))
+            try:
+                if os.path.getsize(lp(op)) == i.file_size and file_crc(lp(op)) == i.CRC:
+                    reuse.append((i, op))
+                    continue
+            except OSError:
+                pass
+            fetch.append(i)
+            self._set_task(pct=100.0 * n / max(1, len(infos)))
+        need = sum(i.compress_size for i in fetch)
+        if need > 0.7 * z["size"]:
+            return False
+        free = shutil.disk_usage(self.root()).free
+        if free < need * 2 + 2 ** 28:
+            return False
+        dest = self.build_dir(tag)
+        tmp = dest + ".partial"
+        for p in (tmp, dest):
+            if os.path.exists(p):
+                shutil.rmtree(lp(p), ignore_errors=True)
+        base = os.path.abspath(tmp)
+        os.makedirs(lp(base), exist_ok=True)
+        files = {}
+        for i, op in reuse:
+            target = os.path.abspath(os.path.join(base, *i.filename.split("/")))
+            os.makedirs(lp(os.path.dirname(target)), exist_ok=True)
+            try:
+                os.link(lp(op), lp(target))
+            except OSError:
+                shutil.copy2(lp(op), lp(target))
+            files[i.filename] = i.file_size
+        done = 0
+        samples = collections.deque(maxlen=40)
+        total = max(1, need)
+        for i in fetch:
+            target = os.path.abspath(os.path.join(base, *i.filename.split("/")))
+            if not target.startswith(base + os.sep):
+                continue
+            os.makedirs(lp(os.path.dirname(target)), exist_ok=True)
+            if i.compress_size == 0:
+                open(lp(target), "wb").close()
+                files[i.filename] = i.file_size
+                continue
+            hdr = _range(z["url"], i.header_offset, i.header_offset + 29)
+            nlen, elen = struct.unpack("<HH", hdr[26:30])
+            start = i.header_offset + 30 + nlen + elen
+            dec = zlib.decompressobj(-15) if i.compress_type == 8 else None
+            crc = 0
+            for attempt in range(5):
+                try:
+                    crc = 0
+                    dec = zlib.decompressobj(-15) if i.compress_type == 8 else None
+                    got = 0
+                    with requests.get(z["url"], headers=dict(UA, Range="bytes=%d-%d" % (start, start + i.compress_size - 1)), stream=True, timeout=(15, 30)) as r:
+                        if r.status_code != 206:
+                            raise IOError("HTTP %d" % r.status_code)
+                        with open(lp(target), "wb") as out:
+                            for chunk in r.iter_content(1 << 20):
+                                if self.stop_flag == "cancel":
+                                    raise _Cancel()
+                                data = dec.decompress(chunk) if dec else chunk
+                                out.write(data)
+                                crc = zlib.crc32(data, crc)
+                                got += len(chunk)
+                                now = time.time()
+                                samples.append((now, done + got))
+                                sp = 0
+                                if len(samples) > 3 and samples[-1][0] > samples[0][0]:
+                                    sp = (samples[-1][1] - samples[0][1]) / (samples[-1][0] - samples[0][0])
+                                self._set_task(phase="download", bytes=done + got, total=need, pct=100.0 * (done + got) / total, speed=sp,
+                                               eta=(total - done - got) / sp if sp > 1 else 0,
+                                               msg="Обновляем: только изменённые файлы (%s из %s)" % (fmt_mb(need), fmt_mb(z["size"])))
+                            if dec:
+                                tail = dec.flush()
+                                out.write(tail)
+                                crc = zlib.crc32(tail, crc)
+                    if (crc & 0xFFFFFFFF) != i.CRC:
+                        raise IOError("CRC mismatch " + i.filename)
+                    break
+                except _Cancel:
+                    raise
+                except (requests.RequestException, IOError):
+                    if attempt == 4:
+                        raise
+                    time.sleep(2 + attempt)
+            done += i.compress_size
+            files[i.filename] = i.file_size
+        for i in zf.infolist():
+            if i.is_dir():
+                os.makedirs(lp(os.path.join(base, *i.filename.split("/"))), exist_ok=True)
+        with open(os.path.join(tmp, "files.json"), "w", encoding="utf-8") as f:
+            json.dump(files, f)
+        os.replace(tmp, dest)
+        with open(os.path.join(dest, ".complete"), "w", encoding="utf-8") as f:
+            json.dump({"tag": tag, "time": time.time(), "delta_from": old, "downloaded": need}, f)
+        self.delta_info = {"from": old, "downloaded": need, "full": z["size"]}
+        return True
 
     def _activate(self, tag):
         self._set_task(phase="migrate", msg="Переносим сохранения…", pct=100)

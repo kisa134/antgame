@@ -179,7 +179,7 @@ function renderPlay() {
       else if (S.update_available) { title.textContent = 'Вышла новая сборка ' + verOf(tgt.tag); sub.textContent = 'В кооп нужна одна и та же версия у всех. Обновление сохранит твой прогресс.'; act = 'play'; label = 'ИГРАТЬ'; }
       else { title.textContent = 'Всё готово. На вылазку!'; sub.textContent = 'У тебя последняя сборка ' + verOf(inst) + '. Steam и библиотеки проверены.'; act = 'play'; label = 'ИГРАТЬ'; }
       if (S.update_available && !S.running) { sec.hidden = false; sec.dataset.act = 'update'; sec.className = 'btn amber'; sec.textContent = 'Обновить до ' + verOf(tgt.tag) + ' · ' + fmtB(tgt.size); }
-      else if (S.steam !== 'ok' && S.steam !== undefined && !S.running) { sec.hidden = false; sec.dataset.act = 'steam'; sec.className = 'btn'; sec.textContent = S.steam === 'not_installed' ? 'Steam не найден' : S.steam === 'not_logged_in' ? 'Войди в Steam' : 'Запустить Steam'; if (S.steam === 'not_installed') sec.dataset.act = 'dl-steam'; }
+      else if (S.steam !== 'ok' && S.steam !== undefined && !S.running) { sec.hidden = false; sec.dataset.act = 'steam'; sec.className = 'btn'; sec.textContent = S.steam === 'not_installed' ? 'Steam не найден' : S.steam === 'not_logged_in' ? 'Открыть Steam, войти' : 'Запустить Steam'; if (S.steam === 'not_installed') sec.dataset.act = 'dl-steam'; }
       else sec.hidden = true;
     }
     main.dataset.act = act; main.textContent = label; main.disabled = dis || !act; main.classList.toggle('go', go && !dis);
@@ -189,7 +189,7 @@ function renderPlay() {
   renderReceipt(); renderChecks(); renderLatest();
 }
 function renderReceipt() {
-  const t = S.target, st = { ok: ['ok', 'OK, запущен'], not_running: ['warn', 'не запущен'], not_installed: ['bad', 'не найден'], not_logged_in: ['warn', 'нет входа'] }[S.steam] || ['', '?'];
+  const t = S.target, st = { ok: ['ok', 'OK, запущен'], not_running: ['warn', 'не запущен'], not_installed: ['bad', 'не найден'], not_logged_in: ['warn', 'не выполнен вход'] }[S.steam] || ['', '?'];
   const row = (a, b, c = '') => `<div class="row"><span>${a}</span><b class="${c}">${b}</b></div>`;
   const ready = S.installed && !S.update_available && S.prereq === 'ok';
   $('#p-receipt').innerHTML = `<h4>СВОДКА ЩЕЛИ</h4><div class="sep"></div>` +
@@ -199,7 +199,7 @@ function renderReceipt() {
     row('Свободно', fmtB(S.free)) + `<div class="sep"></div><div style="text-align:center"><span class="stamp ${ready ? 'ok' : 'warn'}">${S.running ? 'В ИГРЕ' : ready ? 'ГОТОВО' : S.installed ? 'ЕСТЬ ДЕЛА' : 'ЖДЁМ'}</span></div>`;
 }
 function renderChecks() {
-  const sm = { ok: ['ok', 'Steam: OK', 'Запущен, вход выполнен. Кооп через друзей Steam работает.'], not_running: ['warn', 'Steam не запущен', 'Запусти Steam и войди <b>до</b> игры, иначе кооп только по IP.'], not_logged_in: ['warn', 'Steam: нет входа', 'Steam запущен, но вход не выполнен.'], not_installed: ['bad', 'Steam не найден', 'Для коопа нужен клиент Steam (бесплатно).'] }[S.steam] || ['', 'Steam', ''];
+  const sm = { ok: ['ok', 'Steam: OK', 'Запущен, вход выполнен. Кооп через друзей Steam работает.'], not_running: ['warn', 'Steam не запущен', 'Запусти Steam и войди <b>до</b> игры, иначе кооп только по IP. Статус обновляется сам.'], not_logged_in: ['warn', 'Steam: не выполнен вход', 'Steam запущен, но вход не выполнен — войди в Steam. Статус обновляется сам.'], not_installed: ['bad', 'Steam не найден', 'Для коопа нужен клиент Steam (бесплатно).'] }[S.steam] || ['', 'Steam', ''];
   const free = S.free, low = free < 4e9;
   $('#p-checks').innerHTML = `
     <div class="card check"><h3>СТИМ</h3><div class="st"><span class="dot ${sm[0]}"></span>${sm[1]}</div><p>${sm[2]}</p><div class="row-btn">${S.steam === 'not_running' || S.steam === 'not_logged_in' ? '<button class="btn small" data-do="steam">Запустить Steam</button>' : S.steam === 'not_installed' ? '<button class="btn small" data-url="https://store.steampowered.com/about/">Скачать Steam</button>' : ''}</div></div>
