@@ -7,7 +7,7 @@ try:
 except Exception:  # pragma: no cover
     requests = None
 
-VERSION = "1.0.1"
+VERSION = "1.0.2"
 REPO = "kisa134/antgame"
 API_URL = os.environ.get("AK_API") or "https://api.github.com/repos/%s/releases?per_page=30" % REPO
 ZIP_RE = re.compile(r"^AntKitchen-playtest-.*\.zip$")

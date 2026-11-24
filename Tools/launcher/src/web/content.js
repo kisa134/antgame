@@ -118,8 +118,7 @@ CONTENT.bugTemplate = `Что случилось:
 CONTENT.links = (chat) => [
   ['GitHub: репозиторий', 'Код и сборки (репозиторий открытый)', 'https://github.com/kisa134/antgame'],
   ['GitHub: все сборки', 'Releases: архивы, заметки к версиям', 'https://github.com/kisa134/antgame/releases'],
-  ['Инструкция для команды', 'Подробный документ (Claude Doc)', 'https://claude.ai/artifact/F63NpXPnqyhhDJn7VP7V52'],
-  ['Библия ассетов (Meshy)', 'Как делаем 3D-ассеты', 'https://claude.ai/artifact/KHh6mXNgmUhf46mw7aAYbX'],
+    ['Инструкция для друзей', 'Установка Windows / Mac и кооп — можно скинуть кому угодно', 'https://github.com/kisa134/antgame/blob/code/ANT-v14/docs/PLAY.md'],
   ['Скачать Steam', 'Нужен клиент и аккаунт (игра бесплатна)', 'https://store.steampowered.com/about/'],
   ['Tailscale', 'VPN для игры по IP без Steam', 'https://tailscale.com/download'],
   ['CrossOver (Mac)', 'Запуск Windows-сборки на Mac', 'https://www.codeweavers.com/crossover'],
