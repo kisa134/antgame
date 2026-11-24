@@ -1,5 +1,5 @@
-param([switch]$SkipCook, [string]$Out = "DistTutorial2")
-$w = "C:\Users\HYPERPC\Documents\Unreal Projects\AntKitchen_tutorial"
+param([switch]$SkipCook, [string]$Out = "DistTut2")
+$w = (Resolve-Path "$PSScriptRoot\..\..").Path
 $log = "$w\_tut\pack_$Out.log"
 # Build both targets ourselves (another worktree's editor keeps a Live Coding session open: UAT's own build would refuse).
 $bat = "C:\Program Files\Epic Games\UE_5.8\Engine\Build\BatchFiles\Build.bat"

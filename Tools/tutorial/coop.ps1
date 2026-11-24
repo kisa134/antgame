@@ -1,8 +1,8 @@
 param([string]$Name = "coop", [int]$Beat = 0, [int]$Timeout = 420, [switch]$Packaged)
 # Two players on this machine over 127.0.0.1:7807 (no Steam): the host runs the training (scripted), the client joins and takes
 # pictures of its own HUD (-AntLocalDo). Logs: _tut\<Name>_h.log, _tut\<Name>_c.log
-$w = "C:\Users\HYPERPC\Documents\Unreal Projects\AntKitchen_tutorial"
-if ($Packaged) { $exe = "$w\DistTutorial\Windows\AntKitchen\Binaries\Win64\AntKitchen.exe"; $proj = "" }
+$w = (Resolve-Path "$PSScriptRoot\..\..").Path
+if ($Packaged) { $exe = "$w\DistTut2\Windows\AntKitchen\Binaries\Win64\AntKitchen.exe"; $proj = "" }
 else { $exe = "C:\Program Files\Epic Games\UE_5.8\Engine\Binaries\Win64\UnrealEditor.exe"; $proj = "`"$w\AntKitchen.uproject`" -game" }
 $base = "$proj -RenderOffScreen -nosound -unattended -NoSplash -ResX=960 -ResY=540 -WINDOWED -log -NOSTEAM -AntNoMenu"
 $hl = "$w\_tut\${Name}_h.log"; $cl = "$w\_tut\${Name}_c.log"

@@ -1,8 +1,8 @@
 param([string]$Name = "demo1", [int]$Timeout = 900)
 # The demo end to end, off screen: the training's graduation (beat 15) -> straight into the first real raid -> 3 short raids
 # (-AntRaidLen=45, the host starts each one by itself: -AntDemoAuto) -> the end screen (a picture) -> quit.
-$w = "C:\Users\HYPERPC\Documents\Unreal Projects\AntKitchen_tutorial"
-& powershell -NoProfile -ExecutionPolicy Bypass -File "$w\_tut\pack_demo.ps1" | Out-Null
+$w = (Resolve-Path "$PSScriptRoot\..\..").Path
+& powershell -NoProfile -ExecutionPolicy Bypass -File "$PSScriptRoot\pack_demo.ps1" | Out-Null
 $exe = "$w\DistDemo\Windows\AntKitchen\Binaries\Win64\AntKitchen.exe"
 $log = "$w\_tut\$Name.log"
 Remove-Item $log -ErrorAction SilentlyContinue

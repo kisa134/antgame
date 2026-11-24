@@ -91,6 +91,8 @@ namespace AntTut
 	ANTKITCHEN_API bool OwnsRaid(const AAntRaid* Raid);
 	/** AntSnowball: deliveries feed the mass only in the snowball's own beat (no card picks over the other lessons). */
 	ANTKITCHEN_API bool MassHeld(const UObject* Ctx);
+	/** Sandbox: the lite admin panel (F2) of the host: spawn the chains' props, the Giant, time of day, TV, vacuum, weather, tap, reset. */
+	ANTKITCHEN_API void ToggleSandboxPanel(APlayerController* PC);
 	/** AAntRaid::ServerInit of a real raid world: the Queen's starter gift after the training (once). */
 	ANTKITCHEN_API void ApplyGift(AAntRaid* Raid);
 	/** The Steam demo (every machine, every frame): counts the real raids, opens the end screen after the last one. */
@@ -175,6 +177,10 @@ public:
 	UPROPERTY(Replicated) int32 TotalSeconds = 0;
 	UPROPERTY(Replicated) int32 BeatsDoneMask = 0;
 	UPROPERTY(Replicated) uint8 Assists = 0;
+	/** The debrief's page: 0 rank and medal, 1 the Queen's gift, 2 the caste perk, 3 what opens now. */
+	UPROPERTY(Replicated) uint8 DebriefPage = 0;
+	/** Chains: the prop (station) the team is at; 5 stations. */
+	UPROPERTY(Replicated) uint8 Station = 0;
 
 	float ServerNow() const;
 	const FAntTutPlayer* Find(const APlayerState* PS) const;
@@ -183,7 +189,10 @@ public:
 	void SkipBeat(const TCHAR* Why);
 	void Assist();
 	void GoToBeat(int32 N);
-	void Say(int32 Line);
+	/** Queue a line (dropped when stale: another beat, or the step it belongs to is already done); bCut stops the one on now. */
+	void Say(int32 Line, int32 Step = -1, bool bCut = false);
+	/** Server: the sandbox's lite panel actions ("tut sbx <name> [x y z]"). */
+	void SandboxAction(const TArray<FString>& A);
 	void Enter(APlayerController* PC);
 	/** Server: a hook of the game (AntTut::Note). */
 	void OnNote(uint8 Event, AActor* By, AActor* What);
@@ -201,6 +210,7 @@ private:
 	void Next();
 	void Cleanup(int32 N);
 	void AutoPlay(float Dt);
+	void AutoPlayFor(int32 Idx, float Dt);
 	/** Flies, red ants and stand-in bots of the raid: the training is the players' own. */
 	void PurgeStrays();
 	TWeakObjectPtr<AAntCharacter> Fly;
@@ -215,13 +225,23 @@ private:
 	AAntCharacter* AntOf(const FAntTutPlayer& P) const;
 	AKitchenLoot* SpawnFood(const FString& Name, const FVector& At, const FString& Rename = FString());
 	FVector Checkpoint() const;
-	void TeleportAll(const FVector& At, float Yaw);
+	void TeleportAll(const FVector& At, float Yaw, bool bWall = false);
+	/** Chains: the team goes to station S (the prop's use point, the squad around it). */
+	void GoStation(int32 S);
+	bool StationDone(int32 S) const;
+	void DebriefAdvance();
+	void EnsureSquad(int32 N);
 	void SetGod(bool bOn);
 
 	AAntKitchenGameMode* GM = nullptr;
 	bool bStarted = false;
 	bool bStaged = false;
-	TArray<int32> LineQueue;
+	struct FQLine { int16 Line = -1; uint8 Beat = 0; int8 Step = -1; };
+	TArray<FQLine> LineQueue;
+	float LastProgressAt = 0.f;
+	float StationAt = -1.f;
+	float BeatStartAt = 0.f;
+	float PerkAt = -1.f;
 	float LineEnds = 0.f;
 	float FadeAt = -1.f;
 	float StartedAt = 0.f;
