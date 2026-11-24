@@ -35,6 +35,7 @@
 #include "AntSnowball.h"
 #include "AntColony.h"
 #include "AntFighter.h"
+#include "AntTutorial.h"
 
 namespace
 {
@@ -222,6 +223,8 @@ void AAntRaid::ServerInit(AAntKitchenGameMode* InGM)
 		Nest.MaxTier = FMath::Clamp(FMath::Max(Nest.MaxTier, ForcedTier), 1, AntTier::Max);
 		Nest.Tier = FMath::Clamp(ForcedTier, 1, AntTier::Max);
 	}
+	if (AntTut::IsDemo()) { Nest.MaxTier = 1; Nest.Tier = 1; }   // the demo: tier 1 only
+	AntTut::ApplyGift(this);   // the Queen's gift after the training (once, into the real colony)
 	RaidNo = Nest.Raids;
 	UE_LOG(LogTemp, Display, TEXT("ANTNEST %s (%s): food %d jelly %d larvae %d workers %d mood %d raids %d tier %d of %d, up %d %d %d %d %d %d"), bHad ? TEXT("loaded") : TEXT("fresh"), *Why,
 		Nest.Food, Nest.Jelly, Nest.Larvae, Nest.Workers, Nest.Mood, Nest.Raids, Nest.Tier, Nest.MaxTier,
@@ -622,7 +625,7 @@ void AAntRaid::SpawnGuards()
 
 void AAntRaid::StartSpecials()
 {
-	if (!InRaid() || !GM)
+	if (!InRaid() || !GM || AntTut::OwnsRaid(this))   // (the training and the sandbox: no special finds)
 	{
 		return;
 	}
@@ -679,7 +682,7 @@ void AAntRaid::CountStartCost()
 
 void AAntRaid::StartClan()
 {
-	if (!InRaid() || !GM || FParse::Param(FCommandLine::Get(), TEXT("AntNoClan")))   // (dev: a raid without the red clan)
+	if (!InRaid() || !GM || FParse::Param(FCommandLine::Get(), TEXT("AntNoClan")) || AntTut::OwnsRaid(this))   // (dev: a raid without the red clan; the training)
 	{
 		return;
 	}
@@ -849,6 +852,12 @@ void AAntRaid::RaidSecond()
 	AAntGameState* S = GS();
 	if (!S || !GM || !InRaid() || S->Phase != 0)
 	{
+		return;
+	}
+	if (AntTut::OwnsRaid(this))
+	{
+		// The training / the sandbox own the clock: no stages, no events, no timeout; the snowball still runs (picks, squad tasks).
+		AntSnowball::RaidSecond(this);
 		return;
 	}
 	const AntTier::FDef& T = TierDef();
@@ -1533,7 +1542,8 @@ void AAntRaid::PlayerCommand(AAntPlayerController* PC, uint8 Cmd, int32 A, int32
 		}
 		else if (Cmd == AntRaidCmd::Tier)
 		{
-			if (A >= 1 && A <= Nest.MaxTier) { Nest.Tier = A; Tier = (uint8)A; SaveNest(); PickLevelSeed(S->LevelSeed()); }
+			if (AntTut::IsDemo() && A > 1) { Say(TEXT("Угрозы 2–4 — в полной версии игры"), RaidInfo); }
+			else if (A >= 1 && A <= Nest.MaxTier) { Nest.Tier = A; Tier = (uint8)A; SaveNest(); PickLevelSeed(S->LevelSeed()); }
 			else { PC->ClientToast(TEXT("Эта угроза ещё закрыта: принесите торт домой на предыдущей")); }
 		}
 		else if (Cmd == AntRaidCmd::Contract)

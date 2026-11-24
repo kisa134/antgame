@@ -34,6 +34,7 @@
 #include "AntSnowball.h"
 #include "AntRts.h"
 #include "AntFighter.h"
+#include "AntTutorial.h"
 
 namespace GMColors
 {
@@ -240,6 +241,15 @@ void AAntKitchenGameMode::BeginPlay()
 			RP.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 			Raid = GetWorld()->SpawnActor<AAntRaid>(AAntRaid::StaticClass(), FTransform::Identity, RP);
 			if (Raid) { Raid->ServerInit(this); }
+			if (AntTut::Wanted() != AntTut::Off)
+			{
+				// «Учебка» / «Песочница» (AntTutorial.h): a director that owns this raid world.
+				if (AAntTutorial* Tut = GetWorld()->SpawnActor<AAntTutorial>(AAntTutorial::StaticClass(), FTransform::Identity, RP))
+				{
+					Tut->Mode = AntTut::Wanted();
+					Tut->StartBeat = AntTut::WantedBeat();
+				}
+			}
 		}
 		else
 		{
@@ -1027,6 +1037,12 @@ void AAntKitchenGameMode::OnFoodDelivered(uint8 Team, AKitchenLoot* Food, const 
 	{
 		return;
 	}
+	if (Team == 0 && !Food->bBody)
+	{
+		AAntCharacter* By = nullptr;
+		for (AAntCharacter* A : Carriers) { if (A && (!By || A->IsPlayerControlled())) { By = A; } }
+		AntTut::Note(this, AntTut::EvDeliver, By, Food);
+	}
 	if (Food->bBody)
 	{
 		// A dead teammate brought home: the colony gets a larva back (or the player himself, if he was out for good).
@@ -1135,6 +1151,7 @@ void AAntKitchenGameMode::OnAntKilled(AAntCharacter* Ant, AController* Killer, A
 		return;
 	}
 	AntFighter::OnAntKilled(Ant, Killer, Causer);   // kills, deaths, a veteran to the wall (AntFighter.h)
+	AntTut::Note(this, AntTut::EvKill, Killer ? Killer->GetPawn() : nullptr, Ant);
 	if (AntRts::OnSquadBotKilled(Ant))
 	{
 		return;   // a squad ant of the snowball raid: gone for good, no respawn, no kill feed line (AntRts.cpp)

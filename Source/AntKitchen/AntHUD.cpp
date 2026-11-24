@@ -40,6 +40,7 @@
 #include "AntFighter.h"
 #include "AntFighterUi.h"
 #include "AntReact.h"
+#include "AntTutorial.h"
 
 namespace
 {
@@ -235,6 +236,7 @@ void AAntHUD::DrawHUD()
 
 	// A raid: the nest screen and the results cover everything else.
 	AAntRaid* Raid = (GS && GS->bHeistMode) ? AAntRaid::Get(GetWorld()) : nullptr;
+	AntTut::DemoHud(this, Canvas, PC);   // the Steam demo: counts its raids, the end screen (AntTutorial.cpp)
 	if (Raid && Raid->Phase != AntRaidPhase::Raid)
 	{
 		DrawRaid(Raid, GS, Me);
@@ -271,6 +273,7 @@ void AAntHUD::DrawHUD()
 	if (Raid) { AntRts::DrawHud(this, Canvas, PC); }   // the snowball: mass, picks, squad groups, selection (AntRts.cpp)
 	AntAdmin::DrawHud(this, Canvas, PC);   // the АДМИН badge, "show everyone" (AntAdmin.h)
 	AntFighterUi::DrawRaid(this, Canvas, PC);   // medal toasts; the profile's own tick (AntFighterUi.h)
+	AntTut::DrawHud(this, Canvas, PlayerOwner);   // «Учебка»: the objective card, the sergeant's lines, markers, the newsreels (AntTutorial.cpp)
 	AntInside::DrawHud(this, Canvas, PlayerOwner);   // inside a resident: the place, the keys, the warning; the Human's hints (AntInside.h)
 	AntReact::DrawHud(this, Canvas, PlayerOwner);    // flour in the eyes, a powder cloud round the camera, the blackout line (AntReact.h)
 	DrawFeed(GS);
@@ -294,6 +297,10 @@ void AAntHUD::DrawTop(AAntGameState* GS)
 
 	const FLinearColor Fire(1.f, 0.4f, 0.2f);
 	AAntRaid* Raid = GS->bHeistMode ? AAntRaid::Get(GetWorld()) : nullptr;
+	if (Raid && AntTut::OwnsRaid(Raid))
+	{
+		return;   // the training: its own card and timers (AntTutorial.cpp)
+	}
 	if (Raid)
 	{
 		DrawRaidTop(Raid, GS);

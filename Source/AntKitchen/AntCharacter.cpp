@@ -1,4 +1,5 @@
 ﻿#include "AntCharacter.h"
+#include "AntTutorial.h"
 #include "AntMovementComponent.h"
 #include "AcidProjectile.h"
 #include "KitchenLoot.h"
@@ -1143,6 +1144,7 @@ void AAntCharacter::Dash()
 	if (HasAuthority())
 	{
 		RamUntil = Now + 0.45f;
+		AntTut::Note(this, AntTut::EvDash, this);
 	}
 	// Along the movement input (or forward), in the plane of the surface you stand on.
 	FVector Dir = GetLastMovementInputVector();
@@ -1169,6 +1171,7 @@ void AAntCharacter::ServerDash_Implementation()
 	// The client already moved itself (owner-authoritative); the server just marks the cooldown for bots' sake.
 	NextDash = GetWorld()->GetTimeSeconds() + DashCooldown();
 	RamUntil = GetWorld()->GetTimeSeconds() + 0.5f;
+	AntTut::Note(this, AntTut::EvDash, this);
 	NoteBodyAct(AntAct::Dash, GetVelocity().GetSafeNormal(UE_SMALL_NUMBER, GetActorForwardVector()), 1.f);
 }
 
@@ -1537,6 +1540,7 @@ void AAntCharacter::ServerFire_Implementation(FVector_NetQuantize Origin, FVecto
 		return;
 	}
 	Acid -= Cost;
+	AntTut::Note(this, AntTut::EvSpit, this);
 	ServerNextFireTime = Now + 0.8f / FMath::Max(0.2f, Weapon.FireRate);
 
 	FVector Start = Origin;
@@ -1800,6 +1804,7 @@ void AAntCharacter::ServerBite_Implementation()
 	}
 	AntCloth::OnBite(this);   // cloth in front of the jaws gets a cut (AntCloth.h)
 	NoteBodyAct(AntAct::Bite, GetActorForwardVector(), 1.f);
+	AntTut::Note(this, AntTut::EvBite, this);
 	AntSfx::Everyone(this, AntSfx::Bite, GetActorLocation(), FMath::FRandRange(0.9f, 1.2f));
 	const FVector Me = GetActorLocation();
 	FVector Fwd = Controller ? Controller->GetControlRotation().Vector() : GetActorForwardVector();

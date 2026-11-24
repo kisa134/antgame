@@ -1,4 +1,5 @@
 ﻿#include "AntSnowball.h"
+#include "AntTutorial.h"
 #include "AntTrail.h"
 #include "AntRts.h"
 #include "AntHaulAdapter.h"
@@ -227,7 +228,7 @@ void AAntSnowball::Begin(AAntRaid* Raid)
 	if (AAntTrailNet* T = AAntTrailNet::Get(GetWorld(), true)) { T->Clear(); }
 	// v12, a snappy first minutes: every player starts with a few workers on a starter trail from the nest to the nearest
 	// cluster of light food, and the family has dropped crumbs round the nest (a solo player picks within about a minute).
-	if (!FParse::Param(FCommandLine::Get(), TEXT("AntSnowOld")))
+	if (!FParse::Param(FCommandLine::Get(), TEXT("AntSnowOld")) && !AntTut::OwnsRaid(Raid))   // (the training hands workers out in its own beat)
 	{
 		AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>();
 		const FVector Nest = AKitchenBuilder::NestLocation(0);
@@ -480,7 +481,7 @@ void AAntSnowball::Second()
 		if (It->Team == 0 && !It->bIsHuman && !It->IsABot() && !Find(*It))
 		{
 			FAntSnowPlayer* NewP = For(*It);
-			if (NewP && !FParse::Param(FCommandLine::Get(), TEXT("AntSnowOld")))
+			if (NewP && !FParse::Param(FCommandLine::Get(), TEXT("AntSnowOld")) && !AntTut::OwnsRaid(AAntRaid::Get(GetWorld())))
 			{
 				NewP->Workers = FMath::Max(NewP->Workers, 10);   // v12: a late joiner gets the start kit too
 				AntSnowball::StarterTrail(*It, false);
@@ -712,9 +713,9 @@ namespace AntSnowball
 	{
 		// (AntHaul::NotifyDelivered is fired by AntCarry's own Delivered event since the carry merge: AntHaulAdapter.cpp)
 		AAntSnowball* S = GM ? AAntSnowball::Get(GM->GetWorld()) : nullptr;
-		if (!S || !S->bActive || !Food || Food->bBody)
+		if (!S || !S->bActive || !Food || Food->bBody || AntTut::MassHeld(GM))
 		{
-			return;
+			return;   // (the training: no mass before the snowball's own beat)
 		}
 		APlayerState* By = GCredit;
 		for (int32 i = 0; !By && i < Carriers.Num(); ++i)

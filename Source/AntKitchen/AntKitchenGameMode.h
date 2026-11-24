@@ -135,6 +135,11 @@ public:
 	void StartEvent(uint8 Id);
 	/** Admin mode (AntAdmin.cpp): one command from the host's panel; anything it does not know goes to DevCommand. */
 	void AdminCommand(class AAntPlayerController* By, const FString& Cmd);
+	/** The tutorial / sandbox director (AntTutorial.h): an admin command as the host's own, with no toast and in any build
+	 *  (the demo has no admin panel, but the training stages its beats with the same commands). */
+	void StageCommand(const FString& Cmd);
+	bool bStaging = false;
+	friend class AAntTutorial;
 	void EndEvent();
 	FAntRunState Run;
 	FTimerHandle RunTimer;

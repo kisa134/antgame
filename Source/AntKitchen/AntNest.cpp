@@ -1,6 +1,7 @@
 ﻿#include "AntNest.h"
 #include "AntRun.h"
 #include "AntColony.h"
+#include "AntTutorial.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "Misc/Crc.h"
@@ -147,6 +148,11 @@ bool CanBuy(const FAntNestState& S, uint8 Branch, FString* Why)
 		if (Why) { *Why = TEXT("построено всё"); }
 		return false;
 	}
+	if (AntTut::IsDemo() && Have >= 1)
+	{
+		if (Why) { *Why = TEXT("в полной версии"); }   // the demo: the first chamber of every branch
+		return false;
+	}
 	int32 DFood = 0, DJelly = 0, DMood = 0;
 	AntColony::Cost(S, AntColony::ChamberOfBranch(Branch), DFood, DJelly, DMood);   // the one price (tier I grows with the chambers already open)
 	if (S.Mood < DMood)
@@ -206,8 +212,9 @@ bool ToolUnlocked(const FAntNestState& S, uint8 Tool)
 // Written to a temp file first and moved into place; the save that was there becomes the backup.
 // ---------------------------------------------------------------------------------------------
 
-FString SavePath() { return FPaths::ProjectSavedDir() / TEXT("Nest") / TEXT("colony.sav"); }
-FString BackupPath() { return FPaths::ProjectSavedDir() / TEXT("Nest") / TEXT("colony.bak"); }
+// The folder: Nest (the game), NestDemo (the Steam demo), NestTutorial (the training's own colony): AntTut::NestFolder().
+FString SavePath() { return FPaths::ProjectSavedDir() / AntTut::NestFolder() / TEXT("colony.sav"); }
+FString BackupPath() { return FPaths::ProjectSavedDir() / AntTut::NestFolder() / TEXT("colony.bak"); }
 
 namespace
 {
@@ -336,7 +343,7 @@ bool SaveAsV1(const FAntNestState& S)
 void Reset()
 {
 	IFileManager& FM = IFileManager::Get();
-	const FString Old = FPaths::ProjectSavedDir() / TEXT("Nest") / TEXT("colony.old");
+	const FString Old = FPaths::ProjectSavedDir() / AntTut::NestFolder() / TEXT("colony.old");
 	if (FM.FileExists(*SavePath())) { FM.Move(*Old, *SavePath(), true); }
 	FM.Delete(*BackupPath());
 }
