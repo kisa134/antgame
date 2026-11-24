@@ -244,6 +244,22 @@ static TArray<AMap4Runner::FCam> AllCams()
 		{ TEXT("22_table_top"),  FVector(1000.f, -1900.f, 1480.f), FVector(-1200.f, 200.f, 1560.f), 74.f },
 		{ TEXT("23_worktop"),    FVector(-4300.f, 3200.f, 1800.f),  FVector(-1200.f, 4300.f, 1960.f), 74.f },
 		{ TEXT("24_fly_spider"), FVector(6300.f, 2200.f, 3400.f),  FVector(6990.f, 2600.f, 2880.f), 60.f },
+		// the living flat (docs/level/LIFE.md): the TV, its remote, the windows, the clocks and displays, the decor, the details
+		{ TEXT("30_life_tv"),       FVector(13150.f, -2600.f, 1500.f), FVector(13150.f, -8700.f, 2150.f), 70.f },
+		{ TEXT("31_life_remote"),   FVector(13280.f, -4180.f, 1090.f), FVector(13000.f, -3900.f, 1010.f), 70.f },
+		{ TEXT("32_life_window_k"), FVector(300.f, -2200.f, 1400.f),   FVector(0.f, -9000.f, 4300.f), 78.f },
+		{ TEXT("33_life_window_l"), FVector(18000.f, -5600.f, 1600.f), FVector(18285.f, -13000.f, 4800.f), 78.f },
+		{ TEXT("34_life_clock"),    FVector(5300.f, 1300.f, 3200.f),   FVector(6970.f, 1500.f, 3300.f), 60.f },
+		{ TEXT("35_life_fridge"),   FVector(5900.f, 3500.f, 1800.f),   FVector(4700.f, 3850.f, 1900.f), 70.f },
+		{ TEXT("36_life_microwave"),FVector(2150.f, 3350.f, 2120.f),   FVector(2280.f, 3987.f, 2234.f), 60.f },
+		{ TEXT("44_life_fridge_panel"),FVector(3550.f, 2050.f, 2950.f), FVector(3700.f, 2889.f, 3366.f), 60.f },
+		{ TEXT("37_life_banner"),   FVector(13500.f, -3500.f, 2300.f), FVector(13500.f, 1400.f, 4200.f), 78.f },
+		{ TEXT("38_life_floor"),    FVector(14200.f, -1200.f, 45.f),   FVector(13000.f, -3200.f, 0.f), 78.f },
+		{ TEXT("39_life_sill"),     FVector(600.f, -7600.f, 2700.f),   FVector(-300.f, -5300.f, 2300.f), 70.f },
+		{ TEXT("40_life_kitchen_floor"), FVector(4800.f, -2600.f, 40.f), FVector(3500.f, -800.f, 20.f), 78.f },
+		{ TEXT("41_life_out_k"),    FVector(0.f, -4400.f, 2600.f),     FVector(0.f, -20000.f, 6500.f), 80.f },
+		{ TEXT("42_life_out_l"),    FVector(18285.f, -8400.f, 2500.f), FVector(18285.f, -20000.f, 6500.f), 80.f },
+		{ TEXT("43_life_street"),   FVector(-9500.f, -2500.f, 250.f),  FVector(-14000.f, 1500.f, 400.f), 80.f },
 	};
 }
 

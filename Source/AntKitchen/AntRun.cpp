@@ -1,6 +1,7 @@
 ﻿#include "AntRun.h"
 #include "AntTutorial.h"
 #include "AntWreck.h"
+#include "AntLife.h"
 #include "AntFluidWorld.h"
 #include "AntWeapon.h"
 #include "AntVersus.h"
@@ -363,6 +364,10 @@ void AAntKitchenGameMode::NoiseChecked(const FAntNoise& N, bool bDistracted)
 		else if (AKitchenNoiseBox* Box = Cast<AKitchenNoiseBox>(N.Source.Get()))
 		{
 			Box->SwitchOff();
+		}
+		else
+		{
+			AntLife::HumanChecked(N.Source.Get());   // the living room's TV, turned up by the ants: down / off
 		}
 	}
 	else if (N.Kind < AntNoise::Count)
@@ -1595,6 +1600,10 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 	if (AntWreck::DevCommand(this, A) || AntWeapons::DevCommand(this, A) || AntVersus::DevCommand(this, A) || AHumanCharacter::HeavyDevCommand(this, A))
 	{
 		return;   // wreck ..., weapon ..., rage N, versus ... (AntWreck.cpp, AntWeapon.cpp, AntVersus.cpp)
+	}
+	if (AntLife::DevCommand(this, A))   // the living flat: tv ..., life ... (AntLife.h)
+	{
+		return;
 	}
 	if (Map4::DevCommand(this, A))
 	{

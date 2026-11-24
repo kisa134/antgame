@@ -8,6 +8,7 @@
 #include "LevelV3.h"
 #include "KitchenFixture.h"
 #include "Map4Look.h"
+#include "AntLife.h"
 #include "GameFramework/Character.h"
 #include "Components/CapsuleComponent.h"
 #include "Engine/StaticMesh.h"
@@ -70,6 +71,7 @@ void AKitchenBuilder::BeginPlay()
 {
 	Super::BeginPlay();
 	Build();
+	AntLife::Spawn(GetWorld());   // the living flat: the TV, the world outside, the small life of the rooms (AntLife.h)
 }
 
 // ---------------------------------------------------------------------------------------------

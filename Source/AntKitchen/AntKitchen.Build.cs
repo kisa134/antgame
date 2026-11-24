@@ -1,4 +1,4 @@
-using UnrealBuildTool;
+﻿using UnrealBuildTool;
 
 public class AntKitchen : ModuleRules
 {
@@ -10,7 +10,7 @@ public class AntKitchen : ModuleRules
 
 		PublicDependencyModuleNames.AddRange(new string[]
 		{
-			"Core", "CoreUObject", "Engine", "InputCore", "AIModule", "NetCore", "PhysicsCore", "OnlineSubsystem", "OnlineSubsystemUtils", "Slate", "SlateCore", "ProceduralMeshComponent", "Niagara", "RenderCore", "RHI", "MoviePlayer", "Chaos", "Json", "JsonUtilities", "CoreOnline"
+			"Core", "CoreUObject", "Engine", "InputCore", "AIModule", "NetCore", "PhysicsCore", "OnlineSubsystem", "OnlineSubsystemUtils", "Slate", "SlateCore", "ProceduralMeshComponent", "Niagara", "RenderCore", "RHI", "MoviePlayer", "Chaos", "Json", "JsonUtilities", "CoreOnline", "MediaAssets", "Media", "AudioMixer"
 		});
 		DynamicallyLoadedModuleNames.Add("OnlineSubsystemSteam");
 	}
