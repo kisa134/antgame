@@ -1,4 +1,5 @@
 ﻿#include "AntRun.h"
+#include "AntTutorial.h"
 #include "AntWreck.h"
 #include "AntFluidWorld.h"
 #include "AntWeapon.h"
@@ -1552,6 +1553,10 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 	if (A.Num() == 0)
 	{
 		return;
+	}
+	if (AntTut::DevCommand(this, A))
+	{
+		return;   // tut info|skip|beat N|assist|enter|auto|end (AntTutorial.cpp)
 	}
 	if (NpcWorld::DevCommand(this, A))
 	{

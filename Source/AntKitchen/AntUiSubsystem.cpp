@@ -19,7 +19,7 @@ namespace
 {
 	uint8 ScreenByName(const FString& N)
 	{
-		static const TCHAR* Names[AntUiScreen::Count] = { TEXT("Boot"), TEXT("Main"), TEXT("Coop"), TEXT("Colony"), TEXT("Lobby"), TEXT("Settings"), TEXT("Credits"), TEXT("Pause"), TEXT("Loading") };
+		static const TCHAR* Names[AntUiScreen::Count] = { TEXT("Boot"), TEXT("Main"), TEXT("Coop"), TEXT("Colony"), TEXT("Lobby"), TEXT("Settings"), TEXT("Credits"), TEXT("Pause"), TEXT("Loading"), TEXT("Training"), TEXT("DemoEnd") };
 		for (uint8 i = 0; i < AntUiScreen::Count; ++i)
 		{
 			if (N.StartsWith(Names[i])) { return i; }

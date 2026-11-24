@@ -10,6 +10,8 @@
 #include "AntNest.h"
 #include "LevelV3.h"
 #include "AntVersus.h"
+#include "AntTutorial.h"
+#include "GenericPlatform/GenericPlatformProcess.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "Engine/GameViewportClient.h"
@@ -186,7 +188,7 @@ namespace
 	float Ease(float X) { X = FMath::Clamp(X, 0.f, 1.f); return 1.f - FMath::Pow(1.f - X, 3.f); }
 	float EaseBack(float X) { X = FMath::Clamp(X, 0.f, 1.f); const float C1 = 1.70158f, C3 = C1 + 1.f; return 1.f + C3 * FMath::Pow(X - 1.f, 3.f) + C1 * FMath::Pow(X - 1.f, 2.f); }
 	int32 IdOf(const FString& Key) { return (int32)(GetTypeHash(Key) | 1u); }
-	bool IsOpaque(uint8 S) { return S == AntUiScreen::Boot || S == AntUiScreen::Main || S == AntUiScreen::Coop || S == AntUiScreen::Colony || S == AntUiScreen::Credits || S == AntUiScreen::Lobby; }
+	bool IsOpaque(uint8 S) { return S == AntUiScreen::Boot || S == AntUiScreen::Main || S == AntUiScreen::Coop || S == AntUiScreen::Colony || S == AntUiScreen::Credits || S == AntUiScreen::Lobby || S == AntUiScreen::Training || S == AntUiScreen::DemoEnd; }
 
 	const TCHAR* LoadingArts[] =
 	{
@@ -398,7 +400,9 @@ void SAntUiMenu::Back()
 	case AntUiScreen::Boot: Go(AntUiScreen::Main); break;
 	case AntUiScreen::Coop:
 	case AntUiScreen::Colony:
-	case AntUiScreen::Credits: Go(AntUiScreen::Main); break;
+	case AntUiScreen::Credits:
+	case AntUiScreen::Training:
+	case AntUiScreen::DemoEnd: Go(AntUiScreen::Main); break;
 	case AntUiScreen::Settings: SettingsRevert(); Go(ReturnTo); break;
 	case AntUiScreen::Pause:
 	case AntUiScreen::Lobby: CloseOrBack(); break;
@@ -695,6 +699,8 @@ int32 SAntUiMenu::OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeome
 	case AntUiScreen::Credits: PaintCredits(D); break;
 	case AntUiScreen::Pause: PaintPause(D); break;
 	case AntUiScreen::Loading: PaintLoading(D); break;
+	case AntUiScreen::Training: PaintTraining(D); break;
+	case AntUiScreen::DemoEnd: PaintDemoEnd(D); break;
 	default: break;
 	}
 
@@ -813,13 +819,39 @@ void SAntUiMenu::PaintMain(FUiDraw& D) const
 	UAntSession* S = Session();
 	TWeakObjectPtr<AAntPlayerController> WPC = PC;
 	const float BX = 120.f;
-	float Y = 470.f;
-	const float Step = 66.f;
+	float Y = 450.f;
+	// «Учебка» first for a new recruit (auto-suggested until it is done); after it: the real raid, the chapters, the sandbox.
+	const AntTut::FProgress& Tut = AntTut::Progress();
+	const bool bTutDone = Tut.bDone;
+	const float Step = bTutDone ? 56.f : 62.f;
 	int32 N = 0;
 	auto Slide = [&](float Yb) { return Yb + 24.f * (1.f - Ease((D.T - 0.08f * N++) / 0.5f)); };
-	MenuButton(DC, TEXT("m.play"), L(TEXT("main.play")), BX, Slide(Y), [S]() { if (S) { S->PlaySolo(); } }); Y += Step;
-	MenuButton(DC, TEXT("m.coop"), L(TEXT("main.coop")), BX, Slide(Y), [Self]() { Self->Go(AntUiScreen::Coop); }); Y += Step;
+	if (!bTutDone)
+	{
+		MenuButton(DC, TEXT("m.tut"), AntTut::Tx(TEXT("Учебка Сержанта Жвалова"), TEXT("Sergeant Zhvalov's Training")), BX, Slide(Y), [S]() { AntTut::SetWanted(AntTut::Training, 0); if (S) { S->PlaySolo(); } }); Y += Step;
+	}
+	MenuButton(DC, TEXT("m.play"), bTutDone ? FString(AntTut::Tx(TEXT("Настоящий рейд"), TEXT("The Real Raid"))) : L(TEXT("main.play")), BX, Slide(Y), [S]() { AntTut::SetWanted(AntTut::Off); AntVersus::Wanted() = false; if (S) { S->PlaySolo(); } }); Y += Step;
+	MenuButton(DC, TEXT("m.coop"), L(TEXT("main.coop")), BX, Slide(Y), [Self]() { AntTut::SetWanted(AntTut::Off); Self->Go(AntUiScreen::Coop); }); Y += Step;
 	MenuButton(DC, TEXT("m.colony"), L(TEXT("main.colony")), BX, Slide(Y), [Self]() { Self->Go(AntUiScreen::Colony); }); Y += Step;
+	if (bTutDone && AntTut::IsDemo())
+	{
+		// The demo's versus teaser: one round as the Giant against the colony's ants.
+		MenuButton(DC, TEXT("m.giant"), AntTut::Tx(TEXT("Сыграть за Гиганта (1 раунд)"), TEXT("Play the Giant (1 round)")), BX, Slide(Y), [S]() { AntTut::SetWanted(AntTut::Off); AntVersus::Wanted() = true; if (S) { S->PlaySolo(); } }, !AntTut::Progress().bDemoVersus); Y += Step;
+	}
+	if (bTutDone)
+	{
+		MenuButton(DC, TEXT("m.tutch"), AntTut::Tx(TEXT("Учебка: главы"), TEXT("Training: chapters")), BX, Slide(Y), [Self]() { Self->Go(AntUiScreen::Training); }); Y += Step;
+		MenuButton(DC, TEXT("m.sandbox"), AntTut::IsDemo() ? FString(AntTut::Tx(TEXT("Песочница — в полной версии"), TEXT("Sandbox — full game"))) : FString(AntTut::Tx(TEXT("Песочница"), TEXT("Sandbox"))), BX, Slide(Y),
+			[S]() { AntTut::SetWanted(AntTut::Sandbox); if (S) { S->PlaySolo(); } }, !AntTut::IsDemo()); Y += Step;
+	}
+	else
+	{
+		// The recruit's note: why the training first.
+		DC.Paper(860.f, 470.f, 430.f, 150.f, 2.f);
+		DC.Text(AntTut::Tx(TEXT("НОВОБРАНЕЦ?"), TEXT("NEW RECRUIT?")), 888.f, 494.f, EFont::Display, 22.f, C::JamDeep);
+		DC.Wrap(AntTut::Tx(TEXT("Начни с учебки: 25 минут — и ты знаешь всё, что умеет муравей. Можно вдвоём."), TEXT("Start with the training: 25 minutes and you know everything an ant can do. Co-op works too.")),
+			888.f, 532.f, 380.f, EFont::Hand, 20.f, C::Graphite, 3, 1.15f);
+	}
 	MenuButton(DC, TEXT("m.settings"), L(TEXT("main.settings")), BX, Slide(Y), [Self]() { Self->Go(AntUiScreen::Settings); }); Y += Step;
 	MenuButton(DC, TEXT("m.credits"), L(TEXT("main.credits")), BX, Slide(Y), [Self]() { Self->Go(AntUiScreen::Credits); }); Y += Step;
 	MenuButton(DC, TEXT("m.quit"), L(TEXT("main.quit")), BX, Slide(Y), [WPC]() { if (WPC.IsValid()) { UKismetSystemLibrary::QuitGame(WPC.Get(), WPC.Get(), EQuitPreference::Quit, false); } });
@@ -1331,4 +1363,65 @@ void SAntUiMenu::PaintLoading(FUiDraw& D) const
 	const float AntX = 120.f + 1680.f * Prog;
 	D.Box(AntX - 26.f, 940.f + 3.f * FMath::Sin(t * 14.f), 52.f, 52.f, IconBrush(TEXT("Carry")), FLinearColor::White);
 	D.Text(L(TEXT("loading")), 1800.f, 1000.f, EFont::Hand, 22.f, WithA(C::Muted, 0.6f + 0.4f * FMath::Sin(t * 3.f)), 2);
+}
+
+// ---------------------------------------------------------------------------------------------------- «Учебка»: chapters
+
+void SAntUiMenu::PaintTraining(FUiDraw& D) const
+{
+	PaintBackdrop(D, TEXT("Backgrounds/T_UI_BgWarRoom"), 0.5f, true);
+	FUiDraw DC = D;
+	DC.A = Ease(D.T / 0.35f);
+	SAntUiMenu* Self = const_cast<SAntUiMenu*>(this);
+	UAntSession* S = Session();
+	const AntTut::FProgress& P = AntTut::Progress();
+	DC.Text(AntTut::Tx(TEXT("УЧЕБКА СЕРЖАНТА ЖВАЛОВА"), TEXT("SERGEANT ZHVALOV'S TRAINING")), 960.f, 56.f, EFont::Display, 50.f, C::Honey, 1, 0.6f);
+	DC.Text(P.bDone ? FString::Printf(TEXT("%s · %d XP"), *AntTut::RankName(P.Rank), P.Xp) : FString(AntTut::Tx(TEXT("Пройди с начала — или выбери главу"), TEXT("Start from the top — or pick a chapter"))),
+		960.f, 128.f, EFont::Body, 22.f, C::Sugar, 1, 0.6f);
+	// The beats, chapter by chapter, two columns.
+	const int32 NB = AntTut::NumBeats();
+	for (int32 i = 0; i < NB; ++i)
+	{
+		const int32 Col = i < (NB + 1) / 2 ? 0 : 1, Row = Col == 0 ? i : i - (NB + 1) / 2;
+		const float X = 150.f + Col * 560.f, Y = 190.f + Row * 74.f;
+		const bool bDone = (P.BeatsDone & (1u << i)) != 0;
+		const AntTut::FBeat& B = AntTut::Beat(i);
+		const FString Label = FString::Printf(TEXT("%d. %s%s"), i, *AntTut::BeatTitle(i), AntTut::BranchMerged(B.Branch) ? TEXT("") : TEXT(" *"));
+		Button(DC, FString::Printf(TEXT("t.beat%d"), i), Label, X, Y, 520.f, 60.f, [S, i]() { AntTut::SetWanted(AntTut::Training, i); if (S) { S->PlaySolo(); } }, false, true, bDone ? TEXT("Ready") : nullptr);
+	}
+	// Right: from the top, together, the sandbox.
+	const float RX = 1320.f;
+	DC.Glass(RX - 20.f, 190.f, 500.f, 560.f, 0.8f);
+	Button(DC, TEXT("t.start"), AntTut::Tx(TEXT("С начала"), TEXT("From the top")), RX, 220.f, 460.f, 66.f, [S]() { AntTut::SetWanted(AntTut::Training, 0); if (S) { S->PlaySolo(); } }, true, true, TEXT("Clipboard"));
+	Button(DC, TEXT("t.coop"), AntTut::Tx(TEXT("Вдвоём–вчетвером (кооп)"), TEXT("2–4 players (co-op)")), RX, 306.f, 460.f, 66.f, [Self]() { AntTut::SetWanted(AntTut::Training, 0); Self->Go(AntUiScreen::Coop); }, false, true, TEXT("Squad"));
+	Button(DC, TEXT("t.sand"), AntTut::IsDemo() ? FString(AntTut::Tx(TEXT("Песочница — в полной версии"), TEXT("Sandbox — full game"))) : FString(AntTut::Tx(TEXT("Песочница"), TEXT("Sandbox"))), RX, 392.f, 460.f, 66.f,
+		[S]() { AntTut::SetWanted(AntTut::Sandbox); if (S) { S->PlaySolo(); } }, false, P.bDone && !AntTut::IsDemo(), TEXT("Wrench"));
+	DC.Wrap(AntTut::Tx(TEXT("Песочница — вся квартира и инструменты: еда у прицела, Гигант стоп/ход, время суток, цепные реакции, потоп. Открывается после учебки. * — упрощённо, пока в игру не влита ветка."),
+		TEXT("Sandbox: the whole flat and tools — food at the crosshair, the Giant stop/go, time of day, chain reactions, flood. Opens after the training. * — simplified until its branch is merged.")),
+		RX, 486.f, 460.f, EFont::Body, 18.f, WithA(C::Sugar, 0.75f), 8, 1.2f);
+	Button(DC, TEXT("t.back"), L(TEXT("back")), 70.f, 990.f, 220.f, 60.f, [Self]() { Self->Back(); }, false, true);
+	PaintFooter(DC, true);
+}
+
+// ---------------------------------------------------------------------------------------------------- the demo's end
+
+void SAntUiMenu::PaintDemoEnd(FUiDraw& D) const
+{
+	PaintBackdrop(D, TEXT("Backgrounds/T_UI_BgCake"), 0.45f, true);
+	FUiDraw DC = D;
+	DC.A = Ease(D.T / 0.5f);
+	SAntUiMenu* Self = const_cast<SAntUiMenu*>(this);
+	TWeakObjectPtr<AAntPlayerController> WPC = PC;
+	if (const FSlateBrush* Logo = Brush(TEXT("Logo/T_UI_Logo"))) { DC.Box(960.f - 300.f, 40.f, 600.f, 426.f, Logo, FLinearColor::White); }
+	DC.Text(AntTut::Tx(TEXT("Спасибо, что играли!"), TEXT("Thanks for playing!")), 960.f, 500.f, EFont::Display, 56.f, C::Honey, 1, 0.6f);
+	DC.Wrap(AntTut::Tx(TEXT("Это была демо-версия. В полной игре — четыре угрозы до «Дня рождения», вся колония и её камеры, режим «Человек против муравьёв», песочница и ветераны отряда."),
+		TEXT("That was the demo. The full game has four threats up to «Birthday», the whole colony and its chambers, Human vs Ants, the sandbox and squad veterans.")),
+		560.f, 580.f, 800.f, EFont::Body, 24.f, C::Sugar, 4, 1.25f);
+	Button(DC, TEXT("d.wish"), AntTut::Tx(TEXT("Добавь в желаемое в Steam"), TEXT("Wishlist on Steam")), 660.f, 740.f, 600.f, 76.f, []()
+	{
+		FPlatformProcess::LaunchURL(TEXT("https://store.steampowered.com/app/0000000/AntKitchen/"), nullptr, nullptr);   // placeholder: the store page id goes here
+	}, true, true, TEXT("Ready"));
+	Button(DC, TEXT("d.menu"), AntTut::Tx(TEXT("В главное меню"), TEXT("Main menu")), 660.f, 836.f, 290.f, 60.f, [Self]() { Self->Go(AntUiScreen::Main); }, false, true);
+	Button(DC, TEXT("d.quit"), L(TEXT("main.quit")), 970.f, 836.f, 290.f, 60.f, [WPC]() { if (WPC.IsValid()) { UKismetSystemLibrary::QuitGame(WPC.Get(), WPC.Get(), EQuitPreference::Quit, false); } }, false, true);
+	PaintFooter(DC, true);
 }

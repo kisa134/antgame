@@ -1,4 +1,5 @@
 ﻿#include "AntAdmin.h"
+#include "AntTutorial.h"
 #include "AntUiStyle.h"
 #include "AntAudio.h"
 #include "AntKitchenGameMode.h"
@@ -200,7 +201,8 @@ namespace AntAdmin
 	bool CanUse(const APlayerController* PC)
 	{
 		const UWorld* W = PC ? PC->GetWorld() : nullptr;
-		return W && PC->IsLocalController() && W->GetNetMode() != NM_Client;
+		// The Steam demo has no admin panel (docs/DEMO.md); the training stages its beats through StageCommand instead.
+		return W && PC->IsLocalController() && W->GetNetMode() != NM_Client && !AntTut::IsDemo();
 	}
 
 	void MarkUsed()
@@ -213,10 +215,19 @@ namespace AntAdmin
 // The server side: one text command
 // =============================================================================================
 
+void AAntKitchenGameMode::StageCommand(const FString& Cmd)
+{
+	AAntPlayerController* Host = nullptr;
+	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It) { if (It->Get() && It->Get()->IsLocalController()) { Host = Cast<AAntPlayerController>(It->Get()); break; } }
+	if (!Host) { DevCommand(Cmd); return; }
+	TGuardValue<bool> G(bStaging, true);
+	AdminCommand(Host, Cmd);
+}
+
 void AAntKitchenGameMode::AdminCommand(AAntPlayerController* By, const FString& Cmd)
 {
 	UWorld* W = GetWorld();
-	if (!By || !AntAdmin::CanUse(By))
+	if (!By || (!bStaging && !AntAdmin::CanUse(By)))
 	{
 		// A client of an online game: never. (Its controller is not local on the server.)
 		UE_LOG(LogTemp, Warning, TEXT("ANTADMIN REJECTED (not the host) from %s: %s"), By && By->PlayerState ? *By->PlayerState->GetPlayerName() : TEXT("?"), *Cmd);
@@ -669,7 +680,7 @@ void AAntKitchenGameMode::AdminCommand(AAntPlayerController* By, const FString& 
 	{
 		UE_LOG(LogTemp, Display, TEXT("ANTADMIN done: %s"), *Done);
 		if (St) { St->Last = Done; St->ForceNetUpdate(); }
-		By->ClientToast(FString::Printf(TEXT("Админ: %s"), *Done));
+		if (!bStaging) { By->ClientToast(FString::Printf(TEXT("Админ: %s"), *Done)); }
 	}
 }
 

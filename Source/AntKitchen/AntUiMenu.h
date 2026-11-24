@@ -9,7 +9,7 @@ class UAntSession;
 struct FUiDraw;
 
 /** The screens of the Slate front end (docs/UI_FLOW.md). */
-namespace AntUiScreen { enum EId : uint8 { Boot, Main, Coop, Colony, Lobby, Settings, Credits, Pause, Loading, Count }; }
+namespace AntUiScreen { enum EId : uint8 { Boot, Main, Coop, Colony, Lobby, Settings, Credits, Pause, Loading, Training, DemoEnd, Count }; }
 
 /**
  * Every menu screen in one immediate-mode widget: each paint lays the screen out, draws it and records the clickable items;
@@ -65,6 +65,10 @@ private:
 	void PaintCredits(FUiDraw& D) const;
 	void PaintPause(FUiDraw& D) const;
 	void PaintLoading(FUiDraw& D) const;
+	/** «Учебка»: chapter select, co-op training, the sandbox (AntTutorial.h). */
+	void PaintTraining(FUiDraw& D) const;
+	/** The Steam demo's last screen: thanks, wishlist. */
+	void PaintDemoEnd(FUiDraw& D) const;
 	void PaintBackdrop(FUiDraw& D, const TCHAR* Plate, float Dim, bool bDust) const;
 	void PaintFooter(FUiDraw& D, bool bBack) const;
 

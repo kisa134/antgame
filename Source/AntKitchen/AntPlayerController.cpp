@@ -1,4 +1,5 @@
 ﻿#include "AntPlayerController.h"
+#include "AntTutorial.h"
 #include "AntKitchenGameMode.h"
 #include "HumanCharacter.h"
 #include "AntCharacter.h"
@@ -133,6 +134,13 @@ void AAntPlayerController::BeginPlay()
 			GetWorldTimerManager().SetTimer(JH, FTimerDelegate::CreateWeakLambda(this, [this, JoinArg]() { JoinGame(JoinArg); }), 1.f, false);
 		}
 
+		// Dev/test: -AntListenPort=7807 makes this machine a listen server without Steam (co-op tests of the training).
+		int32 ListenPort = 0;
+		if (JoinArg.IsEmpty() && FParse::Value(FCommandLine::Get(), TEXT("AntListenPort="), ListenPort) && ListenPort > 0 && GetWorld()->GetNetMode() == NM_Standalone)
+		{
+			FTimerHandle LH;
+			GetWorldTimerManager().SetTimer(LH, FTimerDelegate::CreateWeakLambda(this, [this, ListenPort]() { UGameplayStatics::OpenLevel(this, FName(TEXT("/Engine/Maps/Entry")), true, FString::Printf(TEXT("listen?Port=%d"), ListenPort)); }), 1.f, false);
+		}
 		// Dev/test switches.
 		FString TpArg;
 		if (FParse::Value(FCommandLine::Get(), TEXT("AntTp="), TpArg, false))
@@ -304,6 +312,14 @@ void AAntPlayerController::SetupInputComponent()
 	InputComponent->BindKey(EKeys::F10, IE_Pressed, this, &AAntPlayerController::ToggleAdmin).bExecuteWhenPaused = true;   // admin panel (AntAdmin.h); enemy bots: in the panel
 	InputComponent->BindKey(EKeys::MiddleMouseButton, IE_Pressed, this, &AAntPlayerController::PingPressed);
 	InputComponent->BindKey(EKeys::F1, IE_Pressed, this, &AAntPlayerController::ShowHelp);
+	InputComponent->BindKey(EKeys::Enter, IE_Pressed, this, &AAntPlayerController::TutEnterDown);
+	InputComponent->BindKey(EKeys::Enter, IE_Released, this, &AAntPlayerController::TutEnterUp);
+	InputComponent->BindKey(EKeys::F2, IE_Pressed, this, &AAntPlayerController::TutToolN<2>);
+	InputComponent->BindKey(EKeys::F3, IE_Pressed, this, &AAntPlayerController::TutToolN<3>);
+	InputComponent->BindKey(EKeys::F4, IE_Pressed, this, &AAntPlayerController::TutToolN<4>);
+	InputComponent->BindKey(EKeys::F5, IE_Pressed, this, &AAntPlayerController::TutToolN<5>);
+	InputComponent->BindKey(EKeys::F6, IE_Pressed, this, &AAntPlayerController::TutToolN<6>);
+	InputComponent->BindKey(EKeys::F7, IE_Pressed, this, &AAntPlayerController::TutToolN<7>);
 	InputComponent->BindKey(EKeys::Q, IE_Pressed, this, &AAntPlayerController::SquadHaul);
 	InputComponent->BindKey(EKeys::B, IE_Pressed, this, &AAntPlayerController::SquadHold);
 	InputComponent->BindKey(EKeys::Five, IE_Pressed, this, &AAntPlayerController::UseTool0);
@@ -719,4 +735,18 @@ void AAntPlayerController::ServerAdmin_Implementation(const FString& Cmd)
 	{
 		GM->AdminCommand(this, Cmd.Left(400));
 	}
+}
+
+// «Учебка» and the sandbox (AntTutorial.h)
+void AAntPlayerController::TutEnterDown() { AntTut::OnEnter(this, true); }
+void AAntPlayerController::TutEnterUp() { AntTut::OnEnter(this, false); }
+void AAntPlayerController::TutTool(int32 Tool) { if (AntTut::SandboxActive(this)) { ServerTut((uint8)(10 + Tool)); } }
+
+void AAntPlayerController::ServerTut_Implementation(uint8 Cmd)
+{
+	AAntTutorial* T = AAntTutorial::Get(GetWorld());
+	if (!T) { return; }
+	if (Cmd == 0) { T->Enter(this); }
+	else if (Cmd == 1) { if (IsLocalController()) { T->SkipBeat(TEXT("held Enter")); } }
+	else if (Cmd >= 10) { T->SandboxTool(this, Cmd - 10); }
 }

@@ -1,4 +1,5 @@
 ﻿#include "AntHUD.h"
+#include "AntTutorial.h"
 #include "AntUiStyle.h"
 #include "AntUiCanvas.h"
 #include "AntRaid.h"
@@ -282,9 +283,9 @@ void AAntHUD::DrawRaid(AAntRaid* Raid, AAntGameState* GS, APawn* Me)
 		DrawRaidResults(Raid, GS);
 		return;
 	}
-	if (!Ant || Ant->Team != 0)
+	if (!Ant || Ant->Team != 0 || AntTut::OwnsRaid(Raid))
 	{
-		return;
+		return;   // (the training draws its own)
 	}
 
 	// --- Where the cake is, once the team knows ---

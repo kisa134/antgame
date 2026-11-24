@@ -104,6 +104,12 @@ public:
 	/** A command from the panel: the few that are this machine's own (con ..., stat ..., hudtoggle, film, freecam) run here, the rest on the server. */
 	void Admin(const FString& Cmd);
 	UFUNCTION(Server, Reliable) void ServerAdmin(const FString& Cmd);
+	/** «Учебка» (AntTutorial.h): 0 [Enter], 1 [Enter] held (skip the beat), 12..17 the sandbox tools F2..F7. */
+	UFUNCTION(Server, Reliable) void ServerTut(uint8 Cmd);
+	void TutEnterDown();
+	void TutEnterUp();
+	void TutTool(int32 Tool);
+	template<int32 N> void TutToolN() { TutTool(N); }
 	TSharedPtr<class SWidget> AdminWidget;
 	/** While the admin panel is open: swallows the right mouse button (it is the look button then). */
 	UPROPERTY() class UInputComponent* AdminLook = nullptr;
