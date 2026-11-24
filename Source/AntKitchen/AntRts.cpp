@@ -233,6 +233,21 @@ void AAntSquadBot::ThinkRts(AAntCharacter* Ant, float Dt)
 			return;
 		}
 	}
+	// Leash: a follower that is far from its owner and has not got closer for 5 s is stuck somewhere on the way (a ledge, a leg,
+	// a gap the route graph does not know). It comes out of the cracks right behind him instead of being lost for the whole raid.
+	{
+		const float BossD = (float)FVector::Dist(Boss->GetActorLocation(), Ant->GetActorLocation());
+		if (BossD < 1500.f || Ant->Carrying || Boss->IsInNest() || Boss->bDead) { LeashDeadline = 0.f; }
+		else if (LeashDeadline <= 0.f || BossD < LeashBest - 150.f) { LeashBest = BossD; LeashDeadline = Now + 5.f; }
+		else if (Now > LeashDeadline)
+		{
+			UE_LOG(LogTemp, Display, TEXT("ANTRTS leash: squad ant %s stuck %.0f uu from its owner, regroups behind him"), *Ant->GetName(), BossD);
+			Ant->ApplyTeleport(Boss->GetActorLocation() - Boss->GetActorForwardVector() * (40.f + 12.f * (Slot % 6)) + FVector(0.f, 0.f, 6.f));
+			LeashDeadline = 0.f;
+			bHasGoal = false;
+			return;
+		}
+	}
 	if (Fight(Boss->GetActorLocation(), 650.f))
 	{
 		return;
