@@ -64,9 +64,12 @@ namespace
 	};
 	constexpr int32 ThroneAt2 = 8;
 	constexpr int32 ThroneAt3 = 20;
-	// New chambers cost a little more than the old branches (120 / 300+2 / 650+5 and a pleased Queen): they come on top of the old economy.
-	const int32 OwnCost[MaxTier][3] = { { 150, 0, 0 }, { 400, 3, 0 }, { 800, 6, 60 } };
-	const int32 DigCosts[DigCount][2] = { { 120, 0 }, { 300, 1 }, { 500, 3 } };
+	// v14 rebalance (raid 1 bought 5-6 tier-I chambers at once): tier I is the dear step now and grows by OpenStep food for every
+	// chamber already open, tiers II/III got cheaper. Old branches 330 / 220+2 / 560+5 and a pleased Queen (AntNest.cpp),
+	// new chambers 330 / 320+3 / 700+6. Raid 1 (~950 food) buys 1-2 things; jelly stays the real limit, full colony by raid ~12.
+	constexpr int32 OpenStep = 50;
+	const int32 OwnCost[MaxTier][3] = { { 330, 0, 0 }, { 320, 3, 0 }, { 700, 6, 60 } };
+	const int32 DigCosts[DigCount][2] = { { 330, 0 }, { 300, 1 }, { 500, 3 } };
 
 	const FTrophyDef Trophies_[] =
 	{
@@ -147,6 +150,13 @@ void Cost(const FAntNestState& S, uint8 Chamber, int32& Food, int32& Jelly, int3
 	else if (D.Own >= 0)
 	{
 		Food = OwnCost[Next - 1][0]; Jelly = OwnCost[Next - 1][1]; Mood = OwnCost[Next - 1][2];
+	}
+	if (Next == 1 && TierOf(S, Chamber) == 0 && (D.Branch >= 0 || D.Own >= 0))
+	{
+		// Every new chamber is dug deeper than the last one: +OpenStep food for each chamber already open (not the throne).
+		int32 Open = 0;
+		for (uint8 c = 1; c < Count; ++c) { if (c != Throne && TierOf(S, c) > 0) { ++Open; } }
+		Food += OpenStep * Open;
 	}
 }
 

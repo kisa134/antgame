@@ -43,6 +43,12 @@ namespace
 	const FLinearColor RaidInfo(0.9f, 0.9f, 0.9f);
 	const FLinearColor RaidGold(1.f, 0.8f, 0.2f);
 
+	/** v14 wire-up: the colony's Казарма (Soldiers) and Ясли (Brood) set the veterans' draft cap - refresh it the moment one is built. */
+	void RefreshVetDraftCap(UWorld* W)
+	{
+		if (AAntFighterState* FS = AAntFighterState::Get(W, false)) { FS->DraftCap = (uint8)AntVets::DraftCapFor(W); }
+	}
+
 	bool FastScreens()
 	{
 		static const bool b = FParse::Param(FCommandLine::Get(), TEXT("AntFastVote"));
@@ -1478,6 +1484,7 @@ void AAntRaid::PlayerCommand(AAntPlayerController* PC, uint8 Cmd, int32 A, int32
 				const uint8 Room = AntColony::ChamberOfBranch((uint8)A);
 				AntColony::Chronicle(Nest, FString::Printf(TEXT("Рейд %d: построено — %s %d «%s»"), Nest.Raids, AntColony::Def(Room).Name, (int32)Nest.Tier_((uint8)A), D.Name));
 				SaveNest();
+				RefreshVetDraftCap(GetWorld());
 			}
 			else
 			{
@@ -1513,6 +1520,7 @@ void AAntRaid::PlayerCommand(AAntPlayerController* PC, uint8 Cmd, int32 A, int32
 				Say(FString::Printf(TEXT("ПОСТРОЕНО: %s %d — «%s». %s"), AntColony::Def(C).Name, T, *AntColony::TierName(C, T), *AntColony::TierText(C, T)), RaidGold);
 				UE_LOG(LogTemp, Display, TEXT("ANTCOLONY built %s tier %d: food %d jelly %d left, level %d"), AntColony::Def(C).Id, T, Nest.Food, Nest.Jelly, AntColony::Level(Nest));
 				SaveNest();
+				RefreshVetDraftCap(GetWorld());
 			}
 			else
 			{

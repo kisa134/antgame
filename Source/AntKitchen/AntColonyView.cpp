@@ -1,6 +1,8 @@
 ﻿#include "AntColonyView.h"
 #include "AntColony.h"
 #include "AntMetaBus.h"
+#include "AntFighter.h"
+#include "AntFighterUi.h"
 #include "AntNest.h"
 #include "AntRaid.h"
 #include "AntHUD.h"
@@ -1178,7 +1180,7 @@ namespace
 		const float Left = Raid->StartEnds > 0.f && GS ? Raid->StartEnds - GS->GetServerWorldTimeSeconds() : -1.f;
 		const bool bReady = MyPS && MyPS->bNestReady;
 		const FString Go = Left >= 0.f ? FString::Printf(TEXT("ВЫХОДИМ ЧЕРЕЗ %d"), FMath::Max(0, FMath::CeilToInt(Left))) : bHost ? FString(TEXT("В РЕЙД  [Enter]")) : bReady ? FString(TEXT("ГОТОВ")) : FString(TEXT("ГОТОВ  [Enter]"));
-		const bool bEnter = PC && PC->WasInputKeyJustPressed(EKeys::Enter);
+		const bool bEnter = PC && PC->WasInputKeyJustPressed(EKeys::Enter) && !AntFighterUi::IsOpen();
 		if (Btn(Cv, Go, W - 240.f * Fs, 16.f * Fs, 222.f * Fs, 52.f * Fs, true, bHost ? TEXT("Начать рейд (отряд, карманы и угроза — в штабе)") : TEXT("Отметить, что готов. Рейд начинает хост"), Fs, bReady && !bHost) || bEnter)
 		{
 			if (bHost) { Send(PC, AntRaidCmd::Ready, 1, 0); Send(PC, AntRaidCmd::Start, 0, 0); }
@@ -1289,6 +1291,19 @@ namespace
 			if (Btn(Cv, FString::Printf(TEXT("Вырастить личинку — %d еды"), AntNest::LarvaCost), X, Y, TW * 0.49f, 40.f * Fs, bHost && N.Food >= AntNest::LarvaCost && N.Larvae < AntNest::MaxLarvae, bHost ? TEXT("Ещё одна жизнь на всех в рейде") : HostOnly, Fs)) { Send(PC, AntRaidCmd::Larva, 0, 0); }
 			if (Btn(Cv, FString::Printf(TEXT("+%d рабочих — %d еды"), AntNest::WorkerPack, AntNest::WorkerPackCost), X + TW * 0.51f, Y, TW * 0.49f, 40.f * Fs, bHost && N.Food >= AntNest::WorkerPackCost && N.Workers < AntNest::MaxWorkers, bHost ? TEXT("Рабочие для отрядов") : HostOnly, Fs)) { Send(PC, AntRaidCmd::Workers, 0, 0); }
 			Y += 48.f * Fs;
+			if (const AAntFighterState* FS = AAntFighterState::Get(PC ? PC->GetWorld() : nullptr))
+			{
+				Row(FString::Printf(TEXT("Ясли и Казарма: ветеранов в набор — до %d на бойца"), (int32)FS->DraftCap), C::JamDeep);
+			}
+			break;
+		case AntColony::Barracks:
+			// v14 wire-up: the fighter layer's veterans live here (AntVeterans.cpp: cap = 2 + Казарма + Ясли/2, up to 6).
+			if (const AAntFighterState* FS = AAntFighterState::Get(PC ? PC->GetWorld() : nullptr))
+			{
+				Row(FString::Printf(TEXT("Ветеранов в казарме %d · павших %d"), FS->Roster.Num(), FS->Fallen.Num()), C::Graphite);
+				Row(FString::Printf(TEXT("В набор на рейд — до %d на бойца (Казарма + Ясли)"), (int32)FS->DraftCap), C::JamDeep);
+				Row(TEXT("Набор и доктрина — кнопка КАЗАРМА в ШТАБЕ [Tab]"), WithA(C::Graphite, 0.7f));
+			}
 			break;
 		case AntColony::Fungus:
 			Row(FString::Printf(TEXT("Вырастила всего: %d еды"), N.Grown), C::Graphite);
@@ -1477,6 +1492,9 @@ void Draw(AHUD* Hud, UCanvas* Cv, AAntRaid* Raid, AAntGameState* GS, AAntPlayerC
 		bDown = bPress;
 		if (AAntHUD::DevClickFrames > 0) { --AAntHUD::DevClickFrames; }
 	}
+	// v14: the fighter's БОЕЦ / КАЗАРМА sheet lies over the colony - the colony under it takes no clicks, Tab or Enter.
+	const bool bFighterOpen = AntFighterUi::IsOpen();
+	if (bFighterOpen) { bPress = bRelease = bDown = false; }
 	const FVector2D Mouse(MX, MY);
 	if (FVector2D::Distance(Mouse, S.Mouse) > 1.f || bPress) { S.LastInput = S.Clock; S.SleepAt = -1.f; }
 	S.Mouse = Mouse;
@@ -1504,7 +1522,7 @@ void Draw(AHUD* Hud, UCanvas* Cv, AAntRaid* Raid, AAntGameState* GS, AAntPlayerC
 			StageCamera(CurrentStage(), N, S.ZoomGoal, S.CenterGoal);
 		}
 	}
-	if (PC && PC->WasInputKeyJustPressed(EKeys::Tab)) { SetOn(false); }
+	if (PC && !bFighterOpen && PC->WasInputKeyJustPressed(EKeys::Tab)) { SetOn(false); }
 
 	// ---- the view
 	FView V;

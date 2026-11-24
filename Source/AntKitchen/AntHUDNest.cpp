@@ -4,6 +4,7 @@
 #include "AntRaid.h"
 #include "AntColonyView.h"
 #include "AntNest.h"
+#include "AntColony.h"
 #include "AntRun.h"
 #include "AntGameState.h"
 #include "LevelV3.h"
@@ -361,7 +362,9 @@ void AAntHUD::DrawNest(AAntRaid* Raid, AAntGameState* GS)
 			const bool bCan = AntNest::CanBuy(N, (uint8)b, &Why);
 			Txt(FString::Printf(TEXT("%s. %s"), RomanN(Have + 1), D.Name), PX(660.f), PY(RY + 42.f), NText, Small, 1.15f * Fs);
 			WrapTxt(D.Text, PX(660.f), PY(RY + 68.f), 440.f * U, NDim, Small, 1.0f * Fs, 2);
-			const FString Cost = D.Jelly > 0 ? FString::Printf(TEXT("%d еды + %d мол."), D.Food, D.Jelly) : FString::Printf(TEXT("%d еды"), D.Food);
+			int32 CFood = 0, CJelly = 0, CMood = 0;
+			AntColony::Cost(N, AntColony::ChamberOfBranch((uint8)b), CFood, CJelly, CMood);   // v14: tier I grows with the open chambers
+			const FString Cost = CJelly > 0 ? FString::Printf(TEXT("%d еды + %d мол."), CFood, CJelly) : FString::Printf(TEXT("%d еды"), CFood);
 			if (NestBtn(Cost, PX(1114.f), PY(RY + 40.f), 162.f * U, 46.f * U, bCan && bHost,
 				!bHost ? FString(HostOnly) : bCan ? FString::Printf(TEXT("Построить «%s»: %s"), D.Name, D.Text) : FString::Printf(TEXT("«%s»: %s"), D.Name, *Why), false, 1.1f))
 			{
