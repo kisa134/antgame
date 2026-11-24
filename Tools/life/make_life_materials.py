@@ -226,8 +226,8 @@ def build_stars():
 # ------------------------------------------------------------------ the house across the yard
 FAC_HEAD = r"""
 float2 q = abs(N.x) > abs(N.y) ? float2(W.y, W.z) : float2(W.x, W.z);
-float2 cell = floor(q / Cell);
-float2 f = frac(q / Cell);
+float2 cell = floor(q / Cell.xy);
+float2 f = frac(q / Cell.xy);
 float h = frac(sin(dot(cell + Seed * 7.13, float2(127.1, 311.7))) * 43758.5453);
 float h2 = frac(h * 91.7 + 0.37);
 float win = step(0.18, f.x) * step(f.x, 0.82) * step(0.22, f.y) * step(f.y, 0.86);
@@ -271,7 +271,7 @@ def build_facade():
                              (FAC_R, "facade rough", unreal.CustomMaterialOutputType.CMOT_FLOAT1)):
         c = custom(m, code, ["W", "N", "T", "Cell", "Seed", "Lit", "Top", "Glow", "Wall"], -600, -300 + len(outs) * 400, desc, kind)
         wire(m, c, [(wp, "W"), (vn, "N"), (tn, "T"), (seed, "Seed"), (lit, "Lit"), (top, "Top"), (glow, "Glow")])
-        MEL.connect_material_expressions(cell, "RG", c, "Cell")
+        MEL.connect_material_expressions(cell, "RGB", c, "Cell")   # (the pin is "RGB": "RG" matched nothing and the facade failed to compile, v14.1 QA)
         MEL.connect_material_expressions(wall, "RGB", c, "Wall")
         outs.append(c)
     MEL.connect_material_property(outs[0], "", unreal.MaterialProperty.MP_BASE_COLOR)

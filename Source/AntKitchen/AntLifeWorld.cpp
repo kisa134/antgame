@@ -590,6 +590,7 @@ void AAntLifeWorld::BuildRoomLife()
 	if (UStaticMeshComponent* Ph = FindArt(TEXT("SM_V3_Phone"), FVector(11300.f, 200.f, 950.f), 2500.f))
 	{
 		Phone = Ph;
+		Ph->SetMobility(EComponentMobility::Movable);   // (QA: it buzzes on the table; a static level piece refused to move and logged a warning every frame)
 		PhoneHome = Ph->GetComponentTransform();
 		if (UStaticMeshComponent* Scr = Mesh(TEXT("SM_Life_Quad"), FTransform::Identity, nullptr, false, Ph))
 		{
