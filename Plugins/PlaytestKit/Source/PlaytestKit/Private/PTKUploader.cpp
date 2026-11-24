@@ -105,7 +105,8 @@ void FPTKUploader::Done(bool bOk, int32 Code, const FString& Err, bool bPermanen
 		}
 		SaveState(FlightSession);
 		++Sent;
-		NextAttempt = 0.0;   // more may be waiting: go on at the next tick
+		// a full batch means more is waiting: go on at once; a partial one means we are caught up, so wait one interval (fewer, bigger requests)
+		NextAttempt = (FlightAdvance >= (int64)BatchBytes * 9 / 10 || !FlightFile.IsEmpty()) ? 0.0 : FPlatformTime::Seconds() + Interval;
 	}
 	else if (bPermanent)
 	{

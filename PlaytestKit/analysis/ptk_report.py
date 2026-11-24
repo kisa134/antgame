@@ -220,7 +220,10 @@ def s_deaths(R, D, cfg, mt, M):
     if d.empty:
         R.p("Смертей не зафиксировано.", "muted"); return
     names = cfg.get("death_causes_ru", {})
-    d = d.copy(); d["cause"] = col(d, "p_cause", "?").fillna("?").map(lambda c: names.get(c, c))
+    d = d.copy()
+    hz = col(d, "p_hazard")
+    d["cause"] = col(d, "p_cause", "?").fillna("?").where(~((col(d, "p_cause") == "hazard") & hz.notna()), "hazard: " + hz.astype(str))
+    d["cause"] = d["cause"].map(lambda c: names.get(c, c))
     cnt = d.groupby("cause").size().sort_values(ascending=False)
     fig, axs = plt.subplots(1, 2, figsize=(11, max(3, .3 * len(cnt) + 1)))
     bar_h(axs[0], list(cnt.index), list(cnt.values), C_BAD); axs[0].set_title("смерти по причинам")

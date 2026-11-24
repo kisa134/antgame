@@ -10,7 +10,7 @@
   "funnel": {
     "event": "tutorial",
     "note": "Steps come from the adapter events: tutorial_* (beat_start/beat_done) with props.beat/beat_no/seconds/par",
-    "steps_from": ["tutorial_beat_start", "tutorial_beat_done"],
+    "steps_from": ["tutorial_step_start", "tutorial_step_complete"],
     "fallback_events": ["objective_start", "objective_complete", "objective_fail"]
   },
   "hypotheses": [
@@ -20,7 +20,7 @@
     {"id": "H4", "text": "Игра понравилась: overall >= 7, play_again = да у >= 70%", "metric": "overall", "target_min": 7}
   ],
   "death_causes_ru": {"human": "Человек", "spray": "Спрей", "fall": "Падение", "drown": "Вода", "trap": "Ловушка", "pet": "Питомец", "fire": "Огонь", "wipe": "Вайп"},
-  "feature_events": ["carry_event", "trail_place", "order_issue", "upgrade_pick", "colony_action", "chain_start", "fighter_profile"],
+  "feature_events": ["carry_event", "chain_step", "squad_order", "card_pick", "snowball_pick", "colony_build", "colony_dig", "inside_enter", "cloth_yank", "mess_clean", "door_open", "wreck_break", "vet_new", "fighter_medal", "clan_ambush"],
   "bug_tags": ["bug"],
   "good_tags": ["fun"],
   "bad_tags": ["boring", "confusing"],
