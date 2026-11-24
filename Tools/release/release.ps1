@@ -53,4 +53,7 @@ if ($LASTEXITCODE -eq 0) {
   gh @args2
 }
 if ($LASTEXITCODE -ne 0) { throw 'gh failed' }
+# keep the stable launcher link (release 'launcher-latest') in sync with the newest exe
+$le = Join-Path $Launcher 'AntKitchenLauncher.exe'; $lv = Join-Path $Launcher 'launcher-version.txt'
+if ((Test-Path $le) -and (Test-Path $lv)) { gh release upload launcher-latest $le $lv -R $Repo --clobber }
 "RELEASE OK: https://github.com/$Repo/releases/tag/$Tag  ($([int]($size/1MB)) MB, sha256 $sha)"
