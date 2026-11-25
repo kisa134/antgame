@@ -354,7 +354,7 @@ static const FLevelV2Main GV3Main[] =
 	{ 19700.f, -8400.f, 60.f, 0, TEXT("в большом подарке под окном гостиной") },   // M4
 };
 
-// Cover boxes of the base (the seed adds and takes some away: hide / hide_off). 48 boxes.
+// Cover boxes of the base (the seed adds and takes some away: hide / hide_off). 50 boxes.
 static const FLevelV2Box GV3Cover[] =
 {
 	{ -5627.6f, 506.8f, 0.f, -4592.4f, 1293.1f, 398.3f, TEXT("в коробке хлопьев") },
@@ -400,13 +400,15 @@ static const FLevelV2Box GV3Cover[] =
 	{ -3250.f, -2300.f, 0.f, -2550.f, -1700.f, 820.f, TEXT("под клапаном рюкзака") },
 	{ 4250.f, -4200.f, 0.f, 5150.f, -3600.f, 450.f, TEXT("между рейками ящика с картошкой") },
 	{ -1730.f, 2050.f, 0.f, 1130.f, 2850.f, 18.f, TEXT("под ковриком у мойки") },
+	{ -4196.f, 3164.f, 140.f, -3644.f, 3716.f, 645.f, TEXT("в ведре под мойкой") },
+	{ -3425.f, 3315.f, 140.f, -2815.f, 3805.f, 620.f, TEXT("под проволочной полкой") },
 	{ 8378.f, 525.f, 0.f, 9782.f, 1425.f, 780.f, TEXT("в ящике для игрушек") },
 	{ 19100.f, -1650.f, 0.f, 19900.f, -350.f, 18.f, TEXT("под ковриком у двери") },
 	{ 11950.f, -6950.f, 0.f, 13050.f, -5850.f, 300.f, TEXT("под подушкой") },
 	{ 14850.f, -7690.f, 0.f, 15950.f, -6590.f, 300.f, TEXT("под подушкой") },
 	{ 19350.f, -3650.f, 4660.f, 20050.f, -2750.f, 5180.f, TEXT("в подарке на шкафу") },
 };
-static const TCHAR* const GV3CoverIds[] = { TEXT("cerealbox"), TEXT("shoe"), TEXT("sock"), TEXT("matchbox"), TEXT("newspaper"), TEXT("copy15"), TEXT("dustpan_0"), TEXT("slipper_0"), TEXT("slipper_1"), TEXT("slipper_2"), TEXT("slipper_3"), TEXT("grocerybag_0"), TEXT("cardboardbox_0"), TEXT("bottle_1"), TEXT("bottle_2"), TEXT("tincan_0"), TEXT("tincan_1"), TEXT("breadbox_0"), TEXT("cookietin_0"), TEXT("cookietin_1"), TEXT("shoerack_0"), TEXT("toyarch_0"), TEXT("toycar_2"), TEXT("toytrain_0"), TEXT("curtain_kw"), TEXT("curtain_ke"), TEXT("curtain_lw"), TEXT("curtain_le"), TEXT("basket"), TEXT("under_book"), TEXT("under_blanket"), TEXT("under_armchair"), TEXT("fort"), TEXT("door_nook"), TEXT("radiator_l"), TEXT("bookshelf_bottom"), TEXT("plant_back"), TEXT("coffee_shelf"), TEXT("hide_v3_rad_k"), TEXT("hide_v3_dogfood"), TEXT("hide_v3_backpack"), TEXT("hide_v3_crate"), TEXT("hide_v3_rug_k"), TEXT("hide_v3_toybox"), TEXT("hide_v3_hall_mat"), TEXT("hide_v3_cush0"), TEXT("hide_v3_cush1"), TEXT("hide_v3_gift0") };
+static const TCHAR* const GV3CoverIds[] = { TEXT("cerealbox"), TEXT("shoe"), TEXT("sock"), TEXT("matchbox"), TEXT("newspaper"), TEXT("copy15"), TEXT("dustpan_0"), TEXT("slipper_0"), TEXT("slipper_1"), TEXT("slipper_2"), TEXT("slipper_3"), TEXT("grocerybag_0"), TEXT("cardboardbox_0"), TEXT("bottle_1"), TEXT("bottle_2"), TEXT("tincan_0"), TEXT("tincan_1"), TEXT("breadbox_0"), TEXT("cookietin_0"), TEXT("cookietin_1"), TEXT("shoerack_0"), TEXT("toyarch_0"), TEXT("toycar_2"), TEXT("toytrain_0"), TEXT("curtain_kw"), TEXT("curtain_ke"), TEXT("curtain_lw"), TEXT("curtain_le"), TEXT("basket"), TEXT("under_book"), TEXT("under_blanket"), TEXT("under_armchair"), TEXT("fort"), TEXT("door_nook"), TEXT("radiator_l"), TEXT("bookshelf_bottom"), TEXT("plant_back"), TEXT("coffee_shelf"), TEXT("hide_v3_rad_k"), TEXT("hide_v3_dogfood"), TEXT("hide_v3_backpack"), TEXT("hide_v3_crate"), TEXT("hide_v3_rug_k"), TEXT("hide_v32_bucket"), TEXT("hide_v32_rack"), TEXT("hide_v3_toybox"), TEXT("hide_v3_hall_mat"), TEXT("hide_v3_cush0"), TEXT("hide_v3_cush1"), TEXT("hide_v3_gift0") };
 
 static const FLevelV2Box GV3TargetBounds[] =
 {
@@ -531,45 +533,47 @@ static const FKitchenArtInst GV3VarArt[] =
 	{ TEXT("SM_K_Kibble"), 0, 0, -1, {2350.f, -4050.f, 55.f}, {-1.f, 0.f, 0.f}, {0.f, -1.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 16 art113
 	{ TEXT("SM_K_Bone"), 0, 0, -1, {3250.f, -4550.f, 0.f}, {-1.f, 0.f, 0.f}, {0.f, -1.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 17 art166
 	{ TEXT("SM_V3_DogFoodBag"), 0, 0, -1, {4900.f, -4751.f, 0.f}, {1.f, 0.f, 0.f}, {0.f, 1.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 18 v3_dogfood
-	{ TEXT("SM_V3_DirtyDishStack"), 0, 0, -1, {-3500.f, 4000.f, 1150.f}, {-1.f, 0.f, 0.f}, {0.f, -1.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 19 v3_dishes
-	{ TEXT("SM_K_Towel"), 0, 0, -1, {0.f, -4880.f, 0.f}, {1.f, 0.f, 0.f}, {0.f, 1.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 20 art156
-	{ TEXT("SM_V3_StepStool"), 0, 0, -1, {-2150.f, -400.f, 0.f}, {0.f, 1.f, 0.f}, {-1.f, 0.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 21 v3_stool
-	{ TEXT("SM_V3_Tablecloth"), 0, 0, -1, {500.f, -500.f, 950.f}, {-1.f, 0.f, 0.f}, {0.f, -1.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 22 v3_cloth
-	{ TEXT("SM_V3_Teapot"), 0, 0, -1, {1300.f, -700.f, 1406.f}, {-0.93969f, 0.34202f, 0.f}, {-0.34202f, -0.93969f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 23 v3_teapot
-	{ TEXT("SM_V3_Teapot_Lid"), 0, 0, -1, {1280.f, -700.f, 1716.f}, {-0.93969f, 0.34202f, 0.f}, {-0.34202f, -0.93969f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 24 v3_teapot_lid
-	{ TEXT("SM_V3_TeaCup"), 0, 0, -1, {300.f, -1500.f, 1406.f}, {1.f, 0.f, 0.f}, {0.f, 1.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 25 v3_cup0
-	{ TEXT("SM_V3_TeaCup"), 0, 0, -1, {2150.f, -1300.f, 1406.f}, {0.76604f, 0.64279f, 0.f}, {-0.64279f, 0.76604f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 26 v3_cup1
-	{ TEXT("SM_V3_CerealBox"), 0, 0, -1, {2100.f, -1250.f, 1400.f}, {0.86603f, 0.5f, 0.f}, {-0.5f, 0.86603f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 27 v3_cereal_t
-	{ TEXT("SM_L_ToyCar"), 1, 0, -1, {-5350.f, -300.f, 0.f}, {0.f, 1.f, 0.f}, {-1.f, 0.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 28 new85
-	{ TEXT("SM_L_ToyArch"), 2, 0, -1, {-3000.f, 950.f, 0.f}, {0.86603f, -0.5f, 0.f}, {0.5f, 0.86603f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 29 new80
-	{ TEXT("SM_K_Chair"), 0, 0, -1, {0.f, -2250.f, 0.f}, {1.f, 0.f, 0.f}, {0.f, 1.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 30 art78
-	{ TEXT("SM_K_Chair"), 1, 0, -1, {1200.f, 1250.f, 0.f}, {-1.f, 0.f, 0.f}, {0.f, -1.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 31 art79
-	{ TEXT("SM_L_ToyCar"), 1, 0, -1, {-5350.f, -300.f, 0.f}, {0.f, 1.f, 0.f}, {-1.f, 0.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 32 new85
-	{ TEXT("SM_L_ToyArch"), 2, 0, -1, {-3000.f, 950.f, 0.f}, {0.86603f, -0.5f, 0.f}, {0.5f, 0.86603f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 33 new80
-	{ TEXT("SM_V3_Tablecloth"), 0, 0, -1, {500.f, -500.f, 950.f}, {-1.f, 0.f, 0.f}, {0.f, -1.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 34 v3_cloth
-	{ TEXT("SM_V3_StepStool"), 0, 0, -1, {-2215.f, -400.f, 0.f}, {0.f, 1.f, 0.f}, {-1.f, 0.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 35 v3_stool
-	{ TEXT("SM_V3_TableclothLong"), 0, 0, -1, {500.f, -500.f, 40.f}, {-1.f, 0.f, 0.f}, {0.f, -1.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 36 v3_cloth_long
-	{ TEXT("SM_V3_TrashBag"), 0, 0, -1, {4900.f, -1500.f, 0.f}, {0.f, 1.f, 0.f}, {-1.f, 0.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 37 v3_recycle
-	{ TEXT("SM_V3_TrashBag"), 0, 0, -1, {4950.f, 1000.f, 0.f}, {0.f, 1.f, 0.f}, {-1.f, 0.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 38 v3_recycle2
-	{ TEXT("SM_K_CardboardBox"), 0, 0, -1, {6250.f, 1150.f, 0.f}, {0.f, 1.f, 0.f}, {-1.f, 0.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 0.12f} },   // 39 v3_box_flat
-	{ TEXT("SM_K_Range_Tray"), 0, 0, -1, {-750.f, 4875.f, 0.f}, {0.f, 1.f, 0.f}, {0.f, 0.f, -1.f}, {-1.f, 0.f, 0.f}, {1.f, 1.f, 1.f} },   // 40 v3_jam_tray
-	{ TEXT("SM_K_Shoe"), 0, 0, -1, {7650.f, -4550.f, 0.f}, {0.98481f, 0.17365f, 0.f}, {-0.17365f, 0.98481f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 41 v3_shoe0
-	{ TEXT("SM_K_Shoe"), 0, 0, -1, {8350.f, -4050.f, 0.f}, {0.96593f, -0.25882f, 0.f}, {0.25882f, 0.96593f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 42 v3_shoe1
-	{ TEXT("SM_K_Shoe"), 0, 0, -1, {6400.f, -4400.f, 0.f}, {0.93969f, 0.34202f, 0.f}, {-0.34202f, 0.93969f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 43 v3_shoe2
-	{ TEXT("SM_V3_StepStool"), 0, 0, -1, {16600.f, -7300.f, 0.f}, {-1.f, 0.f, 0.f}, {0.f, -1.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 44 v3_stool_l
-	{ TEXT("SM_Y_WateringCan"), 0, 0, -1, {17000.f, -6400.f, 0.f}, {0.76604f, -0.64279f, 0.f}, {0.64279f, 0.76604f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 45 v3_can_l
-	{ TEXT("SM_K_Slipper"), 0, 0, -1, {7330.f, -7350.f, 0.f}, {0.f, 1.f, 0.f}, {-1.f, 0.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 46 v3_flap_slipper
-	{ TEXT("SM_V3_BlanketFort"), 0, 0, -1, {13750.f, -1450.f, 0.f}, {-1.f, 0.f, 0.f}, {0.f, -1.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 47 v3_fort
-	{ TEXT("SM_V3_GiftBox"), 0, 0, -1, {12760.f, -3450.f, 980.f}, {0.f, 1.f, 0.f}, {-1.f, 0.f, 0.f}, {0.f, 0.f, 1.f}, {0.6f, 0.6f, 0.6f} },   // 48 v3_gift1
-	{ TEXT("SM_V3_GiftBox_Lid"), 0, 0, -1, {12760.f, -3450.f, 1292.f}, {0.f, 1.f, 0.f}, {-1.f, 0.f, 0.f}, {0.f, 0.f, 1.f}, {0.6f, 0.6f, 0.6f} },   // 49 v3_gift1_lid
-	{ TEXT("SM_V3_GiftBox"), 0, 0, -1, {19700.f, -8400.f, 0.f}, {1.f, 0.f, 0.f}, {0.f, 1.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 50 v3_gift2
-	{ TEXT("SM_V3_GiftBox_Lid"), 0, 0, -1, {19700.f, -8400.f, 520.f}, {1.f, 0.f, 0.f}, {0.f, 1.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 51 v3_gift2_lid
-	{ TEXT("SM_V3_GiftBox"), 0, 0, -1, {19700.f, -8400.f, 670.f}, {0.90631f, 0.42262f, 0.f}, {-0.42262f, 0.90631f, 0.f}, {0.f, 0.f, 1.f}, {0.55f, 0.55f, 0.55f} },   // 52 v3_gift3
+	{ TEXT("SM_V3_SoakBoard"), 0, 0, -1, {-3170.f, 4004.f, 1150.f}, {-1.f, 0.f, 0.f}, {0.f, -1.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 19 v32_board
+	{ TEXT("SM_V3_DirtyDishStack"), 0, 0, -1, {-3500.f, 4000.f, 1150.f}, {-1.f, 0.f, 0.f}, {0.f, -1.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 20 v3_dishes
+	{ TEXT("SM_V3_SoakBoard"), 0, 0, -1, {-3170.f, 4004.f, 1150.f}, {-1.f, 0.f, 0.f}, {0.f, -1.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 21 v32_board
+	{ TEXT("SM_K_Towel"), 0, 0, -1, {0.f, -4880.f, 0.f}, {1.f, 0.f, 0.f}, {0.f, 1.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 22 art156
+	{ TEXT("SM_V3_StepStool"), 0, 0, -1, {-2150.f, -400.f, 0.f}, {0.f, 1.f, 0.f}, {-1.f, 0.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 23 v3_stool
+	{ TEXT("SM_V3_Tablecloth"), 0, 0, -1, {500.f, -500.f, 950.f}, {-1.f, 0.f, 0.f}, {0.f, -1.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 24 v3_cloth
+	{ TEXT("SM_V3_Teapot"), 0, 0, -1, {1300.f, -700.f, 1406.f}, {-0.93969f, 0.34202f, 0.f}, {-0.34202f, -0.93969f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 25 v3_teapot
+	{ TEXT("SM_V3_Teapot_Lid"), 0, 0, -1, {1280.f, -700.f, 1716.f}, {-0.93969f, 0.34202f, 0.f}, {-0.34202f, -0.93969f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 26 v3_teapot_lid
+	{ TEXT("SM_V3_TeaCup"), 0, 0, -1, {300.f, -1500.f, 1406.f}, {1.f, 0.f, 0.f}, {0.f, 1.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 27 v3_cup0
+	{ TEXT("SM_V3_TeaCup"), 0, 0, -1, {2150.f, -1300.f, 1406.f}, {0.76604f, 0.64279f, 0.f}, {-0.64279f, 0.76604f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 28 v3_cup1
+	{ TEXT("SM_V3_CerealBox"), 0, 0, -1, {2100.f, -1250.f, 1400.f}, {0.86603f, 0.5f, 0.f}, {-0.5f, 0.86603f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 29 v3_cereal_t
+	{ TEXT("SM_L_ToyCar"), 1, 0, -1, {-5350.f, -300.f, 0.f}, {0.f, 1.f, 0.f}, {-1.f, 0.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 30 new85
+	{ TEXT("SM_L_ToyArch"), 2, 0, -1, {-3000.f, 950.f, 0.f}, {0.86603f, -0.5f, 0.f}, {0.5f, 0.86603f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 31 new80
+	{ TEXT("SM_K_Chair"), 0, 0, -1, {0.f, -2250.f, 0.f}, {1.f, 0.f, 0.f}, {0.f, 1.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 32 art78
+	{ TEXT("SM_K_Chair"), 1, 0, -1, {1200.f, 1250.f, 0.f}, {-1.f, 0.f, 0.f}, {0.f, -1.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 33 art79
+	{ TEXT("SM_L_ToyCar"), 1, 0, -1, {-5350.f, -300.f, 0.f}, {0.f, 1.f, 0.f}, {-1.f, 0.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 34 new85
+	{ TEXT("SM_L_ToyArch"), 2, 0, -1, {-3000.f, 950.f, 0.f}, {0.86603f, -0.5f, 0.f}, {0.5f, 0.86603f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 35 new80
+	{ TEXT("SM_V3_Tablecloth"), 0, 0, -1, {500.f, -500.f, 950.f}, {-1.f, 0.f, 0.f}, {0.f, -1.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 36 v3_cloth
+	{ TEXT("SM_V3_StepStool"), 0, 0, -1, {-2215.f, -400.f, 0.f}, {0.f, 1.f, 0.f}, {-1.f, 0.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 37 v3_stool
+	{ TEXT("SM_V3_TableclothLong"), 0, 0, -1, {500.f, -500.f, 40.f}, {-1.f, 0.f, 0.f}, {0.f, -1.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 38 v3_cloth_long
+	{ TEXT("SM_V3_TrashBag"), 0, 0, -1, {4900.f, -1500.f, 0.f}, {0.f, 1.f, 0.f}, {-1.f, 0.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 39 v3_recycle
+	{ TEXT("SM_V3_TrashBag"), 0, 0, -1, {4950.f, 1000.f, 0.f}, {0.f, 1.f, 0.f}, {-1.f, 0.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 40 v3_recycle2
+	{ TEXT("SM_K_CardboardBox"), 0, 0, -1, {6250.f, 1150.f, 0.f}, {0.f, 1.f, 0.f}, {-1.f, 0.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 0.12f} },   // 41 v3_box_flat
+	{ TEXT("SM_K_Range_Tray"), 0, 0, -1, {-750.f, 4875.f, 0.f}, {0.f, 1.f, 0.f}, {0.f, 0.f, -1.f}, {-1.f, 0.f, 0.f}, {1.f, 1.f, 1.f} },   // 42 v3_jam_tray
+	{ TEXT("SM_K_Shoe"), 0, 0, -1, {7650.f, -4550.f, 0.f}, {0.98481f, 0.17365f, 0.f}, {-0.17365f, 0.98481f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 43 v3_shoe0
+	{ TEXT("SM_K_Shoe"), 0, 0, -1, {8350.f, -4050.f, 0.f}, {0.96593f, -0.25882f, 0.f}, {0.25882f, 0.96593f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 44 v3_shoe1
+	{ TEXT("SM_K_Shoe"), 0, 0, -1, {6400.f, -4400.f, 0.f}, {0.93969f, 0.34202f, 0.f}, {-0.34202f, 0.93969f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 45 v3_shoe2
+	{ TEXT("SM_V3_StepStool"), 0, 0, -1, {16600.f, -7300.f, 0.f}, {-1.f, 0.f, 0.f}, {0.f, -1.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 46 v3_stool_l
+	{ TEXT("SM_Y_WateringCan"), 0, 0, -1, {17000.f, -6400.f, 0.f}, {0.76604f, -0.64279f, 0.f}, {0.64279f, 0.76604f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 47 v3_can_l
+	{ TEXT("SM_K_Slipper"), 0, 0, -1, {7330.f, -7350.f, 0.f}, {0.f, 1.f, 0.f}, {-1.f, 0.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 48 v3_flap_slipper
+	{ TEXT("SM_V3_BlanketFort"), 0, 0, -1, {13750.f, -1450.f, 0.f}, {-1.f, 0.f, 0.f}, {0.f, -1.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 49 v3_fort
+	{ TEXT("SM_V3_GiftBox"), 0, 0, -1, {12760.f, -3450.f, 980.f}, {0.f, 1.f, 0.f}, {-1.f, 0.f, 0.f}, {0.f, 0.f, 1.f}, {0.6f, 0.6f, 0.6f} },   // 50 v3_gift1
+	{ TEXT("SM_V3_GiftBox_Lid"), 0, 0, -1, {12760.f, -3450.f, 1292.f}, {0.f, 1.f, 0.f}, {-1.f, 0.f, 0.f}, {0.f, 0.f, 1.f}, {0.6f, 0.6f, 0.6f} },   // 51 v3_gift1_lid
+	{ TEXT("SM_V3_GiftBox"), 0, 0, -1, {19700.f, -8400.f, 0.f}, {1.f, 0.f, 0.f}, {0.f, 1.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 52 v3_gift2
+	{ TEXT("SM_V3_GiftBox_Lid"), 0, 0, -1, {19700.f, -8400.f, 520.f}, {1.f, 0.f, 0.f}, {0.f, 1.f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f} },   // 53 v3_gift2_lid
+	{ TEXT("SM_V3_GiftBox"), 0, 0, -1, {19700.f, -8400.f, 670.f}, {0.90631f, 0.42262f, 0.f}, {-0.42262f, 0.90631f, 0.f}, {0.f, 0.f, 1.f}, {0.55f, 0.55f, 0.55f} },   // 54 v3_gift3
 };
 // Flags as GKitchenArtV3Flags (1 ants only); Tint: a look name for the piece's first slot, or "".
-static const uint8 GV3VarArtFlags[] = { 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0 };
-static const TCHAR* const GV3VarArtTint[] = { TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT("Enamel"), TEXT("Teal"), TEXT("Enamel"), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT("") };
-static const TCHAR* const GV3VarArtIds[] = { TEXT("v3_trash0"), TEXT("v3_trash1"), TEXT("v3_rain0"), TEXT("v3_rain1"), TEXT("v3_pole0"), TEXT("v3_pole1"), TEXT("v3_line"), TEXT("v3_sheet0"), TEXT("v3_sheet1"), TEXT("v3_sheet2"), TEXT("new105"), TEXT("v3_trolley"), TEXT("v3_papers"), TEXT("art110"), TEXT("art111"), TEXT("art112"), TEXT("art113"), TEXT("art166"), TEXT("v3_dogfood"), TEXT("v3_dishes"), TEXT("art156"), TEXT("v3_stool"), TEXT("v3_cloth"), TEXT("v3_teapot"), TEXT("v3_teapot_lid"), TEXT("v3_cup0"), TEXT("v3_cup1"), TEXT("v3_cereal_t"), TEXT("new85"), TEXT("new80"), TEXT("art78"), TEXT("art79"), TEXT("new85"), TEXT("new80"), TEXT("v3_cloth"), TEXT("v3_stool"), TEXT("v3_cloth_long"), TEXT("v3_recycle"), TEXT("v3_recycle2"), TEXT("v3_box_flat"), TEXT("v3_jam_tray"), TEXT("v3_shoe0"), TEXT("v3_shoe1"), TEXT("v3_shoe2"), TEXT("v3_stool_l"), TEXT("v3_can_l"), TEXT("v3_flap_slipper"), TEXT("v3_fort"), TEXT("v3_gift1"), TEXT("v3_gift1_lid"), TEXT("v3_gift2"), TEXT("v3_gift2_lid"), TEXT("v3_gift3") };
+static const uint8 GV3VarArtFlags[] = { 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0 };
+static const TCHAR* const GV3VarArtTint[] = { TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT("Enamel"), TEXT("Teal"), TEXT("Enamel"), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT(""), TEXT("") };
+static const TCHAR* const GV3VarArtIds[] = { TEXT("v3_trash0"), TEXT("v3_trash1"), TEXT("v3_rain0"), TEXT("v3_rain1"), TEXT("v3_pole0"), TEXT("v3_pole1"), TEXT("v3_line"), TEXT("v3_sheet0"), TEXT("v3_sheet1"), TEXT("v3_sheet2"), TEXT("new105"), TEXT("v3_trolley"), TEXT("v3_papers"), TEXT("art110"), TEXT("art111"), TEXT("art112"), TEXT("art113"), TEXT("art166"), TEXT("v3_dogfood"), TEXT("v32_board"), TEXT("v3_dishes"), TEXT("v32_board"), TEXT("art156"), TEXT("v3_stool"), TEXT("v3_cloth"), TEXT("v3_teapot"), TEXT("v3_teapot_lid"), TEXT("v3_cup0"), TEXT("v3_cup1"), TEXT("v3_cereal_t"), TEXT("new85"), TEXT("new80"), TEXT("art78"), TEXT("art79"), TEXT("new85"), TEXT("new80"), TEXT("v3_cloth"), TEXT("v3_stool"), TEXT("v3_cloth_long"), TEXT("v3_recycle"), TEXT("v3_recycle2"), TEXT("v3_box_flat"), TEXT("v3_jam_tray"), TEXT("v3_shoe0"), TEXT("v3_shoe1"), TEXT("v3_shoe2"), TEXT("v3_stool_l"), TEXT("v3_can_l"), TEXT("v3_flap_slipper"), TEXT("v3_fort"), TEXT("v3_gift1"), TEXT("v3_gift1_lid"), TEXT("v3_gift2"), TEXT("v3_gift2_lid"), TEXT("v3_gift3") };
 
 // Variant ops: kind (LevelV3::EOp), A, B, six numbers, a text (object / mover / zone id), a Russian note.
 static const FLevelV3Op GV3Ops[] =
@@ -608,91 +612,93 @@ static const FLevelV3Op GV3Ops[] =
 	{ 3, 0, 1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT(""), TEXT("") },   // 31
 	{ 3, 1, 1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT(""), TEXT("") },   // 32
 	{ 3, 30, 1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT(""), TEXT("") },   // 33
-	{ 0, 19, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_dishes"), TEXT("") },   // 34
-	{ 10, -1, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("drain"), TEXT("") },   // 35
-	{ 10, -1, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("pipe"), TEXT("") },   // 36
-	{ 3, 8, 0, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT(""), TEXT("") },   // 37
-	{ 6, -1, 2, { -810.f, 3040.f, 110.f, 3960.f, 460.f, 300.f }, TEXT("burner_on"), TEXT("Конфорка включена с начала") },   // 38
-	{ 13, -1, 1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("OVEN"), TEXT("") },   // 39
-	{ 2, 163, 20, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("art156"), TEXT("") },   // 40
-	{ 10, -1, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("towel"), TEXT("") },   // 41
-	{ 13, -1, 1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("DISHWASHER"), TEXT("") },   // 42
-	{ 13, -1, 2, { 35.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("FRIDGE"), TEXT("") },   // 43
-	{ 12, -1, -1, { 1.6f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("M3"), TEXT("") },   // 44
-	{ 1, 415, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new1"), TEXT("") },   // 45
-	{ 10, -1, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("car_track"), TEXT("") },   // 46
-	{ 0, 21, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_stool"), TEXT("") },   // 47
-	{ 0, 22, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_cloth"), TEXT("") },   // 48
-	{ 0, 23, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_teapot"), TEXT("") },   // 49
-	{ 0, 24, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_teapot_lid"), TEXT("") },   // 50
-	{ 0, 25, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_cup0"), TEXT("") },   // 51
-	{ 0, 26, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_cup1"), TEXT("") },   // 52
-	{ 0, 27, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_cereal_t"), TEXT("") },   // 53
-	{ 0, 28, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new85"), TEXT("") },   // 54
-	{ 0, 29, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new80"), TEXT("") },   // 55
-	{ 2, 78, 30, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("art78"), TEXT("") },   // 56
-	{ 2, 79, 31, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("art79"), TEXT("") },   // 57
-	{ 0, 32, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new85"), TEXT("") },   // 58
-	{ 0, 33, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new80"), TEXT("") },   // 59
-	{ 0, 34, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_cloth"), TEXT("") },   // 60
-	{ 1, 415, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new1"), TEXT("") },   // 61
-	{ 10, -1, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("car_track"), TEXT("") },   // 62
-	{ 0, 35, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_stool"), TEXT("") },   // 63
-	{ 0, 36, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_cloth_long"), TEXT("") },   // 64
-	{ 4, -1, -1, { -1700.f, -1800.f, 2700.f, 800.f, 0.f, 1320.f }, TEXT("tent"), TEXT("под длинной скатертью") },   // 65
-	{ 1, 426, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new13"), TEXT("") },   // 66
-	{ 1, 427, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new14"), TEXT("") },   // 67
-	{ 1, 428, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new16"), TEXT("") },   // 68
-	{ 1, 429, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new17"), TEXT("") },   // 69
-	{ 0, 37, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_recycle"), TEXT("") },   // 70
-	{ 0, 38, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_recycle2"), TEXT("") },   // 71
-	{ 1, 425, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new11"), TEXT("") },   // 72
-	{ 10, -1, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("box_hole"), TEXT("") },   // 73
-	{ 10, -1, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("box_flaps"), TEXT("") },   // 74
-	{ 9, -1, -1, { 200.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("L220,L221,L226,H2"), TEXT("") },   // 75
-	{ 0, 39, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_box_flat"), TEXT("") },   // 76
-	{ 11, -1, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("svalka-vent2"), TEXT("open: за коробкой больше не спрятаться") },   // 77
-	{ 6, -1, 1, { -6800.f, 4750.f, -2600.f, 5000.f, 0.f, 300.f }, TEXT("leak"), TEXT("Мокро: протечка за шкафами") },   // 78
-	{ 11, -1, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("corr_w-corr_m"), TEXT("slow:1.5: мокро") },   // 79
-	{ 0, 40, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_jam_tray"), TEXT("") },   // 80
-	{ 11, -1, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("corr_m-corr_e"), TEXT("closed: противень") },   // 81
-	{ 3, 27, 2, { 100.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT(""), TEXT("") },   // 82
-	{ 5, -1, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("door_nook"), TEXT("") },   // 83
-	{ 4, -1, -1, { 7250.f, -3300.f, 8830.f, -2900.f, 0.f, 30.f }, TEXT("door_leaf100"), TEXT("под створкой двери (щель 23)") },   // 84
-	{ 0, 41, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_shoe0"), TEXT("") },   // 85
-	{ 0, 42, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_shoe1"), TEXT("") },   // 86
-	{ 0, 43, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_shoe2"), TEXT("") },   // 87
-	{ 0, 44, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_stool_l"), TEXT("") },   // 88
-	{ 0, 45, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_can_l"), TEXT("") },   // 89
-	{ 0, 46, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_flap_slipper"), TEXT("") },   // 90
-	{ 3, 31, 1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT(""), TEXT("") },   // 91
-	{ 11, -1, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("flap-dvor_e"), TEXT("open: дверца подпёрта") },   // 92
-	{ 0, 47, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_fort"), TEXT("") },   // 93
-	{ 4, -1, -1, { 12100.f, -2700.f, 15400.f, -260.f, 0.f, 900.f }, TEXT("fort_tent"), TEXT("в шалаше") },   // 94
-	{ 11, -1, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("divan-kover"), TEXT("cover: через шалаш") },   // 95
-	{ 1, 486, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new89"), TEXT("") },   // 96
-	{ 1, 484, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new87"), TEXT("") },   // 97
-	{ 1, 458, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new50"), TEXT("") },   // 98
-	{ 1, 459, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new51"), TEXT("") },   // 99
-	{ 1, 460, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new52"), TEXT("") },   // 100
-	{ 1, 461, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new53"), TEXT("") },   // 101
-	{ 1, 462, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new54"), TEXT("") },   // 102
-	{ 1, 463, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new55"), TEXT("") },   // 103
-	{ 1, 464, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new56"), TEXT("") },   // 104
-	{ 1, 465, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new57"), TEXT("") },   // 105
-	{ 1, 466, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new58"), TEXT("") },   // 106
-	{ 1, 467, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new59"), TEXT("") },   // 107
-	{ 10, -1, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("block_stairs_ct"), TEXT("") },   // 108
-	{ 12, -1, -1, { 0.6f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("M1"), TEXT("") },   // 109
-	{ 0, 48, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_gift1"), TEXT("") },   // 110
-	{ 0, 49, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_gift1_lid"), TEXT("") },   // 111
-	{ 12, -1, -1, { 1.6f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("M1"), TEXT("") },   // 112
-	{ 6, -1, 3, { 11650.f, -9500.f, 14650.f, -6500.f, 1500.f, 300.f }, TEXT("tv_on"), TEXT("Телевизор включён") },   // 113
-	{ 0, 50, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_gift2"), TEXT("") },   // 114
-	{ 0, 51, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_gift2_lid"), TEXT("") },   // 115
-	{ 0, 52, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_gift3"), TEXT("") },   // 116
-	{ 12, -1, -1, { 1.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("M4"), TEXT("") },   // 117
-	{ 11, -1, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("tv-okno"), TEXT("cover: вдоль подарков") },   // 118
+	{ 0, 19, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v32_board"), TEXT("") },   // 34
+	{ 0, 20, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_dishes"), TEXT("") },   // 35
+	{ 10, -1, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("drain"), TEXT("") },   // 36
+	{ 10, -1, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("pipe"), TEXT("") },   // 37
+	{ 3, 8, 0, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT(""), TEXT("") },   // 38
+	{ 0, 21, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v32_board"), TEXT("") },   // 39
+	{ 6, -1, 2, { -810.f, 3040.f, 110.f, 3960.f, 460.f, 300.f }, TEXT("burner_on"), TEXT("Конфорка включена с начала") },   // 40
+	{ 13, -1, 1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("OVEN"), TEXT("") },   // 41
+	{ 2, 163, 22, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("art156"), TEXT("") },   // 42
+	{ 10, -1, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("towel"), TEXT("") },   // 43
+	{ 13, -1, 1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("DISHWASHER"), TEXT("") },   // 44
+	{ 13, -1, 2, { 35.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("FRIDGE"), TEXT("") },   // 45
+	{ 12, -1, -1, { 1.6f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("M3"), TEXT("") },   // 46
+	{ 1, 415, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new1"), TEXT("") },   // 47
+	{ 10, -1, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("car_track"), TEXT("") },   // 48
+	{ 0, 23, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_stool"), TEXT("") },   // 49
+	{ 0, 24, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_cloth"), TEXT("") },   // 50
+	{ 0, 25, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_teapot"), TEXT("") },   // 51
+	{ 0, 26, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_teapot_lid"), TEXT("") },   // 52
+	{ 0, 27, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_cup0"), TEXT("") },   // 53
+	{ 0, 28, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_cup1"), TEXT("") },   // 54
+	{ 0, 29, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_cereal_t"), TEXT("") },   // 55
+	{ 0, 30, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new85"), TEXT("") },   // 56
+	{ 0, 31, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new80"), TEXT("") },   // 57
+	{ 2, 78, 32, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("art78"), TEXT("") },   // 58
+	{ 2, 79, 33, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("art79"), TEXT("") },   // 59
+	{ 0, 34, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new85"), TEXT("") },   // 60
+	{ 0, 35, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new80"), TEXT("") },   // 61
+	{ 0, 36, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_cloth"), TEXT("") },   // 62
+	{ 1, 415, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new1"), TEXT("") },   // 63
+	{ 10, -1, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("car_track"), TEXT("") },   // 64
+	{ 0, 37, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_stool"), TEXT("") },   // 65
+	{ 0, 38, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_cloth_long"), TEXT("") },   // 66
+	{ 4, -1, -1, { -1700.f, -1800.f, 2700.f, 800.f, 0.f, 1320.f }, TEXT("tent"), TEXT("под длинной скатертью") },   // 67
+	{ 1, 426, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new13"), TEXT("") },   // 68
+	{ 1, 427, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new14"), TEXT("") },   // 69
+	{ 1, 428, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new16"), TEXT("") },   // 70
+	{ 1, 429, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new17"), TEXT("") },   // 71
+	{ 0, 39, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_recycle"), TEXT("") },   // 72
+	{ 0, 40, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_recycle2"), TEXT("") },   // 73
+	{ 1, 425, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new11"), TEXT("") },   // 74
+	{ 10, -1, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("box_hole"), TEXT("") },   // 75
+	{ 10, -1, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("box_flaps"), TEXT("") },   // 76
+	{ 9, -1, -1, { 200.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("L220,L221,L226,H2"), TEXT("") },   // 77
+	{ 0, 41, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_box_flat"), TEXT("") },   // 78
+	{ 11, -1, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("svalka-vent2"), TEXT("open: за коробкой больше не спрятаться") },   // 79
+	{ 6, -1, 1, { -6800.f, 4750.f, -2600.f, 5000.f, 0.f, 300.f }, TEXT("leak"), TEXT("Мокро: протечка за шкафами") },   // 80
+	{ 11, -1, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("corr_w-corr_m"), TEXT("slow:1.5: мокро") },   // 81
+	{ 0, 42, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_jam_tray"), TEXT("") },   // 82
+	{ 11, -1, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("corr_m-corr_e"), TEXT("closed: противень") },   // 83
+	{ 3, 27, 2, { 100.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT(""), TEXT("") },   // 84
+	{ 5, -1, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("door_nook"), TEXT("") },   // 85
+	{ 4, -1, -1, { 7250.f, -3300.f, 8830.f, -2900.f, 0.f, 30.f }, TEXT("door_leaf100"), TEXT("под створкой двери (щель 23)") },   // 86
+	{ 0, 43, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_shoe0"), TEXT("") },   // 87
+	{ 0, 44, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_shoe1"), TEXT("") },   // 88
+	{ 0, 45, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_shoe2"), TEXT("") },   // 89
+	{ 0, 46, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_stool_l"), TEXT("") },   // 90
+	{ 0, 47, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_can_l"), TEXT("") },   // 91
+	{ 0, 48, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_flap_slipper"), TEXT("") },   // 92
+	{ 3, 31, 1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT(""), TEXT("") },   // 93
+	{ 11, -1, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("flap-dvor_e"), TEXT("open: дверца подпёрта") },   // 94
+	{ 0, 49, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_fort"), TEXT("") },   // 95
+	{ 4, -1, -1, { 12100.f, -2700.f, 15400.f, -260.f, 0.f, 900.f }, TEXT("fort_tent"), TEXT("в шалаше") },   // 96
+	{ 11, -1, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("divan-kover"), TEXT("cover: через шалаш") },   // 97
+	{ 1, 486, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new89"), TEXT("") },   // 98
+	{ 1, 484, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new87"), TEXT("") },   // 99
+	{ 1, 458, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new50"), TEXT("") },   // 100
+	{ 1, 459, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new51"), TEXT("") },   // 101
+	{ 1, 460, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new52"), TEXT("") },   // 102
+	{ 1, 461, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new53"), TEXT("") },   // 103
+	{ 1, 462, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new54"), TEXT("") },   // 104
+	{ 1, 463, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new55"), TEXT("") },   // 105
+	{ 1, 464, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new56"), TEXT("") },   // 106
+	{ 1, 465, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new57"), TEXT("") },   // 107
+	{ 1, 466, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new58"), TEXT("") },   // 108
+	{ 1, 467, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("new59"), TEXT("") },   // 109
+	{ 10, -1, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("block_stairs_ct"), TEXT("") },   // 110
+	{ 12, -1, -1, { 0.6f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("M1"), TEXT("") },   // 111
+	{ 0, 50, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_gift1"), TEXT("") },   // 112
+	{ 0, 51, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_gift1_lid"), TEXT("") },   // 113
+	{ 12, -1, -1, { 1.6f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("M1"), TEXT("") },   // 114
+	{ 6, -1, 3, { 11650.f, -9500.f, 14650.f, -6500.f, 1500.f, 300.f }, TEXT("tv_on"), TEXT("Телевизор включён") },   // 115
+	{ 0, 52, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_gift2"), TEXT("") },   // 116
+	{ 0, 53, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_gift2_lid"), TEXT("") },   // 117
+	{ 0, 54, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("v3_gift3"), TEXT("") },   // 118
+	{ 12, -1, -1, { 1.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("M4"), TEXT("") },   // 119
+	{ 11, -1, -1, { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f }, TEXT("tv-okno"), TEXT("cover: вдоль подарков") },   // 120
 };
 
 // The variants: district (index into GV3DistrictIds), letter, name, what it plays, first op, op count, times of day (1 day, 2 evening, 4 night).
@@ -711,38 +717,38 @@ static const FLevelV3Variant GV3Variants[] =
 	{ 3, TEXT('A'), TEXT("Всё закрыто"), TEXT("как v2: ящики задвинуты (лесенку муравьи выдвигают сами — ящики лёгкие), дверцы закрыты — еда за дверцами"), 28, 0, 7 },
 	{ 3, TEXT('B'), TEXT("Ящики лесенкой"), TEXT("малыш выдвинул ящики: лесенка со столешницы на пол готова с начала рейда — тяжёлое вниз без метлы"), 28, 3, 7 },
 	{ 3, TEXT('C'), TEXT("Шкаф открыт"), TEXT("бабушка искала муку: шкаф у тостера и хлебница открыты"), 31, 3, 7 },
-	{ 4, TEXT('A'), TEXT("Посуда помыта"), TEXT("v2: тарелки в сушилке, дверца под мойкой открыта"), 34, 0, 7 },
-	{ 4, TEXT('B'), TEXT("Гора посуды"), TEXT("раковина полна посуды: слив закрыт (без телепорта), Человек раньше придёт мыть посуду"), 34, 3, 7 },
-	{ 4, TEXT('C'), TEXT("Дверца закрыта"), TEXT("дверца под мойкой закрыта: внутрь только через дыру из коридора и по трубе"), 37, 1, 7 },
-	{ 5, TEXT('A'), TEXT("Суп на плите"), TEXT("конфорка под кастрюлей горит с начала: путь по плите — только по краю"), 38, 1, 7 },
-	{ 5, TEXT('B'), TEXT("Пирог в духовке"), TEXT("дверца духовки приоткрыта (полка на 300), внутри пирог — трофей ур. 3, но жарко"), 39, 1, 7 },
-	{ 5, TEXT('C'), TEXT("Полотенце сохнет"), TEXT("полотенце снято с духовки и сушится на батарее под окном: на плиту только с рейлинга и полочек специй, зато у окна новая тряпка-укрытие"), 40, 2, 7 },
-	{ 6, TEXT('A'), TEXT("Рисунки"), TEXT("магниты и рисунки — путь наверх по боку холодильника"), 42, 0, 7 },
-	{ 6, TEXT('B'), TEXT("Посудомойка открыта"), TEXT("посудомойку разгружают: дверца лежит рампой у пола (вход внутрь без троих), корзины на месте — выдвинутые корзины отрезали бы Человеку мойку и плиту, когда на столе трасса (Плато B)"), 42, 1, 7 },
-	{ 6, TEXT('C'), TEXT("Холодильник приоткрыт"), TEXT("папа не закрыл холодильник: внутрь без троих, но Человек закроет его, заметив (и запрёт того, кто внутри)"), 43, 2, 7 },
-	{ 7, TEXT('A'), TEXT("Ужин накрыт"), TEXT("скатерть, чайник, чашки; трасса убрана, у торца — табурет-стремянка (ступени 450/900 — пандус для тяжёлого)"), 45, 8, 2 },
-	{ 7, TEXT('B'), TEXT("Малыш завтракал"), TEXT("без скатерти; трасса для машинок от стола к полу (v2), грузовик и арка малыша у трассы, хлопья на столе, крошки у стульчика"), 53, 3, 1 },
-	{ 7, TEXT('C'), TEXT("Стулья придвинуты"), TEXT("оба стула вплотную к столу: сиденье 880 -> стол 1400 (ступень 520 — тяжёлое тащат); малыш катал машинки: трасса, грузовик и арка на кухне"), 56, 5, 7 },
-	{ 7, TEXT('D'), TEXT("Длинная скатерть"), TEXT("праздничная скатерть до пола: под столом шатёр (Человек не видит), но там спит Бадрик; табурет снаружи у торца"), 61, 5, 2 },
-	{ 8, TEXT('A'), TEXT("Полное ведро"), TEXT("v2: бутылки и банки у ведра, пакет, коробка-форт"), 66, 0, 7 },
-	{ 8, TEXT('B'), TEXT("Бутылки сдали"), TEXT("бутылки и банки унесли: у ведра голый пол, укрытия — только коробка, пакет и новый мешок с бутылками у стены"), 66, 6, 7 },
-	{ 8, TEXT('C'), TEXT("Коробку сложили"), TEXT("картонную коробку сложили и прислонили к стене: форта нет, мусорный лаз на виду"), 72, 6, 7 },
-	{ 9, TEXT('A'), TEXT("Сухо"), TEXT("v2"), 78, 0, 7 },
-	{ 9, TEXT('B'), TEXT("Протечка"), TEXT("течёт сифон: в коридоре за шкафами лужа от мойки до западного лаза — мокро и медленно"), 78, 2, 7 },
-	{ 9, TEXT('C'), TEXT("Завал"), TEXT("за плиту упал противень и стоит ребром: коридор перегорожен посередине"), 80, 2, 7 },
-	{ 10, TEXT('A'), TEXT("Дверь настежь"), TEXT("v2: дверь сложена к стене, щель под ней — укрытие"), 82, 0, 7 },
-	{ 10, TEXT('B'), TEXT("Дверь не до конца"), TEXT("дверь открыта на 100°, а не сложена к стене: щели под ней нет, зато створка — ширма между порогом и обувницей"), 82, 3, 7 },
-	{ 10, TEXT('C'), TEXT("Обувь у порога"), TEXT("папины ботинки и сапоги бабушки у двери: цепочка укрытий через порог"), 85, 3, 7 },
-	{ 11, TEXT('A'), TEXT("Вяжет"), TEXT("бабушка в кресле, вязание на корзине, клубок на полу"), 88, 0, 7 },
-	{ 11, TEXT('B'), TEXT("Поливала цветы"), TEXT("стремянка у окна гостиной, лейка на полу: бабушки нет в кресле (рутина у окна)"), 88, 2, 1 },
-	{ 11, TEXT('C'), TEXT("Дверца подпёрта"), TEXT("кошачья дверца подпёрта тапком: выход во двор без троих — и вход для красных"), 90, 3, 7 },
-	{ 12, TEXT('A'), TEXT("Железная дорога"), TEXT("v2: кольцо дороги на ковре, паровозик"), 93, 0, 7 },
-	{ 12, TEXT('B'), TEXT("Шалаш"), TEXT("малыш построил шалаш из пледа между диваном и журнальным столом: огромное укрытие, но малыш возвращается в него"), 93, 3, 7 },
-	{ 12, TEXT('C'), TEXT("Прибрано"), TEXT("дорога и паровозик в ящике, кубиковая лесенка у стола разобрана: ковёр голый, торт с журнального стола — только по книжке"), 96, 14, 7 },
-	{ 12, TEXT('D'), TEXT("Праздник"), TEXT("ещё два подарка на журнальном столе и шарики на стульях: торт вероятнее на журнальном столе"), 110, 3, 2 },
-	{ 13, TEXT('A'), TEXT("Телевизор выключен"), TEXT("v2"), 113, 0, 7 },
-	{ 13, TEXT('B'), TEXT("Мультики"), TEXT("телевизор включён с начала (шум): малыш сидит перед ним, Человек приходит выключать"), 113, 1, 6 },
-	{ 13, TEXT('C'), TEXT("Подарки за шторой"), TEXT("подарки спрятаны под окном за шторой: укрытие у батареи, конфеты, торт может быть в большом подарке"), 114, 5, 7 },
+	{ 4, TEXT('A'), TEXT("Посуда помыта"), TEXT("v2: тарелки в сушилке, дверца под мойкой открыта; доска замочена в мойке"), 34, 1, 7 },
+	{ 4, TEXT('B'), TEXT("Гора посуды"), TEXT("раковина полна посуды: слив закрыт (без телепорта), Человек раньше придёт мыть посуду"), 35, 3, 7 },
+	{ 4, TEXT('C'), TEXT("Дверца закрыта"), TEXT("дверца под мойкой закрыта: внутрь только через дыру из коридора и по трубе"), 38, 2, 7 },
+	{ 5, TEXT('A'), TEXT("Суп на плите"), TEXT("конфорка под кастрюлей горит с начала: путь по плите — только по краю"), 40, 1, 7 },
+	{ 5, TEXT('B'), TEXT("Пирог в духовке"), TEXT("дверца духовки приоткрыта (полка на 300), внутри пирог — трофей ур. 3, но жарко"), 41, 1, 7 },
+	{ 5, TEXT('C'), TEXT("Полотенце сохнет"), TEXT("полотенце снято с духовки и сушится на батарее под окном: на плиту только с рейлинга и полочек специй, зато у окна новая тряпка-укрытие"), 42, 2, 7 },
+	{ 6, TEXT('A'), TEXT("Рисунки"), TEXT("магниты и рисунки — путь наверх по боку холодильника"), 44, 0, 7 },
+	{ 6, TEXT('B'), TEXT("Посудомойка открыта"), TEXT("посудомойку разгружают: дверца лежит рампой у пола (вход внутрь без троих), корзины на месте — выдвинутые корзины отрезали бы Человеку мойку и плиту, когда на столе трасса (Плато B)"), 44, 1, 7 },
+	{ 6, TEXT('C'), TEXT("Холодильник приоткрыт"), TEXT("папа не закрыл холодильник: внутрь без троих, но Человек закроет его, заметив (и запрёт того, кто внутри)"), 45, 2, 7 },
+	{ 7, TEXT('A'), TEXT("Ужин накрыт"), TEXT("скатерть, чайник, чашки; трасса убрана, у торца — табурет-стремянка (ступени 450/900 — пандус для тяжёлого)"), 47, 8, 2 },
+	{ 7, TEXT('B'), TEXT("Малыш завтракал"), TEXT("без скатерти; трасса для машинок от стола к полу (v2), грузовик и арка малыша у трассы, хлопья на столе, крошки у стульчика"), 55, 3, 1 },
+	{ 7, TEXT('C'), TEXT("Стулья придвинуты"), TEXT("оба стула вплотную к столу: сиденье 880 -> стол 1400 (ступень 520 — тяжёлое тащат); малыш катал машинки: трасса, грузовик и арка на кухне"), 58, 5, 7 },
+	{ 7, TEXT('D'), TEXT("Длинная скатерть"), TEXT("праздничная скатерть до пола: под столом шатёр (Человек не видит), но там спит Бадрик; табурет снаружи у торца"), 63, 5, 2 },
+	{ 8, TEXT('A'), TEXT("Полное ведро"), TEXT("v2: бутылки и банки у ведра, пакет, коробка-форт"), 68, 0, 7 },
+	{ 8, TEXT('B'), TEXT("Бутылки сдали"), TEXT("бутылки и банки унесли: у ведра голый пол, укрытия — только коробка, пакет и новый мешок с бутылками у стены"), 68, 6, 7 },
+	{ 8, TEXT('C'), TEXT("Коробку сложили"), TEXT("картонную коробку сложили и прислонили к стене: форта нет, мусорный лаз на виду"), 74, 6, 7 },
+	{ 9, TEXT('A'), TEXT("Сухо"), TEXT("v2"), 80, 0, 7 },
+	{ 9, TEXT('B'), TEXT("Протечка"), TEXT("течёт сифон: в коридоре за шкафами лужа от мойки до западного лаза — мокро и медленно"), 80, 2, 7 },
+	{ 9, TEXT('C'), TEXT("Завал"), TEXT("за плиту упал противень и стоит ребром: коридор перегорожен посередине"), 82, 2, 7 },
+	{ 10, TEXT('A'), TEXT("Дверь настежь"), TEXT("v2: дверь сложена к стене, щель под ней — укрытие"), 84, 0, 7 },
+	{ 10, TEXT('B'), TEXT("Дверь не до конца"), TEXT("дверь открыта на 100°, а не сложена к стене: щели под ней нет, зато створка — ширма между порогом и обувницей"), 84, 3, 7 },
+	{ 10, TEXT('C'), TEXT("Обувь у порога"), TEXT("папины ботинки и сапоги бабушки у двери: цепочка укрытий через порог"), 87, 3, 7 },
+	{ 11, TEXT('A'), TEXT("Вяжет"), TEXT("бабушка в кресле, вязание на корзине, клубок на полу"), 90, 0, 7 },
+	{ 11, TEXT('B'), TEXT("Поливала цветы"), TEXT("стремянка у окна гостиной, лейка на полу: бабушки нет в кресле (рутина у окна)"), 90, 2, 1 },
+	{ 11, TEXT('C'), TEXT("Дверца подпёрта"), TEXT("кошачья дверца подпёрта тапком: выход во двор без троих — и вход для красных"), 92, 3, 7 },
+	{ 12, TEXT('A'), TEXT("Железная дорога"), TEXT("v2: кольцо дороги на ковре, паровозик"), 95, 0, 7 },
+	{ 12, TEXT('B'), TEXT("Шалаш"), TEXT("малыш построил шалаш из пледа между диваном и журнальным столом: огромное укрытие, но малыш возвращается в него"), 95, 3, 7 },
+	{ 12, TEXT('C'), TEXT("Прибрано"), TEXT("дорога и паровозик в ящике, кубиковая лесенка у стола разобрана: ковёр голый, торт с журнального стола — только по книжке"), 98, 14, 7 },
+	{ 12, TEXT('D'), TEXT("Праздник"), TEXT("ещё два подарка на журнальном столе и шарики на стульях: торт вероятнее на журнальном столе"), 112, 3, 2 },
+	{ 13, TEXT('A'), TEXT("Телевизор выключен"), TEXT("v2"), 115, 0, 7 },
+	{ 13, TEXT('B'), TEXT("Мультики"), TEXT("телевизор включён с начала (шум): малыш сидит перед ним, Человек приходит выключать"), 115, 1, 6 },
+	{ 13, TEXT('C'), TEXT("Подарки за шторой"), TEXT("подарки спрятаны под окном за шторой: укрытие у батареи, конфеты, торт может быть в большом подарке"), 116, 5, 7 },
 };
 static const TCHAR* const GV3DistrictIds[] = { TEXT("palisad"), TEXT("reddvor"), TEXT("plintus"), TEXT("kladovye"), TEXT("moika"), TEXT("plita"), TEXT("lednik"), TEXT("plato"), TEXT("svalka"), TEXT("zastenye"), TEXT("porog"), TEXT("babushka"), TEXT("play"), TEXT("stenka") };
 static const TCHAR* const GV3DistrictRu[] = { TEXT("Палисадник"), TEXT("Красный двор"), TEXT("Плинтус"), TEXT("Кладовые"), TEXT("Мойка"), TEXT("Плита"), TEXT("Ледник"), TEXT("Плато"), TEXT("Свалка"), TEXT("Застенье"), TEXT("Порог"), TEXT("Бабушкин угол"), TEXT("Игровая"), TEXT("Стенка") };
@@ -764,11 +770,11 @@ static const FLevelV3Fixture GV3Fixtures[] =
 	{ TEXT("upper_doors"), TEXT("art27"), 27, TEXT("Дверцы верхних шкафов"), 9, 21, 1, TEXT("kladovye"), TEXT("выкрутить верхнюю петлю (2 шурупа из 3)"), TEXT("дверца висит криво и не закрывается: Человек её не захлопнет; обе петли — дверца падает (грохот 0,9) и лежит на столешнице пандусом") },
 	{ TEXT("fridge_art"), TEXT("v3_draw0"), 567, TEXT("Рисунки и магниты на холодильнике"), 6, 22, 4, TEXT("lednik"), TEXT("отклеить скотч / столкнуть магнит"), TEXT("рисунок планирует на пол: лист 400 x 570 — укрытие на полу; малыш расстраивается и идёт поднимать (рутина)") },
 	{ TEXT("photo_l"), TEXT("v3_photo_l1"), 559, TEXT("Фото над диваном"), 0, 26, 1, TEXT("play"), TEXT("перегрызть шнурок (6 с)"), TEXT("рамка падает на спинку дивана и стекло бьётся: осколки на сиденье (режут), грохот 0,8") },
-	{ TEXT("balloons"), TEXT("v3_bal0"), 603, TEXT("Шарики"), 8, 27, 3, TEXT("play"), TEXT("перегрызть ленточку у грузика (5 с) — шарик уходит под потолок с муравьём на ленте; кислотой — лопается"), TEXT("ленточка — канат с пола до потолка; хлопок 1,0 — все идут на звук (отвлечение на другом конце дома)") },
-	{ TEXT("toybox"), TEXT("v3_toybox"), 596, TEXT("Ящик для игрушек"), 9, 30, 2, TEXT("play"), TEXT("поднять крышку втроём (сила 24) или выкрутить петли"), TEXT("внутри: игрушки и сладости малыша; опрокинуть ящик нельзя, но открытый ящик малыш вываливает сам (рутина «играет»): игрушки по полу — укрытия") },
-	{ TEXT("gift"), TEXT("v3_gift0"), 609, TEXT("Подарок на шкафу"), 5, 32, 1, TEXT("stenka"), TEXT("перегрызть ленту (5 с), сдвинуть крышку вдвоём"), TEXT("внутри конфеты (еда ур. 3, 4 шт.); крышка с бантом падает на пол — шум 0,3") },
-	{ TEXT("knitting"), TEXT("v3_scarf"), 612, TEXT("Вязание бабушки"), 11, 33, 2, TEXT("babushka"), TEXT("вытащить спицу вдвоём (4 с)"), TEXT("шарф распускается: нитка от клубка через всю комнату — путь (как нитки v2) и ловушка для бабушки: она ищет и сматывает (рутина 40 с, не охотится)") },
-	{ TEXT("glasses"), TEXT("v3_glasses"), 611, TEXT("Очки бабушки"), 0, 35, 1, TEXT("stenka"), TEXT("утащить вчетвером (вес 18) или столкнуть с тумбы"), TEXT("без очков бабушка видит вдвое ближе (2600 -> 1300) и ищет их (рутина); разбитые — до конца рейда") },
+	{ TEXT("balloons"), TEXT("v3_bal0"), 609, TEXT("Шарики"), 8, 27, 3, TEXT("play"), TEXT("перегрызть ленточку у грузика (5 с) — шарик уходит под потолок с муравьём на ленте; кислотой — лопается"), TEXT("ленточка — канат с пола до потолка; хлопок 1,0 — все идут на звук (отвлечение на другом конце дома)") },
+	{ TEXT("toybox"), TEXT("v3_toybox"), 602, TEXT("Ящик для игрушек"), 9, 30, 2, TEXT("play"), TEXT("поднять крышку втроём (сила 24) или выкрутить петли"), TEXT("внутри: игрушки и сладости малыша; опрокинуть ящик нельзя, но открытый ящик малыш вываливает сам (рутина «играет»): игрушки по полу — укрытия") },
+	{ TEXT("gift"), TEXT("v3_gift0"), 615, TEXT("Подарок на шкафу"), 5, 32, 1, TEXT("stenka"), TEXT("перегрызть ленту (5 с), сдвинуть крышку вдвоём"), TEXT("внутри конфеты (еда ур. 3, 4 шт.); крышка с бантом падает на пол — шум 0,3") },
+	{ TEXT("knitting"), TEXT("v3_scarf"), 618, TEXT("Вязание бабушки"), 11, 33, 2, TEXT("babushka"), TEXT("вытащить спицу вдвоём (4 с)"), TEXT("шарф распускается: нитка от клубка через всю комнату — путь (как нитки v2) и ловушка для бабушки: она ищет и сматывает (рутина 40 с, не охотится)") },
+	{ TEXT("glasses"), TEXT("v3_glasses"), 617, TEXT("Очки бабушки"), 0, 35, 1, TEXT("stenka"), TEXT("утащить вчетвером (вес 18) или столкнуть с тумбы"), TEXT("без очков бабушка видит вдвое ближе (2600 -> 1300) и ищет их (рутина); разбитые — до конца рейда") },
 	{ TEXT("outlets"), TEXT("v3_out_k1"), 574, TEXT("Розетки"), 4, 36, 1, TEXT("svalka"), TEXT("открутить винт рамки (8 с вдвоём)"), TEXT("рамка отходит: лаз в стену к проводам (короткий ход в вентиляцию; ток в мокрой стене)") },
 	{ TEXT("trolley"), TEXT("v3_trolley"), -1, TEXT("Сумка-тележка"), 7, 37, 1, TEXT("plintus"), TEXT("открыть молнию"), TEXT("внутри картошка и лук (тяжёлая еда ур. 1–2); толкнуть тележку нельзя") },
 	{ TEXT("toaster"), TEXT("art73"), 73, TEXT("Тостер"), 10, 38, 1, TEXT("kladovye"), TEXT("есть"), TEXT("есть: шум и тост") },
@@ -804,14 +810,14 @@ static const FLevelV3FastenerDef GV3Fasteners[] =
 	{ TEXT("new29"), 440, 3, 11 },
 	{ TEXT("new30"), 441, 3, 11 },
 	{ TEXT("v3_nail_l1"), 564, 2, 12 },
-	{ TEXT("v3_str0"), 606, 6, 13 },
-	{ TEXT("v3_str1"), 607, 6, 13 },
-	{ TEXT("v3_str2"), 608, 6, 13 },
-	{ TEXT("v3_toybox_h0"), 598, 1, 14 },
-	{ TEXT("v3_toybox_h1"), 599, 1, 14 },
+	{ TEXT("v3_str0"), 612, 6, 13 },
+	{ TEXT("v3_str1"), 613, 6, 13 },
+	{ TEXT("v3_str2"), 614, 6, 13 },
+	{ TEXT("v3_toybox_h0"), 604, 1, 14 },
+	{ TEXT("v3_toybox_h1"), 605, 1, 14 },
 	{ TEXT("лента (knot)"), -1, 11, 15 },
-	{ TEXT("v3_needle0"), 613, 8, 16 },
-	{ TEXT("v3_needle1"), 614, 8, 16 },
+	{ TEXT("v3_needle0"), 619, 8, 16 },
+	{ TEXT("v3_needle1"), 620, 8, 16 },
 	{ TEXT("friction"), -1, 9, 17 },
 	{ TEXT("винт рамки x1"), -1, 11, 18 },
 	{ TEXT("молния (держать [E] вдвоём, 4 с)"), -1, 11, 19 },
@@ -822,9 +828,9 @@ static const FLevelV3FastenerDef GV3Fasteners[] =
 static const int32 GV3FixtureParts[][2] =
 {
 	{ 1, 520 },   // v3_jam_lid
-	{ 13, 606 },   // v3_str0
-	{ 14, 597 },   // v3_toybox_lid
-	{ 15, 610 },   // v3_gift0_lid
+	{ 13, 612 },   // v3_str0
+	{ 14, 603 },   // v3_toybox_lid
+	{ 15, 616 },   // v3_gift0_lid
 	{ -1, -1 }
 };
 
@@ -838,9 +844,9 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 1, 1, 0, 13, TEXT("CBCCCBBBAABCCA"), 2, { 12, -1, -1 }, { 517, -1, -1 }, 12, 17 },
 	{ 2, 1, 0, 13, TEXT("ABCBCBCBACACAA"), 0, { -1, -1, -1 }, { 580, 513, -1 }, 29, 20 },
 	{ 3, 1, 0, 13, TEXT("CABABCACBCCBCA"), 1, { 4, 15, -1 }, { 516, 517, 511 }, 49, 12 },
-	{ 4, 1, 0, 13, TEXT("AAABABACABABCC"), 0, { -1, -1, -1 }, { 572, 613, -1 }, 61, 13 },
+	{ 4, 1, 0, 13, TEXT("AAABABACABABCC"), 0, { -1, -1, -1 }, { 572, 619, -1 }, 61, 13 },
 	{ 5, 1, 0, 13, TEXT("CBBABBBBAABACC"), 2, { -1, -1, -1 }, { 512, 510, -1 }, 74, 12 },
-	{ 6, 1, 0, 13, TEXT("AADBBBCCCBABAA"), 1, { 15, -1, -1 }, { 564, 613, 510 }, 86, 11 },
+	{ 6, 1, 0, 13, TEXT("AADBBBCCCBABAA"), 1, { 15, -1, -1 }, { 564, 619, 510 }, 86, 11 },
 	{ 7, 1, 0, 13, TEXT("CACBACCCCAACCA"), 0, { 7, 18, -1 }, { 512, 510, -1 }, 97, 12 },
 	{ 8, 1, 0, 13, TEXT("CCCBACBBCABAAA"), 0, { -1, -1, -1 }, { 572, 511, 509 }, 109, 14 },
 	{ 9, 1, 0, 13, TEXT("CCBBABACABABAC"), 2, { 14, 19, -1 }, { 514, -1, -1 }, 123, 16 },
@@ -853,9 +859,9 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 16, 1, 0, 13, TEXT("CCABCCCBACCACA"), 1, { 5, 7, 15 }, { 572, 515, -1 }, 219, 10 },
 	{ 17, 1, 0, 13, TEXT("BADACCCCAABCAA"), 2, { 15, -1, -1 }, { 510, -1, -1 }, 229, 15 },
 	{ 18, 1, 0, 13, TEXT("ACBCBAACBCABCC"), 0, { 6, -1, -1 }, { 515, -1, -1 }, 244, 14 },
-	{ 19, 1, 0, 13, TEXT("BAAAABBCBBCCCC"), 3, { 4, -1, -1 }, { 613, 511, 507 }, 258, 14 },
+	{ 19, 1, 0, 13, TEXT("BAAAABBCBBCCCC"), 3, { 4, -1, -1 }, { 619, 511, 507 }, 258, 14 },
 	{ 20, 1, 0, 13, TEXT("BCDABBABBAABAA"), 0, { -1, -1, -1 }, { 512, 509, -1 }, 272, 17 },
-	{ 21, 1, 0, 13, TEXT("BAACAAACCCABAC"), 2, { 15, 18, 25 }, { 613, 518, 507 }, 289, 14 },
+	{ 21, 1, 0, 13, TEXT("BAACAAACCCABAC"), 2, { 15, 18, 25 }, { 619, 518, 507 }, 289, 14 },
 	{ 22, 1, 0, 13, TEXT("BBCCBACBAACACC"), 0, { 6, -1, -1 }, { 507, -1, -1 }, 303, 11 },
 	{ 23, 1, 0, 13, TEXT("BAABBBCCCCCAAC"), 3, { 17, 18, -1 }, { 569, 572, -1 }, 314, 15 },
 	{ 24, 1, 0, 13, TEXT("BBBBBCABCABAAA"), 0, { 7, -1, -1 }, { 509, -1, -1 }, 329, 18 },
@@ -872,7 +878,7 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 35, 1, 0, 13, TEXT("CACACBCBBCBCCC"), 1, { 19, -1, -1 }, { 580, 517, -1 }, 486, 17 },
 	{ 36, 1, 0, 13, TEXT("CBBCBBABBBCCCC"), 2, { -1, -1, -1 }, { 513, -1, -1 }, 503, 13 },
 	{ 37, 1, 0, 13, TEXT("CCBACBABCBCCCA"), 0, { 7, 19, -1 }, { 516, 511, -1 }, 516, 12 },
-	{ 38, 1, 0, 13, TEXT("ABDAABBCBBBCCA"), 1, { 13, -1, -1 }, { 572, 613, 518 }, 528, 16 },
+	{ 38, 1, 0, 13, TEXT("ABDAABBCBBBCCA"), 1, { 13, -1, -1 }, { 572, 619, 518 }, 528, 16 },
 	{ 39, 1, 0, 13, TEXT("ABACCCBBBAAACA"), 1, { -1, -1, -1 }, { 564, -1, -1 }, 544, 18 },
 	{ 40, 1, 0, 13, TEXT("ABCAACBCCBCACC"), 2, { 15, 25, -1 }, { 514, -1, -1 }, 562, 15 },
 	{ 41, 1, 0, 13, TEXT("BBDBAACBCCBBCC"), 1, { 12, 14, 18 }, { 580, 516, 517 }, 577, 12 },
@@ -888,7 +894,7 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 51, 1, 0, 13, TEXT("CBBCCAACAABBCA"), 0, { 10, 25, -1 }, { 518, 513, -1 }, 695, 9 },
 	{ 52, 1, 0, 13, TEXT("BBBACCCBBCCCAC"), 2, { 18, -1, -1 }, { 515, 508, -1 }, 704, 17 },
 	{ 53, 1, 0, 13, TEXT("BCDBCBBBBBCCCA"), 2, { 4, 9, 26 }, { 569, -1, -1 }, 721, 13 },
-	{ 54, 1, 0, 13, TEXT("BADCCCBCCABCAA"), 1, { 10, 26, -1 }, { 569, 613, 516 }, 734, 13 },
+	{ 54, 1, 0, 13, TEXT("BADCCCBCCABCAA"), 1, { 10, 26, -1 }, { 569, 619, 516 }, 734, 13 },
 	{ 55, 1, 0, 13, TEXT("ABCABAABBBAACC"), 0, { 12, 13, 19 }, { 507, 509, 510 }, 747, 12 },
 	{ 56, 1, 0, 13, TEXT("BADBBCBBACABCA"), 0, { 10, 14, -1 }, { 572, 515, -1 }, 759, 12 },
 	{ 57, 1, 0, 13, TEXT("BCAACABBABBACA"), 2, { 6, 15, -1 }, { 518, 508, -1 }, 771, 12 },
@@ -899,8 +905,8 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 62, 1, 0, 13, TEXT("AABBAABCBAAACA"), 1, { 4, 14, 17 }, { 514, -1, -1 }, 840, 12 },
 	{ 63, 1, 0, 13, TEXT("CBDCCCBCCCAACA"), 0, { 13, -1, -1 }, { 569, -1, -1 }, 852, 15 },
 	{ 64, 1, 0, 13, TEXT("BCCCBBBCBCBACA"), 0, { -1, -1, -1 }, { 510, -1, -1 }, 867, 13 },
-	{ 65, 1, 0, 13, TEXT("CADBCACCAABCCC"), 0, { -1, -1, -1 }, { 564, 613, -1 }, 880, 14 },
-	{ 66, 1, 0, 13, TEXT("ABBCAACCBACBCC"), 2, { -1, -1, -1 }, { 564, 613, -1 }, 894, 13 },
+	{ 65, 1, 0, 13, TEXT("CADBCACCAABCCC"), 0, { -1, -1, -1 }, { 564, 619, -1 }, 880, 14 },
+	{ 66, 1, 0, 13, TEXT("ABBCAACCBACBCC"), 2, { -1, -1, -1 }, { 564, 619, -1 }, 894, 13 },
 	{ 67, 1, 0, 13, TEXT("AAABCCACAAAAAA"), 1, { 19, 25, -1 }, { 572, -1, -1 }, 907, 19 },
 	{ 68, 1, 0, 13, TEXT("BCDCCACCAACBCA"), 1, { 10, 13, -1 }, { 512, -1, -1 }, 926, 17 },
 	{ 69, 1, 0, 13, TEXT("CBBCBBBCCBBACA"), 0, { 5, 25, -1 }, { 572, 513, -1 }, 943, 12 },
@@ -911,7 +917,7 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 74, 1, 0, 13, TEXT("CBBCAACBCACAAA"), 1, { 12, 19, -1 }, { 569, 572, 518 }, 1002, 17 },
 	{ 75, 1, 0, 13, TEXT("BADBABABBABBAC"), 3, { 7, 16, -1 }, { 517, 512, 508 }, 1019, 14 },
 	{ 76, 1, 0, 13, TEXT("ABCBACCBABBBCC"), 3, { 9, 10, 19 }, { 518, -1, -1 }, 1033, 15 },
-	{ 77, 1, 0, 13, TEXT("BACCACBBABABCA"), 2, { 9, 17, 26 }, { 569, 613, -1 }, 1048, 16 },
+	{ 77, 1, 0, 13, TEXT("BACCACBBABABCA"), 2, { 9, 17, 26 }, { 569, 619, -1 }, 1048, 16 },
 	{ 78, 1, 0, 13, TEXT("ACACCBCCCACACA"), 0, { 18, 19, -1 }, { 572, -1, -1 }, 1064, 13 },
 	{ 79, 1, 0, 13, TEXT("CBDBACCCBABACA"), 0, { -1, -1, -1 }, { 518, 511, -1 }, 1077, 13 },
 	{ 80, 1, 0, 13, TEXT("ACBAACACABBBCA"), 1, { 18, -1, -1 }, { 508, -1, -1 }, 1090, 14 },
@@ -923,30 +929,30 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 86, 1, 0, 13, TEXT("CCBCCBCBCCCBAA"), 2, { 13, 14, 19 }, { 580, -1, -1 }, 1160, 14 },
 	{ 87, 1, 0, 13, TEXT("ABBBCBBBBBCCCC"), 1, { 9, 19, -1 }, { 580, 564, -1 }, 1174, 8 },
 	{ 88, 1, 0, 13, TEXT("BCBCACABBCAAAC"), 2, { -1, -1, -1 }, { 515, -1, -1 }, 1182, 15 },
-	{ 89, 1, 0, 13, TEXT("CCBCCBCCAAABCA"), 1, { 15, 18, -1 }, { 569, 613, 517 }, 1197, 11 },
+	{ 89, 1, 0, 13, TEXT("CCBCCBCCAAABCA"), 1, { 15, 18, -1 }, { 569, 619, 517 }, 1197, 11 },
 	{ 90, 1, 0, 13, TEXT("ABCACCCCACCBAA"), 0, { 17, -1, -1 }, { 572, 517, 518 }, 1208, 16 },
 	{ 91, 1, 0, 13, TEXT("BBBCBABCCBCACC"), 0, { 9, 10, 26 }, { 511, -1, -1 }, 1224, 8 },
 	{ 92, 1, 0, 13, TEXT("BADBCAABBCACCC"), 1, { 4, -1, -1 }, { 517, -1, -1 }, 1232, 12 },
 	{ 93, 1, 0, 13, TEXT("CACBCAABCAACCC"), 0, { 4, -1, -1 }, { 580, 510, -1 }, 1244, 13 },
 	{ 94, 1, 0, 13, TEXT("BBBBAABCBACBCA"), 1, { -1, -1, -1 }, { 513, -1, -1 }, 1257, 14 },
 	{ 95, 1, 0, 13, TEXT("ABABBBACBABBCC"), 1, { -1, -1, -1 }, { 515, 509, -1 }, 1271, 12 },
-	{ 96, 1, 0, 13, TEXT("ACCCACBBBBABCA"), 0, { 5, 7, 10 }, { 613, 508, 509 }, 1283, 16 },
+	{ 96, 1, 0, 13, TEXT("ACCCACBBBBABCA"), 0, { 5, 7, 10 }, { 619, 508, 509 }, 1283, 16 },
 	{ 97, 1, 0, 13, TEXT("BABAABCBCACAAC"), 3, { 4, 7, -1 }, { 511, 509, -1 }, 1299, 17 },
 	{ 98, 1, 0, 13, TEXT("AACABBCCCACACC"), 2, { 14, 18, -1 }, { 569, 512, -1 }, 1316, 11 },
 	{ 99, 1, 0, 13, TEXT("ABDCCACCAACCCC"), 3, { 15, -1, -1 }, { 510, -1, -1 }, 1327, 14 },
 	{ 100, 1, 0, 13, TEXT("BBBBAABCABBBCA"), 2, { 4, -1, -1 }, { 516, -1, -1 }, 1341, 10 },
 	{ 101, 1, 0, 13, TEXT("AADCACCBCBBAAC"), 1, { 26, -1, -1 }, { 572, 518, 514 }, 1351, 16 },
 	{ 102, 1, 0, 13, TEXT("BCBCCAABACCBCC"), 0, { 12, 18, -1 }, { 580, 564, -1 }, 1367, 10 },
-	{ 103, 1, 0, 13, TEXT("ACAAAACBCCAACA"), 2, { -1, -1, -1 }, { 569, 613, -1 }, 1377, 16 },
+	{ 103, 1, 0, 13, TEXT("ACAAAACBCCAACA"), 2, { -1, -1, -1 }, { 569, 619, -1 }, 1377, 16 },
 	{ 104, 1, 0, 13, TEXT("CBDBBACBBCCCCA"), 2, { 18, -1, -1 }, { 513, 514, -1 }, 1393, 13 },
-	{ 105, 1, 0, 13, TEXT("CCCCBCBBACABCA"), 0, { 9, 14, 26 }, { 613, 516, 512 }, 1406, 11 },
+	{ 105, 1, 0, 13, TEXT("CCCCBCBBACABCA"), 0, { 9, 14, 26 }, { 619, 516, 512 }, 1406, 11 },
 	{ 106, 1, 0, 13, TEXT("AADACCBBBABCCA"), 0, { 17, 26, -1 }, { 572, 514, -1 }, 1417, 12 },
 	{ 107, 1, 0, 13, TEXT("BBCACBACCCCCCA"), 1, { 6, 17, -1 }, { 510, -1, -1 }, 1429, 9 },
 	{ 108, 1, 0, 13, TEXT("BADBCBBBCBBCCA"), 1, { -1, -1, -1 }, { 516, 514, 510 }, 1438, 15 },
 	{ 109, 1, 0, 13, TEXT("AADCBABCAABBCA"), 0, { 11, 18, -1 }, { 509, -1, -1 }, 1453, 14 },
 	{ 110, 1, 0, 13, TEXT("BBACBAABBACCCA"), 2, { -1, -1, -1 }, { 580, 513, -1 }, 1467, 13 },
 	{ 111, 1, 0, 13, TEXT("ACABBAABBCABCC"), 1, { 7, 26, -1 }, { 513, -1, -1 }, 1480, 15 },
-	{ 112, 1, 0, 13, TEXT("CBACCACCCCCBCA"), 1, { -1, -1, -1 }, { 613, 517, -1 }, 1495, 14 },
+	{ 112, 1, 0, 13, TEXT("CBACCACCCCCBCA"), 1, { -1, -1, -1 }, { 619, 517, -1 }, 1495, 14 },
 	{ 113, 1, 0, 13, TEXT("CBDABCACCBACAA"), 2, { 4, 17, -1 }, { 507, -1, -1 }, 1509, 13 },
 	{ 114, 1, 0, 13, TEXT("CBABCCBBCAACCC"), 2, { 15, 16, 25 }, { 512, 510, -1 }, 1522, 13 },
 	{ 115, 1, 0, 13, TEXT("BBABACABCCBACC"), 1, { 4, 7, 19 }, { 511, 513, -1 }, 1535, 14 },
@@ -958,10 +964,10 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 121, 1, 0, 13, TEXT("ACACBCBCBBAACC"), 3, { 11, 25, 26 }, { 517, 511, -1 }, 1616, 14 },
 	{ 122, 1, 0, 13, TEXT("CCCBCCABBACACA"), 0, { -1, -1, -1 }, { 569, 516, -1 }, 1630, 12 },
 	{ 123, 1, 0, 13, TEXT("BBDAAAACBCCBCA"), 1, { 9, -1, -1 }, { 511, -1, -1 }, 1642, 9 },
-	{ 124, 1, 0, 13, TEXT("CCBCCBBBBBBACA"), 0, { 9, 12, 16 }, { 613, 517, 511 }, 1651, 19 },
+	{ 124, 1, 0, 13, TEXT("CCBCCBBBBBBACA"), 0, { 9, 12, 16 }, { 619, 517, 511 }, 1651, 19 },
 	{ 125, 1, 0, 13, TEXT("ABAACBABACBBCC"), 1, { 4, 13, -1 }, { 518, 508, 510 }, 1670, 9 },
 	{ 126, 1, 0, 13, TEXT("BAACCBBCBBBACC"), 1, { 6, 17, -1 }, { 564, 512, 508 }, 1679, 18 },
-	{ 127, 1, 0, 13, TEXT("CCDAABCCCAACCC"), 2, { 4, 17, -1 }, { 613, 509, 510 }, 1697, 14 },
+	{ 127, 1, 0, 13, TEXT("CCDAABCCCAACCC"), 2, { 4, 17, -1 }, { 619, 509, 510 }, 1697, 14 },
 	{ 128, 1, 0, 13, TEXT("CBCCABACABCACA"), 1, { 9, 11, -1 }, { 511, 507, -1 }, 1711, 16 },
 	{ 129, 1, 0, 13, TEXT("BCABBBBCBCACAA"), 1, { -1, -1, -1 }, { 513, 509, -1 }, 1727, 16 },
 	{ 130, 1, 0, 13, TEXT("CCCCABCCCBCCAA"), 0, { 7, 13, 15 }, { 509, -1, -1 }, 1743, 11 },
@@ -988,26 +994,26 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 151, 1, 0, 13, TEXT("CBDCACCCABCACC"), 3, { 9, 17, 26 }, { 572, 513, -1 }, 2030, 10 },
 	{ 152, 1, 0, 13, TEXT("CCCACCBCAACACC"), 3, { 16, -1, -1 }, { 572, 511, 508 }, 2040, 12 },
 	{ 153, 1, 0, 13, TEXT("CCCBAACCAACCCC"), 1, { -1, -1, -1 }, { 564, 516, -1 }, 2052, 17 },
-	{ 154, 1, 0, 13, TEXT("BCAACBCCCACBCA"), 0, { 26, -1, -1 }, { 613, 515, -1 }, 2069, 19 },
-	{ 155, 1, 0, 13, TEXT("AAAACAABBBBACC"), 0, { 7, 9, 12 }, { 613, -1, -1 }, 2088, 12 },
+	{ 154, 1, 0, 13, TEXT("BCAACBCCCACBCA"), 0, { 26, -1, -1 }, { 619, 515, -1 }, 2069, 19 },
+	{ 155, 1, 0, 13, TEXT("AAAACAABBBBACC"), 0, { 7, 9, 12 }, { 619, -1, -1 }, 2088, 12 },
 	{ 156, 1, 0, 13, TEXT("CBBACBBBABBAAA"), 0, { 10, 11, 26 }, { 510, -1, -1 }, 2100, 11 },
-	{ 157, 1, 0, 13, TEXT("BBACCBCBBBBACC"), 3, { 5, 16, -1 }, { 613, 507, -1 }, 2111, 14 },
+	{ 157, 1, 0, 13, TEXT("BBACCBCBBBBACC"), 3, { 5, 16, -1 }, { 619, 507, -1 }, 2111, 14 },
 	{ 158, 1, 0, 13, TEXT("ABCACAABBABBCC"), 1, { 14, 16, -1 }, { 564, -1, -1 }, 2125, 15 },
 	{ 159, 1, 0, 13, TEXT("BCDABBCCCABACC"), 0, { -1, -1, -1 }, { 507, -1, -1 }, 2140, 10 },
-	{ 160, 1, 0, 13, TEXT("BBBBBCABCACCCC"), 2, { 7, -1, -1 }, { 569, 613, 518 }, 2150, 15 },
+	{ 160, 1, 0, 13, TEXT("BBBBBCABCACCCC"), 2, { 7, -1, -1 }, { 569, 619, 518 }, 2150, 15 },
 	{ 161, 1, 0, 13, TEXT("AACAACBBCBBACC"), 1, { -1, -1, -1 }, { 572, 512, -1 }, 2165, 14 },
 	{ 162, 1, 0, 13, TEXT("CBACBAABACBBCA"), 0, { 4, -1, -1 }, { 517, 507, 509 }, 2179, 17 },
 	{ 163, 1, 0, 13, TEXT("BCCBCABCABCBAC"), 2, { 9, 25, -1 }, { 569, 513, 509 }, 2196, 18 },
 	{ 164, 1, 0, 13, TEXT("BCACCBBBAABCCC"), 1, { 9, 19, -1 }, { 516, 511, -1 }, 2214, 12 },
 	{ 165, 1, 0, 13, TEXT("BBBBAAACBCBCCA"), 2, { 16, 19, -1 }, { 580, 514, -1 }, 2226, 19 },
-	{ 166, 1, 0, 13, TEXT("CCCBCACCBCCBCC"), 0, { 13, -1, -1 }, { 580, 613, 511 }, 2245, 16 },
+	{ 166, 1, 0, 13, TEXT("CCCBCACCBCCBCC"), 0, { 13, -1, -1 }, { 580, 619, 511 }, 2245, 16 },
 	{ 167, 1, 0, 13, TEXT("ACACACCCCBCBCA"), 0, { 4, -1, -1 }, { 513, 508, -1 }, 2261, 14 },
 	{ 168, 1, 0, 13, TEXT("BABBBBABBCCBCA"), 0, { 7, 14, 15 }, { 510, -1, -1 }, 2275, 12 },
 	{ 169, 1, 0, 13, TEXT("BCACBAABAAAACC"), 2, { 5, 9, 17 }, { 569, -1, -1 }, 2287, 14 },
 	{ 170, 1, 0, 13, TEXT("CCDBBACBCAABCA"), 1, { 4, 7, -1 }, { 515, 516, -1 }, 2301, 11 },
 	{ 171, 1, 0, 13, TEXT("ABDBABCBACCCCA"), 0, { -1, -1, -1 }, { 569, 515, -1 }, 2312, 14 },
 	{ 172, 1, 0, 13, TEXT("ACAAAACCBCACCC"), 0, { 9, -1, -1 }, { 515, 513, -1 }, 2326, 12 },
-	{ 173, 1, 0, 13, TEXT("BBDABCACABCACA"), 0, { 4, 7, 15 }, { 613, 517, -1 }, 2338, 10 },
+	{ 173, 1, 0, 13, TEXT("BBDABCACABCACA"), 0, { 4, 7, 15 }, { 619, 517, -1 }, 2338, 10 },
 	{ 174, 1, 0, 13, TEXT("BADABACCCCACCC"), 1, { 9, 16, 19 }, { 515, 511, 509 }, 2348, 16 },
 	{ 175, 1, 0, 13, TEXT("CCACCCCCBABAAA"), 1, { 4, 14, 19 }, { 572, 515, -1 }, 2364, 15 },
 	{ 176, 1, 0, 13, TEXT("BACBBBABACBCCC"), 1, { 13, 15, 17 }, { 517, 513, -1 }, 2379, 16 },
@@ -1027,7 +1033,7 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 190, 1, 0, 13, TEXT("ABACBCBBCBCBCC"), 1, { 6, 17, -1 }, { 518, 514, -1 }, 2558, 15 },
 	{ 191, 1, 0, 13, TEXT("BABBCAACCCBCAC"), 1, { 6, 14, 26 }, { 511, -1, -1 }, 2573, 11 },
 	{ 192, 1, 0, 13, TEXT("BBACBCCCCBCBAA"), 1, { 26, -1, -1 }, { 513, -1, -1 }, 2584, 16 },
-	{ 193, 1, 0, 13, TEXT("CCCBAACCCAACAA"), 0, { 7, 15, 26 }, { 613, 513, -1 }, 2600, 14 },
+	{ 193, 1, 0, 13, TEXT("CCCBAACCCAACAA"), 0, { 7, 15, 26 }, { 619, 513, -1 }, 2600, 14 },
 	{ 194, 1, 0, 13, TEXT("BCBAAACCCABBCC"), 0, { 7, 13, -1 }, { 510, -1, -1 }, 2614, 11 },
 	{ 195, 1, 0, 13, TEXT("CBBCABBBBAACCC"), 2, { 25, -1, -1 }, { 515, -1, -1 }, 2625, 11 },
 	{ 196, 1, 0, 13, TEXT("ABABAABCCABBCC"), 1, { 7, 14, -1 }, { 516, 518, -1 }, 2636, 13 },
@@ -1046,7 +1052,7 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 209, 1, 0, 13, TEXT("CBABBBCCBBCBAA"), 2, { 4, -1, -1 }, { 507, -1, -1 }, 2803, 15 },
 	{ 210, 1, 0, 13, TEXT("ACCCBABCCABACA"), 2, { 26, -1, -1 }, { 518, 508, -1 }, 2818, 14 },
 	{ 211, 1, 0, 13, TEXT("ABDACCBCACCBCA"), 1, { 9, 16, -1 }, { 510, -1, -1 }, 2832, 11 },
-	{ 212, 1, 0, 13, TEXT("BBDBCABCBCCCCC"), 1, { -1, -1, -1 }, { 580, 613, 515 }, 2843, 16 },
+	{ 212, 1, 0, 13, TEXT("BBDBCABCBCCCCC"), 1, { -1, -1, -1 }, { 580, 619, 515 }, 2843, 16 },
 	{ 213, 1, 0, 13, TEXT("CACBABBBCBBBAC"), 3, { 16, -1, -1 }, { 569, 517, 513 }, 2859, 9 },
 	{ 214, 1, 0, 13, TEXT("CAABCBBCBCBCCA"), 0, { 4, 18, -1 }, { 580, 518, 509 }, 2868, 13 },
 	{ 215, 1, 0, 13, TEXT("AADCBBACBACCCA"), 2, { 19, 26, -1 }, { 518, -1, -1 }, 2881, 14 },
@@ -1057,7 +1063,7 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 220, 1, 0, 13, TEXT("BAACBBBCBBAACC"), 3, { -1, -1, -1 }, { 513, -1, -1 }, 2952, 12 },
 	{ 221, 1, 0, 13, TEXT("ACBBBBBCABCBCC"), 0, { 10, 19, 25 }, { 572, 517, -1 }, 2964, 15 },
 	{ 222, 1, 0, 13, TEXT("BCDBCCACBAACCC"), 3, { -1, -1, -1 }, { 513, -1, -1 }, 2979, 11 },
-	{ 223, 1, 0, 13, TEXT("ACBACBCCACBACC"), 0, { 4, 11, 13 }, { 613, 509, -1 }, 2990, 15 },
+	{ 223, 1, 0, 13, TEXT("ACBACBCCACBACC"), 0, { 4, 11, 13 }, { 619, 509, -1 }, 2990, 15 },
 	{ 224, 1, 0, 13, TEXT("BBCBBCBCCBABCA"), 0, { 4, 13, -1 }, { 569, 516, -1 }, 3005, 19 },
 	{ 225, 1, 0, 13, TEXT("CAABBBCBBACBCC"), 2, { -1, -1, -1 }, { 507, -1, -1 }, 3024, 12 },
 	{ 226, 1, 0, 13, TEXT("CAABCAABAABAAA"), 0, { 15, 19, -1 }, { 518, -1, -1 }, 3036, 16 },
@@ -1074,7 +1080,7 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 237, 1, 0, 13, TEXT("CCDCABABCBCACC"), 3, { -1, -1, -1 }, { 564, -1, -1 }, 3186, 12 },
 	{ 238, 1, 0, 13, TEXT("AABABCABBACBCC"), 1, { 10, 12, -1 }, { 564, -1, -1 }, 3198, 14 },
 	{ 239, 1, 0, 13, TEXT("ACDBCCCBCCCCCC"), 1, { 19, -1, -1 }, { 515, -1, -1 }, 3212, 17 },
-	{ 240, 1, 0, 13, TEXT("ABBAABABBCCCCC"), 1, { -1, -1, -1 }, { 613, 512, -1 }, 3229, 16 },
+	{ 240, 1, 0, 13, TEXT("ABBAABABBCCCCC"), 1, { -1, -1, -1 }, { 619, 512, -1 }, 3229, 16 },
 	{ 241, 1, 0, 13, TEXT("CBDBBCCCABCCCC"), 1, { 4, -1, -1 }, { 517, -1, -1 }, 3245, 12 },
 	{ 242, 1, 0, 13, TEXT("BADBBBCBACAACA"), 0, { -1, -1, -1 }, { 515, 516, -1 }, 3257, 16 },
 	{ 243, 1, 0, 13, TEXT("CCCBAAACCBAACC"), 1, { 9, 25, -1 }, { 580, 507, -1 }, 3273, 13 },
@@ -1094,9 +1100,9 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 1, 2, 0, 15, TEXT("CBCCCBBBAABCCA"), 2, { 12, -1, -1 }, { 517, -1, -1 }, 3466, 19 },
 	{ 2, 2, 0, 15, TEXT("ABCBCBCBACACAA"), 0, { -1, -1, -1 }, { 580, 513, -1 }, 3485, 21 },
 	{ 3, 2, 0, 15, TEXT("CABABCACBCCBBA"), 1, { 4, 15, -1 }, { 516, 517, 511 }, 3506, 14 },
-	{ 4, 2, 0, 15, TEXT("AAABABACABABCC"), 0, { -1, -1, -1 }, { 572, 613, -1 }, 3520, 19 },
+	{ 4, 2, 0, 15, TEXT("AAABABACABABCC"), 0, { -1, -1, -1 }, { 572, 619, -1 }, 3520, 19 },
 	{ 5, 2, 0, 15, TEXT("CBBABBBBAABAAC"), 1, { -1, -1, -1 }, { 512, 510, -1 }, 3539, 13 },
-	{ 6, 2, 0, 15, TEXT("AADBBBCCCBABAA"), 1, { 15, -1, -1 }, { 564, 613, 510 }, 3552, 11 },
+	{ 6, 2, 0, 15, TEXT("AADBBBCCCBABAA"), 1, { 15, -1, -1 }, { 564, 619, 510 }, 3552, 11 },
 	{ 7, 2, 0, 15, TEXT("CACBACCCCAACAA"), 0, { 7, 18, -1 }, { 512, 510, -1 }, 3563, 17 },
 	{ 8, 2, 0, 15, TEXT("CCCBACBBCABAAA"), 0, { -1, -1, -1 }, { 572, 511, 509 }, 3580, 16 },
 	{ 9, 2, 0, 15, TEXT("CCBBABACABABAC"), 2, { 14, 19, -1 }, { 514, -1, -1 }, 3596, 20 },
@@ -1109,9 +1115,9 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 16, 2, 0, 15, TEXT("CCABCCCBACCACA"), 1, { 5, 7, 15 }, { 572, 515, -1 }, 3697, 12 },
 	{ 17, 2, 0, 15, TEXT("BADACCCCAABCAA"), 2, { 15, -1, -1 }, { 510, -1, -1 }, 3709, 15 },
 	{ 18, 2, 0, 15, TEXT("ACBCBAACBCABBC"), 0, { 6, -1, -1 }, { 515, -1, -1 }, 3724, 17 },
-	{ 19, 2, 0, 15, TEXT("BAAAABBCBBCCAC"), 3, { 4, -1, -1 }, { 613, 511, 507 }, 3741, 16 },
+	{ 19, 2, 0, 15, TEXT("BAAAABBCBBCCAC"), 3, { 4, -1, -1 }, { 619, 511, 507 }, 3741, 16 },
 	{ 20, 2, 0, 15, TEXT("BCDABBABBAABAA"), 0, { -1, -1, -1 }, { 512, 509, -1 }, 3757, 16 },
-	{ 21, 2, 0, 15, TEXT("BAACAAACCCABAC"), 2, { 15, 18, 25 }, { 613, 518, 507 }, 3773, 19 },
+	{ 21, 2, 0, 15, TEXT("BAACAAACCCABAC"), 2, { 15, 18, 25 }, { 619, 518, 507 }, 3773, 19 },
 	{ 22, 2, 0, 15, TEXT("BBCCBACBAACAAC"), 0, { 6, -1, -1 }, { 507, -1, -1 }, 3792, 11 },
 	{ 23, 2, 0, 15, TEXT("BAABBBCCCCCAAC"), 3, { 17, 18, -1 }, { 569, 572, -1 }, 3803, 16 },
 	{ 24, 2, 0, 15, TEXT("BBBBBCABCABAAA"), 0, { 7, -1, -1 }, { 509, -1, -1 }, 3819, 16 },
@@ -1128,7 +1134,7 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 35, 2, 0, 15, TEXT("CACACBCBBCBCAC"), 1, { 19, -1, -1 }, { 580, 517, -1 }, 3982, 16 },
 	{ 36, 2, 0, 15, TEXT("CBBCBBABBBCCBC"), 1, { -1, -1, -1 }, { 513, -1, -1 }, 3998, 15 },
 	{ 37, 2, 0, 15, TEXT("CCBACBABCBCCCA"), 0, { 7, 19, -1 }, { 516, 511, -1 }, 4013, 14 },
-	{ 38, 2, 0, 15, TEXT("ABDAABBCBBBCBA"), 0, { 13, -1, -1 }, { 572, 613, 518 }, 4027, 18 },
+	{ 38, 2, 0, 15, TEXT("ABDAABBCBBBCBA"), 0, { 13, -1, -1 }, { 572, 619, 518 }, 4027, 18 },
 	{ 39, 2, 0, 15, TEXT("ABACCCBBBAAABA"), 0, { -1, -1, -1 }, { 564, -1, -1 }, 4045, 20 },
 	{ 40, 2, 0, 15, TEXT("ABCAACBCCBCABC"), 1, { 15, 25, -1 }, { 514, -1, -1 }, 4065, 11 },
 	{ 41, 2, 0, 15, TEXT("BBDBAACBCCBBCC"), 1, { 12, 14, 18 }, { 580, 516, 517 }, 4076, 17 },
@@ -1144,7 +1150,7 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 51, 2, 0, 15, TEXT("CBBCCAACAABBCA"), 0, { 10, 25, -1 }, { 518, 513, -1 }, 4217, 13 },
 	{ 52, 2, 0, 15, TEXT("BBBACCCBBCCCAC"), 2, { 18, -1, -1 }, { 515, 508, -1 }, 4230, 17 },
 	{ 53, 2, 0, 15, TEXT("BCDBCBBBBBCCCA"), 2, { 4, 9, 26 }, { 569, -1, -1 }, 4247, 16 },
-	{ 54, 2, 0, 15, TEXT("BADCCCBCCABCAA"), 1, { 10, 26, -1 }, { 569, 613, 516 }, 4263, 14 },
+	{ 54, 2, 0, 15, TEXT("BADCCCBCCABCAA"), 1, { 10, 26, -1 }, { 569, 619, 516 }, 4263, 14 },
 	{ 55, 2, 0, 15, TEXT("ABCABAABBBAACC"), 0, { 12, 13, 19 }, { 507, 509, 510 }, 4277, 12 },
 	{ 56, 2, 0, 15, TEXT("BADBBCBBACABBA"), 0, { 10, 14, -1 }, { 572, 515, -1 }, 4289, 13 },
 	{ 57, 2, 0, 15, TEXT("BCAACABBABBACA"), 2, { 6, 15, -1 }, { 518, 508, -1 }, 4302, 13 },
@@ -1155,8 +1161,8 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 62, 2, 0, 15, TEXT("AABBAABCBAAACA"), 1, { 4, 14, 17 }, { 514, -1, -1 }, 4377, 12 },
 	{ 63, 2, 0, 15, TEXT("CBDCCCBCCCAABA"), 0, { 13, -1, -1 }, { 569, -1, -1 }, 4389, 15 },
 	{ 64, 2, 0, 15, TEXT("BCCCBBBCBCBABA"), 0, { -1, -1, -1 }, { 510, -1, -1 }, 4404, 19 },
-	{ 65, 2, 0, 15, TEXT("CADBCACCAABCBC"), 0, { -1, -1, -1 }, { 564, 613, -1 }, 4423, 18 },
-	{ 66, 2, 0, 15, TEXT("ABBCAACCBACBCC"), 2, { -1, -1, -1 }, { 564, 613, -1 }, 4441, 13 },
+	{ 65, 2, 0, 15, TEXT("CADBCACCAABCBC"), 0, { -1, -1, -1 }, { 564, 619, -1 }, 4423, 18 },
+	{ 66, 2, 0, 15, TEXT("ABBCAACCBACBCC"), 2, { -1, -1, -1 }, { 564, 619, -1 }, 4441, 13 },
 	{ 67, 2, 0, 15, TEXT("AAABCCACAAAAAA"), 1, { 19, 25, -1 }, { 572, -1, -1 }, 4454, 13 },
 	{ 68, 2, 0, 15, TEXT("BCDCCACCAACBCA"), 1, { 10, 13, -1 }, { 512, -1, -1 }, 4467, 14 },
 	{ 69, 2, 0, 15, TEXT("CBBCBBBCCBBACA"), 0, { 5, 25, -1 }, { 572, 513, -1 }, 4481, 12 },
@@ -1167,7 +1173,7 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 74, 2, 0, 15, TEXT("CBBCAACBCACAAA"), 1, { 12, 19, -1 }, { 569, 572, 518 }, 4550, 19 },
 	{ 75, 2, 0, 15, TEXT("BADBABABBABBAC"), 3, { 7, 16, -1 }, { 517, 512, 508 }, 4569, 17 },
 	{ 76, 2, 0, 15, TEXT("ABCBACCBABBBCC"), 3, { 9, 10, 19 }, { 518, -1, -1 }, 4586, 16 },
-	{ 77, 2, 0, 15, TEXT("BACCACBBABABBA"), 2, { 9, 17, 26 }, { 569, 613, -1 }, 4602, 11 },
+	{ 77, 2, 0, 15, TEXT("BACCACBBABABBA"), 2, { 9, 17, 26 }, { 569, 619, -1 }, 4602, 11 },
 	{ 78, 2, 0, 15, TEXT("ACACCBCCCACACA"), 0, { 18, 19, -1 }, { 572, -1, -1 }, 4613, 16 },
 	{ 79, 2, 0, 15, TEXT("CBDBACCCBABABA"), 0, { -1, -1, -1 }, { 518, 511, -1 }, 4629, 14 },
 	{ 80, 2, 0, 15, TEXT("ACBAACACABBBBA"), 1, { 18, -1, -1 }, { 508, -1, -1 }, 4643, 15 },
@@ -1179,30 +1185,30 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 86, 2, 0, 15, TEXT("CCBCCBCBCCCBAA"), 2, { 13, 14, 19 }, { 580, -1, -1 }, 4735, 17 },
 	{ 87, 2, 0, 15, TEXT("ABBBCBBBBBCCCC"), 1, { 9, 19, -1 }, { 580, 564, -1 }, 4752, 10 },
 	{ 88, 2, 0, 15, TEXT("BCBCACABBCAAAC"), 2, { -1, -1, -1 }, { 515, -1, -1 }, 4762, 16 },
-	{ 89, 2, 0, 15, TEXT("CCBCCBCCAAABCA"), 1, { 15, 18, -1 }, { 569, 613, 517 }, 4778, 14 },
+	{ 89, 2, 0, 15, TEXT("CCBCCBCCAAABCA"), 1, { 15, 18, -1 }, { 569, 619, 517 }, 4778, 14 },
 	{ 90, 2, 0, 15, TEXT("ABCACCCCACCBAA"), 0, { 17, -1, -1 }, { 572, 517, 518 }, 4792, 13 },
 	{ 91, 2, 0, 15, TEXT("BBBCBABCCBCACC"), 0, { 9, 10, 26 }, { 511, -1, -1 }, 4805, 9 },
 	{ 92, 2, 0, 15, TEXT("BADBCAABBCACBC"), 0, { 4, -1, -1 }, { 517, -1, -1 }, 4814, 15 },
 	{ 93, 2, 0, 15, TEXT("CACBCAABCAACCC"), 0, { 4, -1, -1 }, { 580, 510, -1 }, 4829, 13 },
 	{ 94, 2, 0, 15, TEXT("BBBBAABCBACBCA"), 1, { -1, -1, -1 }, { 513, -1, -1 }, 4842, 17 },
 	{ 95, 2, 0, 15, TEXT("ABABBBACBABBBC"), 0, { -1, -1, -1 }, { 515, 509, -1 }, 4859, 20 },
-	{ 96, 2, 0, 15, TEXT("ACCCACBBBBABCA"), 0, { 5, 7, 10 }, { 613, 508, 509 }, 4879, 16 },
+	{ 96, 2, 0, 15, TEXT("ACCCACBBBBABCA"), 0, { 5, 7, 10 }, { 619, 508, 509 }, 4879, 16 },
 	{ 97, 2, 0, 15, TEXT("BABAABCBCACAAC"), 3, { 4, 7, -1 }, { 511, 509, -1 }, 4895, 19 },
 	{ 98, 2, 0, 15, TEXT("AACABBCCCACACC"), 2, { 14, 18, -1 }, { 569, 512, -1 }, 4914, 16 },
 	{ 99, 2, 0, 15, TEXT("ABDCCACCAACCCC"), 3, { 15, -1, -1 }, { 510, -1, -1 }, 4930, 16 },
 	{ 100, 2, 0, 15, TEXT("BBBBAABCABBBCA"), 2, { 4, -1, -1 }, { 516, -1, -1 }, 4946, 13 },
 	{ 101, 2, 0, 15, TEXT("AADCACCBCBBAAC"), 1, { 26, -1, -1 }, { 572, 518, 514 }, 4959, 13 },
 	{ 102, 2, 0, 15, TEXT("BCBCCAABACCBBC"), 0, { 12, 18, -1 }, { 580, 564, -1 }, 4972, 16 },
-	{ 103, 2, 0, 15, TEXT("ACAAAACBCCAABA"), 2, { -1, -1, -1 }, { 569, 613, -1 }, 4988, 13 },
+	{ 103, 2, 0, 15, TEXT("ACAAAACBCCAABA"), 2, { -1, -1, -1 }, { 569, 619, -1 }, 4988, 13 },
 	{ 104, 2, 0, 15, TEXT("CBDBBACBBCCCBA"), 2, { 18, -1, -1 }, { 513, 514, -1 }, 5001, 16 },
-	{ 105, 2, 0, 15, TEXT("CCCCBCBBACABBA"), 0, { 9, 14, 26 }, { 613, 516, 512 }, 5017, 11 },
+	{ 105, 2, 0, 15, TEXT("CCCCBCBBACABBA"), 0, { 9, 14, 26 }, { 619, 516, 512 }, 5017, 11 },
 	{ 106, 2, 0, 15, TEXT("AADACCBBBABCBA"), 0, { 17, 26, -1 }, { 572, 514, -1 }, 5028, 16 },
 	{ 107, 2, 0, 15, TEXT("BBCACBACCCCCBA"), 1, { 6, 17, -1 }, { 510, -1, -1 }, 5044, 9 },
 	{ 108, 2, 0, 15, TEXT("BADBCBBBCBBCAA"), 1, { -1, -1, -1 }, { 516, 514, 510 }, 5053, 19 },
 	{ 109, 2, 0, 15, TEXT("AADCBABCAABBAA"), 0, { 11, 18, -1 }, { 509, -1, -1 }, 5072, 12 },
 	{ 110, 2, 0, 15, TEXT("BBACBAABBACCBA"), 2, { -1, -1, -1 }, { 580, 513, -1 }, 5084, 16 },
 	{ 111, 2, 0, 15, TEXT("ACABBAABBCABBC"), 1, { 7, 26, -1 }, { 513, -1, -1 }, 5100, 14 },
-	{ 112, 2, 0, 15, TEXT("CBACCACCCCCBCA"), 1, { -1, -1, -1 }, { 613, 517, -1 }, 5114, 13 },
+	{ 112, 2, 0, 15, TEXT("CBACCACCCCCBCA"), 1, { -1, -1, -1 }, { 619, 517, -1 }, 5114, 13 },
 	{ 113, 2, 0, 15, TEXT("CBDABCACCBACAA"), 2, { 4, 17, -1 }, { 507, -1, -1 }, 5127, 18 },
 	{ 114, 2, 0, 15, TEXT("CBABCCBBCAACBC"), 1, { 15, 16, 25 }, { 512, 510, -1 }, 5145, 16 },
 	{ 115, 2, 0, 15, TEXT("BBABACABCCBAAC"), 1, { 4, 7, 19 }, { 511, 513, -1 }, 5161, 19 },
@@ -1214,10 +1220,10 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 121, 2, 0, 15, TEXT("ACACBCBCBBAACC"), 3, { 11, 25, 26 }, { 517, 511, -1 }, 5259, 17 },
 	{ 122, 2, 0, 15, TEXT("CCCBCCABBACACA"), 0, { -1, -1, -1 }, { 569, 516, -1 }, 5276, 10 },
 	{ 123, 2, 0, 15, TEXT("BBDAAAACBCCBCA"), 1, { 9, -1, -1 }, { 511, -1, -1 }, 5286, 14 },
-	{ 124, 2, 0, 15, TEXT("CCBCCBBBBBBACA"), 0, { 9, 12, 16 }, { 613, 517, 511 }, 5300, 21 },
+	{ 124, 2, 0, 15, TEXT("CCBCCBBBBBBACA"), 0, { 9, 12, 16 }, { 619, 517, 511 }, 5300, 21 },
 	{ 125, 2, 0, 15, TEXT("ABAACBABACBBAC"), 1, { 4, 13, -1 }, { 518, 508, 510 }, 5321, 11 },
 	{ 126, 2, 0, 15, TEXT("BAACCBBCBBBACC"), 1, { 6, 17, -1 }, { 564, 512, 508 }, 5332, 22 },
-	{ 127, 2, 0, 15, TEXT("CCDAABCCCAACCC"), 2, { 4, 17, -1 }, { 613, 509, 510 }, 5354, 11 },
+	{ 127, 2, 0, 15, TEXT("CCDAABCCCAACCC"), 2, { 4, 17, -1 }, { 619, 509, 510 }, 5354, 11 },
 	{ 128, 2, 0, 15, TEXT("CBCCABACABCABA"), 1, { 9, 11, -1 }, { 511, 507, -1 }, 5365, 14 },
 	{ 129, 2, 0, 15, TEXT("BCABBBBCBCACAA"), 1, { -1, -1, -1 }, { 513, 509, -1 }, 5379, 18 },
 	{ 130, 2, 0, 15, TEXT("CCCCABCCCBCCAA"), 0, { 7, 13, 15 }, { 509, -1, -1 }, 5397, 16 },
@@ -1244,26 +1250,26 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 151, 2, 0, 15, TEXT("CBDCACCCABCABC"), 3, { 9, 17, 26 }, { 572, 513, -1 }, 5732, 12 },
 	{ 152, 2, 0, 15, TEXT("CCCACCBCAACACC"), 3, { 16, -1, -1 }, { 572, 511, 508 }, 5744, 14 },
 	{ 153, 2, 0, 15, TEXT("CCCBAACCAACCAC"), 0, { -1, -1, -1 }, { 564, 516, -1 }, 5758, 18 },
-	{ 154, 2, 0, 15, TEXT("BCAACBCCCACBBA"), 0, { 26, -1, -1 }, { 613, 515, -1 }, 5776, 20 },
-	{ 155, 2, 0, 15, TEXT("AAAACAABBBBACC"), 0, { 7, 9, 12 }, { 613, -1, -1 }, 5796, 15 },
+	{ 154, 2, 0, 15, TEXT("BCAACBCCCACBBA"), 0, { 26, -1, -1 }, { 619, 515, -1 }, 5776, 20 },
+	{ 155, 2, 0, 15, TEXT("AAAACAABBBBACC"), 0, { 7, 9, 12 }, { 619, -1, -1 }, 5796, 15 },
 	{ 156, 2, 0, 15, TEXT("CBBACBBBABBAAA"), 0, { 10, 11, 26 }, { 510, -1, -1 }, 5811, 19 },
-	{ 157, 2, 0, 15, TEXT("BBACCBCBBBBACC"), 3, { 5, 16, -1 }, { 613, 507, -1 }, 5830, 16 },
+	{ 157, 2, 0, 15, TEXT("BBACCBCBBBBACC"), 3, { 5, 16, -1 }, { 619, 507, -1 }, 5830, 16 },
 	{ 158, 2, 0, 15, TEXT("ABCACAABBABBBC"), 1, { 14, 16, -1 }, { 564, -1, -1 }, 5846, 16 },
 	{ 159, 2, 0, 15, TEXT("BCDABBCCCABACC"), 0, { -1, -1, -1 }, { 507, -1, -1 }, 5862, 11 },
-	{ 160, 2, 0, 15, TEXT("BBBBBCABCACCBC"), 2, { 7, -1, -1 }, { 569, 613, 518 }, 5873, 14 },
+	{ 160, 2, 0, 15, TEXT("BBBBBCABCACCBC"), 2, { 7, -1, -1 }, { 569, 619, 518 }, 5873, 14 },
 	{ 161, 2, 0, 15, TEXT("AACAACBBCBBACC"), 1, { -1, -1, -1 }, { 572, 512, -1 }, 5887, 19 },
 	{ 162, 2, 0, 15, TEXT("CBACBAABACBBCA"), 0, { 4, -1, -1 }, { 517, 507, 509 }, 5906, 17 },
 	{ 163, 2, 0, 15, TEXT("BCCBCABCABCBAC"), 2, { 9, 25, -1 }, { 569, 513, 509 }, 5923, 17 },
 	{ 164, 2, 0, 15, TEXT("BCACCBBBAABCCC"), 1, { 9, 19, -1 }, { 516, 511, -1 }, 5940, 12 },
 	{ 165, 2, 0, 15, TEXT("BBBBAAACBCBCCA"), 2, { 16, 19, -1 }, { 580, 514, -1 }, 5952, 18 },
-	{ 166, 2, 0, 15, TEXT("CCCBCACCBCCBCC"), 0, { 13, -1, -1 }, { 580, 613, 511 }, 5970, 18 },
+	{ 166, 2, 0, 15, TEXT("CCCBCACCBCCBCC"), 0, { 13, -1, -1 }, { 580, 619, 511 }, 5970, 18 },
 	{ 167, 2, 0, 15, TEXT("ACACACCCCBCBBA"), 0, { 4, -1, -1 }, { 513, 508, -1 }, 5988, 15 },
 	{ 168, 2, 0, 15, TEXT("BABBBBABBCCBCA"), 0, { 7, 14, 15 }, { 510, -1, -1 }, 6003, 14 },
 	{ 169, 2, 0, 15, TEXT("BCACBAABAAAABC"), 1, { 5, 9, 17 }, { 569, -1, -1 }, 6017, 15 },
 	{ 170, 2, 0, 15, TEXT("CCDBBACBCAABCA"), 1, { 4, 7, -1 }, { 515, 516, -1 }, 6032, 13 },
 	{ 171, 2, 0, 15, TEXT("ABDBABCBACCCBA"), 0, { -1, -1, -1 }, { 569, 515, -1 }, 6045, 21 },
 	{ 172, 2, 0, 15, TEXT("ACAAAACCBCACCC"), 0, { 9, -1, -1 }, { 515, 513, -1 }, 6066, 16 },
-	{ 173, 2, 0, 15, TEXT("BBDABCACABCACA"), 0, { 4, 7, 15 }, { 613, 517, -1 }, 6082, 16 },
+	{ 173, 2, 0, 15, TEXT("BBDABCACABCACA"), 0, { 4, 7, 15 }, { 619, 517, -1 }, 6082, 16 },
 	{ 174, 2, 0, 15, TEXT("BADABACCCCACCC"), 1, { 9, 16, 19 }, { 515, 511, 509 }, 6098, 15 },
 	{ 175, 2, 0, 15, TEXT("CCACCCCCBABAAA"), 1, { 4, 14, 19 }, { 572, 515, -1 }, 6113, 17 },
 	{ 176, 2, 0, 15, TEXT("BACBBBABACBCBC"), 1, { 13, 15, 17 }, { 517, 513, -1 }, 6130, 19 },
@@ -1283,7 +1289,7 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 190, 2, 0, 15, TEXT("ABACBCBBCBCBCC"), 1, { 6, 17, -1 }, { 518, 514, -1 }, 6331, 11 },
 	{ 191, 2, 0, 15, TEXT("BABBCAACCCBCAC"), 1, { 6, 14, 26 }, { 511, -1, -1 }, 6342, 14 },
 	{ 192, 2, 0, 15, TEXT("BBACBCCCCBCBAA"), 1, { 26, -1, -1 }, { 513, -1, -1 }, 6356, 14 },
-	{ 193, 2, 0, 15, TEXT("CCCBAACCCAACAA"), 0, { 7, 15, 26 }, { 613, 513, -1 }, 6370, 14 },
+	{ 193, 2, 0, 15, TEXT("CCCBAACCCAACAA"), 0, { 7, 15, 26 }, { 619, 513, -1 }, 6370, 14 },
 	{ 194, 2, 0, 15, TEXT("BCBAAACCCABBBC"), 0, { 7, 13, -1 }, { 510, -1, -1 }, 6384, 12 },
 	{ 195, 2, 0, 15, TEXT("CBBCABBBBAACBC"), 2, { 25, -1, -1 }, { 515, -1, -1 }, 6396, 12 },
 	{ 196, 2, 0, 15, TEXT("ABABAABCCABBCC"), 1, { 7, 14, -1 }, { 516, 518, -1 }, 6408, 14 },
@@ -1302,7 +1308,7 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 209, 2, 0, 15, TEXT("CBABBBCCBBCBAA"), 2, { 4, -1, -1 }, { 507, -1, -1 }, 6605, 11 },
 	{ 210, 2, 0, 15, TEXT("ACCCBABCCABACA"), 2, { 26, -1, -1 }, { 518, 508, -1 }, 6616, 11 },
 	{ 211, 2, 0, 15, TEXT("ABDACCBCACCBCA"), 1, { 9, 16, -1 }, { 510, -1, -1 }, 6627, 13 },
-	{ 212, 2, 0, 15, TEXT("BBDBCABCBCCCCC"), 1, { -1, -1, -1 }, { 580, 613, 515 }, 6640, 13 },
+	{ 212, 2, 0, 15, TEXT("BBDBCABCBCCCCC"), 1, { -1, -1, -1 }, { 580, 619, 515 }, 6640, 13 },
 	{ 213, 2, 0, 15, TEXT("CACBABBBCBBBAC"), 3, { 16, -1, -1 }, { 569, 517, 513 }, 6653, 11 },
 	{ 214, 2, 0, 15, TEXT("CAABCBBCBCBCBA"), 0, { 4, 18, -1 }, { 580, 518, 509 }, 6664, 14 },
 	{ 215, 2, 0, 15, TEXT("AADCBBACBACCCA"), 2, { 19, 26, -1 }, { 518, -1, -1 }, 6678, 16 },
@@ -1313,7 +1319,7 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 220, 2, 0, 15, TEXT("BAACBBBCBBAABC"), 3, { -1, -1, -1 }, { 513, -1, -1 }, 6745, 15 },
 	{ 221, 2, 0, 15, TEXT("ACBBBBBCABCBCC"), 0, { 10, 19, 25 }, { 572, 517, -1 }, 6760, 18 },
 	{ 222, 2, 0, 15, TEXT("BCDBCCACBAACBC"), 3, { -1, -1, -1 }, { 513, -1, -1 }, 6778, 15 },
-	{ 223, 2, 0, 15, TEXT("ACBACBCCACBACC"), 0, { 4, 11, 13 }, { 613, 509, -1 }, 6793, 13 },
+	{ 223, 2, 0, 15, TEXT("ACBACBCCACBACC"), 0, { 4, 11, 13 }, { 619, 509, -1 }, 6793, 13 },
 	{ 224, 2, 0, 15, TEXT("BBCBBCBCCBABBA"), 0, { 4, 13, -1 }, { 569, 516, -1 }, 6806, 15 },
 	{ 225, 2, 0, 15, TEXT("CAABBBCBBACBBC"), 1, { -1, -1, -1 }, { 507, -1, -1 }, 6821, 12 },
 	{ 226, 2, 0, 15, TEXT("CAABCAABAABAAA"), 0, { 15, 19, -1 }, { 518, -1, -1 }, 6833, 16 },
@@ -1330,7 +1336,7 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 237, 2, 0, 15, TEXT("CCDCABABCBCABC"), 3, { -1, -1, -1 }, { 564, -1, -1 }, 7007, 11 },
 	{ 238, 2, 0, 15, TEXT("AABABCABBACBBC"), 1, { 10, 12, -1 }, { 564, -1, -1 }, 7018, 14 },
 	{ 239, 2, 0, 15, TEXT("ACDBCCCBCCCCCC"), 1, { 19, -1, -1 }, { 515, -1, -1 }, 7032, 19 },
-	{ 240, 2, 0, 15, TEXT("ABBAABABBCCCBC"), 1, { -1, -1, -1 }, { 613, 512, -1 }, 7051, 18 },
+	{ 240, 2, 0, 15, TEXT("ABBAABABBCCCBC"), 1, { -1, -1, -1 }, { 619, 512, -1 }, 7051, 18 },
 	{ 241, 2, 0, 15, TEXT("CBDBBCCCABCCCC"), 1, { 4, -1, -1 }, { 517, -1, -1 }, 7069, 13 },
 	{ 242, 2, 0, 15, TEXT("BADBBBCBACAABA"), 0, { -1, -1, -1 }, { 515, 516, -1 }, 7082, 18 },
 	{ 243, 2, 0, 15, TEXT("CCCBAAACCBAACC"), 1, { 9, 25, -1 }, { 580, 507, -1 }, 7100, 13 },
@@ -1350,9 +1356,9 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 1, 3, 1, 14, TEXT("CBCCCBBAAABCDB"), 2, { 12, -1, -1 }, { 517, -1, -1 }, 7310, 19 },
 	{ 2, 3, 1, 14, TEXT("ABCBCBCAACACAB"), 0, { -1, -1, -1 }, { 580, 513, -1 }, 7329, 19 },
 	{ 3, 3, 1, 14, TEXT("CABABCACBCCACB"), 1, { 4, 15, -1 }, { 516, 517, 511 }, 7348, 12 },
-	{ 4, 3, 1, 14, TEXT("AAABABADABACCC"), 0, { -1, -1, -1 }, { 572, 613, -1 }, 7360, 15 },
+	{ 4, 3, 1, 14, TEXT("AAABABADABACCC"), 0, { -1, -1, -1 }, { 572, 619, -1 }, 7360, 15 },
 	{ 5, 3, 1, 14, TEXT("CBBABBBAAABABC"), 1, { -1, -1, -1 }, { 512, 510, -1 }, 7375, 16 },
-	{ 6, 3, 1, 14, TEXT("AADBBBCDCBACAB"), 1, { 15, -1, -1 }, { 564, 613, 510 }, 7391, 10 },
+	{ 6, 3, 1, 14, TEXT("AADBBBCDCBACAB"), 1, { 15, -1, -1 }, { 564, 619, 510 }, 7391, 10 },
 	{ 7, 3, 1, 14, TEXT("CACBACCDCAACBB"), 0, { 7, 18, -1 }, { 512, 510, -1 }, 7401, 15 },
 	{ 8, 3, 1, 14, TEXT("CCCBACBACABAAA"), 0, { -1, -1, -1 }, { 572, 511, 509 }, 7416, 15 },
 	{ 9, 3, 1, 14, TEXT("CCBBABACABAAAC"), 2, { 14, 19, -1 }, { 514, -1, -1 }, 7431, 16 },
@@ -1365,9 +1371,9 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 16, 3, 1, 14, TEXT("CCABCCCAACCADA"), 1, { 5, 7, 15 }, { 572, 515, -1 }, 7522, 9 },
 	{ 17, 3, 1, 14, TEXT("BADACCCDAABCAB"), 2, { 15, -1, -1 }, { 510, -1, -1 }, 7531, 16 },
 	{ 18, 3, 1, 14, TEXT("ACBCBAADBCACCB"), 0, { 6, -1, -1 }, { 515, -1, -1 }, 7547, 15 },
-	{ 19, 3, 1, 14, TEXT("BAAAABBDBBCCBC"), 3, { 4, -1, -1 }, { 613, 511, 507 }, 7562, 19 },
+	{ 19, 3, 1, 14, TEXT("BAAAABBDBBCCBC"), 3, { 4, -1, -1 }, { 619, 511, 507 }, 7562, 19 },
 	{ 20, 3, 1, 14, TEXT("BCDABBACBAACAA"), 0, { -1, -1, -1 }, { 512, 509, -1 }, 7581, 17 },
-	{ 21, 3, 1, 14, TEXT("BAACAAADCCAAAC"), 2, { 15, 18, 25 }, { 613, 518, 507 }, 7598, 16 },
+	{ 21, 3, 1, 14, TEXT("BAACAAADCCAAAC"), 2, { 15, 18, 25 }, { 619, 518, 507 }, 7598, 16 },
 	{ 22, 3, 1, 14, TEXT("BBCCBACCAACABB"), 0, { 6, -1, -1 }, { 507, -1, -1 }, 7614, 11 },
 	{ 23, 3, 1, 14, TEXT("BAABBBCCCCCAAB"), 2, { 17, 18, -1 }, { 569, 572, -1 }, 7625, 19 },
 	{ 24, 3, 1, 14, TEXT("BBBBBCAACABAAA"), 0, { 7, -1, -1 }, { 509, -1, -1 }, 7644, 18 },
@@ -1384,7 +1390,7 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 35, 3, 1, 14, TEXT("CACACBCABCBCBC"), 1, { 19, -1, -1 }, { 580, 517, -1 }, 7804, 18 },
 	{ 36, 3, 1, 14, TEXT("CBBCBBACBBCCCC"), 2, { -1, -1, -1 }, { 513, -1, -1 }, 7822, 15 },
 	{ 37, 3, 1, 14, TEXT("CCBACBAACBCCDB"), 0, { 7, 19, -1 }, { 516, 511, -1 }, 7837, 14 },
-	{ 38, 3, 1, 14, TEXT("ABDAABBCBBBCCB"), 1, { 13, -1, -1 }, { 572, 613, 518 }, 7851, 16 },
+	{ 38, 3, 1, 14, TEXT("ABDAABBCBBBCCB"), 1, { 13, -1, -1 }, { 572, 619, 518 }, 7851, 16 },
 	{ 39, 3, 1, 14, TEXT("ABACCCBABAAABB"), 0, { -1, -1, -1 }, { 564, -1, -1 }, 7867, 20 },
 	{ 40, 3, 1, 14, TEXT("ABCAACBDCBCACB"), 1, { 15, 25, -1 }, { 514, -1, -1 }, 7887, 11 },
 	{ 41, 3, 1, 14, TEXT("BBDBAACCCCBCDB"), 0, { 12, 14, 18 }, { 580, 516, 517 }, 7898, 13 },
@@ -1400,7 +1406,7 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 51, 3, 1, 14, TEXT("CBBCCAADAABCDA"), 0, { 10, 25, -1 }, { 518, 513, -1 }, 8018, 12 },
 	{ 52, 3, 1, 14, TEXT("BBBACCCCBCCCAB"), 2, { 18, -1, -1 }, { 515, 508, -1 }, 8030, 16 },
 	{ 53, 3, 1, 14, TEXT("BCDBCBBABBCCDA"), 2, { 4, 9, 26 }, { 569, -1, -1 }, 8046, 17 },
-	{ 54, 3, 1, 14, TEXT("BADCCCBDCABCAA"), 1, { 10, 26, -1 }, { 569, 613, 516 }, 8063, 12 },
+	{ 54, 3, 1, 14, TEXT("BADCCCBDCABCAA"), 1, { 10, 26, -1 }, { 569, 619, 516 }, 8063, 12 },
 	{ 55, 3, 1, 14, TEXT("ABCABAAABBAADC"), 0, { 12, 13, 19 }, { 507, 509, 510 }, 8075, 12 },
 	{ 56, 3, 1, 14, TEXT("BADBBCBAACAABA"), 0, { 10, 14, -1 }, { 572, 515, -1 }, 8087, 12 },
 	{ 57, 3, 1, 14, TEXT("BCAACABCABBADA"), 1, { 6, 15, -1 }, { 518, 508, -1 }, 8099, 12 },
@@ -1411,8 +1417,8 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 62, 3, 1, 14, TEXT("AABBAABDBAAADB"), 1, { 4, 14, 17 }, { 514, -1, -1 }, 8165, 11 },
 	{ 63, 3, 1, 14, TEXT("CBDCCCBDCCAACA"), 0, { 13, -1, -1 }, { 569, -1, -1 }, 8176, 16 },
 	{ 64, 3, 1, 14, TEXT("BCCCBBBDBCBABA"), 0, { -1, -1, -1 }, { 510, -1, -1 }, 8192, 12 },
-	{ 65, 3, 1, 14, TEXT("CADBCACDAABCBC"), 0, { -1, -1, -1 }, { 564, 613, -1 }, 8204, 20 },
-	{ 66, 3, 1, 14, TEXT("ABBCAACDBACADC"), 2, { -1, -1, -1 }, { 564, 613, -1 }, 8224, 13 },
+	{ 65, 3, 1, 14, TEXT("CADBCACDAABCBC"), 0, { -1, -1, -1 }, { 564, 619, -1 }, 8204, 20 },
+	{ 66, 3, 1, 14, TEXT("ABBCAACDBACADC"), 2, { -1, -1, -1 }, { 564, 619, -1 }, 8224, 13 },
 	{ 67, 3, 1, 14, TEXT("AAABCCADAAAAAA"), 1, { 19, 25, -1 }, { 572, -1, -1 }, 8237, 18 },
 	{ 68, 3, 1, 14, TEXT("BCDCCACDAACADB"), 1, { 10, 13, -1 }, { 512, -1, -1 }, 8255, 16 },
 	{ 69, 3, 1, 14, TEXT("CBBCBBBDCBBADB"), 0, { 5, 25, -1 }, { 572, 513, -1 }, 8271, 14 },
@@ -1423,7 +1429,7 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 74, 3, 1, 14, TEXT("CBBCAACACACAAA"), 1, { 12, 19, -1 }, { 569, 572, 518 }, 8337, 16 },
 	{ 75, 3, 1, 14, TEXT("BADBABAABABCAC"), 3, { 7, 16, -1 }, { 517, 512, 508 }, 8353, 14 },
 	{ 76, 3, 1, 14, TEXT("ABCBACCAABBADC"), 3, { 9, 10, 19 }, { 518, -1, -1 }, 8367, 14 },
-	{ 77, 3, 1, 14, TEXT("BACCACBAABACCB"), 2, { 9, 17, 26 }, { 569, 613, -1 }, 8381, 12 },
+	{ 77, 3, 1, 14, TEXT("BACCACBAABACCB"), 2, { 9, 17, 26 }, { 569, 619, -1 }, 8381, 12 },
 	{ 78, 3, 1, 14, TEXT("ACACCBCDCACADB"), 0, { 18, 19, -1 }, { 572, -1, -1 }, 8393, 10 },
 	{ 79, 3, 1, 14, TEXT("CBDBACCDBABABA"), 0, { -1, -1, -1 }, { 518, 511, -1 }, 8403, 9 },
 	{ 80, 3, 1, 14, TEXT("ACBAACADABBABA"), 1, { 18, -1, -1 }, { 508, -1, -1 }, 8412, 17 },
@@ -1435,30 +1441,30 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 86, 3, 1, 14, TEXT("CCBCCBCCCCCAAA"), 2, { 13, 14, 19 }, { 580, -1, -1 }, 8492, 13 },
 	{ 87, 3, 1, 14, TEXT("ABBBCBBCBBCCDB"), 0, { 9, 19, -1 }, { 580, 564, -1 }, 8505, 8 },
 	{ 88, 3, 1, 14, TEXT("BCBCACACBCAAAC"), 2, { -1, -1, -1 }, { 515, -1, -1 }, 8513, 17 },
-	{ 89, 3, 1, 14, TEXT("CCBCCBCCAAAADB"), 0, { 15, 18, -1 }, { 569, 613, 517 }, 8530, 10 },
+	{ 89, 3, 1, 14, TEXT("CCBCCBCCAAAADB"), 0, { 15, 18, -1 }, { 569, 619, 517 }, 8530, 10 },
 	{ 90, 3, 1, 14, TEXT("ABCACCCDACCAAB"), 0, { 17, -1, -1 }, { 572, 517, 518 }, 8540, 19 },
 	{ 91, 3, 1, 14, TEXT("BBBCBABDCBCADC"), 0, { 9, 10, 26 }, { 511, -1, -1 }, 8559, 9 },
 	{ 92, 3, 1, 14, TEXT("BADBCAACBCACCB"), 0, { 4, -1, -1 }, { 517, -1, -1 }, 8568, 15 },
 	{ 93, 3, 1, 14, TEXT("CACBCAAACAACDB"), 0, { 4, -1, -1 }, { 580, 510, -1 }, 8583, 11 },
 	{ 94, 3, 1, 14, TEXT("BBBBAABCBACACA"), 1, { -1, -1, -1 }, { 513, -1, -1 }, 8594, 18 },
 	{ 95, 3, 1, 14, TEXT("ABABBBADBABACC"), 1, { -1, -1, -1 }, { 515, 509, -1 }, 8612, 14 },
-	{ 96, 3, 1, 14, TEXT("ACCCACBABBAACA"), 0, { 5, 7, 10 }, { 613, 508, 509 }, 8626, 16 },
+	{ 96, 3, 1, 14, TEXT("ACCCACBABBAACA"), 0, { 5, 7, 10 }, { 619, 508, 509 }, 8626, 16 },
 	{ 97, 3, 1, 14, TEXT("BABAABCCCACAAC"), 3, { 4, 7, -1 }, { 511, 509, -1 }, 8642, 16 },
 	{ 98, 3, 1, 14, TEXT("AACABBCDCACADC"), 2, { 14, 18, -1 }, { 569, 512, -1 }, 8658, 15 },
 	{ 99, 3, 1, 14, TEXT("ABDCCACDAACCCB"), 2, { 15, -1, -1 }, { 510, -1, -1 }, 8673, 13 },
 	{ 100, 3, 1, 14, TEXT("BBBBAABDABBCDB"), 1, { 4, -1, -1 }, { 516, -1, -1 }, 8686, 12 },
 	{ 101, 3, 1, 14, TEXT("AADCACCACBBAAC"), 1, { 26, -1, -1 }, { 572, 518, 514 }, 8698, 11 },
 	{ 102, 3, 1, 14, TEXT("BCBCCAAAACCABC"), 0, { 12, 18, -1 }, { 580, 564, -1 }, 8709, 9 },
-	{ 103, 3, 1, 14, TEXT("ACAAAACACCAACA"), 2, { -1, -1, -1 }, { 569, 613, -1 }, 8718, 16 },
+	{ 103, 3, 1, 14, TEXT("ACAAAACACCAACA"), 2, { -1, -1, -1 }, { 569, 619, -1 }, 8718, 16 },
 	{ 104, 3, 1, 14, TEXT("CBDBBACABCCCBB"), 2, { 18, -1, -1 }, { 513, 514, -1 }, 8734, 13 },
-	{ 105, 3, 1, 14, TEXT("CCCCBCBAACAABA"), 0, { 9, 14, 26 }, { 613, 516, 512 }, 8747, 11 },
+	{ 105, 3, 1, 14, TEXT("CCCCBCBAACAABA"), 0, { 9, 14, 26 }, { 619, 516, 512 }, 8747, 11 },
 	{ 106, 3, 1, 14, TEXT("AADACCBABABCCA"), 0, { 17, 26, -1 }, { 572, 514, -1 }, 8758, 18 },
 	{ 107, 3, 1, 14, TEXT("BBCACBADCCCCBA"), 1, { 6, 17, -1 }, { 510, -1, -1 }, 8776, 9 },
 	{ 108, 3, 1, 14, TEXT("BADBCBBACBBCBB"), 1, { -1, -1, -1 }, { 516, 514, 510 }, 8785, 17 },
 	{ 109, 3, 1, 14, TEXT("AADCBABDAABCBA"), 0, { 11, 18, -1 }, { 509, -1, -1 }, 8802, 14 },
 	{ 110, 3, 1, 14, TEXT("BBACBAAABACCCB"), 2, { -1, -1, -1 }, { 580, 513, -1 }, 8816, 17 },
 	{ 111, 3, 1, 14, TEXT("ACABBAAABCAACB"), 1, { 7, 26, -1 }, { 513, -1, -1 }, 8833, 16 },
-	{ 112, 3, 1, 14, TEXT("CBACCACCCCCADA"), 1, { -1, -1, -1 }, { 613, 517, -1 }, 8849, 13 },
+	{ 112, 3, 1, 14, TEXT("CBACCACCCCCADA"), 1, { -1, -1, -1 }, { 619, 517, -1 }, 8849, 13 },
 	{ 113, 3, 1, 14, TEXT("CBDABCACCBACAA"), 2, { 4, 17, -1 }, { 507, -1, -1 }, 8862, 19 },
 	{ 114, 3, 1, 14, TEXT("CBABCCBACAACCB"), 1, { 15, 16, 25 }, { 512, 510, -1 }, 8881, 15 },
 	{ 115, 3, 1, 14, TEXT("BBABACAACCBABC"), 1, { 4, 7, 19 }, { 511, 513, -1 }, 8896, 17 },
@@ -1470,10 +1476,10 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 121, 3, 1, 14, TEXT("ACACBCBDBBAADC"), 3, { 11, 25, 26 }, { 517, 511, -1 }, 8982, 15 },
 	{ 122, 3, 1, 14, TEXT("CCCBCCAABACACA"), 0, { -1, -1, -1 }, { 569, 516, -1 }, 8997, 12 },
 	{ 123, 3, 1, 14, TEXT("BBDAAAADBCCCDB"), 0, { 9, -1, -1 }, { 511, -1, -1 }, 9009, 13 },
-	{ 124, 3, 1, 14, TEXT("CCBCCBBABBBADB"), 0, { 9, 12, 16 }, { 613, 517, 511 }, 9022, 20 },
+	{ 124, 3, 1, 14, TEXT("CCBCCBBABBBADB"), 0, { 9, 12, 16 }, { 619, 517, 511 }, 9022, 20 },
 	{ 125, 3, 1, 14, TEXT("ABAACBACACBABC"), 1, { 4, 13, -1 }, { 518, 508, 510 }, 9042, 8 },
 	{ 126, 3, 1, 14, TEXT("BAACCBBDBBBACC"), 1, { 6, 17, -1 }, { 564, 512, 508 }, 9050, 18 },
-	{ 127, 3, 1, 14, TEXT("CCDAABCDCAACCC"), 2, { 4, 17, -1 }, { 613, 509, 510 }, 9068, 11 },
+	{ 127, 3, 1, 14, TEXT("CCDAABCDCAACCC"), 2, { 4, 17, -1 }, { 619, 509, 510 }, 9068, 11 },
 	{ 128, 3, 1, 14, TEXT("CBCCABACABCACA"), 1, { 9, 11, -1 }, { 511, 507, -1 }, 9079, 17 },
 	{ 129, 3, 1, 14, TEXT("BCABBBBDBCACAB"), 1, { -1, -1, -1 }, { 513, 509, -1 }, 9096, 18 },
 	{ 130, 3, 1, 14, TEXT("CCCCABCDCBCCAB"), 0, { 7, 13, 15 }, { 509, -1, -1 }, 9114, 12 },
@@ -1500,26 +1506,26 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 151, 3, 1, 14, TEXT("CBDCACCDABCACB"), 2, { 9, 17, 26 }, { 572, 513, -1 }, 9415, 9 },
 	{ 152, 3, 1, 14, TEXT("CCCACCBDAACADC"), 2, { 16, -1, -1 }, { 572, 511, 508 }, 9424, 18 },
 	{ 153, 3, 1, 14, TEXT("CCCBAACDAACCBB"), 0, { -1, -1, -1 }, { 564, 516, -1 }, 9442, 17 },
-	{ 154, 3, 1, 14, TEXT("BCAACBCCCACCBB"), 0, { 26, -1, -1 }, { 613, 515, -1 }, 9459, 20 },
-	{ 155, 3, 1, 14, TEXT("AAAACAAABBBADC"), 0, { 7, 9, 12 }, { 613, -1, -1 }, 9479, 12 },
+	{ 154, 3, 1, 14, TEXT("BCAACBCCCACCBB"), 0, { 26, -1, -1 }, { 619, 515, -1 }, 9459, 20 },
+	{ 155, 3, 1, 14, TEXT("AAAACAAABBBADC"), 0, { 7, 9, 12 }, { 619, -1, -1 }, 9479, 12 },
 	{ 156, 3, 1, 14, TEXT("CBBACBBAABBAAA"), 0, { 10, 11, 26 }, { 510, -1, -1 }, 9491, 17 },
-	{ 157, 3, 1, 14, TEXT("BBACCBCCBBBACB"), 2, { 5, 16, -1 }, { 613, 507, -1 }, 9508, 14 },
+	{ 157, 3, 1, 14, TEXT("BBACCBCCBBBACB"), 2, { 5, 16, -1 }, { 619, 507, -1 }, 9508, 14 },
 	{ 158, 3, 1, 14, TEXT("ABCACAAABABCBC"), 1, { 14, 16, -1 }, { 564, -1, -1 }, 9522, 17 },
 	{ 159, 3, 1, 14, TEXT("BCDABBCDCABADB"), 0, { -1, -1, -1 }, { 507, -1, -1 }, 9539, 12 },
-	{ 160, 3, 1, 14, TEXT("BBBBBCAACACCBC"), 2, { 7, -1, -1 }, { 569, 613, 518 }, 9551, 20 },
+	{ 160, 3, 1, 14, TEXT("BBBBBCAACACCBC"), 2, { 7, -1, -1 }, { 569, 619, 518 }, 9551, 20 },
 	{ 161, 3, 1, 14, TEXT("AACAACBCCBBACC"), 1, { -1, -1, -1 }, { 572, 512, -1 }, 9571, 16 },
 	{ 162, 3, 1, 14, TEXT("CBACBAACACBCDB"), 0, { 4, -1, -1 }, { 517, 507, 509 }, 9587, 15 },
 	{ 163, 3, 1, 14, TEXT("BCCBCABCABCCAB"), 1, { 9, 25, -1 }, { 569, 513, 509 }, 9602, 18 },
 	{ 164, 3, 1, 14, TEXT("BCACCBBAAABCDC"), 1, { 9, 19, -1 }, { 516, 511, -1 }, 9620, 11 },
 	{ 165, 3, 1, 14, TEXT("BBBBAAADBCBCDB"), 2, { 16, 19, -1 }, { 580, 514, -1 }, 9631, 18 },
-	{ 166, 3, 1, 14, TEXT("CCCBCACDBCCCDC"), 0, { 13, -1, -1 }, { 580, 613, 511 }, 9649, 19 },
+	{ 166, 3, 1, 14, TEXT("CCCBCACDBCCCDC"), 0, { 13, -1, -1 }, { 580, 619, 511 }, 9649, 19 },
 	{ 167, 3, 1, 14, TEXT("ACACACCDCBCCBA"), 0, { 4, -1, -1 }, { 513, 508, -1 }, 9668, 9 },
 	{ 168, 3, 1, 14, TEXT("BABBBBAABCCCDA"), 0, { 7, 14, 15 }, { 510, -1, -1 }, 9677, 14 },
 	{ 169, 3, 1, 14, TEXT("BCACBAAAAAAACC"), 2, { 5, 9, 17 }, { 569, -1, -1 }, 9691, 13 },
 	{ 170, 3, 1, 14, TEXT("CCDBBACCCAAADA"), 1, { 4, 7, -1 }, { 515, 516, -1 }, 9704, 10 },
 	{ 171, 3, 1, 14, TEXT("ABDBABCAACCCCA"), 0, { -1, -1, -1 }, { 569, 515, -1 }, 9714, 19 },
 	{ 172, 3, 1, 14, TEXT("ACAAAACCBCACDC"), 0, { 9, -1, -1 }, { 515, 513, -1 }, 9733, 13 },
-	{ 173, 3, 1, 14, TEXT("BBDABCACABCADB"), 0, { 4, 7, 15 }, { 613, 517, -1 }, 9746, 16 },
+	{ 173, 3, 1, 14, TEXT("BBDABCACABCADB"), 0, { 4, 7, 15 }, { 619, 517, -1 }, 9746, 16 },
 	{ 174, 3, 1, 14, TEXT("BADABACCCCACDB"), 0, { 9, 16, 19 }, { 515, 511, 509 }, 9762, 15 },
 	{ 175, 3, 1, 14, TEXT("CCACCCCCBABAAA"), 1, { 4, 14, 19 }, { 572, 515, -1 }, 9777, 13 },
 	{ 176, 3, 1, 14, TEXT("BACBBBACACBCCB"), 1, { 13, 15, 17 }, { 517, 513, -1 }, 9790, 15 },
@@ -1539,7 +1545,7 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 190, 3, 1, 14, TEXT("ABACBCBACBCCDC"), 1, { 6, 17, -1 }, { 518, 514, -1 }, 9984, 14 },
 	{ 191, 3, 1, 14, TEXT("BABBCAADCCBCAC"), 1, { 6, 14, 26 }, { 511, -1, -1 }, 9998, 12 },
 	{ 192, 3, 1, 14, TEXT("BBACBCCDCBCAAB"), 1, { 26, -1, -1 }, { 513, -1, -1 }, 10010, 15 },
-	{ 193, 3, 1, 14, TEXT("CCCBAACCCAACAA"), 0, { 7, 15, 26 }, { 613, 513, -1 }, 10025, 14 },
+	{ 193, 3, 1, 14, TEXT("CCCBAACCCAACAA"), 0, { 7, 15, 26 }, { 619, 513, -1 }, 10025, 14 },
 	{ 194, 3, 1, 14, TEXT("BCBAAACDCABCCC"), 0, { 7, 13, -1 }, { 510, -1, -1 }, 10039, 10 },
 	{ 195, 3, 1, 14, TEXT("CBBCABBCBAACCC"), 2, { 25, -1, -1 }, { 515, -1, -1 }, 10049, 11 },
 	{ 196, 3, 1, 14, TEXT("ABABAABDCABCDC"), 1, { 7, 14, -1 }, { 516, 518, -1 }, 10060, 13 },
@@ -1558,7 +1564,7 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 209, 3, 1, 14, TEXT("CBABBBCDBBCAAA"), 2, { 4, -1, -1 }, { 507, -1, -1 }, 10228, 15 },
 	{ 210, 3, 1, 14, TEXT("ACCCBABCCABADB"), 1, { 26, -1, -1 }, { 518, 508, -1 }, 10243, 15 },
 	{ 211, 3, 1, 14, TEXT("ABDACCBCACCACA"), 1, { 9, 16, -1 }, { 510, -1, -1 }, 10258, 10 },
-	{ 212, 3, 1, 14, TEXT("BBDBCABDBCCCDC"), 0, { -1, -1, -1 }, { 580, 613, 515 }, 10268, 16 },
+	{ 212, 3, 1, 14, TEXT("BBDBCABDBCCCDC"), 0, { -1, -1, -1 }, { 580, 619, 515 }, 10268, 16 },
 	{ 213, 3, 1, 14, TEXT("CACBABBACBBCAC"), 3, { 16, -1, -1 }, { 569, 517, 513 }, 10284, 8 },
 	{ 214, 3, 1, 14, TEXT("CAABCBBCBCBCBB"), 0, { 4, 18, -1 }, { 580, 518, 509 }, 10292, 13 },
 	{ 215, 3, 1, 14, TEXT("AADCBBACBACCCA"), 2, { 19, 26, -1 }, { 518, -1, -1 }, 10305, 14 },
@@ -1569,7 +1575,7 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 220, 3, 1, 14, TEXT("BAACBBBDBBAABC"), 3, { -1, -1, -1 }, { 513, -1, -1 }, 10372, 12 },
 	{ 221, 3, 1, 14, TEXT("ACBBBBBDABCADC"), 0, { 10, 19, 25 }, { 572, 517, -1 }, 10384, 13 },
 	{ 222, 3, 1, 14, TEXT("BCDBCCADBAACBC"), 3, { -1, -1, -1 }, { 513, -1, -1 }, 10397, 12 },
-	{ 223, 3, 1, 14, TEXT("ACBACBCDACBACC"), 0, { 4, 11, 13 }, { 613, 509, -1 }, 10409, 14 },
+	{ 223, 3, 1, 14, TEXT("ACBACBCDACBACC"), 0, { 4, 11, 13 }, { 619, 509, -1 }, 10409, 14 },
 	{ 224, 3, 1, 14, TEXT("BBCBBCBDCBACBB"), 0, { 4, 13, -1 }, { 569, 516, -1 }, 10423, 18 },
 	{ 225, 3, 1, 14, TEXT("CAABBBCABACACC"), 2, { -1, -1, -1 }, { 507, -1, -1 }, 10441, 14 },
 	{ 226, 3, 1, 14, TEXT("CAABCAAAAABAAA"), 0, { 15, 19, -1 }, { 518, -1, -1 }, 10455, 15 },
@@ -1586,7 +1592,7 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 237, 3, 1, 14, TEXT("CCDCABAACBCACB"), 2, { -1, -1, -1 }, { 564, -1, -1 }, 10623, 12 },
 	{ 238, 3, 1, 14, TEXT("AABABCACBACACC"), 1, { 10, 12, -1 }, { 564, -1, -1 }, 10635, 15 },
 	{ 239, 3, 1, 14, TEXT("ACDBCCCCCCCCDC"), 0, { 19, -1, -1 }, { 515, -1, -1 }, 10650, 18 },
-	{ 240, 3, 1, 14, TEXT("ABBAABAABCCCBC"), 1, { -1, -1, -1 }, { 613, 512, -1 }, 10668, 16 },
+	{ 240, 3, 1, 14, TEXT("ABBAABAABCCCBC"), 1, { -1, -1, -1 }, { 619, 512, -1 }, 10668, 16 },
 	{ 241, 3, 1, 14, TEXT("CBDBBCCDABCCDC"), 0, { 4, -1, -1 }, { 517, -1, -1 }, 10684, 16 },
 	{ 242, 3, 1, 14, TEXT("BADBBBCCACAABB"), 0, { -1, -1, -1 }, { 515, 516, -1 }, 10700, 16 },
 	{ 243, 3, 1, 14, TEXT("CCCBAAACCBAACC"), 1, { 9, 25, -1 }, { 580, 507, -1 }, 10716, 9 },
@@ -1606,9 +1612,9 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 1, 4, 2, 15, TEXT("CBCCCBBCAABCCB"), 2, { 12, -1, -1 }, { 517, -1, -1 }, 10916, 19 },
 	{ 2, 4, 1, 15, TEXT("ABCBCBCAACACAB"), 0, { -1, -1, -1 }, { 580, 513, -1 }, 10935, 20 },
 	{ 3, 4, 1, 15, TEXT("CABABCACBCCACB"), 1, { 4, 15, -1 }, { 516, 517, 511 }, 10955, 13 },
-	{ 4, 4, 1, 15, TEXT("AAABABADABACCC"), 0, { -1, -1, -1 }, { 572, 613, -1 }, 10968, 18 },
+	{ 4, 4, 1, 15, TEXT("AAABABADABACCC"), 0, { -1, -1, -1 }, { 572, 619, -1 }, 10968, 18 },
 	{ 5, 4, 1, 15, TEXT("CBBABBBAAABABC"), 1, { -1, -1, -1 }, { 512, 510, -1 }, 10986, 13 },
-	{ 6, 4, 1, 15, TEXT("AADBBBCDCBACAB"), 1, { 15, -1, -1 }, { 564, 613, 510 }, 10999, 11 },
+	{ 6, 4, 1, 15, TEXT("AADBBBCDCBACAB"), 1, { 15, -1, -1 }, { 564, 619, 510 }, 10999, 11 },
 	{ 7, 4, 1, 15, TEXT("CACBACCDCAACBB"), 0, { 7, 18, -1 }, { 512, 510, -1 }, 11010, 17 },
 	{ 8, 4, 1, 15, TEXT("CCCBACBACABAAA"), 0, { -1, -1, -1 }, { 572, 511, 509 }, 11027, 16 },
 	{ 9, 4, 1, 15, TEXT("CCBBABACABAAAC"), 2, { 14, 19, -1 }, { 514, -1, -1 }, 11043, 20 },
@@ -1621,9 +1627,9 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 16, 4, 2, 15, TEXT("CCABCCCCACCACA"), 1, { 5, 7, 15 }, { 572, 515, -1 }, 11142, 11 },
 	{ 17, 4, 1, 15, TEXT("BADACCCDAABCAB"), 2, { 15, -1, -1 }, { 510, -1, -1 }, 11153, 14 },
 	{ 18, 4, 1, 15, TEXT("ACBCBAADBCACCB"), 0, { 6, -1, -1 }, { 515, -1, -1 }, 11167, 16 },
-	{ 19, 4, 2, 15, TEXT("BAAAABBCBBCCAC"), 3, { 4, -1, -1 }, { 613, 511, 507 }, 11183, 15 },
+	{ 19, 4, 2, 15, TEXT("BAAAABBCBBCCAC"), 3, { 4, -1, -1 }, { 619, 511, 507 }, 11183, 15 },
 	{ 20, 4, 1, 15, TEXT("BCDABBACBAACAA"), 0, { -1, -1, -1 }, { 512, 509, -1 }, 11198, 15 },
-	{ 21, 4, 1, 15, TEXT("BAACAAADCCAAAC"), 2, { 15, 18, 25 }, { 613, 518, 507 }, 11213, 19 },
+	{ 21, 4, 1, 15, TEXT("BAACAAADCCAAAC"), 2, { 15, 18, 25 }, { 619, 518, 507 }, 11213, 19 },
 	{ 22, 4, 1, 15, TEXT("BBCCBACCAACABB"), 0, { 6, -1, -1 }, { 507, -1, -1 }, 11232, 10 },
 	{ 23, 4, 1, 15, TEXT("BAABBBCCCCCAAB"), 2, { 17, 18, -1 }, { 569, 572, -1 }, 11242, 16 },
 	{ 24, 4, 1, 15, TEXT("BBBBBCAACABAAA"), 0, { 7, -1, -1 }, { 509, -1, -1 }, 11258, 15 },
@@ -1640,7 +1646,7 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 35, 4, 2, 15, TEXT("CACACBCCBCBCAC"), 1, { 19, -1, -1 }, { 580, 517, -1 }, 11417, 16 },
 	{ 36, 4, 1, 15, TEXT("CBBCBBACBBCCCC"), 2, { -1, -1, -1 }, { 513, -1, -1 }, 11433, 15 },
 	{ 37, 4, 1, 15, TEXT("CCBACBAACBCCDB"), 0, { 7, 19, -1 }, { 516, 511, -1 }, 11448, 14 },
-	{ 38, 4, 2, 15, TEXT("ABDAABBCBBBCBB"), 0, { 13, -1, -1 }, { 572, 613, 518 }, 11462, 17 },
+	{ 38, 4, 2, 15, TEXT("ABDAABBCBBBCBB"), 0, { 13, -1, -1 }, { 572, 619, 518 }, 11462, 17 },
 	{ 39, 4, 2, 15, TEXT("ABACCCBCBAAABB"), 0, { -1, -1, -1 }, { 564, -1, -1 }, 11479, 19 },
 	{ 40, 4, 2, 15, TEXT("ABCAACBCCBCABB"), 1, { 15, 25, -1 }, { 514, -1, -1 }, 11498, 10 },
 	{ 41, 4, 1, 15, TEXT("BBDBAACCCCBCDB"), 0, { 12, 14, 18 }, { 580, 516, 517 }, 11508, 16 },
@@ -1656,7 +1662,7 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 51, 4, 1, 15, TEXT("CBBCCAADAABCDA"), 0, { 10, 25, -1 }, { 518, 513, -1 }, 11641, 12 },
 	{ 52, 4, 1, 15, TEXT("BBBACCCCBCCCAB"), 2, { 18, -1, -1 }, { 515, 508, -1 }, 11653, 17 },
 	{ 53, 4, 1, 15, TEXT("BCDBCBBABBCCDA"), 2, { 4, 9, 26 }, { 569, -1, -1 }, 11670, 15 },
-	{ 54, 4, 1, 15, TEXT("BADCCCBDCABCAA"), 1, { 10, 26, -1 }, { 569, 613, 516 }, 11685, 14 },
+	{ 54, 4, 1, 15, TEXT("BADCCCBDCABCAA"), 1, { 10, 26, -1 }, { 569, 619, 516 }, 11685, 14 },
 	{ 55, 4, 1, 15, TEXT("ABCABAAABBAADC"), 0, { 12, 13, 19 }, { 507, 509, 510 }, 11699, 12 },
 	{ 56, 4, 1, 15, TEXT("BADBBCBAACAABA"), 0, { 10, 14, -1 }, { 572, 515, -1 }, 11711, 12 },
 	{ 57, 4, 1, 15, TEXT("BCAACABCABBADA"), 1, { 6, 15, -1 }, { 518, 508, -1 }, 11723, 13 },
@@ -1667,8 +1673,8 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 62, 4, 1, 15, TEXT("AABBAABDBAAADB"), 1, { 4, 14, 17 }, { 514, -1, -1 }, 11795, 11 },
 	{ 63, 4, 1, 15, TEXT("CBDCCCBDCCAACA"), 0, { 13, -1, -1 }, { 569, -1, -1 }, 11806, 15 },
 	{ 64, 4, 2, 15, TEXT("BCCCBBBCBCBABA"), 0, { -1, -1, -1 }, { 510, -1, -1 }, 11821, 19 },
-	{ 65, 4, 2, 15, TEXT("CADBCACCAABCBC"), 0, { -1, -1, -1 }, { 564, 613, -1 }, 11840, 18 },
-	{ 66, 4, 2, 15, TEXT("ABBCAACCBACACC"), 2, { -1, -1, -1 }, { 564, 613, -1 }, 11858, 12 },
+	{ 65, 4, 2, 15, TEXT("CADBCACCAABCBC"), 0, { -1, -1, -1 }, { 564, 619, -1 }, 11840, 18 },
+	{ 66, 4, 2, 15, TEXT("ABBCAACCBACACC"), 2, { -1, -1, -1 }, { 564, 619, -1 }, 11858, 12 },
 	{ 67, 4, 1, 15, TEXT("AAABCCADAAAAAA"), 1, { 19, 25, -1 }, { 572, -1, -1 }, 11870, 13 },
 	{ 68, 4, 1, 15, TEXT("BCDCCACDAACADB"), 1, { 10, 13, -1 }, { 512, -1, -1 }, 11883, 14 },
 	{ 69, 4, 1, 15, TEXT("CBBCBBBDCBBADB"), 0, { 5, 25, -1 }, { 572, 513, -1 }, 11897, 12 },
@@ -1679,7 +1685,7 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 74, 4, 2, 15, TEXT("CBBCAACCCACAAA"), 1, { 12, 19, -1 }, { 569, 572, 518 }, 11964, 19 },
 	{ 75, 4, 1, 15, TEXT("BADBABAABABCAC"), 3, { 7, 16, -1 }, { 517, 512, 508 }, 11983, 16 },
 	{ 76, 4, 2, 15, TEXT("ABCBACCCABBACC"), 3, { 9, 10, 19 }, { 518, -1, -1 }, 11999, 16 },
-	{ 77, 4, 2, 15, TEXT("BACCACBCABACBB"), 2, { 9, 17, 26 }, { 569, 613, -1 }, 12015, 11 },
+	{ 77, 4, 2, 15, TEXT("BACCACBCABACBB"), 2, { 9, 17, 26 }, { 569, 619, -1 }, 12015, 11 },
 	{ 78, 4, 2, 15, TEXT("ACACCBCCCACACB"), 0, { 18, 19, -1 }, { 572, -1, -1 }, 12026, 16 },
 	{ 79, 4, 1, 15, TEXT("CBDBACCDBABABA"), 0, { -1, -1, -1 }, { 518, 511, -1 }, 12042, 13 },
 	{ 80, 4, 1, 15, TEXT("ACBAACADABBABA"), 1, { 18, -1, -1 }, { 508, -1, -1 }, 12055, 15 },
@@ -1691,30 +1697,30 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 86, 4, 1, 15, TEXT("CCBCCBCCCCCAAA"), 2, { 13, 14, 19 }, { 580, -1, -1 }, 12143, 17 },
 	{ 87, 4, 2, 15, TEXT("ABBBCBBCBBCCCB"), 1, { 9, 19, -1 }, { 580, 564, -1 }, 12160, 9 },
 	{ 88, 4, 1, 15, TEXT("BCBCACACBCAAAC"), 2, { -1, -1, -1 }, { 515, -1, -1 }, 12169, 15 },
-	{ 89, 4, 2, 15, TEXT("CCBCCBCCAAAACB"), 1, { 15, 18, -1 }, { 569, 613, 517 }, 12184, 14 },
+	{ 89, 4, 2, 15, TEXT("CCBCCBCCAAAACB"), 1, { 15, 18, -1 }, { 569, 619, 517 }, 12184, 14 },
 	{ 90, 4, 2, 15, TEXT("ABCACCCCACCAAB"), 0, { 17, -1, -1 }, { 572, 517, 518 }, 12198, 13 },
 	{ 91, 4, 1, 15, TEXT("BBBCBABDCBCADC"), 0, { 9, 10, 26 }, { 511, -1, -1 }, 12211, 9 },
 	{ 92, 4, 2, 15, TEXT("BADBCAACBCACBB"), 0, { 4, -1, -1 }, { 517, -1, -1 }, 12220, 14 },
 	{ 93, 4, 1, 15, TEXT("CACBCAAACAACDB"), 0, { 4, -1, -1 }, { 580, 510, -1 }, 12234, 13 },
 	{ 94, 4, 1, 15, TEXT("BBBBAABCBACACA"), 1, { -1, -1, -1 }, { 513, -1, -1 }, 12247, 16 },
 	{ 95, 4, 1, 15, TEXT("ABABBBADBABACC"), 1, { -1, -1, -1 }, { 515, 509, -1 }, 12263, 19 },
-	{ 96, 4, 2, 15, TEXT("ACCCACBCBBAACA"), 0, { 5, 7, 10 }, { 613, 508, 509 }, 12282, 16 },
+	{ 96, 4, 2, 15, TEXT("ACCCACBCBBAACA"), 0, { 5, 7, 10 }, { 619, 508, 509 }, 12282, 16 },
 	{ 97, 4, 2, 15, TEXT("BABAABCCCACAAC"), 3, { 4, 7, -1 }, { 511, 509, -1 }, 12298, 18 },
 	{ 98, 4, 1, 15, TEXT("AACABBCDCACADC"), 2, { 14, 18, -1 }, { 569, 512, -1 }, 12316, 15 },
 	{ 99, 4, 1, 15, TEXT("ABDCCACDAACCCB"), 2, { 15, -1, -1 }, { 510, -1, -1 }, 12331, 16 },
 	{ 100, 4, 1, 15, TEXT("BBBBAABDABBCDB"), 1, { 4, -1, -1 }, { 516, -1, -1 }, 12347, 12 },
 	{ 101, 4, 1, 15, TEXT("AADCACCACBBAAC"), 1, { 26, -1, -1 }, { 572, 518, 514 }, 12359, 13 },
 	{ 102, 4, 1, 15, TEXT("BCBCCAAAACCABC"), 0, { 12, 18, -1 }, { 580, 564, -1 }, 12372, 15 },
-	{ 103, 4, 1, 15, TEXT("ACAAAACACCAACA"), 2, { -1, -1, -1 }, { 569, 613, -1 }, 12387, 13 },
+	{ 103, 4, 1, 15, TEXT("ACAAAACACCAACA"), 2, { -1, -1, -1 }, { 569, 619, -1 }, 12387, 13 },
 	{ 104, 4, 2, 15, TEXT("CBDBBACCBCCCBB"), 2, { 18, -1, -1 }, { 513, 514, -1 }, 12400, 16 },
-	{ 105, 4, 1, 15, TEXT("CCCCBCBAACAABA"), 0, { 9, 14, 26 }, { 613, 516, 512 }, 12416, 10 },
+	{ 105, 4, 1, 15, TEXT("CCCCBCBAACAABA"), 0, { 9, 14, 26 }, { 619, 516, 512 }, 12416, 10 },
 	{ 106, 4, 2, 15, TEXT("AADACCBCBABCBA"), 0, { 17, 26, -1 }, { 572, 514, -1 }, 12426, 15 },
 	{ 107, 4, 1, 15, TEXT("BBCACBADCCCCBA"), 1, { 6, 17, -1 }, { 510, -1, -1 }, 12441, 8 },
 	{ 108, 4, 2, 15, TEXT("BADBCBBCCBBCAB"), 1, { -1, -1, -1 }, { 516, 514, 510 }, 12449, 19 },
 	{ 109, 4, 2, 15, TEXT("AADCBABCAABCAA"), 0, { 11, 18, -1 }, { 509, -1, -1 }, 12468, 12 },
 	{ 110, 4, 2, 15, TEXT("BBACBAACBACCBB"), 2, { -1, -1, -1 }, { 580, 513, -1 }, 12480, 15 },
 	{ 111, 4, 2, 15, TEXT("ACABBAACBCAABB"), 0, { 7, 26, -1 }, { 513, -1, -1 }, 12495, 14 },
-	{ 112, 4, 1, 15, TEXT("CBACCACCCCCADA"), 1, { -1, -1, -1 }, { 613, 517, -1 }, 12509, 12 },
+	{ 112, 4, 1, 15, TEXT("CBACCACCCCCADA"), 1, { -1, -1, -1 }, { 619, 517, -1 }, 12509, 12 },
 	{ 113, 4, 2, 15, TEXT("CBDABCACCBACAA"), 2, { 4, 17, -1 }, { 507, -1, -1 }, 12521, 18 },
 	{ 114, 4, 1, 15, TEXT("CBABCCBACAACCB"), 1, { 15, 16, 25 }, { 512, 510, -1 }, 12539, 16 },
 	{ 115, 4, 1, 15, TEXT("BBABACAACCBABC"), 1, { 4, 7, 19 }, { 511, 513, -1 }, 12555, 19 },
@@ -1726,10 +1732,10 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 121, 4, 1, 15, TEXT("ACACBCBDBBAADC"), 3, { 11, 25, 26 }, { 517, 511, -1 }, 12649, 17 },
 	{ 122, 4, 2, 15, TEXT("CCCBCCACBACACA"), 0, { -1, -1, -1 }, { 569, 516, -1 }, 12666, 9 },
 	{ 123, 4, 1, 15, TEXT("BBDAAAADBCCCDB"), 0, { 9, -1, -1 }, { 511, -1, -1 }, 12675, 14 },
-	{ 124, 4, 2, 15, TEXT("CCBCCBBCBBBACB"), 0, { 9, 12, 16 }, { 613, 517, 511 }, 12689, 20 },
+	{ 124, 4, 2, 15, TEXT("CCBCCBBCBBBACB"), 0, { 9, 12, 16 }, { 619, 517, 511 }, 12689, 20 },
 	{ 125, 4, 1, 15, TEXT("ABAACBACACBABC"), 1, { 4, 13, -1 }, { 518, 508, 510 }, 12709, 11 },
 	{ 126, 4, 1, 15, TEXT("BAACCBBDBBBACC"), 1, { 6, 17, -1 }, { 564, 512, 508 }, 12720, 21 },
-	{ 127, 4, 1, 15, TEXT("CCDAABCDCAACCC"), 2, { 4, 17, -1 }, { 613, 509, 510 }, 12741, 11 },
+	{ 127, 4, 1, 15, TEXT("CCDAABCDCAACCC"), 2, { 4, 17, -1 }, { 619, 509, 510 }, 12741, 11 },
 	{ 128, 4, 1, 15, TEXT("CBCCABACABCACA"), 1, { 9, 11, -1 }, { 511, 507, -1 }, 12752, 14 },
 	{ 129, 4, 2, 15, TEXT("BCABBBBCBCACAB"), 1, { -1, -1, -1 }, { 513, 509, -1 }, 12766, 17 },
 	{ 130, 4, 1, 15, TEXT("CCCCABCDCBCCAB"), 0, { 7, 13, 15 }, { 509, -1, -1 }, 12783, 15 },
@@ -1756,26 +1762,26 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 151, 4, 2, 15, TEXT("CBDCACCCABCABB"), 2, { 9, 17, 26 }, { 572, 513, -1 }, 13110, 12 },
 	{ 152, 4, 1, 15, TEXT("CCCACCBDAACADC"), 2, { 16, -1, -1 }, { 572, 511, 508 }, 13122, 14 },
 	{ 153, 4, 2, 15, TEXT("CCCBAACCAACCAB"), 0, { -1, -1, -1 }, { 564, 516, -1 }, 13136, 18 },
-	{ 154, 4, 2, 15, TEXT("BCAACBCCCACCBB"), 0, { 26, -1, -1 }, { 613, 515, -1 }, 13154, 20 },
-	{ 155, 4, 1, 15, TEXT("AAAACAAABBBADC"), 0, { 7, 9, 12 }, { 613, -1, -1 }, 13174, 14 },
+	{ 154, 4, 2, 15, TEXT("BCAACBCCCACCBB"), 0, { 26, -1, -1 }, { 619, 515, -1 }, 13154, 20 },
+	{ 155, 4, 1, 15, TEXT("AAAACAAABBBADC"), 0, { 7, 9, 12 }, { 619, -1, -1 }, 13174, 14 },
 	{ 156, 4, 1, 15, TEXT("CBBACBBAABBAAA"), 0, { 10, 11, 26 }, { 510, -1, -1 }, 13188, 19 },
-	{ 157, 4, 1, 15, TEXT("BBACCBCCBBBACB"), 2, { 5, 16, -1 }, { 613, 507, -1 }, 13207, 16 },
+	{ 157, 4, 1, 15, TEXT("BBACCBCCBBBACB"), 2, { 5, 16, -1 }, { 619, 507, -1 }, 13207, 16 },
 	{ 158, 4, 1, 15, TEXT("ABCACAAABABCBC"), 1, { 14, 16, -1 }, { 564, -1, -1 }, 13223, 16 },
 	{ 159, 4, 1, 15, TEXT("BCDABBCDCABADB"), 0, { -1, -1, -1 }, { 507, -1, -1 }, 13239, 11 },
-	{ 160, 4, 1, 15, TEXT("BBBBBCAACACCBC"), 2, { 7, -1, -1 }, { 569, 613, 518 }, 13250, 14 },
+	{ 160, 4, 1, 15, TEXT("BBBBBCAACACCBC"), 2, { 7, -1, -1 }, { 569, 619, 518 }, 13250, 14 },
 	{ 161, 4, 1, 15, TEXT("AACAACBCCBBACC"), 1, { -1, -1, -1 }, { 572, 512, -1 }, 13264, 18 },
 	{ 162, 4, 1, 15, TEXT("CBACBAACACBCDB"), 0, { 4, -1, -1 }, { 517, 507, 509 }, 13282, 17 },
 	{ 163, 4, 1, 15, TEXT("BCCBCABCABCCAB"), 1, { 9, 25, -1 }, { 569, 513, 509 }, 13299, 17 },
 	{ 164, 4, 1, 15, TEXT("BCACCBBAAABCDC"), 1, { 9, 19, -1 }, { 516, 511, -1 }, 13316, 11 },
 	{ 165, 4, 1, 15, TEXT("BBBBAAADBCBCDB"), 2, { 16, 19, -1 }, { 580, 514, -1 }, 13327, 17 },
-	{ 166, 4, 1, 15, TEXT("CCCBCACDBCCCDC"), 0, { 13, -1, -1 }, { 580, 613, 511 }, 13344, 17 },
+	{ 166, 4, 1, 15, TEXT("CCCBCACDBCCCDC"), 0, { 13, -1, -1 }, { 580, 619, 511 }, 13344, 17 },
 	{ 167, 4, 1, 15, TEXT("ACACACCDCBCCBA"), 0, { 4, -1, -1 }, { 513, 508, -1 }, 13361, 15 },
 	{ 168, 4, 1, 15, TEXT("BABBBBAABCCCDA"), 0, { 7, 14, 15 }, { 510, -1, -1 }, 13376, 13 },
 	{ 169, 4, 2, 15, TEXT("BCACBAACAAAABC"), 1, { 5, 9, 17 }, { 569, -1, -1 }, 13389, 15 },
 	{ 170, 4, 1, 15, TEXT("CCDBBACCCAAADA"), 1, { 4, 7, -1 }, { 515, 516, -1 }, 13404, 12 },
 	{ 171, 4, 2, 15, TEXT("ABDBABCCACCCBA"), 0, { -1, -1, -1 }, { 569, 515, -1 }, 13416, 20 },
 	{ 172, 4, 1, 15, TEXT("ACAAAACCBCACDC"), 0, { 9, -1, -1 }, { 515, 513, -1 }, 13436, 16 },
-	{ 173, 4, 1, 15, TEXT("BBDABCACABCADB"), 0, { 4, 7, 15 }, { 613, 517, -1 }, 13452, 15 },
+	{ 173, 4, 1, 15, TEXT("BBDABCACABCADB"), 0, { 4, 7, 15 }, { 619, 517, -1 }, 13452, 15 },
 	{ 174, 4, 1, 15, TEXT("BADABACCCCACDB"), 0, { 9, 16, 19 }, { 515, 511, 509 }, 13467, 14 },
 	{ 175, 4, 1, 15, TEXT("CCACCCCCBABAAA"), 1, { 4, 14, 19 }, { 572, 515, -1 }, 13481, 16 },
 	{ 176, 4, 1, 15, TEXT("BACBBBACACBCCB"), 1, { 13, 15, 17 }, { 517, 513, -1 }, 13497, 18 },
@@ -1795,7 +1801,7 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 190, 4, 1, 15, TEXT("ABACBCBACBCCDC"), 1, { 6, 17, -1 }, { 518, 514, -1 }, 13690, 11 },
 	{ 191, 4, 2, 15, TEXT("BABBCAACCCBCAC"), 1, { 6, 14, 26 }, { 511, -1, -1 }, 13701, 14 },
 	{ 192, 4, 1, 15, TEXT("BBACBCCDCBCAAB"), 1, { 26, -1, -1 }, { 513, -1, -1 }, 13715, 14 },
-	{ 193, 4, 1, 15, TEXT("CCCBAACCCAACAA"), 0, { 7, 15, 26 }, { 613, 513, -1 }, 13729, 13 },
+	{ 193, 4, 1, 15, TEXT("CCCBAACCCAACAA"), 0, { 7, 15, 26 }, { 619, 513, -1 }, 13729, 13 },
 	{ 194, 4, 2, 15, TEXT("BCBAAACCCABCBC"), 0, { 7, 13, -1 }, { 510, -1, -1 }, 13742, 11 },
 	{ 195, 4, 1, 15, TEXT("CBBCABBCBAACCC"), 2, { 25, -1, -1 }, { 515, -1, -1 }, 13753, 11 },
 	{ 196, 4, 1, 15, TEXT("ABABAABDCABCDC"), 1, { 7, 14, -1 }, { 516, 518, -1 }, 13764, 13 },
@@ -1814,7 +1820,7 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 209, 4, 1, 15, TEXT("CBABBBCDBBCAAA"), 2, { 4, -1, -1 }, { 507, -1, -1 }, 13953, 11 },
 	{ 210, 4, 1, 15, TEXT("ACCCBABCCABADB"), 1, { 26, -1, -1 }, { 518, 508, -1 }, 13964, 11 },
 	{ 211, 4, 1, 15, TEXT("ABDACCBCACCACA"), 1, { 9, 16, -1 }, { 510, -1, -1 }, 13975, 13 },
-	{ 212, 4, 1, 15, TEXT("BBDBCABDBCCCDC"), 0, { -1, -1, -1 }, { 580, 613, 515 }, 13988, 12 },
+	{ 212, 4, 1, 15, TEXT("BBDBCABDBCCCDC"), 0, { -1, -1, -1 }, { 580, 619, 515 }, 13988, 12 },
 	{ 213, 4, 1, 15, TEXT("CACBABBACBBCAC"), 3, { 16, -1, -1 }, { 569, 517, 513 }, 14000, 11 },
 	{ 214, 4, 1, 15, TEXT("CAABCBBCBCBCBB"), 0, { 4, 18, -1 }, { 580, 518, 509 }, 14011, 14 },
 	{ 215, 4, 1, 15, TEXT("AADCBBACBACCCA"), 2, { 19, 26, -1 }, { 518, -1, -1 }, 14025, 15 },
@@ -1825,7 +1831,7 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 220, 4, 2, 15, TEXT("BAACBBBCBBAABC"), 3, { -1, -1, -1 }, { 513, -1, -1 }, 14088, 14 },
 	{ 221, 4, 1, 15, TEXT("ACBBBBBDABCADC"), 0, { 10, 19, 25 }, { 572, 517, -1 }, 14102, 17 },
 	{ 222, 4, 2, 15, TEXT("BCDBCCACBAACBC"), 3, { -1, -1, -1 }, { 513, -1, -1 }, 14119, 14 },
-	{ 223, 4, 1, 15, TEXT("ACBACBCDACBACC"), 0, { 4, 11, 13 }, { 613, 509, -1 }, 14133, 13 },
+	{ 223, 4, 1, 15, TEXT("ACBACBCDACBACC"), 0, { 4, 11, 13 }, { 619, 509, -1 }, 14133, 13 },
 	{ 224, 4, 1, 15, TEXT("BBCBBCBDCBACBB"), 0, { 4, 13, -1 }, { 569, 516, -1 }, 14146, 14 },
 	{ 225, 4, 1, 15, TEXT("CAABBBCABACACC"), 2, { -1, -1, -1 }, { 507, -1, -1 }, 14160, 11 },
 	{ 226, 4, 1, 15, TEXT("CAABCAAAAABAAA"), 0, { 15, 19, -1 }, { 518, -1, -1 }, 14171, 16 },
@@ -1842,7 +1848,7 @@ static const FLevelV3Seed GV3Seeds[] =
 	{ 237, 4, 1, 15, TEXT("CCDCABAACBCACB"), 2, { -1, -1, -1 }, { 564, -1, -1 }, 14340, 11 },
 	{ 238, 4, 1, 15, TEXT("AABABCACBACACC"), 1, { 10, 12, -1 }, { 564, -1, -1 }, 14351, 14 },
 	{ 239, 4, 2, 15, TEXT("ACDBCCCCCCCCCC"), 1, { 19, -1, -1 }, { 515, -1, -1 }, 14365, 19 },
-	{ 240, 4, 1, 15, TEXT("ABBAABAABCCCBC"), 1, { -1, -1, -1 }, { 613, 512, -1 }, 14384, 17 },
+	{ 240, 4, 1, 15, TEXT("ABBAABAABCCCBC"), 1, { -1, -1, -1 }, { 619, 512, -1 }, 14384, 17 },
 	{ 241, 4, 1, 15, TEXT("CBDBBCCDABCCDC"), 0, { 4, -1, -1 }, { 517, -1, -1 }, 14401, 12 },
 	{ 242, 4, 1, 15, TEXT("BADBBBCCACAABB"), 0, { -1, -1, -1 }, { 515, 516, -1 }, 14413, 17 },
 	{ 243, 4, 1, 15, TEXT("CCCBAAACCBAACC"), 1, { 9, 25, -1 }, { 580, 507, -1 }, 14430, 13 },

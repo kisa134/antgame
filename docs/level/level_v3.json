@@ -1,7 +1,7 @@
 {
  "meta": {
   "title": "Ant Kitchen — level v3 (design data, not in the game yet)",
-  "generated": "2026-11-21 16:08",
+  "generated": "2026-11-25 23:39",
   "units": "Unreal units (uu); 1 m = 1900 uu; X west(-) -> east(+), Y south(-) -> north(+), floor Z = 0",
   "tool": "Tools/level/build_level_v3.py from level_v2.json + Tools/level/level_v3_layout.py",
   "version": "v3.0 (2026-11-21)",
@@ -2090,30 +2090,31 @@
    "climbable": true,
    "src": "KitchenArtData.inl:25",
    "origin": [
-    -3900.0,
-    3500.0,
+    -4050.0,
+    4300.0,
     140.0
    ],
    "bb": [
-    -4110.2,
-    3289.8,
-    -3689.8,
-    3710.2
+    -4176.1,
+    4173.9,
+    -3923.9,
+    4426.1
    ],
    "z": [
     140.0,
-    910.1
+    602.0
    ],
    "c": [
-    -3900.0,
-    3500.0
+    -4050.0,
+    4300.0
    ],
    "s": [
-    327.9,
-    327.9
+    252.20000000000027,
+    252.20000000000073
    ],
    "yaw": 160.0,
-   "area": "kitchen"
+   "area": "kitchen",
+   "v3": "scaled"
   },
   {
    "id": "art19",
@@ -24362,6 +24363,256 @@
    "break": "не бьётся; держится на крепеже"
   },
   {
+   "id": "v32_bucket",
+   "mesh": "SM_V3_Pail",
+   "index": 0,
+   "ru": "Ведро с тряпкой под мойкой",
+   "cat": "prop",
+   "role": "static",
+   "solid": true,
+   "climbable": true,
+   "origin": [
+    -3920,
+    3440,
+    140
+   ],
+   "bb": [
+    -4190.0,
+    3163.9,
+    -3451.3,
+    3716.1
+   ],
+   "z": [
+    140.0,
+    644.5
+   ],
+   "c": [
+    -3820.65,
+    3440.0
+   ],
+   "s": [
+    738.6999999999998,
+    552.1999999999998
+   ],
+   "yaw": -90,
+   "area": "kitchen",
+   "v3": "new",
+   "mount": "floor",
+   "district": "moika",
+   "mat": "plastic",
+   "src": "level_v3_layout",
+   "break": "не бьётся, отскакивает"
+  },
+  {
+   "id": "v32_rack",
+   "mesh": "SM_V3_WireRack",
+   "index": 0,
+   "ru": "Проволочная полка под мойкой",
+   "cat": "furn",
+   "role": "static",
+   "solid": true,
+   "climbable": true,
+   "origin": [
+    -3120,
+    3560,
+    140
+   ],
+   "bb": [
+    -3424.2,
+    3315.1,
+    -2815.8,
+    3804.9
+   ],
+   "z": [
+    140.0,
+    635.0
+   ],
+   "c": [
+    -3120.0,
+    3560.0
+   ],
+   "s": [
+    608.3999999999996,
+    489.8000000000002
+   ],
+   "yaw": 180,
+   "area": "kitchen",
+   "v3": "new",
+   "mount": "floor",
+   "district": "moika",
+   "mat": "metal",
+   "src": "level_v3_layout",
+   "tops": [
+    636
+   ],
+   "gap_under": 620,
+   "break": "не бьётся; громко падает"
+  },
+  {
+   "id": "v32_rags",
+   "mesh": "SM_V3_RagPile",
+   "index": 0,
+   "ru": "Сложенные тряпки на полке",
+   "cat": "prop",
+   "role": "static",
+   "solid": true,
+   "climbable": true,
+   "origin": [
+    -3200,
+    3560,
+    630
+   ],
+   "bb": [
+    -3415.1,
+    3400.0,
+    -2984.9,
+    3720.0
+   ],
+   "z": [
+    630.0,
+    733.9
+   ],
+   "c": [
+    -3200.0,
+    3560.0
+   ],
+   "s": [
+    430.1999999999998,
+    320.0
+   ],
+   "yaw": 180,
+   "area": "kitchen",
+   "v3": "new",
+   "mount": "on:v32_rack",
+   "district": null,
+   "mat": "cloth",
+   "src": "level_v3_layout",
+   "break": "тянется (симуляция), рвётся по линии укусов, падает кучей — новая гора-укрытие"
+  },
+  {
+   "id": "v32_spray",
+   "mesh": "SM_V3_Sprayer",
+   "index": 0,
+   "ru": "Средство для стёкол на полке",
+   "cat": "prop",
+   "role": "static",
+   "solid": true,
+   "climbable": true,
+   "origin": [
+    -2900,
+    3600,
+    630
+   ],
+   "bb": [
+    -2960.0,
+    3528.0,
+    -2840.0,
+    3717.0
+   ],
+   "z": [
+    630.0,
+    1058.1
+   ],
+   "c": [
+    -2900.0,
+    3622.5
+   ],
+   "s": [
+    120.0,
+    189.0
+   ],
+   "yaw": 90,
+   "area": "kitchen",
+   "v3": "new",
+   "mount": "on:v32_rack",
+   "district": null,
+   "mat": "plastic",
+   "src": "level_v3_layout",
+   "break": "не бьётся, отскакивает"
+  },
+  {
+   "id": "v32_plunger",
+   "mesh": "SM_V3_Plunger",
+   "index": 0,
+   "ru": "Вантуз под мойкой",
+   "cat": "prop",
+   "role": "static",
+   "solid": true,
+   "climbable": true,
+   "origin": [
+    -2960,
+    4560,
+    140
+   ],
+   "bb": [
+    -3116.0,
+    4404.0,
+    -2804.0,
+    4716.0
+   ],
+   "z": [
+    140.0,
+    911.0
+   ],
+   "c": [
+    -2960.0,
+    4560.0
+   ],
+   "s": [
+    312.0,
+    312.0
+   ],
+   "yaw": 180,
+   "area": "kitchen",
+   "v3": "new",
+   "mount": "floor",
+   "district": "moika",
+   "mat": "wood",
+   "src": "level_v3_layout",
+   "break": "не бьётся; держится на крепеже"
+  },
+  {
+   "id": "v32_soap",
+   "mesh": "SM_V3_DishSoap",
+   "index": 0,
+   "ru": "Средство для посуды на борту мойки",
+   "cat": "prop",
+   "role": "static",
+   "solid": true,
+   "climbable": true,
+   "origin": [
+    -3950,
+    3110,
+    1710
+   ],
+   "bb": [
+    -4008.0,
+    3050.9,
+    -3892.1,
+    3167.9
+   ],
+   "z": [
+    1710.0,
+    2048.0
+   ],
+   "c": [
+    -3950.05,
+    3109.4
+   ],
+   "s": [
+    115.90000000000009,
+    117.0
+   ],
+   "yaw": 180,
+   "area": "kitchen",
+   "v3": "new",
+   "mount": "surface",
+   "district": "moika",
+   "mat": "plastic",
+   "src": "level_v3_layout",
+   "break": "не бьётся, отскакивает"
+  },
+  {
    "id": "v3_toybox",
    "mesh": "SM_V3_ToyBox",
    "index": 0,
@@ -44768,6 +45019,36 @@
     },
     {
      "rect": [
+      -4196,
+      3164,
+      -3644,
+      3716
+     ],
+     "z": [
+      140,
+      645
+     ],
+     "ru": "в ведре под мойкой",
+     "id": "hide_v32_bucket",
+     "src": "level_v3"
+    },
+    {
+     "rect": [
+      -3425,
+      3315,
+      -2815,
+      3805
+     ],
+     "z": [
+      140,
+      620
+     ],
+     "ru": "под проволочной полкой",
+     "id": "hide_v32_rack",
+     "src": "level_v3"
+    },
+    {
+     "rect": [
       8378,
       525,
       9782,
@@ -45647,12 +45928,12 @@
   "removed": 28,
   "moved": 34,
   "loot_clamped": 37,
-  "objects": 628,
-  "v3_new": 117,
+  "objects": 634,
+  "v3_new": 123,
   "v3_moved": 6,
-  "v3_scaled": 19,
+  "v3_scaled": 20,
   "variants": 45,
-  "hides": 52
+  "hides": 54
  },
  "districts": [
   {
@@ -51226,6 +51507,15 @@
     "copy5": "карниз гостиной -> карниз v3"
    },
    "moved": {
+    "art18": {
+     "to": [
+      -4050,
+      4300
+     ],
+     "yaw": null,
+     "z0": null,
+     "why": "бутыль моющего уменьшена до настоящего размера и убрана в дальний угол: на её месте ведро (v3.2)"
+    },
     "art163": {
      "to": [
       1300,
@@ -51282,6 +51572,7 @@
     }
    },
    "scaled": {
+    "art18": 0.6,
     "art140": 0.55,
     "art141": 0.55,
     "copy11": 0.55,
@@ -51918,6 +52209,72 @@
       5400
      ],
      "yaw": 90
+    },
+    {
+     "id": "v32_bucket",
+     "piece": "SM_V3_Pail",
+     "ru": "Ведро с тряпкой под мойкой",
+     "p": [
+      -3920,
+      3440,
+      140
+     ],
+     "yaw": -90
+    },
+    {
+     "id": "v32_rack",
+     "piece": "SM_V3_WireRack",
+     "ru": "Проволочная полка под мойкой",
+     "p": [
+      -3120,
+      3560,
+      140
+     ],
+     "yaw": 180
+    },
+    {
+     "id": "v32_rags",
+     "piece": "SM_V3_RagPile",
+     "ru": "Сложенные тряпки на полке",
+     "p": [
+      -3200,
+      3560,
+      630
+     ],
+     "yaw": 180
+    },
+    {
+     "id": "v32_spray",
+     "piece": "SM_V3_Sprayer",
+     "ru": "Средство для стёкол на полке",
+     "p": [
+      -2900,
+      3600,
+      630
+     ],
+     "yaw": 90
+    },
+    {
+     "id": "v32_plunger",
+     "piece": "SM_V3_Plunger",
+     "ru": "Вантуз под мойкой",
+     "p": [
+      -2960,
+      4560,
+      140
+     ],
+     "yaw": 180
+    },
+    {
+     "id": "v32_soap",
+     "piece": "SM_V3_DishSoap",
+     "ru": "Средство для посуды на борту мойки",
+     "p": [
+      -3950,
+      3110,
+      1710
+     ],
+     "yaw": 180
     },
     {
      "id": "v3_toybox",
@@ -53779,6 +54136,97 @@
     ],
     "cat": "prop",
     "mat": "cloth"
+   },
+   "SM_V3_Pail": {
+    "ru": "Ведро с половой тряпкой через край",
+    "box": [
+     -276,
+     276,
+     -469,
+     271,
+     0,
+     505
+    ],
+    "cat": "prop",
+    "mat": "plastic"
+   },
+   "SM_V3_WireRack": {
+    "ru": "Проволочная полка на ножках под мойкой (второй этаж)",
+    "box": [
+     -305,
+     305,
+     -245,
+     245,
+     0,
+     496
+    ],
+    "cat": "furn",
+    "mat": "metal"
+   },
+   "SM_V3_RagPile": {
+    "ru": "Стопка сложенных тряпок",
+    "box": [
+     -215,
+     215,
+     -160,
+     160,
+     0,
+     105
+    ],
+    "cat": "prop",
+    "mat": "cloth"
+   },
+   "SM_V3_Sprayer": {
+    "ru": "Средство для стёкол с курком",
+    "box": [
+     -73,
+     118,
+     -61,
+     61,
+     0,
+     429
+    ],
+    "cat": "prop",
+    "mat": "plastic"
+   },
+   "SM_V3_Plunger": {
+    "ru": "Вантуз, стоит на чашке",
+    "box": [
+     -157,
+     157,
+     -157,
+     157,
+     0,
+     772
+    ],
+    "cat": "prop",
+    "mat": "wood"
+   },
+   "SM_V3_SoakBoard": {
+    "ru": "Разделочная доска замочена в мойке: пандус со дна к борту (34°)",
+    "box": [
+     -271,
+     271,
+     -718,
+     18,
+     0,
+     517
+    ],
+    "cat": "prop",
+    "mat": "wood"
+   },
+   "SM_V3_DishSoap": {
+    "ru": "Средство для посуды на борту мойки",
+    "box": [
+     -59,
+     59,
+     -60,
+     59,
+     0,
+     339
+    ],
+    "cat": "prop",
+    "mat": "plastic"
    }
   },
   "break_classes": {
@@ -58037,11 +58485,226 @@
     {
      "id": "A",
      "ru": "Посуда помыта",
-     "plays": "v2: тарелки в сушилке, дверца под мойкой открыта",
+     "plays": "v2: тарелки в сушилке, дверца под мойкой открыта; доска замочена в мойке",
      "weight": 1.0,
      "when": null,
-     "ops": [],
-     "objects": [],
+     "ops": [
+      [
+       "add",
+       "v32_board"
+      ]
+     ],
+     "objects": [
+      {
+       "id": "v32_bucket",
+       "mesh": "SM_V3_Pail",
+       "index": 0,
+       "ru": "Ведро с тряпкой под мойкой",
+       "cat": "prop",
+       "role": "static",
+       "solid": true,
+       "climbable": true,
+       "origin": [
+        -3920,
+        3440,
+        140
+       ],
+       "bb": [
+        -4190.0,
+        3163.9,
+        -3451.3,
+        3716.1
+       ],
+       "z": [
+        140.0,
+        644.5
+       ],
+       "c": [
+        -3820.65,
+        3440.0
+       ],
+       "s": [
+        738.6999999999998,
+        552.1999999999998
+       ],
+       "yaw": -90,
+       "area": "kitchen",
+       "v3": "new",
+       "mount": "floor",
+       "district": "moika",
+       "mat": "plastic",
+       "src": "level_v3_layout",
+       "break": "не бьётся, отскакивает"
+      },
+      {
+       "id": "v32_rack",
+       "mesh": "SM_V3_WireRack",
+       "index": 0,
+       "ru": "Проволочная полка под мойкой",
+       "cat": "furn",
+       "role": "static",
+       "solid": true,
+       "climbable": true,
+       "origin": [
+        -3120,
+        3560,
+        140
+       ],
+       "bb": [
+        -3424.2,
+        3315.1,
+        -2815.8,
+        3804.9
+       ],
+       "z": [
+        140.0,
+        635.0
+       ],
+       "c": [
+        -3120.0,
+        3560.0
+       ],
+       "s": [
+        608.3999999999996,
+        489.8000000000002
+       ],
+       "yaw": 180,
+       "area": "kitchen",
+       "v3": "new",
+       "mount": "floor",
+       "district": "moika",
+       "mat": "metal",
+       "src": "level_v3_layout",
+       "tops": [
+        636
+       ],
+       "gap_under": 620,
+       "break": "не бьётся; громко падает"
+      },
+      {
+       "id": "v32_plunger",
+       "mesh": "SM_V3_Plunger",
+       "index": 0,
+       "ru": "Вантуз под мойкой",
+       "cat": "prop",
+       "role": "static",
+       "solid": true,
+       "climbable": true,
+       "origin": [
+        -2960,
+        4560,
+        140
+       ],
+       "bb": [
+        -3116.0,
+        4404.0,
+        -2804.0,
+        4716.0
+       ],
+       "z": [
+        140.0,
+        911.0
+       ],
+       "c": [
+        -2960.0,
+        4560.0
+       ],
+       "s": [
+        312.0,
+        312.0
+       ],
+       "yaw": 180,
+       "area": "kitchen",
+       "v3": "new",
+       "mount": "floor",
+       "district": "moika",
+       "mat": "wood",
+       "src": "level_v3_layout",
+       "break": "не бьётся; держится на крепеже"
+      },
+      {
+       "id": "v32_soap",
+       "mesh": "SM_V3_DishSoap",
+       "index": 0,
+       "ru": "Средство для посуды на борту мойки",
+       "cat": "prop",
+       "role": "static",
+       "solid": true,
+       "climbable": true,
+       "origin": [
+        -3950,
+        3110,
+        1710
+       ],
+       "bb": [
+        -4008.0,
+        3050.9,
+        -3892.1,
+        3167.9
+       ],
+       "z": [
+        1710.0,
+        2048.0
+       ],
+       "c": [
+        -3950.05,
+        3109.4
+       ],
+       "s": [
+        115.90000000000009,
+        117.0
+       ],
+       "yaw": 180,
+       "area": "kitchen",
+       "v3": "new",
+       "mount": "surface",
+       "district": "moika",
+       "mat": "plastic",
+       "src": "level_v3_layout",
+       "break": "не бьётся, отскакивает"
+      },
+      {
+       "id": "v32_board",
+       "mesh": "SM_V3_SoakBoard",
+       "index": 0,
+       "ru": "Разделочная доска замочена в мойке (пандус на борт)",
+       "cat": "prop",
+       "role": "static",
+       "solid": true,
+       "climbable": true,
+       "origin": [
+        -3170,
+        4004,
+        1150
+       ],
+       "bb": [
+        -3440.0,
+        3286.0,
+        -2900.0,
+        4021.1
+       ],
+       "z": [
+        1152.1,
+        1666.0
+       ],
+       "c": [
+        -3170.0,
+        3653.55
+       ],
+       "s": [
+        540.0,
+        735.0999999999999
+       ],
+       "yaw": 180,
+       "area": "kitchen",
+       "v3": "new",
+       "mount": "surface",
+       "district": "moika",
+       "mat": "wood",
+       "src": "level_v3_layout",
+       "break": "не бьётся; держится на крепеже"
+      }
+     ],
      "removed": [],
      "moved_bb": {}
     },
@@ -58066,6 +58729,174 @@
       ]
      ],
      "objects": [
+      {
+       "id": "v32_bucket",
+       "mesh": "SM_V3_Pail",
+       "index": 0,
+       "ru": "Ведро с тряпкой под мойкой",
+       "cat": "prop",
+       "role": "static",
+       "solid": true,
+       "climbable": true,
+       "origin": [
+        -3920,
+        3440,
+        140
+       ],
+       "bb": [
+        -4190.0,
+        3163.9,
+        -3451.3,
+        3716.1
+       ],
+       "z": [
+        140.0,
+        644.5
+       ],
+       "c": [
+        -3820.65,
+        3440.0
+       ],
+       "s": [
+        738.6999999999998,
+        552.1999999999998
+       ],
+       "yaw": -90,
+       "area": "kitchen",
+       "v3": "new",
+       "mount": "floor",
+       "district": "moika",
+       "mat": "plastic",
+       "src": "level_v3_layout",
+       "break": "не бьётся, отскакивает"
+      },
+      {
+       "id": "v32_rack",
+       "mesh": "SM_V3_WireRack",
+       "index": 0,
+       "ru": "Проволочная полка под мойкой",
+       "cat": "furn",
+       "role": "static",
+       "solid": true,
+       "climbable": true,
+       "origin": [
+        -3120,
+        3560,
+        140
+       ],
+       "bb": [
+        -3424.2,
+        3315.1,
+        -2815.8,
+        3804.9
+       ],
+       "z": [
+        140.0,
+        635.0
+       ],
+       "c": [
+        -3120.0,
+        3560.0
+       ],
+       "s": [
+        608.3999999999996,
+        489.8000000000002
+       ],
+       "yaw": 180,
+       "area": "kitchen",
+       "v3": "new",
+       "mount": "floor",
+       "district": "moika",
+       "mat": "metal",
+       "src": "level_v3_layout",
+       "tops": [
+        636
+       ],
+       "gap_under": 620,
+       "break": "не бьётся; громко падает"
+      },
+      {
+       "id": "v32_plunger",
+       "mesh": "SM_V3_Plunger",
+       "index": 0,
+       "ru": "Вантуз под мойкой",
+       "cat": "prop",
+       "role": "static",
+       "solid": true,
+       "climbable": true,
+       "origin": [
+        -2960,
+        4560,
+        140
+       ],
+       "bb": [
+        -3116.0,
+        4404.0,
+        -2804.0,
+        4716.0
+       ],
+       "z": [
+        140.0,
+        911.0
+       ],
+       "c": [
+        -2960.0,
+        4560.0
+       ],
+       "s": [
+        312.0,
+        312.0
+       ],
+       "yaw": 180,
+       "area": "kitchen",
+       "v3": "new",
+       "mount": "floor",
+       "district": "moika",
+       "mat": "wood",
+       "src": "level_v3_layout",
+       "break": "не бьётся; держится на крепеже"
+      },
+      {
+       "id": "v32_soap",
+       "mesh": "SM_V3_DishSoap",
+       "index": 0,
+       "ru": "Средство для посуды на борту мойки",
+       "cat": "prop",
+       "role": "static",
+       "solid": true,
+       "climbable": true,
+       "origin": [
+        -3950,
+        3110,
+        1710
+       ],
+       "bb": [
+        -4008.0,
+        3050.9,
+        -3892.1,
+        3167.9
+       ],
+       "z": [
+        1710.0,
+        2048.0
+       ],
+       "c": [
+        -3950.05,
+        3109.4
+       ],
+       "s": [
+        115.90000000000009,
+        117.0
+       ],
+       "yaw": 180,
+       "area": "kitchen",
+       "v3": "new",
+       "mount": "surface",
+       "district": "moika",
+       "mat": "plastic",
+       "src": "level_v3_layout",
+       "break": "не бьётся, отскакивает"
+      },
       {
        "id": "v3_dishes",
        "mesh": "SM_V3_DirtyDishStack",
@@ -58122,9 +58953,223 @@
        "mover",
        "mover8",
        "closed"
+      ],
+      [
+       "add",
+       "v32_board"
       ]
      ],
-     "objects": [],
+     "objects": [
+      {
+       "id": "v32_bucket",
+       "mesh": "SM_V3_Pail",
+       "index": 0,
+       "ru": "Ведро с тряпкой под мойкой",
+       "cat": "prop",
+       "role": "static",
+       "solid": true,
+       "climbable": true,
+       "origin": [
+        -3920,
+        3440,
+        140
+       ],
+       "bb": [
+        -4190.0,
+        3163.9,
+        -3451.3,
+        3716.1
+       ],
+       "z": [
+        140.0,
+        644.5
+       ],
+       "c": [
+        -3820.65,
+        3440.0
+       ],
+       "s": [
+        738.6999999999998,
+        552.1999999999998
+       ],
+       "yaw": -90,
+       "area": "kitchen",
+       "v3": "new",
+       "mount": "floor",
+       "district": "moika",
+       "mat": "plastic",
+       "src": "level_v3_layout",
+       "break": "не бьётся, отскакивает"
+      },
+      {
+       "id": "v32_rack",
+       "mesh": "SM_V3_WireRack",
+       "index": 0,
+       "ru": "Проволочная полка под мойкой",
+       "cat": "furn",
+       "role": "static",
+       "solid": true,
+       "climbable": true,
+       "origin": [
+        -3120,
+        3560,
+        140
+       ],
+       "bb": [
+        -3424.2,
+        3315.1,
+        -2815.8,
+        3804.9
+       ],
+       "z": [
+        140.0,
+        635.0
+       ],
+       "c": [
+        -3120.0,
+        3560.0
+       ],
+       "s": [
+        608.3999999999996,
+        489.8000000000002
+       ],
+       "yaw": 180,
+       "area": "kitchen",
+       "v3": "new",
+       "mount": "floor",
+       "district": "moika",
+       "mat": "metal",
+       "src": "level_v3_layout",
+       "tops": [
+        636
+       ],
+       "gap_under": 620,
+       "break": "не бьётся; громко падает"
+      },
+      {
+       "id": "v32_plunger",
+       "mesh": "SM_V3_Plunger",
+       "index": 0,
+       "ru": "Вантуз под мойкой",
+       "cat": "prop",
+       "role": "static",
+       "solid": true,
+       "climbable": true,
+       "origin": [
+        -2960,
+        4560,
+        140
+       ],
+       "bb": [
+        -3116.0,
+        4404.0,
+        -2804.0,
+        4716.0
+       ],
+       "z": [
+        140.0,
+        911.0
+       ],
+       "c": [
+        -2960.0,
+        4560.0
+       ],
+       "s": [
+        312.0,
+        312.0
+       ],
+       "yaw": 180,
+       "area": "kitchen",
+       "v3": "new",
+       "mount": "floor",
+       "district": "moika",
+       "mat": "wood",
+       "src": "level_v3_layout",
+       "break": "не бьётся; держится на крепеже"
+      },
+      {
+       "id": "v32_soap",
+       "mesh": "SM_V3_DishSoap",
+       "index": 0,
+       "ru": "Средство для посуды на борту мойки",
+       "cat": "prop",
+       "role": "static",
+       "solid": true,
+       "climbable": true,
+       "origin": [
+        -3950,
+        3110,
+        1710
+       ],
+       "bb": [
+        -4008.0,
+        3050.9,
+        -3892.1,
+        3167.9
+       ],
+       "z": [
+        1710.0,
+        2048.0
+       ],
+       "c": [
+        -3950.05,
+        3109.4
+       ],
+       "s": [
+        115.90000000000009,
+        117.0
+       ],
+       "yaw": 180,
+       "area": "kitchen",
+       "v3": "new",
+       "mount": "surface",
+       "district": "moika",
+       "mat": "plastic",
+       "src": "level_v3_layout",
+       "break": "не бьётся, отскакивает"
+      },
+      {
+       "id": "v32_board",
+       "mesh": "SM_V3_SoakBoard",
+       "index": 0,
+       "ru": "Разделочная доска замочена в мойке (пандус на борт)",
+       "cat": "prop",
+       "role": "static",
+       "solid": true,
+       "climbable": true,
+       "origin": [
+        -3170,
+        4004,
+        1150
+       ],
+       "bb": [
+        -3440.0,
+        3286.0,
+        -2900.0,
+        4021.1
+       ],
+       "z": [
+        1152.1,
+        1666.0
+       ],
+       "c": [
+        -3170.0,
+        3653.55
+       ],
+       "s": [
+        540.0,
+        735.0999999999999
+       ],
+       "yaw": 180,
+       "area": "kitchen",
+       "v3": "new",
+       "mount": "surface",
+       "district": "moika",
+       "mat": "wood",
+       "src": "level_v3_layout",
+       "break": "не бьётся; держится на крепеже"
+      }
+     ],
      "removed": [],
      "moved_bb": {}
     }
@@ -60269,7 +61314,50 @@
    },
    "time_by_threat": {
     "4": {
-     "evening": 1.0
+     "evening": 0.75,
+     "night": 0.25
+    }
+   },
+   "by_threat": {
+    "1": {
+     "time": "day",
+     "home": {
+      "grandma": true,
+      "kid": false,
+      "dog": true,
+      "cat": true
+     },
+     "ru": "Будний день: день, малыш в садике, дома бабушка, Бадрик и кошка"
+    },
+    "2": {
+     "time": "day",
+     "home": {
+      "grandma": true,
+      "kid": true,
+      "dog": true,
+      "cat": true
+     },
+     "ru": "Выходной: день, дома все"
+    },
+    "3": {
+     "time": "evening",
+     "home": {
+      "grandma": false,
+      "kid": true,
+      "dog": true,
+      "cat": true
+     },
+     "ru": "Большая уборка: вечер, бабушка уехала к подруге, папа убирает один"
+    },
+    "4": {
+     "time": null,
+     "home": {
+      "grandma": true,
+      "kid": true,
+      "dog": true,
+      "cat": true
+     },
+     "ru": "День рождения: вечер (каждый четвёртый рейд — ночь после праздника), дома все"
     }
    },
    "home": {
