@@ -36,6 +36,8 @@ public:
 	float StuckFor = 0.f;
 	float LeashDeadline = 0.f;   // follow watchdog: far from the owner and not getting closer by this time -> come out right behind him
 	float LeashBest = 0.f;
+	float LeashFarDeadline = 0.f;
+	FVector LeashAnchor = FVector::ZeroVector;
 	FVector LastHaulPos = FVector::ZeroVector;
 	float NextShootPick = 0.f;
 	int32 Slot = 0;
