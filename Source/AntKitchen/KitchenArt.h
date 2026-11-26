@@ -57,6 +57,9 @@ namespace KitchenArt
 	/** Where the manifest puts this instance (rotation, location, full scale). */
 	ANTKITCHEN_API FTransform WorldTransform(const FKitchenArtInst& I);
 
+	/** Hero props in use (default)? -AntHeroArt=0 brings back the old models: Mesh() then skips /Game/Hero/<Name>/<Name>. */
+	ANTKITCHEN_API bool HeroArt();
+
 	ANTKITCHEN_API UStaticMesh* Mesh(const TCHAR* Name);
 
 	/** The game's own materials on the mesh, one shared material per slot name (see the look table in KitchenArt.cpp). */

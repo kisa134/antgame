@@ -251,6 +251,19 @@ namespace KitchenArt
 TConstArrayView<FKitchenArtInst> Instances() { return LevelV3::Enabled() ? LevelV3::BaseArt() : TConstArrayView<FKitchenArtInst>(GKitchenArt, UE_ARRAY_COUNT(GKitchenArt)); }
 TConstArrayView<FKitchenArtMover> Movers() { return LevelV3::Enabled() ? LevelV3::BaseMovers() : TConstArrayView<FKitchenArtMover>(GKitchenMovers, UE_ARRAY_COUNT(GKitchenMovers)); }
 
+bool HeroArt()
+{
+	static int32 State = -1;
+	if (State < 0)
+	{
+		int32 V = 1;
+		FParse::Value(FCommandLine::Get(), TEXT("AntHeroArt="), V);
+		State = V != 0 ? 1 : 0;
+		UE_LOG(LogTemp, Display, TEXT("KitchenArt: hero art %s (/Game/Hero; -AntHeroArt=0 for the old models)"), State ? TEXT("on") : TEXT("off"));
+	}
+	return State == 1;
+}
+
 UStaticMesh* Mesh(const TCHAR* Name)
 {
 	static TMap<FString, UStaticMesh*> Cache;   // rooted below: static, survives map travel
@@ -261,7 +274,13 @@ UStaticMesh* Mesh(const TCHAR* Name)
 	}
 	const TCHAR* Dir = N.StartsWith(TEXT("SM_V3")) ? TEXT("LevelV3") : N.StartsWith(TEXT("SM_K_")) ? TEXT("Kitchen") : TEXT("Living");
 	UStaticMesh* M = nullptr;
-	if (Map4Look::Enabled())
+	if (HeroArt())
+	{
+		// Hero props (KAN-22 pipeline, Tools/blender/hero_lib.py): a rebuilt model under /Game/Hero/<Name>/<Name>, same name and frame.
+		// The old asset stays where it was: -AntHeroArt=0 brings it back.
+		M = LoadObject<UStaticMesh>(nullptr, *FString::Printf(TEXT("/Game/Hero/%s/%s.%s"), *N, *N, *N), nullptr, LOAD_NoWarn | LOAD_Quiet);
+	}
+	if (!M && Map4Look::Enabled())
 	{
 		// map v4: a generated replacement fitted to the same frame and footprint (SM_M4R_<name>), or a map v4 prop by name
 		// Owner's rule (26.11): the generated mop and broom read as foreign next to our own set. They keep their own Blender models.
