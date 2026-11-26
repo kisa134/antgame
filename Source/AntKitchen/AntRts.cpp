@@ -1,10 +1,10 @@
 ﻿#include "AntRts.h"
+#include "AntRoutes.h"
 #include "AntUiStyle.h"
 #include "AntUiCanvas.h"
 #include "AntSnowball.h"
 #include "AntTrail.h"
 #include "AntHaulAdapter.h"
-#include "AntRoutes.h"
 #include "AntRaid.h"
 #include "AntCharacter.h"
 #include "AntPlayerState.h"
@@ -233,7 +233,28 @@ void AAntSquadBot::ThinkRts(AAntCharacter* Ant, float Dt)
 			return;
 		}
 	}
-	if (Fight(Boss->GetActorLocation(), 650.f))
+	// Leash: a follower far from its owner that stands in place for 5 s (a ledge, a leg, a gap the routes do not know), or that has
+	// not got any closer to him in 25 s (walking in circles), is stuck. It comes out of the cracks right behind him instead of
+	// being lost for the whole raid. (Distance alone is no measure: the way round through a doorway first leads away from him.)
+	{
+		const FVector Here = Ant->GetActorLocation();
+		const float BossD = (float)FVector::Dist(Boss->GetActorLocation(), Here);
+		if (BossD < 1500.f || Ant->Carrying || Boss->IsInNest() || Boss->bDead) { LeashDeadline = 0.f; LeashFarDeadline = 0.f; }
+		else
+		{
+			if (LeashDeadline <= 0.f || FVector::Dist(Here, LeashAnchor) > 250.f) { LeashAnchor = Here; LeashDeadline = Now + 5.f; }
+			if (LeashFarDeadline <= 0.f || BossD < LeashBest - 400.f) { LeashBest = BossD; LeashFarDeadline = Now + 25.f; }
+			if (Now > LeashDeadline || Now > LeashFarDeadline)
+			{
+				UE_LOG(LogTemp, Display, TEXT("ANTRTS leash: squad ant %s stuck %.0f uu from its owner at %s (%s), regroups behind him"), *Ant->GetName(), BossD, *Here.ToCompactString(),
+					Now > LeashDeadline ? TEXT("stands") : TEXT("no closer"));
+				Ant->ApplyTeleport(Boss->GetActorLocation() - Boss->GetActorForwardVector() * (40.f + 12.f * (Slot % 6)) + FVector(0.f, 0.f, 6.f));
+				LeashDeadline = 0.f; LeashFarDeadline = 0.f;
+				bHasGoal = false;
+				return;
+			}
+		}
+	}	if (Fight(Boss->GetActorLocation(), 650.f))
 	{
 		return;
 	}

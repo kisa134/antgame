@@ -18,6 +18,8 @@ def load_base():
     M2 = json.load(open(os.path.join(ART, 'level_v2', 'level_v2_manifest.json'), encoding='utf-8'))
     npj = os.path.join(ART, 'level_v3', 'level_v3_new_pieces.json')
     NP = json.load(open(npj, encoding='utf-8')) if os.path.exists(npj) else None
+    npj2 = os.path.join(ART, 'level_v32', 'level_v32_new_pieces.json')   # v3.2: the sink zone pilot (Tools/blender/level_v32_pieces.py)
+    if NP and os.path.exists(npj2): NP['pieces'] = NP['pieces'] + json.load(open(npj2, encoding='utf-8'))['pieces']
     B = {'D2': D2, 'M2': M2, 'NP': NP}
     B['piece_v2'] = {p['name']: p for p in M2['pieces']}
     B['piece_v3'] = {p['name']: p for p in NP['pieces']} if NP else {}
@@ -114,7 +116,7 @@ def place(B, a):
     o = {'id': a['id'], 'mesh': name, 'index': 0, 'ru': a.get('ru') or pc.get('ru', name), 'cat': cat, 'role': 'static', 'solid': a.get('solid', True), 'climbable': True,
          'origin': list(a['p']), 'bb': [mn[0], mn[1], mx[0], mx[1]], 'z': [mn[2], mx[2]], 'c': [(mn[0] + mx[0]) / 2, (mn[1] + mx[1]) / 2], 's': [mx[0] - mn[0], mx[1] - mn[1]],
          'yaw': a.get('yaw'), 'area': a.get('area'), 'v3': 'new', 'mount': a.get('mount'), 'district': a.get('district'), 'mat': pc.get('mat'), 'src': 'level_v3_layout'}
-    for k in ('part_of', 'replaces', 'tops', 'cloth', 'tint', 'hazard', 'state'):
+    for k in ('part_of', 'replaces', 'tops', 'cloth', 'tint', 'hazard', 'state', 'gap_under'):
         if a.get(k) is not None: o[k] = a[k]
     if pc.get('state'): o['state'] = pc['state']
     if cat in ('fastener',) or name in ('SM_V3_BalloonString', 'SM_V3_CurtainRing', 'SM_V3_TapeStrip', 'SM_V3_KidDrawing', 'SM_V3_Cornice', 'SM_V3_Outlet', 'SM_V3_PictureFrame', 'SM_V3_Nail', 'SM_V3_Balloon', 'SM_V3_PendantLamp', 'SM_V3_LaundryLine'):

@@ -1142,8 +1142,8 @@ namespace
 		const float BH = 84.f * Fs;
 		AntUiCanvas::Rect(Cv, 0.f, 0.f, W, BH, FLinearColor(0.012f, 0.006f, 0.003f, 0.86f));
 		AntUiCanvas::Rect(Cv, 0.f, BH - 3.f * Fs, W, 3.f * Fs, WithA(C::AmberDeep, 0.9f));
-		AntUiCanvas::Text(Cv, TEXT("МУРАВЕЙНИК"), 22.f * Fs, 8.f * Fs, EFont::Display, 28.f * Fs, C::Amber, 0, 0.6f);
-		AntUiCanvas::Text(Cv, FString::Printf(TEXT("Великая Колония Щели · уровень %d из %d · рейдов %d"), AntColony::Level(N), AntColony::MaxLevel(), N.Raids), 24.f * Fs, 50.f * Fs, EFont::Body, 13.f * Fs, C::Muted);
+		AntUiCanvas::TextFit(Cv, TEXT("МУРАВЕЙНИК"), 22.f * Fs, 8.f * Fs, 212.f * Fs, EFont::Display, 28.f * Fs, C::Amber, 0, 0.6f);   // (QA: the title ran under the emblem, the subtitle under the fighter / barracks buttons (x 300..590) at 720p)
+		AntUiCanvas::TextFit(Cv, FString::Printf(TEXT("Великая Колония Щели · уровень %d из %d · рейдов %d"), AntColony::Level(N), AntColony::MaxLevel(), N.Raids), 24.f * Fs, 50.f * Fs, 266.f * Fs, EFont::Body, 13.f * Fs, C::Muted);
 		struct FChip { const TCHAR* Icon; FString Value; FString Label; FLinearColor Col; FString Tip; };
 		TArray<FChip> Chips;
 		for (int32 k = 0; k < AntFoodKind::Count; ++k)
@@ -1196,7 +1196,7 @@ namespace
 		AntUiCanvas::Paper(Cv, 14.f * Fs, Y, PW, BH, false);
 		AntUiCanvas::Text(Cv, TEXT("ЛЕТОПИСЬ"), 28.f * Fs, Y + 13.f * Fs, EFont::Display, 13.f * Fs, C::JamDeep);
 		const FString Last = N.Chronicle.Num() > 0 ? N.Chronicle.Last() : FString(TEXT("Пусто. Первая запись появится после первого рейда."));
-		AntUiCanvas::TextFit(Cv, Last, 128.f * Fs, Y + 13.f * Fs, PW - 128.f * Fs, EFont::Mono, 13.f * Fs, C::Graphite);
+		AntUiCanvas::TextFit(Cv, Last, 158.f * Fs, Y + 13.f * Fs, PW - 158.f * Fs, EFont::Mono, 13.f * Fs, C::Graphite);
 		const FString Hint = !Raid->NestNote.IsEmpty() ? Raid->NestNote
 			: bHost ? FString(TEXT("Клик по залу — карточка и стройка · колесо — зум · тяни — двигать · пунктир — ещё не прорыто"))
 			: FString(TEXT("Колония хоста: строит он · клик по залу — карточка · колесо — зум · тяни — двигать"));

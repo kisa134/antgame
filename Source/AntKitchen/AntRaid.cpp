@@ -1,4 +1,5 @@
 ﻿#include "AntRaid.h"
+#include "AntRts.h"
 #include "AntRun.h"
 #include "AntKitchenGameMode.h"
 #include "AntGameState.h"
@@ -1756,6 +1757,14 @@ bool AAntRaid::DevCommand(const TArray<FString>& A)
 					It->Count, It->Taken, (int32)It->Mode, It->Strength(), *It->GetActorLocation().ToCompactString(), FVector::Dist(It->GetActorLocation(), Me->GetActorLocation()),
 					It->Commander ? *It->Commander->GetDisplayName() : TEXT("-"), It->bOrphan ? 1 : 0, It->bForaging ? 1 : 0, It->Cargo ? *It->Cargo->LootName : TEXT("-"), It->bCargoHeld ? 1 : 0, It->bCargoHome ? 1 : 0,
 					It->WayAt, It->Way.Num(), It->Lead.Num(), It->bCatchUp ? 1 : 0, It->bSwarming ? 1 : 0);
+			}
+			// The squad ants themselves (AntRts): how far each is from me, to see a straggler in a test log.
+			for (TActorIterator<AAntSquadBot> It(GetWorld()); It; ++It)
+			{
+				if (const APawn* Pw = It->GetPawn())
+				{
+					UE_LOG(LogTemp, Display, TEXT("ANTSQUAD info: squad ant %s at %s, %.0f from me"), *Pw->GetName(), *Pw->GetActorLocation().ToCompactString(), FVector::Dist(Pw->GetActorLocation(), Me->GetActorLocation()));
+				}
 			}
 		}
 		else { return false; }

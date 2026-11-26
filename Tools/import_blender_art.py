@@ -25,6 +25,7 @@ SETS = [
     # level v3: every SM_V3_* piece in its own folder (KitchenArt::Mesh looks SM_V3_* up under /Game/LevelV3)
     ("level_v3", os.path.join(PROJ, "SourceArt", "Blender", "level_v3"), "/Game/LevelV3", "level_v3_new_pieces.json"),
     ("level_v31", os.path.join(PROJ, "SourceArt", "Blender", "level_v31"), "/Game/LevelV3", "level_v31_new_pieces.json"),
+    ("level_v32", os.path.join(PROJ, "SourceArt", "Blender", "level_v32"), "/Game/LevelV3", "level_v32_new_pieces.json"),   # the sink zone pilot
 ]
 EAL = unreal.EditorAssetLibrary
 AT = unreal.AssetToolsHelpers.get_asset_tools()
