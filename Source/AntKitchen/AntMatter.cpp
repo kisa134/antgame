@@ -495,6 +495,18 @@ bool AAntMatterNet::IsAtRest(const FBody& B) const
 	return true;
 }
 
+int32 AAntMatterNet::PutOutFar(const FVector& At, float Keep, const TCHAR* Why)
+{
+	int32 N = 0;
+	for (FBody& B : Bodies)
+	{
+		const UPrimitiveComponent* C = B.C.Get();
+		if (B.bBurning && C && FVector::Dist(C->Bounds.Origin, At) > Keep) { Extinguish(B, Why); ++N; }
+	}
+	UE_LOG(LogTemp, Display, TEXT("ANTMATTER put out %d fires farther than %.0f from %s (%s)"), N, Keep, *At.ToCompactString(), Why);
+	return N;
+}
+
 bool AAntMatterNet::Ignite(UPrimitiveComponent* C, const FVector& At, const TCHAR* Why)
 {
 	C = TakeOver(C);
@@ -2786,6 +2798,9 @@ bool DevCommand(AAntKitchenGameMode* GM, const TArray<FString>& A)
 				const FBox B = Pot->Bounds.GetBox();
 				const FVector Ctr = B.GetCenter();
 				const FVector Nap(B.Max.X + 18.f + 80.f, Ctr.Y - 40.f, B.Min.Z);
+				// (fire pass 4: with the hero kitchen the earlier scenes' fires had spread to the fire cap of 24, and the napkin
+				//  "did not catch". The scene is about the spark: what still burns far away is put out first.)
+				N->PutOutFar(Ctr, 1500.f, TEXT("тест: место для искры"));
 				TArray<FString> Cmd = { TEXT("matter"), TEXT("thing"), TEXT("napkin"), FString::SanitizeFloat(Nap.X), FString::SanitizeFloat(Nap.Y), FString::SanitizeFloat(Nap.Z), TEXT("12") };
 				DevCommand(N->GetWorld()->GetAuthGameMode<AAntKitchenGameMode>(), Cmd);
 				UE_LOG(LogTemp, Display, TEXT("ANTMATTER test spark: pot %s box %s, napkin at %s"), *Pot->GetName(), *Ctr.ToCompactString(), *Nap.ToCompactString());

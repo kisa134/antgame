@@ -155,6 +155,8 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	static AAntMatterNet* Get(const UWorld* W);
+	/** Server, dev/test: puts out every fire farther than Keep from At (a test scene's own fire is not held back by the fire cap). */
+	int32 PutOutFar(const FVector& At, float Keep, const TCHAR* Why);
 
 	UPROPERTY(ReplicatedUsing = OnRep_Recs) TArray<FAntMatterRec> Recs;
 	UPROPERTY(Replicated) TArray<FAntMatterPool> Pools;
