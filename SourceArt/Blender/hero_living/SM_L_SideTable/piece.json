@@ -1,0 +1,151 @@
+{
+ "name": "SM_L_SideTable",
+ "file": "SM_L_SideTable.fbx",
+ "set": "hero_living",
+ "break_class": "wood",
+ "textures": {
+  "C": "SM_L_SideTable/tex/T_SM_L_SideTable_C.png",
+  "N": "SM_L_SideTable/tex/T_SM_L_SideTable_N.png",
+  "R": "SM_L_SideTable/tex/T_SM_L_SideTable_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_L_SideTable_Brk0",
+   "file": "SM_L_SideTable_Brk0.fbx",
+   "triangles": 844,
+   "bbox_min_m": [
+    0.0081,
+    -0.205,
+    0.4947
+   ],
+   "bbox_max_m": [
+    0.2115,
+    0.2111,
+    0.5267
+   ],
+   "materials": [
+    "Hero_SM_L_SideTable",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_SideTable_Brk1",
+   "file": "SM_L_SideTable_Brk1.fbx",
+   "triangles": 448,
+   "bbox_min_m": [
+    -0.1737,
+    -0.1737,
+    0.004
+   ],
+   "bbox_max_m": [
+    0.1737,
+    0.184,
+    0.1737
+   ],
+   "materials": [
+    "Hero_SM_L_SideTable",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_SideTable_Brk2",
+   "file": "SM_L_SideTable_Brk2.fbx",
+   "triangles": 164,
+   "bbox_min_m": [
+    -0.1594,
+    -0.092,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.1594,
+    0.1942,
+    0.5058
+   ],
+   "materials": [
+    "Hero_SM_L_SideTable",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_SideTable_Brk3",
+   "file": "SM_L_SideTable_Brk3.fbx",
+   "triangles": 164,
+   "bbox_min_m": [
+    -0.1695,
+    -0.1021,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.1594,
+    0.184,
+    0.5058
+   ],
+   "materials": [
+    "Hero_SM_L_SideTable",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_SideTable_Brk4",
+   "file": "SM_L_SideTable_Brk4.fbx",
+   "triangles": 164,
+   "bbox_min_m": [
+    -0.1594,
+    -0.1021,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.1695,
+    0.184,
+    0.5058
+   ],
+   "materials": [
+    "Hero_SM_L_SideTable",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_SideTable_Brk5",
+   "file": "SM_L_SideTable_Brk5.fbx",
+   "triangles": 844,
+   "bbox_min_m": [
+    -0.2115,
+    -0.2115,
+    0.4947
+   ],
+   "bbox_max_m": [
+    0.0518,
+    0.2115,
+    0.5267
+   ],
+   "materials": [
+    "Hero_SM_L_SideTable",
+    "Break"
+   ]
+  }
+ ],
+ "note": "round tripod side table: walnut, turned splayed legs, lower shelf, a water ring",
+ "kept_slots": [],
+ "triangles": 1820,
+ "bbox_min_m": [
+  -0.2115,
+  -0.2115,
+  0.0
+ ],
+ "bbox_max_m": [
+  0.2115,
+  0.2115,
+  0.5267
+ ],
+ "materials": [
+  "Hero_SM_L_SideTable"
+ ],
+ "lod_triangles": [
+  1820,
+  637,
+  218
+ ],
+ "ucx": 5
+}

@@ -1,0 +1,56 @@
+{
+ "name": "SM_V3_CurtainRing",
+ "file": "SM_V3_CurtainRing.fbx",
+ "set": "hero_living",
+ "break_class": "metal",
+ "textures": {
+  "C": "SM_V3_CurtainRing/tex/T_SM_V3_CurtainRing_C.png",
+  "N": "SM_V3_CurtainRing/tex/T_SM_V3_CurtainRing_N.png",
+  "R": "SM_V3_CurtainRing/tex/T_SM_V3_CurtainRing_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_V3_CurtainRing_Brk0",
+   "file": "SM_V3_CurtainRing_Brk0.fbx",
+   "triangles": 632,
+   "bbox_min_m": [
+    -0.0053,
+    -0.02,
+    -0.0405
+   ],
+   "bbox_max_m": [
+    0.0058,
+    0.02,
+    0.02
+   ],
+   "materials": [
+    "Hero_SM_V3_CurtainRing",
+    "Break"
+   ]
+  }
+ ],
+ "note": "brass curtain ring with an eye and a toothed clip",
+ "kept_slots": [],
+ "triangles": 632,
+ "bbox_min_m": [
+  -0.0053,
+  -0.02,
+  -0.0405
+ ],
+ "bbox_max_m": [
+  0.0058,
+  0.02,
+  0.02
+ ],
+ "materials": [
+  "Hero_SM_V3_CurtainRing"
+ ],
+ "lod_triangles": [
+  632,
+  221,
+  74
+ ],
+ "ucx": 1
+}

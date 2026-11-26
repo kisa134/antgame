@@ -1,0 +1,75 @@
+{
+ "name": "SM_V3_FloorCushion",
+ "file": "SM_V3_FloorCushion.fbx",
+ "set": "hero_living",
+ "break_class": "cloth",
+ "textures": {
+  "C": "SM_V3_FloorCushion/tex/T_SM_V3_FloorCushion_C.png",
+  "N": "SM_V3_FloorCushion/tex/T_SM_V3_FloorCushion_N.png",
+  "R": "SM_V3_FloorCushion/tex/T_SM_V3_FloorCushion_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_V3_FloorCushion_Brk0",
+   "file": "SM_V3_FloorCushion_Brk0.fbx",
+   "triangles": 7860,
+   "bbox_min_m": [
+    -0.1043,
+    -0.3042,
+    0.0062
+   ],
+   "bbox_max_m": [
+    0.3094,
+    0.3094,
+    0.1298
+   ],
+   "materials": [
+    "Hero_SM_V3_FloorCushion",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_V3_FloorCushion_Brk1",
+   "file": "SM_V3_FloorCushion_Brk1.fbx",
+   "triangles": 8388,
+   "bbox_min_m": [
+    -0.3094,
+    -0.3094,
+    0.0061
+   ],
+   "bbox_max_m": [
+    0.1461,
+    0.3067,
+    0.1299
+   ],
+   "materials": [
+    "Hero_SM_V3_FloorCushion",
+    "Break"
+   ]
+  }
+ ],
+ "note": "floor cushion: honey corduroy, piped, carry handle",
+ "kept_slots": [],
+ "triangles": 14500,
+ "bbox_min_m": [
+  -0.3094,
+  -0.3149,
+  0.0061
+ ],
+ "bbox_max_m": [
+  0.3094,
+  0.3094,
+  0.1299
+ ],
+ "materials": [
+  "Hero_SM_V3_FloorCushion"
+ ],
+ "lod_triangles": [
+  14500,
+  5074,
+  1740
+ ],
+ "ucx": 1
+}

@@ -1,0 +1,94 @@
+{
+ "name": "SM_K_Window",
+ "file": "SM_K_Window.fbx",
+ "set": "hero_living",
+ "break_class": "wood",
+ "textures": {
+  "C": "SM_K_Window/tex/T_SM_K_Window_C.png",
+  "N": "SM_K_Window/tex/T_SM_K_Window_N.png",
+  "R": "SM_K_Window/tex/T_SM_K_Window_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_K_Window_Brk0",
+   "file": "SM_K_Window_Brk0.fbx",
+   "triangles": 752,
+   "bbox_min_m": [
+    -0.7895,
+    -0.0568,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.7895,
+    0.0589,
+    1.0526
+   ],
+   "materials": [
+    "Hero_SM_K_Window",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_K_Window_Brk1",
+   "file": "SM_K_Window_Brk1.fbx",
+   "triangles": 988,
+   "bbox_min_m": [
+    -0.7579,
+    -0.0305,
+    0.0316
+   ],
+   "bbox_max_m": [
+    0.7579,
+    0.0168,
+    1.0211
+   ],
+   "materials": [
+    "Hero_SM_K_Window",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_K_Window_Brk2",
+   "file": "SM_K_Window_Brk2.fbx",
+   "triangles": 564,
+   "bbox_min_m": [
+    -0.8474,
+    -0.0589,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.8474,
+    -0.0463,
+    1.1105
+   ],
+   "materials": [
+    "Hero_SM_K_Window",
+    "Break"
+   ]
+  }
+ ],
+ "note": "window lining, mullion and transom with putty beads (no glass on purpose), architrave, brass stay and handle",
+ "kept_slots": [],
+ "triangles": 2304,
+ "bbox_min_m": [
+  -0.8474,
+  -0.0589,
+  0.0
+ ],
+ "bbox_max_m": [
+  0.8474,
+  0.0589,
+  1.1105
+ ],
+ "materials": [
+  "Hero_SM_K_Window"
+ ],
+ "lod_triangles": [
+  2304,
+  806,
+  276
+ ],
+ "ucx": 9
+}

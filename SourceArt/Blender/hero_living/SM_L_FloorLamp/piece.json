@@ -1,0 +1,99 @@
+{
+ "name": "SM_L_FloorLamp",
+ "file": "SM_L_FloorLamp.fbx",
+ "set": "hero_living",
+ "break_class": "metal",
+ "textures": {
+  "C": "SM_L_FloorLamp/tex/T_SM_L_FloorLamp_C.png",
+  "N": "SM_L_FloorLamp/tex/T_SM_L_FloorLamp_N.png",
+  "R": "SM_L_FloorLamp/tex/T_SM_L_FloorLamp_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_L_FloorLamp_Brk0",
+   "file": "SM_L_FloorLamp_Brk0.fbx",
+   "triangles": 1004,
+   "bbox_min_m": [
+    -0.1368,
+    -0.1368,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.1368,
+    0.1377,
+    1.7676
+   ],
+   "materials": [
+    "Hero_SM_L_FloorLamp",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_FloorLamp_Brk1",
+   "file": "SM_L_FloorLamp_Brk1.fbx",
+   "triangles": 1572,
+   "bbox_min_m": [
+    -0.1687,
+    -0.1963,
+    0.05
+   ],
+   "bbox_max_m": [
+    0.1732,
+    0.1039,
+    2.1596
+   ],
+   "materials": [
+    "Hero_SM_L_FloorLamp",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_FloorLamp_Brk2",
+   "file": "SM_L_FloorLamp_Brk2.fbx",
+   "triangles": 1920,
+   "bbox_min_m": [
+    -0.2236,
+    -0.2236,
+    1.7416
+   ],
+   "bbox_max_m": [
+    0.2236,
+    0.2236,
+    2.213
+   ],
+   "materials": [
+    "Hero_SM_L_FloorLamp",
+    "Break"
+   ]
+  }
+ ],
+ "note": "floor lamp: iron base on felt, pole with brass coupling, linen shade on wire hems (LampShade slot), bulb (Bulb slot), bead pull chain",
+ "kept_slots": [
+  "LampShade",
+  "Bulb"
+ ],
+ "triangles": 4496,
+ "bbox_min_m": [
+  -0.2236,
+  -0.2236,
+  0.0
+ ],
+ "bbox_max_m": [
+  0.2236,
+  0.2236,
+  2.213
+ ],
+ "materials": [
+  "Hero_SM_L_FloorLamp",
+  "LampShade",
+  "Bulb"
+ ],
+ "lod_triangles": [
+  4496,
+  1572,
+  539
+ ],
+ "ucx": 3
+}
