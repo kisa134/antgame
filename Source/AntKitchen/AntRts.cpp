@@ -251,7 +251,7 @@ void AAntSquadBot::ThinkRts(AAntCharacter* Ant, float Dt)
 			if (LeashFarDeadline <= 0.f || BossD < LeashBest - 400.f) { LeashBest = BossD; LeashFarDeadline = Now + 25.f; }
 			// Three seconds on one spot (busy, but going nowhere: round an edge, along a lip): walk off sideways, the same side
 			// each time, before the leash has to fetch it (twice per spot; KAN-27).
-			if (Now > LeashDeadline - 2.f && LeashDetours < 2 && UnstickTime <= 0.f)
+			if (Now > LeashDeadline - 2.f && LeashDetours < 2)
 			{
 				++LeashDetours;
 				const FVector ToBoss = (Boss->GetActorLocation() - Here).GetSafeNormal2D();
