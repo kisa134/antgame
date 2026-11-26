@@ -146,7 +146,7 @@ def wirerack(M):
     for sx in (-1, 1):
         for sy in (-1, 1):
             parts.append((tube("Leg", [(sx * (W - 12), sy * (D - 12), 14), (sx * (W - 12), sy * (D - 12), Hh + 6)], 9, M["chrome"], 2, 5), 0))
-            parts.append((lathe("Foot", [(0, 0), (16, 0), (17, 4), (14, 16), (10, 18), (0, 18)], M["rubber"], 20, 1, (sx * (W - 12), sy * (D - 12), 0)), 0))
+            parts.append((lathe("Foot", [(0, 0), (16, 0), (17, 4), (14, 16), (10, 18), (0, 18)], M["rubber"], 20, 0, (sx * (W - 12), sy * (D - 12), 0)), 0))   # (no subdivision: the foot stands on the floor)
     for sy in (-1, 1):
         parts.append((tube("Rail", [(-W + 12, sy * (D - 12), Hh + 6), (W - 12, sy * (D - 12), Hh + 6)], 7, M["chrome"], 2, 5), 0))
         parts.append((tube("Low", [(-W + 12, sy * (D - 12), 150), (W - 12, sy * (D - 12), 150)], 6, M["chrome"], 2, 5), 0))

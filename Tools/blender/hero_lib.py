@@ -193,6 +193,7 @@ def set_part(o, part):
 
 def join(objs, name):
     objs = [bake_mesh(o) if (o.type != "MESH" or o.modifiers) else o for o in objs]
+    cuts = [v for o in objs for v in o.get("cuts", [])]                 # (fracture planes of break pieces go with the join)
     for o in S().objects: o.select_set(False)
     for o in objs: o.select_set(True)
     bpy.context.view_layer.objects.active = objs[0]
@@ -200,6 +201,7 @@ def join(objs, name):
     if len(objs) > 1: bpy.ops.object.join()
     o = bpy.context.view_layer.objects.active
     o.name = name; o.data.name = name
+    if cuts: o["cuts"] = cuts
     return o
 
 def tris(o):
@@ -399,6 +401,7 @@ def cutter(co, no, size, jag, seed, sub=5, splinter=0.0, mat_name="Break", depth
     # box below the plane: top face on the plane, normal along no
     q = Vector((0, 0, 1)).rotation_difference(no)
     c.matrix_world = Matrix.Translation(Vector(co)) @ q.to_matrix().to_4x4() @ Matrix.Translation((0, 0, -0.5 * (depth or size))) @ Matrix.Diagonal((size, size, depth or size, 1))
+    c["cut"] = [co[0], co[1], co[2], no.x, no.y, no.z, abs(jag) * 2.5 + splinter * 6 + 0.002]   # where the fracture is (break_slots)
     return c
 
 def split(o, ct, keep_name, other_name):
@@ -422,23 +425,32 @@ def split(o, ct, keep_name, other_name):
             left = x.modifiers.get("cut")
             if left: x.modifiers.remove(left)                       # (a refused apply leaves the modifier on)
             if (len(x.data.polygons), len(x.data.vertices)) != before: break
+    for x in (o, b): x["cuts"] = list(x.get("cuts", [])) + list(ct["cut"])
     o.name = keep_name
     bpy.data.objects.remove(ct)
     return o, b
+
+def is_fracture(o, p):
+    """a face on one of the cut planes of this piece (within the ragged band) and facing along it: a fresh fracture face"""
+    c = o.get("cuts", [])
+    for k in range(0, len(c) - 6, 7):
+        n = Vector(c[k + 3:k + 6])
+        if abs((p.center - Vector(c[k:k + 3])).dot(n)) < c[k + 6] and abs(p.normal.dot(n)) > 0.5:
+            return True
+    return False
 
 def break_slots(o):
     """slot 0 = the surface (Hero_<name>), slot 1 = Break (fracture faces)"""
     names = [m.name if m else "" for m in o.data.materials]
     brk = [i for i, n in enumerate(names) if n.startswith("Break")]
     hero = [i for i, n in enumerate(names) if n.startswith("Hero_")]
-    surf = o.data.attributes.get("surf")
-    for i, p in enumerate(o.data.polygons):
-        cut = (surf is not None and surf.data[i].value == 0) or p.material_index in brk
-        p.material_index = 1 if cut else 0
+    flags = [p.material_index in brk or is_fracture(o, p) for p in o.data.polygons]
     if not bpy.data.materials.get("Break"): plastic("Break", (0.8, 0.8, 0.78), 0.7)
     ms = [bpy.data.materials[names[hero[0]]] if hero else o.data.materials[0], bpy.data.materials.get("Break")]
-    o.data.materials.clear()
+    o.data.materials.clear()                                      # (resets the face indices: set them after)
     for m in ms: o.data.materials.append(m)
+    for p, cut in zip(o.data.polygons, flags): p.material_index = 1 if cut else 0
+    print("HERO break %s: %d fracture faces of %d" % (o.name, sum(flags), len(flags)))
     for u in [u for u in o.data.uv_layers if u.name != "UV0"]:     # (the cutter brings its own UV layer: UV0 must stay channel 0)
         o.data.uv_layers.remove(u)
     return o
