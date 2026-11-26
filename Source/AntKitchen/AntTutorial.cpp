@@ -10,6 +10,7 @@
 #include "AntSnowball.h"
 #include "AntTrail.h"
 #include "AntRts.h"
+#include "AntSquad.h"
 #include "AntBotController.h"
 #include "AntCarry.h"
 #include "AntCloth.h"
@@ -990,6 +991,16 @@ void AAntTutorial::Stage(int32 N)
 		break;
 	}
 	case BRts:
+		// The order is given by looking at the cheese: an ant still in the nest (home from the trail) is put out on the kitchen
+		// floor facing it, or it never sees what it is told to aim at.
+		for (FAntTutPlayer& P : Players)
+		{
+			AAntCharacter* A = AntOf(P);
+			if (!A || !A->IsInNest()) { continue; }
+			A->LetGo();
+			A->ApplyTeleport(PStart);
+			if (APlayerController* PC = Cast<APlayerController>(A->GetController())) { PC->ClientSetRotation(FRotator(-8.f, (PCheese - PStart).Rotation().Yaw, 0.f)); }
+		}
 		for (FAntTutPlayer& P : Players) { AntRts::Spawn(P.PS, 4, 0); }
 		Target = SpawnFood(NCheese, PCheese);
 		Mark(PCheese, TEXT("Сыр"), TEXT("Cheese"), 3);
@@ -1114,6 +1125,17 @@ void AAntTutorial::Cleanup(int32 N)
 	UWorld* W = GetWorld();
 	switch (N)
 	{
+	case BCarry:
+		// Co-op: a partner still carrying a crumb when the beat closes kept it into «Раз-два, взяли!» and could not grab the
+		// chocolate (packaged co-op run 26.11). The crumbs of the beat go.
+		for (FAntTutPlayer& P : Players)
+		{
+			AAntCharacter* A = AntOf(P);
+			AKitchenLoot* L = nullptr;
+			if (A) { L = A->Carrying; }
+			if (L && L->LootName == NCrumb) { A->LetGo(); L->Destroy(); UE_LOG(LogTemp, Display, TEXT("ANTTUT %s still carried a crumb: dropped"), P.PS ? *P.PS->GetPlayerName() : TEXT("?")); }
+		}
+		break;
 	case BCombat:
 		for (const TWeakObjectPtr<AActor>& A : Spawned) { if (AAntCharacter* C = Cast<AAntCharacter>(A.Get())) { C->Destroy(); } }
 		for (TActorIterator<AAntCharacter> It(W); It; ++It) { if (It->Creature == 1 && !It->IsPlayerControlled()) { It->Destroy(); } }   // the fly
@@ -1315,6 +1337,17 @@ void AAntTutorial::Check(float Dt)
 			{
 				if (SP->Selected.Num() >= 2) { PlayerStep(P, 0, 1); }
 				for (const FAntRtsTask& T : SP->Tasks) { if (T.Order == AntTask::Haul && T.Target == Target.Get()) { PlayerStep(P, 0, 1); PlayerStep(P, 1, 1); } }
+			}
+			// The order step ([Q]) went unnoticed at the 24.11 playtest: with no order 8 s into it, the sergeant says it again
+			// (then every 14 s); the HUD dims round the squad panel at the same time (QOrderCard).
+			if (P.Count.IsValidIndex(1) && P.Count[0] >= 1 && P.Count[1] < 1)
+			{
+				P.Aux += Dt;
+				if (P.Aux > 8.f)
+				{
+					P.Aux = -6.f;
+					if (&P == &Players[0] && LineQueue.Num() == 0) { Say(LRtsOrder, 1, true); UE_LOG(LogTemp, Display, TEXT("ANTTUT the squad order is said again (no [Q] yet)")); }
+				}
 			}
 			break;
 		case BFast:
@@ -2089,16 +2122,33 @@ void AAntTutorial::AutoPlayFor(int32 Idx, float Dt)
 		}
 		break;
 	case BRts:
+		if (!Done(1)) { Stop(); }   // (the walk home of the beats before is still on: the ant stays where the beat put it, facing the cheese)
 		if (!Done(1) && bTick)
 		{
 			AAntSnowball* Snow = AAntSnowball::Get(W);
 			FAntSnowPlayer* SP = Snow ? Snow->For(P.PS) : nullptr;
 			if (SP && Target.IsValid())
 			{
-				SP->Selected.Reset();
-				for (AAntCharacter* A : SP->Squad) { if (A) { SP->Selected.Add(A); } }
-				AntRts::Assign(*SP, SP->Squad, AntTask::Haul, Target.Get(), Target->GetActorLocation());
-				Log(FString::Printf(TEXT("box-select %d, right-click: haul the cheese"), SP->Squad.Num()));
+				if (!Done(0))
+				{
+					SP->Selected.Reset();
+					for (AAntCharacter* A : SP->Squad) { if (A) { SP->Selected.Add(A); } }
+					Log(FString::Printf(TEXT("box-select %d"), SP->Squad.Num()));
+				}
+				else if (bLead && BeatClock < 18.f)
+				{
+					// The [Q] step waits like a player who missed it (KAN-33): the order card, then the dim round the squad panel and
+					// the sergeant again; pictures of both. Then the real [Q] path (AntSquad::Order -> AntRts: the load near the aim).
+					if (!(ShotMask & 64) && BeatClock > 9.5f) { ShotMask |= 64; Shot(TEXT("qcard")); }
+					if (!(ShotMask & 128) && BeatClock > 15.5f) { ShotMask |= 128; Shot(TEXT("qdim")); }
+					if (BeatClock > 13.f) { Face(Target->GetActorLocation()); }
+				}
+				else
+				{
+					Face(Target->GetActorLocation());
+					AntSquad::Order(Me, AntSquad::Haul, Target->GetActorLocation());
+					Log(FString::Printf(TEXT("[Q] at the cheese (the squad-key path): tasks %d"), SP->Tasks.Num()));
+				}
 			}
 		}
 		break;
@@ -2323,8 +2373,87 @@ namespace
 	}
 	const TCHAR* Portrait(uint8 Voice) { return Voice == 2 ? TEXT("Portraits/T_UI_PorQueen") : Voice == 1 ? TEXT("Icons/T_UI_Icon_Radio") : TEXT("Portraits/T_UI_PorZhvalov"); }
 
-	struct FLocalSeen { int16 Line = -1; float LineAt = 0.f; uint8 Phase = 255; uint8 Beat = 255; float PayAt = -100.f; float ChapterAt = -100.f; bool bSaved = false; float DoneAt = -1.f; bool bLeft = false; int32 StepId = -1; int32 LastSum = -1; float StepAt = 0.f; float ProgAt = 0.f; };
+	struct FLocalSeen { int16 Line = -1; float LineAt = 0.f; uint8 Phase = 255; uint8 Beat = 255; float PayAt = -100.f; float ChapterAt = -100.f; bool bSaved = false; float DoneAt = -1.f; bool bLeft = false; int32 StepId = -1; int32 LastSum = -1; float StepAt = 0.f; float ProgAt = 0.f; float QMissAt = -100.f; float QPressAt = -100.f; };
 	TMap<TWeakObjectPtr<APlayerController>, FLocalSeen> GSeen;
+
+	/**
+	 * The squad order step (beat «Командир», [Q]): playtest 24.11 — the key went by unnoticed. For the whole step: the key on
+	 * screen; the squad panel it changes (left, under the mass meter, AntRts::DrawHud) framed and labelled; the aim told (is the
+	 * crosshair on the cheese, a line to it if not); a Q that missed named; after 6 s with no order the screen dims round the
+	 * panel and the card grows (the sergeant says the order again on the server: Check, BRts).
+	 */
+	void QOrderCard(AHUD* Hud, UCanvas* Cv, const AAntTutorial* T, APlayerController* PC, FLocalSeen& Seen, float Now)
+	{
+		const float K = GK, SW = Cv->ClipX, SH = Cv->ClipY;
+		const float Pu = 0.5f + 0.5f * FMath::Sin(Now * 6.f);
+		const float Waited = Now - FMath::Max(Seen.StepAt, Seen.QPressAt);
+		const UAntRtsInput* In = UAntRtsInput::Of(PC);
+		const bool bCursor = In && In->bRtsMode;
+		// the aim: where the crosshair order lands (AAntPlayerController::SquadHaul -> AntRts: loot within 260 of the point)
+		const bool bMark = T->Marks.Num() > 0;
+		const FVector CheeseAt = bMark ? FVector(T->Marks[0].At) : FVector::ZeroVector;
+		bool bOnCheese = false;
+		if (const AAntPlayerController* APC = Cast<AAntPlayerController>(PC)) { bOnCheese = bMark && FVector::Dist(APC->CrosshairPoint(), CheeseAt) < 240.f; }
+		if (PC->WasInputKeyJustPressed(EKeys::Q))
+		{
+			Seen.QPressAt = Now;
+			if (!bOnCheese && !bCursor) { Seen.QMissAt = Now; }
+		}
+		// the squad panel (AntRts::DrawHud: «ОТРЯД n · за мной m», the jobs, «Приказ: ...» at x 24, y 200 of 1080)
+		const float PX = 12.f * K, PY = 190.f * K, PW = 400.f * K, PH = 84.f * K;
+		// the dim after 6 s without the order: four rects round the panel, so the panel stays lit
+		const float Dim = FMath::Clamp((Waited - 6.f) / 0.6f, 0.f, 1.f) * 0.5f;
+		if (Dim > 0.f)
+		{
+			const FLinearColor D(0.f, 0.f, 0.f, Dim);
+			AntUiCanvas::Rect(Cv, 0.f, 0.f, SW, PY, D);
+			AntUiCanvas::Rect(Cv, 0.f, PY + PH, SW, SH - PY - PH, D);
+			AntUiCanvas::Rect(Cv, 0.f, PY, PX, PH, D);
+			AntUiCanvas::Rect(Cv, PX + PW, PY, SW - PX - PW, PH, D);
+		}
+		Frame(Cv, PX, PY, PW, PH, (2.f + 3.f * Pu) * K, WithA(C::Amber, 0.5f + 0.5f * Pu));
+		{
+			float W0 = 0.f;
+			KeyCap(Cv, TEXT("Q"), PX + PW + 14.f * K, PY + 8.f * K, 18.f, W0);
+			Text(Cv, AntTut::Tx(TEXT("← твой отряд: здесь появится приказ «тащить»"), TEXT("← your squad: the «haul» order shows up here")), PX + PW + 22.f * K + W0, PY + 10.f * K, EFont::Bold, 18.f * K, C::Honey);
+		}
+		// the cheese: a pointer on top of the dim, and a line from the crosshair while the aim is off it
+		if (bMark)
+		{
+			FVector CamLoc; FRotator CamRot;
+			PC->GetPlayerViewPoint(CamLoc, CamRot);
+			if (FVector::DotProduct(CamRot.Vector(), CheeseAt - CamLoc) > 0.f)
+			{
+				const FVector Sp = Hud->Project(CheeseAt, false);
+				const FVector2D P(FMath::Clamp((float)Sp.X, 40.f * K, SW - 40.f * K), FMath::Clamp((float)Sp.Y, 40.f * K, SH - 40.f * K));
+				const FLinearColor Col = bOnCheese ? C::Leaf : C::Honey;
+				Frame(Cv, P.X - 22.f * K, P.Y - 22.f * K, 44.f * K, 44.f * K, (2.f + 2.f * Pu) * K, Col);
+				if (!bOnCheese && !bCursor) { Cv->K2_DrawLine(FVector2D(SW * 0.5f, SH * 0.5f), P, 2.f * K, WithA(Col, 0.5f + 0.4f * Pu)); }
+			}
+		}
+		// the card: the key, what it does, the aim state
+		const float Grow = Dim > 0.f ? 1.25f : 1.f;
+		const float BW = 640.f * K * Grow, BH = 168.f * K * Grow, BX = SW * 0.5f - BW * 0.5f, BY = SH * 0.58f - (Grow - 1.f) * 60.f * K;
+		Glass(Cv, BX, BY, BW, BH, 0.9f);
+		Frame(Cv, BX, BY, BW, BH, (2.f + 3.f * Pu) * K, WithA(bOnCheese ? C::Leaf : C::Amber, 0.5f + 0.5f * Pu));
+		{
+			// a big square keycap of its own (KeyCap's text overruns the cap at this size)
+			const float Cap = 62.f * K * Grow;
+			const float CX0 = SW * 0.5f - Cap * 0.5f, CY0 = BY + 12.f * K;
+			AntUiCanvas::Rect(Cv, CX0, CY0, Cap, Cap, WithA(C::Paper, 0.97f));
+			AntUiCanvas::Rect(Cv, CX0, CY0 + Cap - 5.f * K, Cap, 5.f * K, WithA(C::Cocoa, 0.7f));
+			Frame(Cv, CX0 - 3.f * K, CY0 - 3.f * K, Cap + 6.f * K, Cap + 6.f * K, (1.5f + 2.f * Pu) * K, WithA(C::Amber, 0.6f + 0.4f * Pu));
+			Text(Cv, TEXT("Q"), SW * 0.5f, CY0 + Cap * 0.14f, EFont::Bold, Cap * 0.6f, C::Graphite, 1);
+		}
+		Text(Cv, AntTut::Tx(TEXT("ПРИКАЗ ОТРЯДУ: ТАЩИ СЫР"), TEXT("SQUAD ORDER: HAUL THE CHEESE")), SW * 0.5f, BY + BH - 82.f * K * Grow, EFont::Bold, 26.f * K * Grow, C::Honey, 1);
+		FString Aim;
+		FLinearColor AimC = C::Sugar;
+		if (Now - Seen.QMissAt < 2.5f) { Aim = AntTut::Tx(TEXT("Мимо! [Q] отдаёт приказ туда, куда смотрит прицел: наведи центр экрана на сыр"), TEXT("Missed! [Q] orders the squad where the crosshair points: put the screen centre on the cheese")); AimC = C::Jam; }
+		else if (bCursor) { Aim = AntTut::Tx(TEXT("Курсор: наведи его на сыр и жми [Q] (или [ПКМ] по сыру)"), TEXT("Cursor mode: point it at the cheese and press [Q] (or [RMB] on it)")); }
+		else if (bOnCheese) { Aim = AntTut::Tx(TEXT("Прицел на сыре — жми [Q]!"), TEXT("Crosshair on the cheese — press [Q]!")); AimC = C::Leaf; }
+		else { Aim = AntTut::Tx(TEXT("Наведи прицел (центр экрана) на сыр, потом [Q]"), TEXT("Put the crosshair (screen centre) on the cheese, then [Q]")); }
+		TextFit(Cv, Aim, BX + 20.f * K, BY + BH - 44.f * K * Grow, BW - 40.f * K, EFont::Bold, 20.f * K * Grow, AimC);
+	}
 
 	/** The graduation's pages 1..3 (page 0 is the rank and the medal): the Queen's gift, the caste perk, what opens now. */
 	void DebriefPageDraw(UCanvas* Cv, const AAntTutorial* T, float K, float SW, float SH)
@@ -2537,7 +2666,9 @@ namespace AntTut
 			const int32 SId = (int32)T->BeatNo * 16 + FMath::Max(Cur, 0);
 			if (SId != Seen.StepId) { Seen.StepId = SId; Seen.StepAt = Now; Seen.ProgAt = Now; Seen.LastSum = Sum; }
 			if (Sum != Seen.LastSum) { Seen.LastSum = Sum; Seen.ProgAt = Now; }
-			const bool bShowKey = Cur >= 0 && B.Steps[Cur].Keys && *B.Steps[Cur].Keys && (Now - Seen.StepAt < 9.f || Now - Seen.ProgAt > 8.f);
+			const bool bQStep = T->BeatNo == BRts && Cur == 1;   // the squad order: its own card below (KAN-33)
+			const bool bShowKey = !bQStep && Cur >= 0 && B.Steps[Cur].Keys && *B.Steps[Cur].Keys && (Now - Seen.StepAt < 9.f || Now - Seen.ProgAt > 8.f);
+			if (bQStep) { QOrderCard(Hud, Cv, T, PC, Seen, Now); }
 			if (bShowKey)
 			{
 				const float Pu = 0.5f + 0.5f * FMath::Sin(Now * 6.f);
