@@ -1,5 +1,6 @@
 ﻿#include "AntRun.h"
 #include "AntTutorial.h"
+#include "AntLab.h"
 #include "AntState.h"
 #include "AntWreck.h"
 #include "AntLife.h"
@@ -790,6 +791,8 @@ void AAntKitchenGameMode::RunBeginPlay()
 		}
 	};
 	// Things ants can switch on to make noise: the microwave (start button on its front) and the TV (the console on the stand).
+	if (!AntLab::Get())   // (KAN-37 lab: not in the grey box)
+	{
 	SpawnBox(0, FVector(2290.f, 3985.f, 1960.f));
 	FVector Console(12500.f, -8250.f, 1160.f);
 	if (const FKitchenArtInst* I = KitchenArt::Enabled() ? KitchenArt::Find(TEXT("SM_L_GameConsole")) : nullptr)
@@ -797,6 +800,7 @@ void AAntKitchenGameMode::RunBeginPlay()
 		Console = FVector(I->Loc) + FVector(0.f, 0.f, 60.f);
 	}
 	SpawnBox(1, Console);
+	}
 	SpawnHighProps();
 
 	// Dev: -AntDo="12:tp 4500 2900 60;14:pull;20:bots 2;30:win" runs commands at those seconds (see DevCommand).
@@ -825,6 +829,10 @@ void AAntKitchenGameMode::RunBeginPlay()
 
 void AAntKitchenGameMode::SpawnHighProps()
 {
+	if (AntLab::Get())
+	{
+		return;   // KAN-37 lab: the kitchen's high props have no place in the grey box
+	}
 	// Heavy things near an edge, up high: lean on one and it goes over. On the Human's head it stuns him; on a fire ant it is the end.
 	struct FDef { const TCHAR* Name; EAntShape Shape; FVector Loc; FVector Size; FLinearColor Color; float Mass; };
 	const FDef Defs[] =
@@ -854,7 +862,7 @@ void AAntKitchenGameMode::SpawnHighProps()
 
 void AAntKitchenGameMode::SpawnContainerLoot()
 {
-	if (!bHeist || !KitchenArt::Enabled())
+	if (!bHeist || !KitchenArt::Enabled() || AntLab::Get())
 	{
 		return;
 	}
@@ -1050,7 +1058,7 @@ void AAntKitchenGameMode::RunTick()
 		CompleteOrder(AntOrder::Overfill);
 	}
 	CheckTrapped();
-	if (!Run.bEventDone && Run.EventPlanned != 0 && Gone >= Run.EventAt && GS->ShiftStage < 3)
+	if (!Run.bEventDone && Run.EventPlanned != 0 && Gone >= Run.EventAt && GS->ShiftStage < 3 && !AntLab::Get())   // (KAN-37 lab: no kitchen events)
 	{
 		StartEvent(Run.EventPlanned);
 	}
@@ -1561,6 +1569,10 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 	if (A.Num() == 0)
 	{
 		return;
+	}
+	if (AntLab::DevCommand(this, A))
+	{
+		return;   // KAN-37: lab info | check | open/shut <hatch|all> | tp ... | near | grab | ceiling 0|1 (AntLab.cpp)
 	}
 	if (AntTut::DevCommand(this, A))
 	{

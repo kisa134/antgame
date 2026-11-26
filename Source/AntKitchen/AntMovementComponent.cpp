@@ -119,6 +119,10 @@ bool UAntMovementComponent::IsStickable(const FHitResult& Hit) const
 		if (L) { return !L->IsCarried() && !L->bHeld; }
 		return C->GetOwner() && C->GetOwner()->IsA<AKitchenProp>();
 	}
+	if (C->ComponentHasTag(TEXT("AntNoClimb")))
+	{
+		return false;   // KAN-37 lab: smooth walls, lacquered furniture, glass (AntLab.h); only the kitchen's own pieces never carry it
+	}
 	return T == ECC_WorldStatic || T == ECC_AntClimbable;
 }
 

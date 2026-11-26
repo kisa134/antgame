@@ -106,6 +106,9 @@ public:
 	 *  table row (LevelV3::FindSeed) to its own world. */
 	UPROPERTY(ReplicatedUsing = OnRep_LevelSeed) int32 LevelSeedKey = -1;
 	UFUNCTION() void OnRep_LevelSeed();
+	/** KAN-37: the level lab variant of this world ('A'.., 0 = the kitchen). Set by the host, applied on every machine (AntLab.h). */
+	UPROPERTY(ReplicatedUsing = OnRep_LabVariant) uint8 LabVariant = 0;
+	UFUNCTION() void OnRep_LabVariant();
 	/** Server: use this validated seed of this tier from now on (and on this machine at once). */
 	void SetLevelSeed(int32 Seed, int32 Tier);
 	int32 LevelSeed() const { return LevelSeedKey < 0 ? -1 : LevelSeedKey / 8; }

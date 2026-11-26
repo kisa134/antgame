@@ -25,6 +25,7 @@
 #include "KitchenInteractables.h"
 #include "AntRun.h"
 #include "AntRaid.h"
+#include "AntLab.h"
 
 AHumanAIController::AHumanAIController()
 {
@@ -76,7 +77,7 @@ AAntCharacter* AHumanAIController::PickTarget(const AHumanCharacter* H) const
 		}
 		// Past the line of the cabinet fronts he sees only what is in plain sight from where he stands (the back of the worktop,
 		// the tap, the spice shelves, the rail, the cabinet tops).
-		if (AL.Y > 4750.f && !NpcWorld::CanSee(GetWorld(), Eyes, AL + FVector(0.f, 0.f, 10.f)))
+		if ((AL.Y > 4750.f || AntLab::Get()) && !NpcWorld::CanSee(GetWorld(), Eyes, AL + FVector(0.f, 0.f, 10.f)))   // (KAN-37 lab: walls everywhere: always by sight)
 		{
 			continue;
 		}

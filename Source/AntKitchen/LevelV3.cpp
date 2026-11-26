@@ -1,4 +1,5 @@
 ﻿#include "LevelV3.h"
+#include "AntLab.h"
 #include "KitchenArt.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
@@ -12,6 +13,10 @@ namespace LevelV3
 
 bool Enabled()
 {
+	if (AntLab::Get())
+	{
+		return false;   // KAN-37: a lab variant has no seeds, districts or v3 tables
+	}
 	static int32 State = -1;
 	if (State < 0)
 	{

@@ -11,6 +11,7 @@
 #include "LevelV3.h"
 #include "AntVersus.h"
 #include "AntTutorial.h"
+#include "AntLab.h"
 #include "GenericPlatform/GenericPlatformProcess.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
@@ -913,6 +914,19 @@ void SAntUiMenu::PaintCoop(FUiDraw& D) const
 	{
 		const bool bVs = AntVersus::Wanted();
 		Button(DC, TEXT("c.mode"), bVs ? L(TEXT("coop.mode.versus")) : L(TEXT("coop.mode.raid")), X0 + 28.f, Y0 + CH - 176.f, CW - 56.f, 64.f, []() { AntVersus::Wanted() = !AntVersus::Wanted(); }, false, true, bVs ? TEXT("Human") : TEXT("Squad"));
+	}
+	// KAN-37: the level lab. Off -> A -> ... -> off: the next game (hosted, listen or solo) is that grey-box flat for everybody.
+	{
+		const TCHAR Lab = AntLab::Wanted();
+		const FString Label = Lab ? FString::Printf(TEXT("Лаборатория: %c «%s»"), Lab, *AntLab::VariantName(Lab)) : FString(TEXT("Лаборатория уровней: выкл"));
+		Button(DC, TEXT("c.lab"), Label, X0 + 28.f, Y0 + CH - 256.f, CW - 56.f, 64.f, []()
+		{
+			const FString All = AntLab::Available();
+			const TCHAR Now = AntLab::Wanted();
+			int32 At = INDEX_NONE;
+			All.FindChar(Now, At);
+			AntLab::SetWanted(Now == 0 ? (All.Len() > 0 ? All[0] : (TCHAR)0) : (All.IsValidIndex(At + 1) ? All[At + 1] : (TCHAR)0));
+		}, false, true, TEXT("Lens"));
 	}
 	// 1: host over Steam.
 	Button(DC, TEXT("c.host"), L(TEXT("coop.host.btn")), X0 + 28.f, Y0 + CH - 96.f, CW - 56.f, 64.f, [S]() { if (S) { S->Host(); } }, true, bSteam, TEXT("Ready"));
