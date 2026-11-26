@@ -1,20 +1,30 @@
-# KAN-36: the food materials of the V2 models (Tools/food/food_v2.py), made in the editor without hand work.
-#   /Game/FoodV2/M_FoodV2        the outside of a food: baked colour / normal / AO-rough, the baked colour of each visible state
-#                                (toasted, burnt, spoiled, frozen: roughness in alpha), soaked and dirty on top, jelly = subsurface;
-#                                the deformation layer (world position offset): sag, tip droop, squash, stretch, wobble, melt, bite
-#   /Game/FoodV2/M_FoodV2_Inner  the faces of a break: the inner strip (cake layers, flesh...) read by height in the piece's own space,
-#                                the same states as tints, the same deformation
-# Everything per piece comes from custom primitive data (AntState.h 0..2: wet, char, dirt; AntFood.h from 12 on), so there is no
-# material instance per piece and the default (all zero) is the fresh food at rest.
+# KAN-36: the food materials, made in the editor without hand work.
+#   /Game/FoodV2/M_FoodV2        the new models (-AntFoodV2Models, new foods only): baked colour / normal / AO-rough, the baked colour of
+#                                each visible state (toasted, burnt, spoiled, frozen: roughness in alpha), soaked and dirty on top,
+#                                jelly = subsurface; the deformation layer (world position offset)
+#   /Game/FoodV2/M_FoodV2_Inner  the faces of a break of a new model: the inner strip read by height, the same states, the same deformation
+#   THE OLD MODELS (the owner's decision 26.11: every food that had a model keeps it) get the same deformation through a copy of their
+#   own master with the deformation layer added - built by the very same code as the master, so the look at rest is the same:
+#   /Game/Map4/Materials/M_M4_Food      = M_M4 + deformation      (SM_M4_Crumb, Pea, Speck... in a look: MI_M4_Paint, MI_M4_<Look>)
+#   /Game/Map4/Materials/M_M4_UV_Food   = M_M4_UV + deformation   (SM_M4_AppleSlice, BirthdayCake, Caramel, CondensedMilk, Cookie...)
+#   /Game/Meshy/M_MeshyPBR_Food         = M_MeshyPBR + the state layer of M_M4_UV + deformation (SM_Food_CakePiece, CheeseChunk,
+#                                         Chocolate, Gummy, GummyBearGold, HoneyDrop, SugarCube)
+#   AntFood (Source/AntKitchen/AntFood.cpp) swaps an old food's instance on the visible component for a shared dynamic instance of the
+#   _Food master with the old instance's parameters copied (one per old instance, not per piece).
+# Per piece everything comes from custom primitive data: the states are AntState's (AntState.h: 0 wet, 1 char = toast 0..0.35 /
+# burnt above, 2 dirt, 6 frost, 12 spoil; 16..35 its spots), the deformation is packed into 13..15 (AntFood.h CpdDeform0).
 # Run: UnrealEditor-Cmd.exe AntKitchen.uproject -run=pythonscript -script=Tools/food/make_food_materials.py
-import unreal
+#   FOODMAT_ONLY=old | v2   builds only that part
+import unreal, os
 EAL = unreal.EditorAssetLibrary
 MEL = unreal.MaterialEditingLibrary
 AT = unreal.AssetToolsHelpers.get_asset_tools()
+PROJ = unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_dir())
 DIR = "/Game/FoodV2"
+ONLY = os.environ.get("FOODMAT_ONLY", "")
 
 # custom primitive data (AntState.h / AntFood.h)
-CPD = dict(Wet=0, Char=1, Dirt=2, Toast=12, Frozen=13, Spoil=14, Bite=15, Sag=16, Tip=17, TipSign=18, Squash=19, Stretch=20, StretchAxis=21, Wobble=22, Melt=23)
+CPD = dict(Wet=0, Char=1, Dirt=2, Frozen=6, Spoil=12, D0=13, D1=14, D2=15)
 
 def fresh(name):
     full = DIR + "/" + name
@@ -50,7 +60,8 @@ def tex(m, name, default, x, y, kind="color", uv=None):
     d = unreal.load_asset(default)
     if d: t.set_editor_property("texture", d)
     st = {"color": unreal.MaterialSamplerType.SAMPLERTYPE_COLOR, "normal": unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL,
-          "masks": unreal.MaterialSamplerType.SAMPLERTYPE_MASKS, "linear": unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_COLOR}[kind]
+          "masks": unreal.MaterialSamplerType.SAMPLERTYPE_MASKS, "linear": unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_COLOR,
+          "gray": unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_GRAYSCALE}[kind]
     t.set_editor_property("sampler_type", st)
     t.set_editor_property("sampler_source", unreal.SamplerSourceMode.SSM_WRAP_WORLD_GROUP_SETTINGS)   # one shared sampler
     if uv is not None: MEL.connect_material_expressions(uv, "", t, "UVs")
@@ -62,8 +73,24 @@ def mask(m, src, pin, r, g, b, a, x, y):
     MEL.connect_material_expressions(src, pin, cm, "")
     return cm
 
-# the deformation (local space, cm of the mesh): no soft bodies, a few numbers per component
+# The deformation (local space, cm of the mesh): no soft bodies, a few numbers per component, packed by AntFood::PackDeform into
+# custom primitive data 13..15 (exact integers in a float):
+#   D0 = Sag*1023 * 1024 + Tip*1023;  D1 = Stretch*1023 * 1024 + Squash*1023;
+#   D2 = Wobble*255 * 65536 + Melt*255 * 256 + Bite*63 * 4 + Axis * 2 + (TipSign < 0)
+# All zero: no offset at all (a food at rest looks exactly like its model).
 WPO = r"""
+[branch] if (D0 + D1 + D2 <= 0.0)
+{
+    return float3(0, 0, 0);
+}
+float Sag = floor(D0 / 1024.0); float Tip = (D0 - Sag * 1024.0) / 1023.0; Sag /= 1023.0;
+float Stretch = floor(D1 / 1024.0); float Squash = (D1 - Stretch * 1024.0) / 1023.0; Stretch /= 1023.0;
+float wq = floor(D2 / 65536.0); float rr = D2 - wq * 65536.0;
+float mq = floor(rr / 256.0); rr -= mq * 256.0;
+float bq = floor(rr / 4.0); rr -= bq * 4.0;
+float StretchAxis = floor(rr / 2.0);
+float TipSign = (rr - StretchAxis * 2.0) > 0.5 ? -1.0 : 1.0;
+float Wobble = wq / 255.0, Melt = mq / 255.0, Bite = bq / 63.0;
 float3 h = max((BMax - BMin) * 0.5, 0.01);
 float3 c = (BMax + BMin) * 0.5;
 float3 q = LP - c;
@@ -76,10 +103,12 @@ float3 across = q - ax * dot(q, ax);
 o += ax * dot(q, ax) * Stretch;
 o += across * (1.0 / sqrt(1.0 + Stretch) - 1.0);
 o -= across * 0.35 * Stretch * saturate(1.0 - al * al);
-// sag: held at both ends the middle hangs; held at one end the far end droops (and comes in a little: it bends, not stretches)
-o.z -= h.z * 1.6 * Sag * saturate(1.0 - p.x * p.x);
+// sag: held at both ends the middle hangs; held at one end the far end droops (and comes in a little: it bends, not stretches).
+// The bend keeps its lowest point where the model's was (the ends / the held end come up instead of the rest going down): a
+// piece dragged along the floor would otherwise bend into the floor and nothing would show.
+o.z += h.z * 1.6 * Sag * min(p.x * p.x, 1.0);
 float t = saturate((p.x * TipSign + 1.0) * 0.5);
-o.z -= h.x * Tip * t * t * 1.1;
+o.z += h.x * Tip * (1.0 - t * t) * 1.1;
 o.x -= TipSign * h.x * Tip * t * t * 0.28;
 // squash and melt: the top comes down, the foot spreads
 float zb = saturate((LP.z - BMin.z) / max(BMax.z - BMin.z, 0.01));
@@ -98,11 +127,14 @@ o += normalize(c - LP + 1e-3) * k * min(h.x, h.z) * 0.7;
 return o;
 """
 
+# the new models' colour: the baked state textures by the shared layer's values (char 0..0.35 is toasted, above that burnt)
 COLOR = r"""
+float Toast = saturate(Char / 0.35);
+float Burnt = saturate((Char - 0.35) / 0.65);
 float3 c = C.rgb;
 float r = R.g;
-c = lerp(c, T.rgb, saturate(Toast));  r = lerp(r, T.a, saturate(Toast));
-c = lerp(c, B.rgb, saturate(Char));   r = lerp(r, B.a, saturate(Char));
+c = lerp(c, T.rgb, Toast);            r = lerp(r, T.a, Toast);
+c = lerp(c, B.rgb, Burnt);            r = lerp(r, B.a, Burnt);
 c = lerp(c, S.rgb, saturate(Spoil));  r = lerp(r, S.a, saturate(Spoil));
 c = lerp(c, F.rgb, saturate(Frozen)); r = lerp(r, F.a, saturate(Frozen));
 // soaked / melting wet: darker and glossy
@@ -125,10 +157,12 @@ return float2(u, 1.0 - saturate(hh));
 """
 
 INNER_COLOR = r"""
+float Toast = saturate(Char / 0.35);
+float Burnt = saturate((Char - 0.35) / 0.65);
 float3 c = C.rgb;
 float r = 0.8;
-c = lerp(c, c * float3(0.80, 0.55, 0.30), saturate(Toast));
-c = lerp(c, c * float3(0.20, 0.15, 0.12), saturate(Char));
+c = lerp(c, c * float3(0.80, 0.55, 0.30), Toast);
+c = lerp(c, c * float3(0.20, 0.15, 0.12), Burnt);
 c = lerp(c, lerp(c, float3(0.62, 0.66, 0.50), 0.55), saturate(Spoil));
 c = lerp(c, float3(0.86, 0.93, 1.0), saturate(Frozen) * 0.55);
 c *= lerp(1.0, 0.6, saturate(Wet)); r = lerp(r, 0.2, saturate(Wet));
@@ -137,22 +171,29 @@ return float4(c, r);
 """
 
 def wpo(m, X, Y):
+    """the deformation layer on m's world position offset (reads custom primitive data 13..15)"""
     lp = MEL.create_material_expression(m, unreal.MaterialExpressionLocalPosition, X, Y)
     lb = MEL.create_material_expression(m, unreal.MaterialExpressionObjectLocalBounds, X, Y + 100)
     tm = MEL.create_material_expression(m, unreal.MaterialExpressionTime, X, Y + 220)
-    names = ["Sag", "Tip", "TipSign", "Squash", "Stretch", "StretchAxis", "Wobble", "Melt", "Bite"]
-    w = custom(m, WPO, ["LP", "BMin", "BMax", "Time"] + names, X + 600, Y, "food deformation (local)")
+    w = custom(m, WPO, ["LP", "BMin", "BMax", "Time", "D0", "D1", "D2"], X + 600, Y, "food deformation (local, AntFood::PackDeform)")
     MEL.connect_material_expressions(lp, "", w, "LP")
     MEL.connect_material_expressions(lb, "Min", w, "BMin")
     MEL.connect_material_expressions(lb, "Max", w, "BMax")
     MEL.connect_material_expressions(tm, "", w, "Time")
-    for i, n in enumerate(names):
-        MEL.connect_material_expressions(cpd(m, n, X, Y + 320 + i * 70), "", w, n)
+    for i, n in enumerate(("D0", "D1", "D2")):
+        p = MEL.create_material_expression(m, unreal.MaterialExpressionScalarParameter, X, Y + 320 + i * 70)
+        p.set_editor_property("parameter_name", "FoodDeform%d" % i); p.set_editor_property("default_value", 0.0)
+        p.set_editor_property("use_custom_primitive_data", True); p.set_editor_property("primitive_data_index", CPD[n])
+        MEL.connect_material_expressions(p, "", w, n)
     tr = MEL.create_material_expression(m, unreal.MaterialExpressionTransform, X + 900, Y)
     tr.set_editor_property("transform_source_type", unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_LOCAL)
     tr.set_editor_property("transform_type", unreal.MaterialVectorCoordTransform.TRANSFORM_WORLD)
     MEL.connect_material_expressions(w, "", tr, "")
     MEL.connect_material_property(tr, "", unreal.MaterialProperty.MP_WORLD_POSITION_OFFSET)
+    try:
+        m.set_editor_property("max_world_position_offset_displacement", 40.0)   # (Nanite culls by the bounds grown by this much)
+    except Exception as e:
+        unreal.log_warning("FOODMAT no max WPO displacement: %s" % e)
 
 def build_outer():
     m = fresh("M_FoodV2")
@@ -166,12 +207,12 @@ def build_outer():
     for i, k in enumerate(("TToast", "TBurnt", "TSpoil", "TFrozen")):
         st[k] = tex(m, k, "/Engine/EngineResources/WhiteSquareTexture", X, 50 + i * 250)
     wp = MEL.create_material_expression(m, unreal.MaterialExpressionWorldPosition, X, 1100)
-    col = custom(m, COLOR, ["C", "R", "T", "B", "S", "F", "Toast", "Char", "Spoil", "Frozen", "Wet", "Dirt", "WP"], -900, -300, "food colour + states",
+    col = custom(m, COLOR, ["C", "R", "T", "B", "S", "F", "Char", "Spoil", "Frozen", "Wet", "Dirt", "WP"], -900, -300, "food colour + states",
                  unreal.CustomMaterialOutputType.CMOT_FLOAT4)
     MEL.connect_material_expressions(c, "RGBA", col, "C"); MEL.connect_material_expressions(r, "RGB", col, "R")
     MEL.connect_material_expressions(st["TToast"], "RGBA", col, "T"); MEL.connect_material_expressions(st["TBurnt"], "RGBA", col, "B")
     MEL.connect_material_expressions(st["TSpoil"], "RGBA", col, "S"); MEL.connect_material_expressions(st["TFrozen"], "RGBA", col, "F")
-    for i, k in enumerate(("Toast", "Char", "Spoil", "Frozen", "Wet", "Dirt")):
+    for i, k in enumerate(("Char", "Spoil", "Frozen", "Wet", "Dirt")):
         MEL.connect_material_expressions(cpd(m, k, X + 300, 1200 + i * 70), "", col, k)
     MEL.connect_material_expressions(wp, "", col, "WP")
     rgb = mask(m, col, "", True, True, True, False, -500, -300)
@@ -203,9 +244,9 @@ def build_inner():
     for i, (k, v) in enumerate((("HMin", -50.0), ("HMax", 50.0), ("Axis", 0.0), ("USize", 100.0))):
         MEL.connect_material_expressions(sp(m, k, v, X, -450 + i * 80), "", uvc, k)
     c = tex(m, "InC", "/Engine/EngineResources/WhiteSquareTexture", X + 800, -600, "color", uvc)
-    col = custom(m, INNER_COLOR, ["C", "Toast", "Char", "Spoil", "Frozen", "Wet"], -500, -300, "inner colour + states", unreal.CustomMaterialOutputType.CMOT_FLOAT4)
+    col = custom(m, INNER_COLOR, ["C", "Char", "Spoil", "Frozen", "Wet"], -500, -300, "inner colour + states", unreal.CustomMaterialOutputType.CMOT_FLOAT4)
     MEL.connect_material_expressions(c, "RGBA", col, "C")
-    for i, k in enumerate(("Toast", "Char", "Spoil", "Frozen", "Wet")):
+    for i, k in enumerate(("Char", "Spoil", "Frozen", "Wet")):
         MEL.connect_material_expressions(cpd(m, k, X + 300, 200 + i * 70), "", col, k)
     MEL.connect_material_property(mask(m, col, "", True, True, True, False, -200, -300), "", unreal.MaterialProperty.MP_BASE_COLOR)
     MEL.connect_material_property(mask(m, col, "", False, False, False, True, -200, -150), "", unreal.MaterialProperty.MP_ROUGHNESS)
@@ -214,7 +255,102 @@ def build_inner():
     EAL.save_asset(DIR + "/M_FoodV2_Inner")
     unreal.log("FOODMAT M_FoodV2_Inner")
 
-if not EAL.does_directory_exist(DIR): EAL.make_directory(DIR)
-build_outer()
-build_inner()
+# ---------------------------------------------------------------- the old models' masters + deformation
+def m4_namespace():
+    """the definitions of Tools/map4/make_m4_materials.py (its builders, the state layer), without running its main part: the _Food
+    masters are made by the same code as M_M4 / M_M4_UV, so an old food at rest looks exactly as before"""
+    path = os.path.join(PROJ, "Tools", "map4", "make_m4_materials.py")
+    with open(path, encoding="utf-8") as f:
+        src = f.read()
+    cut = src.find("\nONLY_FX = ")
+    if cut < 0:
+        raise RuntimeError("FOODMAT make_m4_materials.py changed: no 'ONLY_FX =' line to stop at")
+    os.environ["M4_ONLY_MATS"] = "1"   # (no texture import)
+    ns = {"__name__": "m4defs", "__file__": path}
+    exec(compile(src[:cut], path, "exec"), ns)
+    # food does not glow red-hot like metal (a chocolate by the fire stays brown; its embers when it burns stay)
+    hot = "float s_gl = smoothstep(0.55, 1.0, s_heat);"
+    if hot not in ns["STATE_EMIS"]:
+        raise RuntimeError("FOODMAT make_m4_materials.py changed: no heat glow line to take out for food")
+    for k in ("EMIS", "STATE_EMIS"):
+        ns[k] = ns[k].replace(hot, "float s_gl = 0.0;   // (food: no red-hot glow)")
+
+    class FoodMEL(object):
+        """MaterialEditingLibrary, except that a *_Food material gets the deformation layer just before it is compiled"""
+        def __getattr__(self, k):
+            return getattr(MEL, k)
+        def recompile_material(self, m):
+            if m.get_name().endswith("_Food"):
+                wpo(m, -2600, 3200)
+            return MEL.recompile_material(m)
+    ns["MEL"] = FoodMEL()
+    return ns
+
+MESHY = "/Game/Meshy"
+
+def build_meshy_food(ns):
+    """M_MeshyPBR (Tools/import_meshy.py: BaseColor x Tint, Normal, Metallic, Roughness, emissive = colour x Glow) with the state layer
+    of M_M4_UV (wet, toast / burnt, frost, dirt, spoil, the spots of AntMatter) and the deformation"""
+    m = ns["fresh"](MESHY, "M_MeshyPBR_Food")
+    m.set_editor_property("used_with_nanite", True)
+    X = -1400
+    def t(name, y, sampler, default):
+        e = MEL.create_material_expression(m, unreal.MaterialExpressionTextureSampleParameter2D, X, y)
+        e.set_editor_property("parameter_name", name); e.set_editor_property("sampler_type", sampler)
+        d = unreal.load_asset(default)
+        if d: e.set_editor_property("texture", d)
+        return e
+    body = MESHY + "/SM_Ant_Body/T_Ant_Body_"
+    bc = t("BaseColor", -400, unreal.MaterialSamplerType.SAMPLERTYPE_COLOR, body + "BaseColor")
+    nm = t("Normal", -100, unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL, body + "Normal")
+    mt = t("Metallic", 200, unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_GRAYSCALE, body + "Metallic")
+    rg = t("Roughness", 500, unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_GRAYSCALE, body + "Roughness")
+    tint = ns["vp"](m, "Tint", (1, 1, 1, 1), X, -600)
+    glow = ns["sp"](m, "Glow", 0.0, X, 800)
+    mc = MEL.create_material_expression(m, unreal.MaterialExpressionMultiply, -1000, -400)
+    MEL.connect_material_expressions(bc, "RGB", mc, "A"); MEL.connect_material_expressions(tint, "RGB", mc, "B")
+    sn, st = ns["state_node"](m, X - 200, 1200)
+    col = ns["custom"](m, ns["UV_COLOR"], ["Base", "W"] + ns["STATE_USE"], -600, -400, "Meshy colour + states")
+    MEL.connect_material_expressions(mc, "", col, "Base")
+    MEL.connect_material_expressions(st["W"], "", col, "W")
+    ns["use_states"](sn, col)
+    MEL.connect_material_property(col, "", unreal.MaterialProperty.MP_BASE_COLOR)
+    MEL.connect_material_property(nm, "RGB", unreal.MaterialProperty.MP_NORMAL)
+    # ORM: no AO in a Meshy model (1), its roughness and metal maps as they are (RoughMul 1, RoughAdd 0, Metal 0), then the states
+    orm_in = ns["custom"](m, "return float3(1.0, Rg, Mt);", ["Rg", "Mt"], -1000, 300, "Meshy ORM")
+    MEL.connect_material_expressions(rg, "R", orm_in, "Rg"); MEL.connect_material_expressions(mt, "R", orm_in, "Mt")
+    orm = ns["custom"](m, ns["UV_ORM"], ["R", "RoughMul", "RoughAdd", "Metal"] + ns["STATE_USE"], -600, 300, "Meshy rough metal + states")
+    MEL.connect_material_expressions(orm_in, "", orm, "R")
+    MEL.connect_material_expressions(ns["sp"](m, "RoughMul", 1.0, X, 900), "", orm, "RoughMul")
+    MEL.connect_material_expressions(ns["sp"](m, "RoughAdd", 0.0, X, 980), "", orm, "RoughAdd")
+    MEL.connect_material_expressions(ns["sp"](m, "Metal", 0.0, X, 1060), "", orm, "Metal")
+    ns["use_states"](sn, orm)
+    MEL.connect_material_property(ns["mask"](m, orm, False, True, False, -300, 300), "", unreal.MaterialProperty.MP_ROUGHNESS)
+    MEL.connect_material_property(ns["mask"](m, orm, False, False, True, -300, 400), "", unreal.MaterialProperty.MP_METALLIC)
+    # emissive: colour x Glow (as before) + the light of the states (embers of a burning patch)
+    gm = MEL.create_material_expression(m, unreal.MaterialExpressionMultiply, -600, 700)
+    MEL.connect_material_expressions(mc, "", gm, "A"); MEL.connect_material_expressions(glow, "", gm, "B")
+    em = ns["custom"](m, ns["STATE_EMIS"], ["W", "Tm"] + ns["STATE_USE"], -600, 900, "Meshy state light")
+    MEL.connect_material_expressions(st["W"], "", em, "W"); MEL.connect_material_expressions(st["Tm"], "", em, "Tm")
+    ns["use_states"](sn, em)
+    add = MEL.create_material_expression(m, unreal.MaterialExpressionAdd, -300, 700)
+    MEL.connect_material_expressions(gm, "", add, "A"); MEL.connect_material_expressions(em, "", add, "B")
+    MEL.connect_material_property(add, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+    wpo(m, -2600, 3200)
+    MEL.recompile_material(m)
+    EAL.save_asset(MESHY + "/M_MeshyPBR_Food")
+    unreal.log("FOODMAT M_MeshyPBR_Food")
+
+def build_old():
+    ns = m4_namespace()
+    ns["build_m4"]("M_M4_Food")
+    ns["build_uv"]("M_M4_UV_Food")
+    build_meshy_food(ns)
+
+if ONLY != "old":
+    if not EAL.does_directory_exist(DIR): EAL.make_directory(DIR)
+    build_outer()
+    build_inner()
+if ONLY != "v2":
+    build_old()
 unreal.log("FOODMAT_DONE")

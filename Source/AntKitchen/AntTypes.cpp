@@ -539,7 +539,7 @@ const TCHAR* FoodArtName(const FString& LootName)
 		static TArray<FString> Names;
 		const TConstArrayView<AntFood::FFood> T = AntFood::Table();
 		if (Names.Num() != T.Num()) { Names.Reset(); for (const AntFood::FFood& F : T) { Names.Add(FString::Printf(TEXT("SM_FoodV2_%s"), F.Id)); } }
-		if (const AntFood::FFood* F = AntFood::Find(LootName))
+		if (const AntFood::FFood* F = AntFood::Find(LootName); F && F->bNew)   // (an old food keeps its old model)
 		{
 			const FString& N = Names[(int32)(F - T.GetData())];
 			if (Get(*N).IsValid()) { return *N; }

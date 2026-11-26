@@ -198,6 +198,8 @@ public:
 	float Clock() const { return LocalClock; }
 	/** Server: info on the bodies near a point (dev). */
 	void LogAround(const FVector& At, float Radius) const;
+	/** Server: the temperature (°C) the simulation has for C now, -1000 if it does not track it (the food melts and toasts by it, KAN-36). */
+	float BodyTemp(const UPrimitiveComponent* C) const;
 
 	// ---- every machine: the registry of bodies
 	struct FReg

@@ -60,7 +60,8 @@ namespace
 		Put4(C, 0, FVector4(Shown(V, 0), Shown(V, 1), Shown(V, 2), Shown(V, 3)));
 		Put4(C, 4, FVector4(Shown(V, 4), Shown(V, 5), Shown(V, 6), Shown(V, 7)));
 		Put4(C, 8, FVector4(Shown(V, 8), Shown(V, 9), Shown(V, 10), Shown(V, 11)));
-		Put4(C, 12, FVector4(Shown(V, 12), 0.f, 0.f, 0.f));
+		// (13..15 are the food's deformation, AntFood.h: kept as they are)
+		Put4(C, 12, FVector4(Shown(V, 12), Cpd(C, 13), Cpd(C, 14), Cpd(C, 15)));
 		// the spots of every source, strongest (strength x size) first
 		TArray<const FSpot*, TInlineAllocator<16>> All;
 		for (int32 s = 0; s < NumSources; ++s) { for (const FSpot& Sp : V.Spots[s]) { if (Sp.Strength > 0.01f && Sp.Radius > 0.5f) { All.Add(&Sp); } } }

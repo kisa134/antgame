@@ -18,6 +18,10 @@
 #include "ProceduralMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Materials/MaterialInterface.h"
+#include "Materials/Material.h"
+#include "Materials/MaterialInstanceDynamic.h"
+#include "UObject/Package.h"
+#include "AntMatter.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "Misc/CommandLine.h"
@@ -139,7 +143,12 @@ EAntFoodKind KindOf(const FString& LootName)
 bool V2()
 {
 	static int32 S = -1;
-	if (S < 0) { S = FParse::Param(FCommandLine::Get(), TEXT("AntFoodV2")) ? 1 : 0; UE_LOG(LogTemp, Display, TEXT("ANTFOOD models: %s"), S ? TEXT("V2 (Blender, -AntFoodV2)") : TEXT("old (default)")); }
+	if (S < 0)
+	{
+		// (FParse::Param matches whole words: -AntFoodV2 is the older spelling of the same flag)
+		S = FParse::Param(FCommandLine::Get(), TEXT("AntFoodV2Models")) || FParse::Param(FCommandLine::Get(), TEXT("AntFoodV2")) ? 1 : 0;
+		UE_LOG(LogTemp, Display, TEXT("ANTFOOD models: %s"), S ? TEXT("old + the new foods (-AntFoodV2Models)") : TEXT("old only (default: no new food)"));
+	}
 	return S == 1;
 }
 
@@ -199,7 +208,8 @@ UStaticMesh* ModelV2(const AKitchenLoot* L, int32 Piece, UMaterialInterface** Ou
 {
 	if (!V2() || !L || L->bIsGear || L->bBody || L->bVault) { return nullptr; }
 	const FFood* F = FoodOf(L);
-	if (!F || (Piece >= 0 && Piece >= F->Pieces)) { return nullptr; }
+	// an old food keeps its old model (the owner's decision 26.11): the new models only for the foods new to the game
+	if (!F || !F->bNew || (Piece >= 0 && Piece >= F->Pieces)) { return nullptr; }
 	// a pre-cut piece only for a break into exactly the model's pieces (other breaks: the cut of AntShards)
 	if (Piece >= 0 && !(L->ShardPath.Num() == 2 && L->ShardPath[1] == F->Pieces)) { return nullptr; }
 	const FV2Asset& A = LoadV2(F->Id, Piece);
@@ -642,11 +652,18 @@ static void SlowTick(AKitchenLoot* L, FAntFoodServer& S, float T, EAntFoodKind K
 	S.Temp = AntReact::HeatAt(W, P);
 	const bool bFrozen = S.Frozen > 0.5f;
 	UStaticMeshComponent* Mesh = FAntFoodAccess::Mesh(L);
+	// the matter system's own temperature of this piece (a flame, a hot pan, a heat gun next to it: KAN-21)
+	if (AntMatter::Enabled() && Mesh)
+	{
+		if (const AAntMatterNet* Mn = AAntMatterNet::Get(W)) { S.Temp = FMath::Max(S.Temp, Mn->BodyTemp(Mesh)); }
+	}
 
 	// ---- water: soaked through (heavier; crumbly and brittle things fall apart)
 	if (Soakable(Kd0))
 	{
-		const bool bWater = InSinkWater(L) || (Mesh && AntState::Get(Mesh, AntState::Wet) > 0.6f && S.Soak < 0.6f);
+		// (wet from outside: the matter system or a dev command - not the food's own channel, which only shows this soak)
+		const float WetOut = Mesh ? FMath::Max(AntState::GetSource(Mesh, AntState::Matter, AntState::Wet), AntState::GetSource(Mesh, AntState::Dev, AntState::Wet)) : 0.f;
+		const bool bWater = InSinkWater(L) || (WetOut > 0.6f && S.Soak < 0.6f);
 		S.Soak = FMath::Clamp(S.Soak + (bWater ? T / 12.f : -T / 300.f), 0.f, 1.f);
 		if (S.Soak >= 0.85f && !S.bSoakBroke && !bFrozen && (Kd0 == EAntFoodKind::Crumbly || Kd0 == EAntFoodKind::Brittle) && L->Weight >= 6)
 		{
@@ -1040,14 +1057,93 @@ struct FFoodVis
 	FQuat Roll = FQuat::Identity;
 	bool bInit = false;
 	float Seen = 0.f;
+	float NextWatch = 0.f;
 };
 static TMap<TWeakObjectPtr<const AKitchenLoot>, FFoodVis> GVis;
 
-static void Cpd(UPrimitiveComponent* C, int32 Index, float V)
+void PackDeform(float Sag, float Tip, float TipSign, float Stretch, float Squash, int32 Axis, float Wobble, float Melt, float Bite, float Out[3])
 {
-	const TArray<float>& D = C->GetCustomPrimitiveData().Data;
-	const float Old = D.IsValidIndex(Index) ? D[Index] : 0.f;
-	if (FMath::Abs(Old - V) > 0.004f || (V == 0.f && Old != 0.f)) { C->SetCustomPrimitiveDataFloat(Index, V); }
+	auto Q = [](float V, int32 Max) { return FMath::Clamp(FMath::RoundToInt(V * Max), 0, Max); };
+	Out[0] = (float)(Q(Sag, 1023) * 1024 + Q(Tip, 1023));
+	Out[1] = (float)(Q(Stretch, 1023) * 1024 + Q(Squash, 1023));
+	Out[2] = (float)(Q(Wobble, 255) * 65536 + Q(Melt, 255) * 256 + Q(Bite, 63) * 4 + (Axis != 0 ? 2 : 0) + (TipSign < 0.f ? 1 : 0));
+}
+
+/**
+ * The old models keep their look: the master of an old food's material (M_M4, M_M4_UV, M_MeshyPBR) has a twin with the deformation
+ * layer (M_M4_Food, M_M4_UV_Food, M_MeshyPBR_Food: Tools/food/make_food_materials.py, the same graph). The old instance is swapped
+ * for a dynamic instance of the twin with all its parameters copied - one per old instance, shared by every piece that uses it.
+ */
+static TMap<TWeakObjectPtr<UMaterialInterface>, TWeakObjectPtr<UMaterialInstanceDynamic>> GTwinOf;
+static TSet<TWeakObjectPtr<UMaterialInterface>> GTwins;
+
+static UMaterialInterface* TwinMaster(const UMaterial* Base)
+{
+	static const TCHAR* const Pairs[][2] =
+	{
+		{ TEXT("/Game/Map4/Materials/M_M4.M_M4"), TEXT("/Game/Map4/Materials/M_M4_Food.M_M4_Food") },
+		{ TEXT("/Game/Map4/Materials/M_M4_UV.M_M4_UV"), TEXT("/Game/Map4/Materials/M_M4_UV_Food.M_M4_UV_Food") },
+		{ TEXT("/Game/Meshy/M_MeshyPBR.M_MeshyPBR"), TEXT("/Game/Meshy/M_MeshyPBR_Food.M_MeshyPBR_Food") },
+	};
+	static UMaterialInterface* Loaded[UE_ARRAY_COUNT(Pairs)] = {};
+	static bool bTried[UE_ARRAY_COUNT(Pairs)] = {};
+	if (!Base) { return nullptr; }
+	const FString P = Base->GetPathName();
+	for (int32 i = 0; i < (int32)UE_ARRAY_COUNT(Pairs); ++i)
+	{
+		if (P != Pairs[i][0]) { continue; }
+		if (!bTried[i])
+		{
+			bTried[i] = true;
+			Loaded[i] = LoadObject<UMaterialInterface>(nullptr, Pairs[i][1], nullptr, LOAD_NoWarn | LOAD_Quiet);
+			if (Loaded[i]) { Loaded[i]->AddToRoot(); }
+			UE_LOG(LogTemp, Display, TEXT("ANTFOOD deform material %s -> %s"), Pairs[i][0], Loaded[i] ? Pairs[i][1] : TEXT("MISSING (old food will not deform)"));
+		}
+		return Loaded[i];
+	}
+	return nullptr;
+}
+
+static UMaterialInterface* TwinOf(UMaterialInterface* M)
+{
+	if (!M || GTwins.Contains(M)) { return nullptr; }
+	if (const TWeakObjectPtr<UMaterialInstanceDynamic>* Have = GTwinOf.Find(M))
+	{
+		return Have->IsValid() ? Have->Get() : nullptr;
+	}
+	UMaterialInterface* Master = TwinMaster(M->GetBaseMaterial());
+	UMaterialInstanceDynamic* Mid = nullptr;
+	if (Master)
+	{
+		Mid = UMaterialInstanceDynamic::Create(Master, GetTransientPackage(), MakeUniqueObjectName(GetTransientPackage(), UMaterialInstanceDynamic::StaticClass(), *(M->GetName() + TEXT("_Food"))));
+		TArray<FMaterialParameterInfo> Infos;
+		TArray<FGuid> Ids;
+		// (only what the old instance chain sets: the custom primitive data parameters stay the master's)
+		int32 Copied = 0;
+		M->GetAllScalarParameterInfo(Infos, Ids);
+		for (const FMaterialParameterInfo& I : Infos) { float V = 0.f; if (M->GetScalarParameterValue(FHashedMaterialParameterInfo(I), V, true)) { Mid->SetScalarParameterValueByInfo(I, V); ++Copied; } }
+		M->GetAllVectorParameterInfo(Infos, Ids);
+		for (const FMaterialParameterInfo& I : Infos) { FLinearColor V; if (M->GetVectorParameterValue(FHashedMaterialParameterInfo(I), V, true)) { Mid->SetVectorParameterValueByInfo(I, V); ++Copied; } }
+		M->GetAllTextureParameterInfo(Infos, Ids);
+		for (const FMaterialParameterInfo& I : Infos) { UTexture* V = nullptr; if (M->GetTextureParameterValue(FHashedMaterialParameterInfo(I), V, true) && V) { Mid->SetTextureParameterValueByInfo(I, V); ++Copied; } }
+		UE_LOG(LogTemp, Display, TEXT("ANTFOOD %s -> a deforming twin of %s (%d parameters copied)"), *M->GetPathName(), *Master->GetName(), Copied);
+		Mid->AddToRoot();   // (shared by every piece made of this instance, for the whole run)
+		GTwins.Add(Mid);
+	}
+	GTwinOf.Add(M, Mid);
+	return Mid;
+}
+
+static void UseDeformMaterials(UPrimitiveComponent* Visual)
+{
+	if (!Visual || Visual->GetNumMaterials() > 8) { return; }
+	for (int32 i = 0; i < Visual->GetNumMaterials(); ++i)
+	{
+		UMaterialInterface* M = Visual->GetMaterial(i);
+		// (another system's own dynamic instance is left alone: it may be setting something on it)
+		if (!M || GTwins.Contains(M) || M->IsA<UMaterialInstanceDynamic>()) { continue; }
+		if (UMaterialInterface* T = TwinOf(M)) { Visual->SetMaterial(i, T); }
+	}
 }
 
 void VisualTick(AKitchenLoot* L, UPrimitiveComponent* Visual, float Dt)
@@ -1128,6 +1224,7 @@ void VisualTick(AKitchenLoot* L, UPrimitiveComponent* Visual, float Dt)
 
 	// wobble: a jolt sets it shaking, it settles
 	Vs.Wobble = FMath::Max(Vs.Wobble * FMath::Exp(-Dt * 3.f), FMath::Clamp(Acc / 2500.f, 0.f, 1.f) * Wobbly);
+	if (Vs.Wobble < 0.04f) { Vs.Wobble = 0.f; }   // (a body at rest jitters a little: below this it is no jolt, and the model stays as made)
 
 	// rolling: the model turns as it goes (the body itself slides on its ball-bearing friction)
 	if (Kd0 == EAntFoodKind::Rolling && bOn && !L->IsCarried() && Visual == FAntFoodAccess::Mesh(L))
@@ -1144,22 +1241,35 @@ void VisualTick(AKitchenLoot* L, UPrimitiveComponent* Visual, float Dt)
 		Visual->SetRelativeLocationAndRotation(Vs.Roll.RotateVector(Off), Vs.Roll);
 	}
 
-	// the shared state layer (AntState.h) and the food's own slots
-	AntState::Set(Visual, AntState::Wet, FMath::Max(F(N.Soak), Kd0 == EAntFoodKind::Melting ? F(N.Melt) * 0.6f : 0.f));
-	AntState::Set(Visual, AntState::Char, F(N.Burn));
-	AntState::Set(Visual, AntState::Dirt, F(N.Dirt));
-	Cpd(Visual, CpdToast, F(N.Toast));
-	Cpd(Visual, CpdFrozen, Frozen);
-	Cpd(Visual, CpdSpoil, F(N.Spoil));
-	Cpd(Visual, CpdBite, F(N.Bitten));
-	Cpd(Visual, CpdSag, Vs.Sag);
-	Cpd(Visual, CpdTip, Vs.Tip);
-	Cpd(Visual, CpdTipSign, Vs.TipSign);
-	Cpd(Visual, CpdSquash, F(N.Squeeze) * 0.2f);
-	Cpd(Visual, CpdStretch, Vs.Stretch);
-	Cpd(Visual, CpdStretchAxis, (float)Vs.Axis);
-	Cpd(Visual, CpdWobble, Vs.Wobble);
-	Cpd(Visual, CpdMelt, Kd0 == EAntFoodKind::Melting ? F(N.Melt) : 0.f);
+	// an old model: its own material with the deformation layer added (same look at rest)
+	if (bOn) { UseDeformMaterials(Visual); }
+
+	// the shared state layer (AntState.h, the food's own channel): toasted is char up to 0.35, burnt blackens above that
+	const float Toast = F(N.Toast), Burn = F(N.Burn);
+	AntState::SetSource(Visual, AntState::Food, AntState::Wet, FMath::Max(F(N.Soak), Kd0 == EAntFoodKind::Melting ? F(N.Melt) * 0.6f : 0.f));
+	AntState::SetSource(Visual, AntState::Food, AntState::Char, FMath::Max(Toast * 0.35f, Burn > 0.01f ? 0.35f + 0.65f * Burn : 0.f));
+	AntState::SetSource(Visual, AntState::Food, AntState::Dirt, F(N.Dirt));
+	AntState::SetSource(Visual, AntState::Food, AntState::Frost, Frozen);
+	AntState::SetSource(Visual, AntState::Food, AntState::Spoil, F(N.Spoil));
+	// the deformation, packed into the 3 floats the layer leaves free
+	float D[3];
+	PackDeform(Vs.Sag, Vs.Tip, Vs.TipSign, Vs.Stretch, F(N.Squeeze) * 0.2f, Vs.Axis, Vs.Wobble, Kd0 == EAntFoodKind::Melting ? F(N.Melt) : 0.f, F(N.Bitten), D);
+	for (int32 i = 0; i < 3; ++i)
+	{
+		const TArray<float>& Cd = Visual->GetCustomPrimitiveData().Data;
+		const float Old = Cd.IsValidIndex(CpdDeform0 + i) ? Cd[CpdDeform0 + i] : 0.f;
+		if (Old != D[i]) { Visual->SetCustomPrimitiveDataFloat(CpdDeform0 + i, D[i]); }
+	}
+	// -AntFoodWatch: what THIS machine draws (a guest in co-op: is the deformation and the state there?)
+	static const bool bWatch = FParse::Param(FCommandLine::Get(), TEXT("AntFoodWatch"));
+	if (bWatch && Now >= Vs.NextWatch && (D[0] + D[1] + D[2] > 0.f || Toast + Burn + Frozen + F(N.Spoil) + F(N.Soak) > 0.f))
+	{
+		Vs.NextWatch = Now + 1.5f;
+		const UMaterialInterface* M0 = Visual->GetMaterial(0);
+		UE_LOG(LogTemp, Display, TEXT("ANTFOOD watch [%s] «%s» [%s] stretch %.2f sag %.2f tip %.2f wobble %.2f squash %.2f melt %.2f bite %.2f | toast %.2f burn %.2f frozen %.2f spoil %.2f soak %.2f | material %s, cpd %.0f %.0f %.0f"),
+			L->GetNetMode() == NM_Client ? TEXT("guest") : TEXT("host"), *L->LootName, KindName(Kd0), Vs.Stretch, Vs.Sag, Vs.Tip, Vs.Wobble, F(N.Squeeze) * 0.2f,
+			Kd0 == EAntFoodKind::Melting ? F(N.Melt) : 0.f, F(N.Bitten), Toast, Burn, Frozen, F(N.Spoil), F(N.Soak), *GetNameSafe(M0), D[0], D[1], D[2]);
+	}
 }
 
 /** For the logs and the screenshots: the numbers the material gets right now. */
@@ -1305,9 +1415,19 @@ bool DevCommand(AAntKitchenGameMode* GM, const TArray<FString>& A)
 		const FVector At = A.Num() >= 5 ? FVector(Num(2), Num(3), Num(4)) : Here;
 		ForFoodNear(W, At, Num(5, 3000.f), [&](AKitchenLoot* L)
 		{
-			UE_LOG(LogTemp, Display, TEXT("ANTFOOD report «%s» [%s] w %d/%d v %d/%d carriers %d at %s: %s; look: %s; model %s"),
+			// what is drawn: the mesh, its material (an old model's deforming twin: *_Food) and the packed deformation it gets
+			const UStaticMeshComponent* Ms = FAntFoodAccess::Mesh(L);
+			const UPrimitiveComponent* Vis = Ms && Ms->IsVisible() ? (const UPrimitiveComponent*)Ms : nullptr;
+			if (!Vis) { for (UActorComponent* Ac : L->GetComponents()) { if (UProceduralMeshComponent* Pm = Cast<UProceduralMeshComponent>(Ac)) { if (Pm->IsVisible()) { Vis = Pm; } } } }
+			UMaterialInterface* M0 = Vis ? Vis->GetMaterial(0) : nullptr;
+			const TArray<float>& Cd = Vis ? Vis->GetCustomPrimitiveData().Data : TArray<float>();
+			auto CpdAt = [&Cd](int32 i) { return Cd.IsValidIndex(i) ? Cd[i] : 0.f; };
+			UE_LOG(LogTemp, Display, TEXT("ANTFOOD report «%s» [%s] w %d/%d v %d/%d carriers %d at %s: %s; look: %s; model %s %s, material %s (base %s), cpd deform %.0f %.0f %.0f, state wet %.2f char %.2f frost %.2f spoil %.2f"),
 				*L->LootName, KindName(KindNow(L)), L->Weight, (int32)L->FoodNet.BaseWeight, L->Value, (int32)L->FoodNet.BaseValue, L->CarryNet.Grips.Num(),
-				*L->GetActorLocation().ToCompactString(), *Describe(L), *VisDescribe(L), ModelV2(L) ? TEXT("V2") : TEXT("old"));
+				*L->GetActorLocation().ToCompactString(), *Describe(L), *VisDescribe(L), ModelV2(L) ? TEXT("V2") : TEXT("old"),
+				Vis == Ms && Ms && Ms->GetStaticMesh() ? *Ms->GetStaticMesh()->GetName() : Vis ? TEXT("(break piece)") : TEXT("-"),
+				*GetNameSafe(M0), M0 && M0->GetBaseMaterial() ? *M0->GetBaseMaterial()->GetName() : TEXT("-"),
+				CpdAt(13), CpdAt(14), CpdAt(15), CpdAt(0), CpdAt(1), CpdAt(6), CpdAt(12));
 		});
 		return true;
 	}

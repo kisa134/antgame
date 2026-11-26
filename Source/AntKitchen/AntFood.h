@@ -29,15 +29,18 @@ struct FAntEnv;
  *  Juicy    apple slice, watermelon, tomato: squirts when squeezed or hit, gets lighter; the juice is a sticky puddle and bait.
  *
  * States of a piece of food (FAntFoodNet, replicated with the load): soaked, toasted, burnt, frozen, dirty, spoiled, bitten, melted.
- * The visible part goes into the shared state layer (AntState.h: Wet, Char, Dirt on custom primitive data 0..2) plus the food's own
- * slots below (custom primitive data from AntFood::CpdBase on, so the shared layer can grow without a clash).
+ * The visible part goes into the shared state layer (AntState.h, source Food: Wet, Char, Dirt, Frost, Spoil) plus the packed
+ * deformation in the 3 floats AntState leaves free (CpdDeform0, below).
  *
- * Deformation without soft bodies: the food material (M_FoodV2, Tools/food/make_food_materials.py) moves vertices by a few
- * per-component numbers (sag, tip droop, squash, stretch, wobble, melt, bite), worked out on every machine from what is already
- * replicated (the grips of the carriers, the food state). No material instance per piece, a few floats per component.
+ * Deformation without soft bodies: the food materials move vertices by a few per-component numbers (sag, tip droop, squash,
+ * stretch, wobble, melt, bite), worked out on every machine from what is already replicated (the grips of the carriers, the food
+ * state). THE OLD MODELS KEEP THEIR LOOK: an old food's material (an instance of M_M4 / M_M4_UV / M_MeshyPBR) is swapped on the
+ * visible component for a shared dynamic instance of the same master + the deformation layer (M_M4_Food, M_M4_UV_Food,
+ * M_MeshyPBR_Food, Tools/food/make_food_materials.py) with the old instance's parameters copied: one per old instance, not per piece.
  *
- * New models (Blender, Tools/food/food_v2.py) only with -AntFoodV2 (the owner compares first; the default look stays). The
- * behaviour of the kinds is on by default; -AntFoodKinds=0 turns it off.
+ * New models (Blender, Tools/food/food_v2.py) only for foods that were not in the game before, and only with -AntFoodV2Models
+ * (the owner compares first): by default there is no new food and every old food keeps its old model. The behaviour of the
+ * kinds is on by default; -AntFoodKinds=0 turns it off.
  */
 
 UENUM()
@@ -79,13 +82,17 @@ struct FAntFoodNet
 
 namespace AntFood
 {
-	/** First custom primitive data index of the food slots (AntState keeps 0..11 for the shared layer). */
-	constexpr int32 CpdBase = 12;
-	enum ECpd : int32
-	{
-		CpdToast = CpdBase + 0, CpdFrozen, CpdSpoil, CpdBite, CpdSag, CpdTip, CpdTipSign, CpdSquash, CpdStretch, CpdStretchAxis,
-		CpdWobble, CpdMelt, CpdEnd
-	};
+	/**
+	 * The food's own custom primitive data: the 3 floats AntState leaves free (0..12 its kinds, 16..35 its spots; 36 is the
+	 * engine's limit). The states go into AntState's kinds (source Food): soaked = Wet, toasted = Char 0..0.35, burnt = Char
+	 * 0.35..1, frozen = Frost, dirty = Dirt, spoiled = Spoil. The deformation is packed, exact integers in a float (< 2^24):
+	 *   13  round(Sag * 1023) * 1024 + round(Tip * 1023)
+	 *   14  round(Stretch * 1023) * 1024 + round(Squash * 1023)
+	 *   15  round(Wobble * 255) * 65536 + round(Melt * 255) * 256 + round(Bite * 63) * 4 + Axis * 2 + (TipSign < 0)
+	 * Read by FOOD_DEFORM in Tools/food/make_food_materials.py (M_FoodV2, M_M4_Food, M_M4_UV_Food, M_MeshyPBR_Food).
+	 */
+	constexpr int32 CpdDeform0 = 13;
+	ANTKITCHEN_API void PackDeform(float Sag, float Tip, float TipSign, float Stretch, float Squash, int32 Axis, float Wobble, float Melt, float Bite, float Out[3]);
 
 	/** One food the game knows (the Blender model SM_FoodV2_<Id>, its pieces, its behaviour). */
 	struct FFood
