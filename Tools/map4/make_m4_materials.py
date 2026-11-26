@@ -75,6 +75,13 @@ def sp(m, name, val, x, y):
     p = MEL.create_material_expression(m, unreal.MaterialExpressionScalarParameter, x, y)
     p.set_editor_property("parameter_name", name); p.set_editor_property("default_value", val); return p
 
+def cpd(m, name, index, x, y):
+    """a scalar read from the component's custom primitive data (no material instance per object needed): 0 by default"""
+    p = MEL.create_material_expression(m, unreal.MaterialExpressionScalarParameter, x, y)
+    p.set_editor_property("parameter_name", name); p.set_editor_property("default_value", 0.0)
+    p.set_editor_property("use_custom_primitive_data", True); p.set_editor_property("primitive_data_index", index)
+    return p
+
 def vp(m, name, val, x, y):
     p = MEL.create_material_expression(m, unreal.MaterialExpressionVectorParameter, x, y)
     p.set_editor_property("parameter_name", name); p.set_editor_property("default_value", unreal.LinearColor(*val)); return p
@@ -126,6 +133,23 @@ float up = saturate((N.z - 0.75) * 4.0);
 col = lerp(col, float3(0.60, 0.58, 0.54), saturate(up * Dust * (0.35 + 0.9 * vv)));
 float low = saturate(1.0 - (W.z - Base) / 110.0) * (1.0 - up);
 col *= 1.0 - low * Grime * 0.4;
+// states of the thing itself (per component: custom primitive data 0..3, see AntState.h): dirty, wet, charred, damaged
+float2 p3 = (W.xy + W.zz * 0.31 + W.yx * 0.11) / 41.0;
+float2 i3 = floor(p3); float2 f3 = frac(p3); f3 = f3 * f3 * (3.0 - 2.0 * f3);
+float k00 = frac(sin(dot(i3, float2(12.9898, 78.233))) * 43758.5453);
+float k10 = frac(sin(dot(i3 + float2(1, 0), float2(12.9898, 78.233))) * 43758.5453);
+float k01 = frac(sin(dot(i3 + float2(0, 1), float2(12.9898, 78.233))) * 43758.5453);
+float k11 = frac(sin(dot(i3 + float2(1, 1), float2(12.9898, 78.233))) * 43758.5453);
+float v3 = lerp(lerp(k00, k10, f3.x), lerp(k01, k11, f3.x), f3.y);
+float fine = v3 * 0.6 + v2 * 0.4;
+col = lerp(col, float3(0.24, 0.20, 0.15), saturate(Dirt * (0.25 + fine)) * 0.85);
+col *= lerp(1.0, 0.52, saturate(Wet));
+float cm = smoothstep(1.05 - Char * 1.25, 1.30 - Char * 1.25, fine + 0.15) * saturate(Char * 4.0);
+col = lerp(col, float3(0.020, 0.017, 0.014), cm);
+float cs = abs(frac((W.x * 0.83 + W.y * 0.61 + W.z * 0.47) / 19.0 + v3 * 2.5) - 0.5);
+float crack = (1.0 - smoothstep(0.0, 0.03, cs)) * step(0.45, v2 + Dmg * 0.4);
+col = lerp(col, col * 0.25, crack * saturate(Dmg * 1.5));
+col = lerp(col, col * 0.8 + 0.06, saturate(Dmg) * fine * 0.5);
 return max(col, 0.0);
 """
 
@@ -154,6 +178,10 @@ float ao = lerp(1.0, r.r, AOStr);
 float rough = saturate(r.g * RoughMul + RoughAdd);
 rough = lerp(rough, 0.92, saturate(up * Dust * 0.8));
 float metal = saturate(r.b * MetalTex + Metal);
+rough = lerp(rough, 0.90, saturate(Dirt) * 0.6);
+rough = lerp(rough, 0.06, saturate(Wet) * 0.85);
+rough = lerp(rough, 0.95, saturate(Char));
+metal *= 1.0 - saturate(Char);
 return float3(ao, rough, metal);
 """
 
@@ -185,9 +213,11 @@ def build_m4(name="M_M4", two_sided=False):
     mtex = sp(m, "MetalTex", 1.0, X, 1800)
     metal = sp(m, "Metal", 0.0, X, 1900)
     glow = vp(m, "Glow", (0, 0, 0, 1), X, 2000)
+    # the states of the thing (AntState.h): the water, the fire, the mess and the wreck set them on the component
+    wet = cpd(m, "StateWet", 0, X, 2200); char = cpd(m, "StateChar", 1, X, 2300); dirt = cpd(m, "StateDirt", 2, X, 2400); dmg = cpd(m, "StateDamage", 3, X, 2500)
 
-    col = custom(m, COLOR, ["TC", "W", "N", "S", "Tint", "Var", "Dust", "Grime", "Base"], -700, -300, "M4 colour")
-    for src, pin in [(tc, "TC"), (wp, "W"), (vn, "N"), (S, "S"), (var, "Var"), (dust, "Dust"), (grime, "Grime"), (base, "Base")]:
+    col = custom(m, COLOR, ["TC", "W", "N", "S", "Tint", "Var", "Dust", "Grime", "Base", "Wet", "Char", "Dirt", "Dmg"], -700, -300, "M4 colour")
+    for src, pin in [(tc, "TC"), (wp, "W"), (vn, "N"), (S, "S"), (var, "Var"), (dust, "Dust"), (grime, "Grime"), (base, "Base"), (wet, "Wet"), (char, "Char"), (dirt, "Dirt"), (dmg, "Dmg")]:
         MEL.connect_material_expressions(src, "", col, pin)
     colp = vp(m, "Color", (1, 1, 1, 1), X, 2100)
     tmul = MEL.create_material_expression(m, unreal.MaterialExpressionMultiply, -1100, 700)
@@ -197,8 +227,8 @@ def build_m4(name="M_M4", two_sided=False):
     nrm = custom(m, NORMAL, ["TN", "TD", "W", "N", "S", "DS", "NStr", "DStr"], -700, 200, "M4 normal (world)")
     for src, pin in [(tn, "TN"), (td, "TD"), (wp, "W"), (vn, "N"), (S, "S"), (ds, "DS"), (nstr, "NStr"), (dstr, "DStr")]:
         MEL.connect_material_expressions(src, "", nrm, pin)
-    orm = custom(m, ORM, ["TR", "W", "N", "S", "Dust", "AOStr", "RoughMul", "RoughAdd", "MetalTex", "Metal"], -700, 700, "M4 AO rough metal")
-    for src, pin in [(tr, "TR"), (wp, "W"), (vn, "N"), (S, "S"), (dust, "Dust"), (aos, "AOStr"), (rmul, "RoughMul"), (radd, "RoughAdd"), (mtex, "MetalTex"), (metal, "Metal")]:
+    orm = custom(m, ORM, ["TR", "W", "N", "S", "Dust", "AOStr", "RoughMul", "RoughAdd", "MetalTex", "Metal", "Wet", "Char", "Dirt"], -700, 700, "M4 AO rough metal")
+    for src, pin in [(tr, "TR"), (wp, "W"), (vn, "N"), (S, "S"), (dust, "Dust"), (aos, "AOStr"), (rmul, "RoughMul"), (radd, "RoughAdd"), (mtex, "MetalTex"), (metal, "Metal"), (wet, "Wet"), (char, "Char"), (dirt, "Dirt")]:
         MEL.connect_material_expressions(src, "", orm, pin)
     MEL.connect_material_property(col, "", unreal.MaterialProperty.MP_BASE_COLOR)
     MEL.connect_material_property(nrm, "", unreal.MaterialProperty.MP_NORMAL)
