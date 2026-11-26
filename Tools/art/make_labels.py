@@ -369,7 +369,74 @@ def salt():
     for k in range(3): d.line([(W * 0.2, 520 + k * 22), (W * 0.8, 520 + k * 22)], fill=(20, 45, 130, 255), width=6)
     save(im, "salt")
 
+# ------------------------------------------------------------------------------------------------ batch 8: the soda can, the milk carton, the cereal box
+def soda():
+    W, H = 2400, 900
+    im = Image.new("RGB", (W, H), (176, 18, 24)); d = ImageDraw.Draw(im); R = random.Random(8)
+    for _ in range(140):   # bubbles
+        x, y, r = R.uniform(0, W), R.uniform(0, H), R.uniform(6, 34)
+        d.ellipse([x - r, y - r, x + r, y + r], outline=(240, 120, 110), width=3)
+    d.rectangle([0, 600, W, 660], fill=(250, 214, 60))
+    for cx in (W * 0.5, W * 0.0, W * 1.0):
+        ctext(d, cx, 200, "ИСКРА", F("impact.ttf", 300), (255, 250, 240), 10)
+        ctext(d, cx, 520, "лимонад газированный", F("georgiai.ttf", 64), (255, 236, 200))
+    ctext(d, W * 0.25, 700, "0,33 л", F("arialbd.ttf", 60), (255, 250, 240)); ctext(d, W * 0.75, 700, "охладить перед вскрытием", F("arial.ttf", 46), (255, 236, 200))
+    save(im, "soda")
+
+def milk():
+    W, H = 1000, 1000
+    def face(title):
+        im = paper(W, H, (246, 248, 250), 4, 11); d = ImageDraw.Draw(im)
+        d.rectangle([0, 620, W, H], fill=(40, 110, 200))
+        d.polygon([(0, 640), (220, 560), (480, 620), (760, 540), (W, 600), (W, 700), (0, 700)], fill=(90, 170, 70))
+        for x in (150, 420, 760):   # little daisies on the meadow
+            for a in range(6): d.ellipse([x + 22 * math.cos(a) - 10, 640 + 22 * math.sin(a) - 10, x + 22 * math.cos(a) + 10, 640 + 22 * math.sin(a) + 10], fill=(255, 255, 255))
+            d.ellipse([x - 9, 631, x + 9, 649], fill=(250, 200, 40))
+        ctext(d, W * 0.5, 80, "ЛУГОВОЕ", F("georgiab.ttf", 70), (40, 110, 200), 8)
+        ctext(d, W * 0.5, 230, title, F("Gabriola.ttf", 240), (20, 60, 140))
+        ctext(d, W * 0.5, 760, "3,2% · 1 л", F("arialbd.ttf", 90), (255, 255, 255))
+        return im
+    save(face("Молоко"), "milk_front")
+    im = paper(W, H, (246, 248, 250), 4, 12); d = ImageDraw.Draw(im)
+    ctext(d, W * 0.5, 60, "Пищевая ценность на 100 г", F("arialbd.ttf", 44), (20, 60, 140))
+    for k, (a, b) in enumerate((("белки", "2,9 г"), ("жиры", "3,2 г"), ("углеводы", "4,7 г"), ("энергия", "58 ккал"))):
+        d.text((120, 170 + k * 80), a, font=F("arial.ttf", 44), fill=(30, 30, 40)); d.text((640, 170 + k * 80), b, font=F("arial.ttf", 44), fill=(30, 30, 40))
+        d.line([(110, 230 + k * 80), (890, 230 + k * 80)], fill=(150, 160, 180), width=2)
+    ctext(d, W * 0.5, 560, "хранить при +2...+6 °С", F("arial.ttf", 44), (30, 30, 40)); ctext(d, W * 0.5, 640, "годен до: 29.11", F("consola.ttf", 56), (30, 30, 40))
+    barcode(d, 330, 760, 340, 110, 12); save(im, "milk_side")
+
+def cereal():
+    W, H = 1200, 2000
+    im = Image.new("RGB", (W, H), (236, 150, 30)); d = ImageDraw.Draw(im)
+    for k in range(0, H, 80): d.line([(0, k), (W, k + 400)], fill=(244, 170, 50), width=30)
+    ctext(d, W * 0.5, 120, "ХРУСТИКИ", F("impact.ttf", 220), (120, 30, 20), 6)
+    ctext(d, W * 0.5, 380, "медовые колечки", F("georgiai.ttf", 80), (255, 248, 230))
+    d.ellipse([200, 900, 1000, 1500], fill=(245, 245, 250)); d.ellipse([240, 920, 960, 1240], fill=(250, 250, 255))
+    R = random.Random(14)
+    for _ in range(60):   # the rings in the bowl
+        x, y = R.uniform(300, 900), R.uniform(960, 1200); r = R.uniform(28, 40)
+        d.ellipse([x - r, y - r * 0.7, x + r, y + r * 0.7], fill=(214, 140, 40), outline=(160, 90, 20), width=4); d.ellipse([x - r * 0.35, y - r * 0.25, x + r * 0.35, y + r * 0.25], fill=(250, 250, 255))
+    d.ellipse([820, 560, 1120, 860], fill=(220, 30, 40)); ctext(d, 970, 640, "+ мёд", F("arialbd.ttf", 70), (255, 255, 255))
+    ctext(d, W * 0.5, 1650, "375 г", F("arialbd.ttf", 90), (120, 30, 20))
+    save(im, "cereal_front")
+    im = Image.new("RGB", (W, H), (240, 200, 120)); d = ImageDraw.Draw(im)
+    ctext(d, W * 0.5, 80, "Помоги муравью дойти до колечка!", F("arialbd.ttf", 54), (120, 30, 20)); R = random.Random(15)
+    for i in range(10):   # a maze grid
+        for j in range(14):
+            x, y = 150 + i * 90, 250 + j * 90
+            if R.random() < 0.55: d.line([(x, y), (x + 90, y)], fill=(80, 40, 20), width=10)
+            if R.random() < 0.45: d.line([(x, y), (x, y + 90)], fill=(80, 40, 20), width=10)
+    d.rectangle([150, 250, 1050, 1510], outline=(80, 40, 20), width=12)
+    barcode(d, 420, 1700, 360, 120, 15); save(im, "cereal_back")
+    im = Image.new("RGB", (600, H), (236, 150, 30)); d = ImageDraw.Draw(im)
+    ctext(d, 300, 120, "ХРУСТИКИ", F("impact.ttf", 110), (120, 30, 20))
+    d.rectangle([40, 400, 560, 1300], fill=(255, 248, 230))
+    for k, (a, b) in enumerate((("белки", "8 г"), ("жиры", "3 г"), ("углеводы", "79 г"), ("энергия", "370 ккал"))):
+        d.text((70, 440 + k * 90), a, font=F("arial.ttf", 44), fill=(40, 30, 20)); d.text((380, 440 + k * 90), b, font=F("arial.ttf", 44), fill=(40, 30, 20))
+    save(im, "cereal_side")
+    save(Image.new("RGB", (600, 400), (236, 150, 30)), "cereal_top")
+
 if __name__ == "__main__":
     spice(); jam(); pasta(); mug(); peas(); lemonade(); trap(); detergent()
     for k in BOOKS: book(k)
-    phone(); remote(); matches(); kidbooks(); remote2(); sugar(); salt()
+    phone(); remote(); matches(); kidbooks(); remote2(); sugar(); salt(); soda(); milk(); cereal()
