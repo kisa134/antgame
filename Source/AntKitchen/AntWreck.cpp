@@ -612,7 +612,11 @@ void AAntWreckBody::Setup()
 	Orig->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	if (HasAuthority())
 	{
-		for (UBoxComponent* Hb : Hull) { Hb->WeldTo(Root); }
+		// (each welded box brings its own mass into the body - density x its uu^3 volume: a 9-box bucket weighed 17 t and no
+		//  shove moved it. Each box gets its share of the piece's mass before it is welded.)
+		const float Share = FMath::Max(0.01f, Mass / (1 + Hull.Num()));
+		Root->SetMassOverrideInKg(NAME_None, Share, true);
+		for (UBoxComponent* Hb : Hull) { Hb->SetMassOverrideInKg(NAME_None, Share, true); Hb->WeldTo(Root); }
 		Root->OnComponentHit.AddDynamic(this, &AAntWreckBody::OnPhysHit);
 		Root->SetNotifyRigidBodyCollision(true);
 		Pose.Loc = GetActorLocation();
@@ -841,7 +845,11 @@ bool AAntWreckBody::Wake(const FVector& Impulse, const FVector& At, bool bForce)
 	Root->BodyInstance.SetMaxDepenetrationVelocity(60.f);
 	KnockFixtures(Impulse, TEXT("wake"));
 	Root->SetSimulatePhysics(true);
-	Root->SetMassOverrideInKg(NAME_None, Mass, true);
+	Root->SetMassOverrideInKg(NAME_None, Hull.Num() > 0 ? FMath::Max(0.01f, Mass / (1 + Hull.Num())) : Mass, true);   // (the welded boxes carry the rest: Setup)
+	if (Root->GetMass() > Mass * 1.5f)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ANTWRECK %s: the body weighs %.1f kg, the piece %.1f kg"), *PieceName(), Root->GetMass(), Mass);
+	}
 	Root->SetLinearDamping(0.08f);
 	Root->SetAngularDamping(0.7f);
 	Root->SetUseCCD(Mass < 3.f);
@@ -1656,7 +1664,9 @@ bool AntWreck::DevCommand(AAntKitchenGameMode* GM, const TArray<FString>& A)
 		if (!P) { UE_LOG(LogTemp, Display, TEXT("ANTWRECK no piece %s"), A.IsValidIndex(2) ? *A[2] : TEXT("-")); return true; }
 		FVector Dir = Op == TEXT("tip") ? FVector(Num(3, 1.f), Num(4, 0.f), 0.f) : FVector(Num(5, 1.f), Num(6, 0.f), Num(7, -0.3f));
 		Dir = Dir.GetSafeNormal();
-		const float I = Op == TEXT("tip") ? Class(P->Mat).WakeK * P->Mass * 2.2f : Num(3, 20.f);
+		// (KAN-22: a tall round thing needs ~3 m/s at the rim to go over; the class impulse only rocked the bucket 9 degrees)
+		const bool bRound = FString(All[Inst].Name) == TEXT("SM_K_Bucket") || FString(All[Inst].Name) == TEXT("SM_V3_Pail");
+		const float I = Op == TEXT("tip") ? (bRound ? P->Mass * 2.4f : Class(P->Mat).WakeK * P->Mass * 2.2f) : Num(3, 20.f);
 		const float D = Op == TEXT("tip") ? 0.f : Num(4, 30.f);
 		const FVector At = Top(Inst) - Dir * 50.f;
 		HitPiece(W, Inst, At, Dir * I, D, nullptr);

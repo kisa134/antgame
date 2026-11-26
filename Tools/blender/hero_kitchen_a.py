@@ -20,6 +20,89 @@ LEAN = 12.0                      # the placement table leans the mop this much t
 F = 0.342 / 0.274                # the reference bucket scaled to the old bucket's height
 
 # ------------------------------------------------------------------------------------------------ the bucket
+def wall_r(z):
+    """the bucket's outer wall radius at height z (m, scaled bucket)"""
+    return F * (0.1045 + (z / F - 0.014) * (0.0235 / 0.186))
+
+def used_plastic(name, col):
+    """pass 5 (the game showed a clean glossy toy): a mop bucket that has been used - floor dirt splashed up the foot,
+    dried grey drips run down from the rim, pale scuff scratches, dust on what faces up. All in the bake (C/R/N)."""
+    m = H.plastic(name, col, 0.46, peel=0.08, scuff=0.30)
+    nt = m.node_tree; p = nt.nodes["Principled BSDF"]
+    src = p.inputs["Base Color"].links[0].from_socket
+    rsrc = p.inputs["Roughness"].links[0].from_socket
+    N, L = H.N, H.L
+    tc = N(m, "ShaderNodeTexCoord", -1600, 900); sep = N(m, "ShaderNodeSeparateXYZ", -1400, 900); L(m, tc.outputs["Object"], sep.inputs["Vector"])
+    nz = N(m, "ShaderNodeTexNoise", -1400, 700); nz.inputs["Scale"].default_value = 35; nz.inputs["Detail"].default_value = 8; L(m, tc.outputs["Object"], nz.inputs["Vector"])
+    # floor dirt: strong below 2 cm, fading out by 6 cm, broken up
+    fz = N(m, "ShaderNodeMapRange", -1200, 900); fz.inputs["From Min"].default_value = 0.06; fz.inputs["From Max"].default_value = 0.012
+    L(m, sep.outputs["Z"], fz.inputs["Value"])
+    fn = N(m, "ShaderNodeMath", -1000, 900); fn.operation = "MULTIPLY"; fn.use_clamp = True
+    L(m, fz.outputs["Result"], fn.inputs[0]); nn = N(m, "ShaderNodeMath", -1200, 700); nn.operation = "MULTIPLY_ADD"; nn.inputs[1].default_value = 1.6; nn.inputs[2].default_value = -0.2
+    L(m, nz.outputs["Fac"], nn.inputs[0]); L(m, nn.outputs[0], fn.inputs[1])
+    # drips: stretched noise along Z, only above the foot, thresholded into thin runs
+    mp = N(m, "ShaderNodeMapping", -1400, 500); mp.inputs["Scale"].default_value = (60.0, 60.0, 2.2); L(m, tc.outputs["Object"], mp.inputs["Vector"])
+    dn = N(m, "ShaderNodeTexNoise", -1200, 500); dn.inputs["Scale"].default_value = 1.0; dn.inputs["Detail"].default_value = 3; L(m, mp.outputs["Vector"], dn.inputs["Vector"])
+    dr = N(m, "ShaderNodeMapRange", -1000, 500); dr.inputs["From Min"].default_value = 0.66; dr.inputs["From Max"].default_value = 0.74; L(m, dn.outputs["Fac"], dr.inputs["Value"])
+    # scuffs: short horizontal scratches
+    ms = N(m, "ShaderNodeMapping", -1400, 300); ms.inputs["Scale"].default_value = (8.0, 8.0, 260.0); L(m, tc.outputs["Object"], ms.inputs["Vector"])
+    sn = N(m, "ShaderNodeTexNoise", -1200, 300); sn.inputs["Scale"].default_value = 3.0; sn.inputs["Detail"].default_value = 2; L(m, ms.outputs["Vector"], sn.inputs["Vector"])
+    sr = N(m, "ShaderNodeMapRange", -1000, 300); sr.inputs["From Min"].default_value = 0.72; sr.inputs["From Max"].default_value = 0.78; L(m, sn.outputs["Fac"], sr.inputs["Value"])
+    c1 = N(m, "ShaderNodeMix", -700, 700); c1.data_type = "RGBA"; c1.inputs[7].default_value = (0.20, 0.17, 0.13, 1)
+    L(m, fn.outputs[0], c1.inputs[0]); L(m, src, c1.inputs[6])
+    dm = N(m, "ShaderNodeMath", -850, 500); dm.operation = "MULTIPLY"; dm.inputs[1].default_value = 0.55; L(m, dr.outputs["Result"], dm.inputs[0])
+    c2 = N(m, "ShaderNodeMix", -550, 600); c2.data_type = "RGBA"; c2.inputs[7].default_value = (0.42, 0.42, 0.40, 1)
+    L(m, dm.outputs[0], c2.inputs[0]); L(m, c1.outputs[2], c2.inputs[6])
+    sm = N(m, "ShaderNodeMath", -850, 300); sm.operation = "MULTIPLY"; sm.inputs[1].default_value = 0.45; L(m, sr.outputs["Result"], sm.inputs[0])
+    c3 = N(m, "ShaderNodeMix", -400, 500); c3.data_type = "RGBA"; c3.inputs[7].default_value = (min(1, col[0] * 2.2 + 0.18), min(1, col[1] * 1.8 + 0.18), min(1, col[2] * 1.3 + 0.16), 1)
+    L(m, sm.outputs[0], c3.inputs[0]); L(m, c2.outputs[2], c3.inputs[6]); L(m, c3.outputs[2], p.inputs["Base Color"])
+    r1 = N(m, "ShaderNodeMath", -400, 100); r1.operation = "MAXIMUM"; L(m, fn.outputs[0], r1.inputs[0]); L(m, sr.outputs["Result"], r1.inputs[1])
+    r2 = N(m, "ShaderNodeMix", -250, 100); r2.data_type = "FLOAT"; r2.inputs[3].default_value = 0.85
+    L(m, r1.outputs[0], r2.inputs[0]); L(m, rsrc, r2.inputs[2]); L(m, r2.outputs[0], p.inputs["Roughness"])
+    # the scratches cut a hair into the surface
+    old = [l for l in nt.links if l.to_socket == p.inputs["Normal"]]
+    bp = N(m, "ShaderNodeBump", -250, -200); bp.invert = True; bp.inputs["Strength"].default_value = 0.35; bp.inputs["Distance"].default_value = 0.0002
+    if old: L(m, old[0].from_socket, bp.inputs["Normal"])
+    L(m, sr.outputs["Result"], bp.inputs["Height"]); L(m, bp.outputs["Normal"], p.inputs["Normal"])
+    return m
+
+def brand_panel(mat):
+    """the moulded panel every bucket has: a raised rounded label field on the side, a capacity line and scale marks in
+    relief, and the mould's parting seam up both sides - detail that reads at an ant's height"""
+    parts = []
+    # (facing Blender +X / -Y = the game's -X / -Y: the room side the ants and the camera come from)
+    z0, z1, a0, a1 = 0.070 * F, 0.150 * F, math.radians(36), math.radians(84)
+    def patch(name, za, zb, aa, ab, h, nu=24, nv=10):
+        me = bpy.data.meshes.new(name); bm = bmesh.new()
+        grid = [[bm.verts.new(((wall_r(za + (zb - za) * j / nv) + h) * math.cos(aa + (ab - aa) * i / nu - math.pi / 2),
+                               (wall_r(za + (zb - za) * j / nv) + h) * math.sin(aa + (ab - aa) * i / nu - math.pi / 2), za + (zb - za) * j / nv))
+                 for j in range(nv + 1)] for i in range(nu + 1)]
+        for i in range(nu):
+            for j in range(nv):
+                bm.faces.new((grid[i][j], grid[i + 1][j], grid[i + 1][j + 1], grid[i][j + 1]))
+        bm.to_mesh(me); bm.free()
+        o = H.link(bpy.data.objects.new(name, me))
+        s = o.modifiers.new("sol", "SOLIDIFY"); s.thickness = h + 0.001; s.offset = -1
+        o.data.materials.append(mat); H.smooth(o, 0, min(0.0008, h * 0.6), 2)
+        return o
+    parts.append(patch("Panel", z0, z1, a0, a1, 0.0012))
+    # "lettering": rows of short raised bars, and a big "10 L"-like block
+    R = random.Random(4)
+    for row, (zr, n, w) in enumerate(((z1 - 0.014, 6, 0.010), (z1 - 0.026, 9, 0.0065), (z0 + 0.018, 3, 0.016))):
+        a = a0 + math.radians(5)
+        for k in range(n):
+            wa = (w + R.uniform(-0.002, 0.002)) / wall_r(zr)
+            parts.append(patch("Glyph", zr - 0.0045, zr + 0.0045, a, a + wa, 0.0022, 4, 2))
+            a += wa + 0.003 / wall_r(zr)
+    # scale marks on the other side (litres), and the parting seam
+    for k in range(5):
+        z = 0.05 * F + k * 0.032 * F
+        wa = (0.018 if k % 2 == 0 else 0.010) / wall_r(z)
+        parts.append(patch("Mark", z - 0.0012, z + 0.0012, math.pi - wa / 2, math.pi + wa / 2, 0.0012, 4, 1))
+    for a in (math.pi / 2, -math.pi / 2):
+        parts.append(patch("Seam", 0.016 * F, 0.198 * F, a + math.pi / 2 - 0.004, a + math.pi / 2 + 0.004, 0.0007, 2, 16))
+    return [(o, 0) for o in parts]
+
 def bucket_parts():
     f = F
     prof = [(0, 0.004), (0.090, 0.004), (0.098, 0.000), (0.103, 0.006), (0.1045, 0.014),
@@ -28,9 +111,9 @@ def bucket_parts():
             (0.1365, 0.258), (0.1445, 0.262), (0.1470, 0.268), (0.1445, 0.274), (0.1380, 0.274),
             (0.1330, 0.268), (0.1010, 0.016), (0.094, 0.010), (0, 0.010)]
     prof = [(r * f, z * f) for r, z in prof]
-    blue = H.plastic("PlasticBlue", (0.05, 0.16, 0.55))
+    blue = used_plastic("PlasticBlue", (0.07, 0.19, 0.52))   # (a touch less saturated: the game's tonemapper deepens it)
     body = H.screw("Bucket", prof, 72, 1); body.data.materials.append(blue)
-    parts = [(body, 0)]
+    parts = [(body, 0)] + brand_panel(blue)
     zinc = H.metal("Zinc", (0.6, 0.61, 0.62), 0.35)
     for s in (-1, 1):
         lug = H.cube("Lug", (0.012 * f, 0.030 * f, 0.034 * f), (s * 0.1415 * f, 0, 0.243 * f)); H.smooth(lug, 2, 0.004)

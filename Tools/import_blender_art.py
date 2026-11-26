@@ -211,6 +211,18 @@ def import_hero(only_names=None, HERO_SRC=HERO_SRC, manifest="hero_manifest.json
         for k, t in texs.items():
             if t: MEL.set_material_instance_texture_parameter_value(mi, k, t)
         EAL.save_asset(dest + "/" + mi_name)
+        # the owner's palette (hero_kitchen_block.py pass 5): the same model baked in his own map v4 colours -> MI_<Name>_Owner,
+        # which the mesh and its break pieces wear by default (rule 2); KitchenArt swaps MI_<Name> in with -AntHeroPalette=new
+        if p.get("textures_owner"):
+            otex = {k: hero_tex(os.path.join(HERO_SRC, v), dest, "T_%s_%s_Owner" % (name, k), k) for k, v in p["textures_owner"].items()}
+            if not EAL.does_asset_exist(dest + "/" + mi_name + "_Owner"):
+                AT.create_asset(mi_name + "_Owner", dest, unreal.MaterialInstanceConstant, unreal.MaterialInstanceConstantFactoryNew())
+            mio = unreal.load_asset(dest + "/" + mi_name + "_Owner")
+            MEL.set_material_instance_parent(mio, parent)
+            for k, t in otex.items():
+                if t: MEL.set_material_instance_texture_parameter_value(mio, k, t)
+            EAL.save_asset(dest + "/" + mi_name + "_Owner")
+            mi = mio
         # glass (hero props): slot Hero_Glass -> MI_<Name>_Glass, parent M_HeroGlass (translucent; Tools/art/make_hero_glass.py)
         gmi = None
         gpar = unreal.load_asset(HERO_MAT + "/M_HeroGlass") if p.get("glass") else None

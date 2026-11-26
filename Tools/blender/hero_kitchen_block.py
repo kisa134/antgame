@@ -25,6 +25,7 @@ NOBAKE = len(argv) > 3 and argv[3] == "nobake"
 # the owner's kitchen models (the main worktree keeps the source FBX of the base kitchen; level_v2 is in this one too)
 SRC_ROOTS = [os.path.join(HERE, "..", "..", "SourceArt", "Blender"), r"C:\Users\HYPERPC\Documents\Unreal Projects\AntKitchen\SourceArt\Blender"]
 MANIFEST = os.environ.get("HERO_MANIFEST", "hero_kitchen_manifest.json")
+OWNER_PALETTE = os.environ.get("HERO_OWNER_PALETTE", "1") != "0"
 
 # name: (source folder, break class or None, texture size)
 W, P, M_ = "wood", "plastic", None
@@ -218,6 +219,82 @@ def look(slot, rgb):
     else: m = H.plastic("Hero_" + slot, tuple(rgb), 0.38)
     LIB[key] = m
     return m
+
+# ------------------------------------------------------------------------------------------------ the owner's palette (pass 5)
+# Rule 2: the kitchen's colours are the owner's - the map v4 looks (Source/AntKitchen/Map4Look.cpp: per slot, his own
+# textures SourceArt/Blender/textures_own/T_M4_<Set>_{C,R} x tint, tile in uu). The same hero model is baked a second time
+# with those looks into tex_owner/ (MI_<Name>_Owner, the game's default; -AntHeroPalette=new shows the painted set).
+TEXOWN = os.path.join(HERE, "..", "..", "SourceArt", "Blender", "textures_own")
+M4LOOKS = {}
+
+def load_m4looks():
+    import re
+    src = open(os.path.join(HERE, "..", "..", "Source", "AntKitchen", "Map4Look.cpp"), encoding="utf-8", errors="ignore").read()
+    num = r"\s*(-?[\d.]+)f"
+    pat = re.compile(r'\{\s*TEXT\("([^"]+)"\),\s*TEXT\("([^"]+)"\),' + ",".join([num] * 11))
+    for m in pat.finditer(src):
+        k = m.group(1)
+        if k in M4LOOKS: continue
+        v = [float(m.group(i)) for i in range(3, 14)]
+        M4LOOKS[k] = {"set": m.group(2), "tile": v[0], "tint": v[1:4], "rmul": v[4], "radd": v[5], "metal": v[6], "nstr": v[7]}
+    print("HERO owner palette: %d looks from Map4Look.cpp" % len(M4LOOKS))
+
+def _img_tex(m, path, data, x, y, vec):
+    t = H.N(m, "ShaderNodeTexImage", x, y); t.image = bpy.data.images.load(path, check_existing=True)
+    if data: t.image.colorspace_settings.name = "Non-Color"
+    t.projection = "BOX"; t.projection_blend = 0.25; t.interpolation = "Cubic"
+    H.L(m, vec, t.inputs["Vector"]); return t
+
+def owner_look(name, slot, hero_mat):
+    """the map v4 look of an old slot as a Blender material (None: no look - the hero material stays)"""
+    lk = M4LOOKS.get("%s/%s" % (name, slot)) or M4LOOKS.get(slot)
+    if not lk: return None
+    key = "Owner_%s_%s" % (lk["set"], "_".join("%.2f" % c for c in lk["tint"] + [lk["rmul"], lk["radd"], lk["metal"]]))
+    m = bpy.data.materials.get(key)
+    if m: return m
+    cpath = [os.path.join(TEXOWN, "T_M4_%s_C.%s" % (lk["set"], e)) for e in ("jpg", "png")]
+    cpath = [p for p in cpath if os.path.exists(p)]
+    if not cpath: return None
+    rpath = [p for p in (os.path.join(TEXOWN, "T_M4_%s_R.%s" % (lk["set"], e)) for e in ("jpg", "png")) if os.path.exists(p)]
+    m, p = H.mat(key)
+    tc = H.N(m, "ShaderNodeTexCoord", -1300); mp = H.N(m, "ShaderNodeMapping", -1100)
+    s = 1.0 / max(0.05, lk["tile"] / 1900.0)                        # (one repeat per tile uu, as M_M4 lays it)
+    mp.inputs["Scale"].default_value = (s, s, s); H.L(m, tc.outputs["Object"], mp.inputs["Vector"])
+    c = _img_tex(m, cpath[0], False, -800, 300, mp.outputs["Vector"])
+    mul = H.N(m, "ShaderNodeMix", -450, 300); mul.data_type = "RGBA"; mul.blend_type = "MULTIPLY"; mul.inputs[0].default_value = 1.0
+    mul.inputs[7].default_value = (*[min(1.0, t) for t in lk["tint"]], 1)
+    H.L(m, c.outputs["Color"], mul.inputs[6])
+    if max(lk["tint"]) > 1.0:                                        # (tints over 1 brighten: M_M4 multiplies unclamped)
+        br = H.N(m, "ShaderNodeMix", -300, 300); br.data_type = "RGBA"; br.blend_type = "MULTIPLY"; br.inputs[0].default_value = 1.0
+        br.inputs[7].default_value = (*[max(1.0, t) for t in lk["tint"]], 1); H.L(m, mul.outputs[2], br.inputs[6]); mul = br
+    H.L(m, mul.outputs[2], p.inputs["Base Color"])
+    if rpath:
+        r = _img_tex(m, rpath[0], True, -800, -50, mp.outputs["Vector"]); sep = H.N(m, "ShaderNodeSeparateColor", -600, -50)
+        H.L(m, r.outputs["Color"], sep.inputs["Color"])
+        ma = H.N(m, "ShaderNodeMath", -450, -50); ma.operation = "MULTIPLY_ADD"; ma.use_clamp = True
+        ma.inputs[1].default_value = lk["rmul"]; ma.inputs[2].default_value = lk["radd"]
+        H.L(m, sep.outputs["Green"], ma.inputs[0]); H.L(m, ma.outputs[0], p.inputs["Roughness"])
+    else:
+        p.inputs["Roughness"].default_value = min(1.0, 0.5 * lk["rmul"] + lk["radd"])
+    p.inputs["Metallic"].default_value = min(1.0, lk["metal"])
+    # the grain in relief from the colour map (a box-projected tangent normal map would be wrong on the bevels)
+    bw = H.N(m, "ShaderNodeRGBToBW", -450, -300); H.L(m, c.outputs["Color"], bw.inputs["Color"])
+    bp = H.N(m, "ShaderNodeBump", -250, -300); bp.inputs["Strength"].default_value = 0.12 * lk["nstr"]; bp.inputs["Distance"].default_value = 0.0004
+    H.L(m, bw.outputs["Val"], bp.inputs["Height"]); H.L(m, bp.outputs["Normal"], p.inputs["Normal"])
+    H.tag(m, min(1.0, lk["metal"]), float(hero_mat.get("hero_porosity", 0.2)) if hero_mat else 0.2)
+    return m
+
+def to_owner(o, name, slots_by_index):
+    """o's materials swapped to the owner's looks; returns the undo list"""
+    undo = []
+    for i, s in enumerate(o.material_slots):
+        hm = s.material
+        if not hm or not hm.name.startswith("Hero_"): continue
+        old = slots_by_index.get(hm.name)
+        om = owner_look(name, old, hm) if old else None
+        if om:
+            undo.append((i, hm)); s.material = om
+    return undo
 
 # ------------------------------------------------------------------------------------------------ modelled detail (pass 3)
 # What the owner asked for on top of the old shapes (26.11 evening): real hardware and parts, in the old frame (the numbers
@@ -603,6 +680,20 @@ def produce(name, folder, brk, size, mats):
         paths = {k: os.path.join(tdir, "T_%s_%s.png" % (name, k)) for k in "CNR"}
     else:
         paths = H.bake_set(lo, name, tdir, size, 32, hi=hi, ext=max(0.0015, bw * 1.5), grime=0.3, ao_dist=max(0.015, min(0.035, d.length * 0.03)))
+    # pass 5: the same model in the owner's own colours (his map v4 looks), the same UVs -> tex_owner/
+    paths_owner = None
+    if OWNER_PALETTE:
+        alias = {"EdgeBand": "Butcher"}
+        by_name = {m.name: alias.get(k, k) for k, m in LIB.items()}
+        u_hi = to_owner(hi, name, by_name); u_lo = to_owner(lo, name, by_name)
+        if u_hi:
+            odir = os.path.join(out, "tex_owner")
+            if NOBAKE and os.path.exists(os.path.join(odir, "T_%s_C.png" % name)):
+                paths_owner = {k: os.path.join(odir, "T_%s_%s.png" % (name, k)) for k in "CNR"}
+            else:
+                paths_owner = H.bake_set(lo, name, odir, size, 32, hi=hi, ext=max(0.0015, bw * 1.5), grime=0.3, ao_dist=max(0.015, min(0.035, d.length * 0.03)))
+            for i, hm in u_lo: lo.material_slots[i].material = hm
+        print("HERO %s: owner palette %s" % (name, "baked" if paths_owner else "same as hero (no map v4 look)"))
     bpy.data.objects.remove(hi)
     glow_faces = [p.index for p in lo.data.polygons if lo.data.materials[p.material_index] and lo.data.materials[p.material_index].name.startswith("Hero_HeatGlow")]
     H.game_material(lo, name)
@@ -620,6 +711,8 @@ def produce(name, folder, brk, size, mats):
            "textures": {k: os.path.relpath(v, OUT).replace("\\", "/") for k, v in paths.items()}, "collision_lod": 0, "movers": [], "breaks": [],
            "source": "%s/%s.fbx (the owner's kitchen model, same frame)" % (folder, name), "old_slots": slots,
            "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)"}
+    if paths_owner:
+        man["textures_owner"] = {k: os.path.relpath(v, OUT).replace("\\", "/") for k, v in paths_owner.items()}
     man.update(H.info(lo)); man["lod_triangles"] = [H.tris(lo), H.tris(l1), H.tris(l2)]; man["ucx"] = len(hs)
     pieces = []
     if brk == W:
@@ -635,6 +728,8 @@ def produce(name, folder, brk, size, mats):
     prev = H.preview_material(name, paths)
     os.makedirs(REV, exist_ok=True)
     review(name, old, lo, prev, os.path.join(REV, name + ".jpg"))
+    if paths_owner:
+        review(name, old, lo, H.preview_material(name + "_Owner", paths_owner), os.path.join(REV, name + "_owner.jpg"))
     print("HERO %s: LOD %s, %d hulls, %d break pieces, %.0f s" % (name, man["lod_triangles"], man["ucx"], len(man["breaks"]), time.time() - t0))
     return man
 
@@ -651,6 +746,7 @@ def main():
                 try: mats.update(json.load(open(pth, encoding="utf-8")).get("materials", {}))
                 except Exception: pass
     mats.update(lv["materials"])
+    load_m4looks()
     names = list(PIECES) if SEL == "all" else sum([GROUPS.get(s, [s]) for s in SEL.replace("+", ",").split(",")], [])
     mpath = os.path.join(OUT, MANIFEST)
     for name in names:
