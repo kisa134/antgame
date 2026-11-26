@@ -97,6 +97,7 @@ void AKitchenLoot::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	DOREPLIFETIME(AKitchenLoot, ShardSeed);
 	DOREPLIFETIME(AKitchenLoot, ShardScale);
 	DOREPLIFETIME(AKitchenLoot, CarryNet);
+	DOREPLIFETIME(AKitchenLoot, FoodNet);
 }
 
 float AKitchenLoot::GetRadius() const
@@ -117,6 +118,7 @@ void AKitchenLoot::InitFood(const FAntFoodDef& Def)
 	ShapeIndex = (uint8)Def.Shape;
 	VisualScale = Def.Scale;
 	bIsGear = false;
+	AntFood::Init(this);   // what it is made of (AntFood.h)
 }
 
 void AKitchenLoot::InitGear(const FAntWeapon& InWeapon)
@@ -138,6 +140,7 @@ void AKitchenLoot::BeginPlay()
 	RefreshVisual();
 	if (HasAuthority() && !bIsGear)
 	{
+		AntFood::Init(this);   // (again: bBody / bVault are set after InitFood)
 		BreakableAfter = GetWorld()->GetTimeSeconds() + 2.f;
 		if (!bOriginSet)
 		{
@@ -163,6 +166,12 @@ void AKitchenLoot::OnBodyHit(UPrimitiveComponent* HitComp, AActor* Other, UPrimi
 	}
 	const float Now = GetWorld()->GetTimeSeconds();
 	const float ImpactSpeed = FMath::Max(0.f, -(float)FVector::DotProduct(LastVelocity, Hit.ImpactNormal));
+	if (ImpactSpeed > 150.f && Now > NextFoodHit)
+	{
+		NextFoodHit = Now + 0.15f;
+		AntFood::OnImpact(this, ImpactSpeed, Hit.ImpactPoint, Other);   // crumbs knocked off, a snap, a squirt, a bounce, a ram (AntFood.cpp)
+		if (bShatterPending || IsActorBeingDestroyed()) { return; }
+	}
 	if (ImpactSpeed > 450.f && Now > NextThud)
 	{
 		NextThud = Now + 0.3f;
@@ -226,6 +235,10 @@ AKitchenLoot* AKitchenLoot::SpawnPiece(const FString& Name, int32 PieceValue, in
 	if (L)
 	{
 		L->InitFood(D);
+		// a piece carries on what happened to the whole (soaked, toasted, spoiled...)
+		L->FoodNet.Soak = FoodNet.Soak; L->FoodNet.Toast = FoodNet.Toast; L->FoodNet.Burn = FoodNet.Burn; L->FoodNet.Frozen = FoodNet.Frozen;
+		L->FoodNet.Dirt = FoodNet.Dirt; L->FoodNet.Spoil = FoodNet.Spoil;
+		if (FoodNet.Food != 255 && L->FoodNet.Food == 255) { L->FoodNet.Food = FoodNet.Food; L->FoodNet.Kind = FoodNet.Kind; }   // "Кусок: ..." is still that food
 		L->Origin = Origin;
 		L->bFromLiving = bFromLiving;
 		L->bOriginSet = true;
@@ -253,10 +266,12 @@ void AKitchenLoot::Shatter(const FVector& At)
 	{
 		return;
 	}
-	const int32 N = FMath::Clamp(Weight / 5, 2, 6);
+	// (AntFood: brittle food snaps in two; the new models break along their own pre-cut pieces)
+	const int32 PreCut = AntFood::BreakPieces(this);
+	const int32 N = PreCut > 0 ? PreCut : FMath::Clamp(Weight / 5, 2, 6);
 	// Ordinary food: pieces are worth a bit more in total (smashing is a strategy). A trophy: the whole-delivery
-	// bonus is gone, the pieces add up to the plain value.
-	const int32 PieceValue = FMath::CeilToInt(Value * (bTrophy ? 1.f : 1.1f) / N);
+	// bonus is gone, the pieces add up to the plain value. Brittle halves: worth less than the whole.
+	const int32 PieceValue = FMath::Max(1, FMath::CeilToInt(Value * (bTrophy ? 1.f : 1.1f) * AntFood::BreakValueMul(this) / N));
 	if (bTrophy)
 	{
 		if (AAntKitchenGameMode* TGM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
@@ -305,6 +320,7 @@ AKitchenLoot* AKitchenLoot::BiteOff(AAntCharacter* By)
 	const int32 V = FMath::Max(1, FMath::RoundToInt((float)Value * W / Weight));
 	Weight -= W;
 	Value = FMath::Max(1, Value - V);
+	AntFood::OnBitten(this);   // the bite shows on the model, the mass follows
 	OnRep_Visual();
 	FVector Dir = By ? (By->GetActorLocation() - GetActorLocation()).GetSafeNormal() : FVector::UpVector;
 	const FVector Where = GetActorLocation() + Dir * GetRadius() + FVector(0.f, 0.f, 20.f);
@@ -361,7 +377,32 @@ void AKitchenLoot::RefreshVisual()
 
 	const TCHAR* ArtName = bIsGear ? nullptr : AntArt::FoodArtName(LootName);
 	const AntArt::FPart* Art = ArtName ? &AntArt::Get(ArtName) : nullptr;
-	if (BuildShard(Art))
+	// -AntFoodV2: the new Blender model at its real size (or one of its pre-cut pieces), with the food material M_FoodV2
+	UMaterialInterface* V2Mat = nullptr;
+	UMaterialInterface* V2Inner = nullptr;
+	UStaticMesh* V2Mesh = nullptr;
+	if (!bIsGear && (ShardPath.Num() == 0 || ShardPath.Num() == 2))
+	{
+		V2Mesh = AntFood::ModelV2(this, ShardPath.Num() == 2 ? (int32)ShardPath[0] : -1, &V2Mat, &V2Inner);
+	}
+	if (V2Mesh)
+	{
+		bHasArt = true;
+		if (Shard) { Shard->SetVisibility(false); }
+		Mesh->SetVisibility(true);
+		const float S = AntFood::ScaleV2(this);
+		Mesh->SetStaticMesh(V2Mesh);
+		// (the model's own slots: Outer = the atlas, Inner = the faces of a break)
+		const int32 OuterSlot = Mesh->GetMaterialIndex(TEXT("Outer")), InnerSlot = Mesh->GetMaterialIndex(TEXT("Inner"));
+		Mesh->SetMaterial(OuterSlot != INDEX_NONE ? OuterSlot : 0, V2Mat);
+		if (InnerSlot != INDEX_NONE) { Mesh->SetMaterial(InnerSlot, V2Inner); }
+		Mesh->SetRelativeScale3D(FVector(S));
+		const FBox Bx = V2Mesh->GetBoundingBox();
+		ArtOffset = -Bx.GetCenter() * S;
+		MeshMID = nullptr;
+		SetupPhysics(Bx.GetExtent() * S);
+	}
+	else if (BuildShard(Art))
 	{
 		// A chunk cut out of the model: BuildShard set the mesh and the physics body.
 	}
@@ -436,12 +477,15 @@ void AKitchenLoot::SetupPhysics(const FVector& HalfExtent)
 		M->AddToRoot();
 		FoodMat = M;
 	}
-	Body->SetPhysMaterialOverride(FoodMat.Get());
+	// what the food is made of: a gummy bounces, a grape is a ball bearing, honey sticks, cheese drags (AntFood.cpp)
+	float LinDamp = 0.3f, AngDamp = 1.5f;
+	UPhysicalMaterial* KindMat = AntFood::PhysMat(this, LinDamp, AngDamp);
+	Body->SetPhysMaterialOverride(KindMat ? KindMat : FoodMat.Get());
 	Body->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	Body->SetSimulatePhysics(true);
 	Body->SetMassOverrideInKg(NAME_None, FMath::Max(1, Weight) * AKitchenLoot::KgPerWeight, true);
-	Body->SetLinearDamping(0.3f);
-	Body->SetAngularDamping(1.5f);
+	Body->SetLinearDamping(LinDamp);
+	Body->SetAngularDamping(AngDamp);
 	Body->SetUseCCD(true);
 }
 
@@ -495,6 +539,11 @@ void AKitchenLoot::Tick(float DeltaSeconds)
 		{
 			return;   // delivered
 		}
+		AntFood::ServerTick(this, DeltaSeconds);   // what the food is made of: crumbs, stretch, sag, roll, melt, spoil (AntFood.cpp)
+		if (IsPendingKillPending())
+		{
+			return;   // melted away
+		}
 		if (!bIsGear && Body->IsSimulatingPhysics())
 		{
 			LastVelocity = Body->GetPhysicsLinearVelocity();
@@ -527,6 +576,7 @@ void AKitchenLoot::Tick(float DeltaSeconds)
 	if (!bIsGear)
 	{
 		Mesh->SetRelativeLocation(ArtOffset);   // food is a physics body: it tumbles for real
+		AntFood::VisualTick(this, (Shard && Shard->IsVisible()) ? (UPrimitiveComponent*)Shard : (UPrimitiveComponent*)Mesh, DeltaSeconds);   // sag, stretch, wobble, states (M_FoodV2)
 		// Too heavy to lift: it scrapes along the floor, leaving crumbs and a little dust behind.
 		const FVector Here = GetActorLocation();
 		if (IsCarried() && CarryRatio() < 1.f && !bHeld)
@@ -656,14 +706,17 @@ bool AKitchenLoot::TryGrab(AAntCharacter* Ant, FString& Why)
 	Ant->SetCarrying(this);
 	AntCarry::ServerCarriersChanged(this);
 	ServerCarryTick(0.f);
+	AntFood::OnGrab(this);   // brittle: one carrier too many and it snaps
 	return true;
 }
 
 void AKitchenLoot::Release(AAntCharacter* Ant)
 {
 	const int32 Idx = Carriers.Find(Ant);
+	FVector GripW = FVector::ZeroVector;
 	if (Idx != INDEX_NONE)
 	{
+		GripW = GetActorTransform().TransformPosition(GrabLocal[Idx]);
 		LastCarrier = Ant;
 		Carriers.RemoveAt(Idx);
 		GrabLocal.RemoveAt(Idx);
@@ -677,6 +730,10 @@ void AKitchenLoot::Release(AAntCharacter* Ant)
 		CarryStrength = 0.f;
 	}
 	AntCarry::ServerCarriersChanged(this);
+	if (Idx != INDEX_NONE)
+	{
+		AntFood::OnRelease(this, GripW);   // elastic: stretched and let go, it springs (a catapult)
+	}
 }
 
 void AKitchenLoot::ReleaseAll()
@@ -727,7 +784,7 @@ void AKitchenLoot::ServerCarryTick(float Dt)
 		return;
 	}
 	const FTransform TM = GetActorTransform();
-	const float Leash = 260.f * AAntCharacter::AntShrink + GetRadius();
+	const float Leash = (260.f * AAntCharacter::AntShrink + GetRadius()) * AntFood::LeashMul(this);   // (sticky: it glues the jaws)
 
 	// Drop ants that died, let go or got pulled too far away.
 	for (int32 i = Carriers.Num() - 1; i >= 0; --i)

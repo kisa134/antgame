@@ -33,6 +33,7 @@
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Engine/Texture.h"
 #include "Components/InstancedStaticMeshComponent.h"
+#include "AntFood.h"
 
 namespace KitchenPalette
 {
@@ -2533,6 +2534,7 @@ void AKitchenBuilder::Tick(float DeltaSeconds)
 		{
 			G->AffectAnt(Ant, Env);
 		}
+		AntFood::AffectAnt(Ant, Env);   // honey, jam, juice on the floor and sticky food hold the other side's ants
 		Ant->ApplyEnvironment(Env, Dt);
 	}
 }
