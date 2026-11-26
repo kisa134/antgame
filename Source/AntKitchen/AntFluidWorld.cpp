@@ -1571,6 +1571,18 @@ bool UAntFluidWorld::DevCommand(const TArray<FString>& A)
 	else if (Op == TEXT("freeze")) { bFrozen = A.Num() >= 3 && A[2] == TEXT("on"); }
 	else if (Op == TEXT("clear")) { Dry(); }
 	else if (Op == TEXT("stats")) { LogStats(); }
+	else if (Op == TEXT("body"))
+	{
+		// fluid body x y z [seed radius]: the body of water a short there would run through (the KAN-21 water fix), and what the column says
+		const FVector P(NumAt(A, 2), NumAt(A, 3), NumAt(A, 4));
+		FAntWaterBody Bd;
+		const bool bOk = WaterBodyAt(P, 0.5f, Bd, NumAt(A, 5, 150.f));
+		FSample S;
+		const bool bS = SampleAt(P, S);
+		UE_LOG(LogTemp, Display, TEXT("ANTFLUID body at %s: %s, basin %d, %d cells%s | column: bed %.1f surface %.1f depth %.1f, DepthAt %.1f, DepthIn %.1f"),
+			*P.ToCompactString(), bOk ? TEXT("water") : TEXT("none"), Bd.Basin, Bd.Num, Bd.bCapped ? TEXT(" (capped)") : TEXT(""),
+			bS ? S.Bed : 0.f, bS ? S.Surface : 0.f, bS ? S.Total : 0.f, DepthAt(P), DepthIn(P));
+	}
 	else if (Op == TEXT("show") && Holder) { Holder->SetActorHiddenInGame(NumAt(A, 2, 1.f) < 0.5f); for (FAntFluidVolume& V : Volumes) { if (V.Comp) { V.Comp->SetVisibility(NumAt(A, 2, 1.f) >= 0.5f); } } }   // A/B: the liquid drawn or not (it still simulates)
 	else if (Op == TEXT("res") && PC) { PC->ConsoleCommand(FString::Printf(TEXT("r.SetRes %dx%dw"), (int32)NumAt(A, 2, 1600.f), (int32)NumAt(A, 3, 900.f)), false); }
 	else if (Op == TEXT("profile") && PC) { PC->ConsoleCommand(TEXT("ProfileGPU"), false); }   // one frame of GPU passes into the log
@@ -2286,6 +2298,88 @@ float UAntFluidWorld::DepthAt(const FVector& P) const
 {
 	FSample S;
 	return bReady && SampleAt(P, S) ? S.Total : 0.f;
+}
+
+float UAntFluidWorld::DepthIn(const FVector& P, float Above) const
+{
+	FSample S;
+	if (!bReady || !SampleAt(P, S) || S.Total <= 0.f) { return 0.f; }
+	return (float)P.Z <= S.Surface + Above ? S.Total : 0.f;
+}
+
+bool UAntFluidWorld::WaterBodyAt(const FVector& At, float MinDepth, FAntWaterBody& Out, float SeedRadius) const
+{
+	// (KAN-21 water fix) the liquid joined to the point: a flood fill over the cells of its basin that hold more than MinDepth.
+	// A short in a puddle on the floor reaches what stands in that puddle, not the wet worktop over it or a puddle across the room.
+	Out = FAntWaterBody();
+	if (!bReady) { return false; }
+	const int32 b = BasinUnder(At + FVector(0.f, 0.f, 30.f));
+	if (b < 0) { return false; }
+	const FBasin& B = *Basins[b];
+	auto Depth = [&B](int32 c) { return B.Layers[LHoney].H[c] + B.Layers[LWater].H[c] + B.Layers[LOil].H[c]; };
+	auto Wet = [&B, &Depth, MinDepth](int32 c) { return B.Kind[c] == Open && Depth(c) > MinDepth; };
+	Out.Basin = b;
+	Out.Cells.Init(false, B.Nx * B.Ny);
+	TArray<int32> Open_;
+	Open_.Reserve(4096);
+	// The seeds: every wet cell within SeedRadius whose water is level with the point (the thing at At stands on its own footprint,
+	// which the bed takes as a wall: the water touching it lies round it, maybe split by its cable into pockets)
+	int32 Ic, Jc;
+	if (!B.CellAt((float)At.X, (float)At.Y, Ic, Jc)) { return false; }
+	const int32 R = FMath::Max(0, FMath::CeilToInt(SeedRadius / B.Dx));
+	for (int32 j = FMath::Max(0, Jc - R); j <= FMath::Min(B.Ny - 1, Jc + R); ++j)
+	{
+		for (int32 i = FMath::Max(0, Ic - R); i <= FMath::Min(B.Nx - 1, Ic + R); ++i)
+		{
+			if (FMath::Square(i - Ic) + FMath::Square(j - Jc) > R * R + 1) { continue; }
+			const int32 c = B.Idx(i, j);
+			if (!Wet(c)) { continue; }
+			const float Bed = B.Z0 + B.Bed[c];
+			if (Bed > (float)At.Z + 30.f || Bed + Depth(c) < (float)At.Z - 30.f) { continue; }   // a shelf of water above it, or a pit far below
+			Out.Cells[c] = true; Open_.Add(c); ++Out.Num;
+		}
+	}
+	if (Out.Num == 0) { Out.Basin = -1; return false; }
+	const int32 MaxCells = 400000;
+	while (Open_.Num() > 0)
+	{
+		const int32 c = Open_.Pop(EAllowShrinking::No);
+		const int32 i = c % B.Nx, j = c / B.Nx;
+		const int32 Nb[4] = { i > 0 ? c - 1 : -1, i < B.Nx - 1 ? c + 1 : -1, j > 0 ? c - B.Nx : -1, j < B.Ny - 1 ? c + B.Nx : -1 };
+		for (int32 n : Nb)
+		{
+			if (n < 0 || Out.Cells[n] || !Wet(n)) { continue; }
+			Out.Cells[n] = true;
+			Open_.Add(n);
+			if (++Out.Num >= MaxCells) { Out.bCapped = true; Open_.Reset(); break; }
+		}
+	}
+	return true;
+}
+
+bool UAntFluidWorld::InWaterBody(const FAntWaterBody& Body, const FBox& Box, float Tol) const
+{
+	if (!bReady || !Basins.IsValidIndex(Body.Basin) || Body.Num == 0) { return false; }
+	const FBasin& B = *Basins[Body.Basin];
+	// the cells under the thing and one ring round it (a static thing's own footprint is a wall cell of the bed: the water is beside it);
+	// at most 24 x 24 samples over a big thing
+	const float X0 = (float)Box.Min.X - B.Dx, Y0 = (float)Box.Min.Y - B.Dx, X1 = (float)Box.Max.X + B.Dx, Y1 = (float)Box.Max.Y + B.Dx;
+	const float StepX = FMath::Max(B.Dx, (X1 - X0) / 24.f), StepY = FMath::Max(B.Dx, (Y1 - Y0) / 24.f);
+	for (float Y = Y0; Y <= Y1 + 0.5f; Y += StepY)
+	{
+		for (float X = X0; X <= X1 + 0.5f; X += StepX)
+		{
+			int32 I, J;
+			if (!B.CellAt(X, Y, I, J)) { continue; }
+			const int32 c = B.Idx(I, J);
+			if (!Body.Cells[c]) { continue; }
+			const float Bed = B.Z0 + B.Bed[c];
+			const float Surface = Bed + B.Layers[LHoney].H[c] + B.Layers[LWater].H[c] + B.Layers[LOil].H[c];
+			// its bottom is under the surface of that water, and it is not hanging over it from above
+			if ((float)Box.Min.Z <= Surface + Tol && (float)Box.Max.Z >= Bed - Tol) { return true; }
+		}
+	}
+	return false;
 }
 
 bool UAntFluidWorld::IsSlippery(const FVector& P) const

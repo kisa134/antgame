@@ -794,7 +794,14 @@ void AAntMatterNet::StepBody(FBody& B, float Dt)
 				const FAntMatProps* OM = Reg[Idx].M;
 				if (!O || O == C || !Burns(OM) || OM->IgniteAt > 270.f) { continue; }
 				// the spark jumps across the gap between the live edge and the paper
-				const FVector P = Bd.GetBox().GetClosestPointTo(O->Bounds.Origin);
+				FVector P = Bd.GetBox().GetClosestPointTo(O->Bounds.Origin);
+				if (Bd.BoxExtent.GetMax() > 300.f)
+				{
+					// a big live thing (a cabinet run, a rail): its box takes in the shelves above it; the spark leaves its real surface
+					FVector OnC;
+					if (C->GetClosestPointOnCollision(O->Bounds.Origin, OnC) < 0.f) { continue; }
+					P = OnC;
+				}
 				const FVector Q = O->Bounds.GetBox().GetClosestPointTo(P);
 				if (FVector::Dist(P, Q) > 120.f) { continue; }
 				Spark((P + Q) * 0.5f, (Q - P).GetSafeNormal(), TEXT("искра с металла под током"));
@@ -934,7 +941,7 @@ void AAntMatterNet::ServerStep(float Dt)
 			UPrimitiveComponent* C = R.C.Get();
 			if (!C || BodyIndex.Contains(C)) { continue; }
 			const FBox Box = C->Bounds.GetBox();
-			if (Fluid->DepthAt(FVector(Box.GetCenter().X, Box.GetCenter().Y, Box.Min.Z + 20.f)) < 0.3f) { continue; }
+			if (Fluid->DepthIn(FVector(Box.GetCenter().X, Box.GetCenter().Y, Box.Min.Z + 20.f), 15.f) < 0.3f) { continue; }   // (in it, not over it)
 			if (FBody* B = BodyOf(C, true)) { ProbeWater(*B, Dt, true); }
 		}
 	}
@@ -1261,22 +1268,40 @@ int32 AAntMatterNet::Electrify(const FVector& At, float Radius, float Seconds, c
 	TSet<int32> Done;
 	Query(At, Radius, Near);
 	for (int32 Idx : Near) { if (Conducts(Idx)) { Open.Add(Idx); Done.Add(Idx); } }
-	// the water it is in: everything conducting that stands in the same water
-	if (UAntFluidWorld* Fluid = UAntFluidWorld::Active(this))
+	// the water it is in: everything conducting that stands in the same water.
+	// (water fix: it used to be "any water under it within 45 m": DepthAt reads the whole column, so a shelf at 2700 over the wet
+	// worktop and a puddle across the room counted as the same water as the floor at the short, and the sparks of 27-40 live things
+	// set the kitchen on fire in a handful of places at once. Now: the body of water joined to the short, and only what stands in it.)
+	int32 InWater = 0;
+	FAntWaterBody Body;
+	UAntFluidWorld* Fluid = UAntFluidWorld::Active(this);
+	if (Fluid && Fluid->WaterBodyAt(At + FVector(0.f, 0.f, 10.f), 0.5f, Body))
 	{
-		if (Fluid->DepthAt(At) > 0.5f)
+		Query(At, 4500.f, Near);
+		for (int32 Idx : Near)
 		{
-			Query(At, 4500.f, Near);
-			for (int32 Idx : Near)
-			{
-				if (Done.Contains(Idx) || !Conducts(Idx)) { continue; }
-				const UPrimitiveComponent* C = Reg[Idx].C.Get();
-				const FBox Box = C->Bounds.GetBox();
-				if (Fluid->DepthAt(FVector(Box.GetCenter().X, Box.GetCenter().Y, Box.Min.Z + 10.f)) > 0.5f) { Open.Add(Idx); Done.Add(Idx); }
-			}
+			if (Done.Contains(Idx) || !Conducts(Idx)) { continue; }
+			const UPrimitiveComponent* C = Reg[Idx].C.Get();
+			if (C && Fluid->InWaterBody(Body, C->Bounds.GetBox())) { Open.Add(Idx); Done.Add(Idx); ++InWater; }
 		}
 	}
+	// two things touch: their boxes meet, and for a big thing (a whole cabinet run, a rail along the wall: its box takes in half the
+	// kitchen) the other one is really at its surface, not just inside its box
+	auto Touch = [](const UPrimitiveComponent* A, const UPrimitiveComponent* O)
+	{
+		const FBox BA = A->Bounds.GetBox(), BO = O->Bounds.GetBox();
+		if (!BA.ExpandBy(12.f).Intersect(BO)) { return false; }
+		if (BA.GetExtent().GetMax() < 300.f && BO.GetExtent().GetMax() < 300.f) { return true; }
+		const FVector P = BA.GetClosestPointTo(BO.GetCenter());
+		FVector Q;
+		const float DO = O->GetClosestPointOnCollision(P, Q);
+		if (DO < 0.f) { return false; }
+		FVector R;
+		const float DA = A->GetClosestPointOnCollision(Q, R);
+		return DA >= 0.f && DA < 12.f;
+	};
 	int32 N = 0;
+	FString Names;
 	while (Open.Num() > 0 && N < 40)
 	{
 		const int32 Idx = Open.Pop(EAllowShrinking::No);
@@ -1286,19 +1311,20 @@ int32 AAntMatterNet::Electrify(const FVector& At, float Radius, float Seconds, c
 		B->Live = FMath::Max(B->Live, Seconds);
 		B->NextSpark = LocalClock;
 		++N;
+		if (N <= 12) { Names += FString::Printf(TEXT(" %s[%s]@%.0f"), *GetNameSafe(C->GetOwner()), Reg[Idx].M ? *Reg[Idx].M->Id : TEXT("?"), C->Bounds.GetBox().Min.Z); }
 		// what touches it and conducts goes live too
 		Query(C->Bounds.Origin, C->Bounds.SphereRadius + 15.f, Near);
-		const FBox Box = C->Bounds.GetBox().ExpandBy(12.f);
 		for (int32 J : Near)
 		{
 			if (Done.Contains(J)) { continue; }
 			const UPrimitiveComponent* O = Reg[J].C.Get();
-			if (!O || !Box.Intersect(O->Bounds.GetBox()) || !Conducts(J)) { continue; }
+			if (!O || !Conducts(J) || !Touch(C, O)) { continue; }
 			Done.Add(J);
 			Open.Add(J);
 		}
 	}
-	UE_LOG(LogTemp, Display, TEXT("ANTMATTER live at %s (%s): %d conducting things carry the current for %.1f s"), *At.ToCompactString(), Why, N, Seconds);
+	UE_LOG(LogTemp, Display, TEXT("ANTMATTER live at %s (%s): %d conducting things carry the current for %.1f s (%d in the water at it, %d cells of water%s):%s"),
+		*At.ToCompactString(), Why, N, Seconds, InWater, Body.Num, Body.bCapped ? TEXT(", capped") : TEXT(""), *Names);
 	if (N > 0) { AntAudio::Everyone(this, EAntSfx::StaticCrackle, At, 1.2f); }
 	return N;
 }
