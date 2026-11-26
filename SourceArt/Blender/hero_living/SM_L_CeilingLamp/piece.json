@@ -1,0 +1,61 @@
+{
+ "name": "SM_L_CeilingLamp",
+ "file": "SM_L_CeilingLamp.fbx",
+ "set": "hero_living",
+ "break_class": "glass",
+ "textures": {
+  "C": "SM_L_CeilingLamp/tex/T_SM_L_CeilingLamp_C.png",
+  "N": "SM_L_CeilingLamp/tex/T_SM_L_CeilingLamp_N.png",
+  "R": "SM_L_CeilingLamp/tex/T_SM_L_CeilingLamp_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_L_CeilingLamp_Brk0",
+   "file": "SM_L_CeilingLamp_Brk0.fbx",
+   "triangles": 2604,
+   "bbox_min_m": [
+    -0.1882,
+    -0.1882,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.2,
+    0.1882,
+    0.1316
+   ],
+   "materials": [
+    "Hero_SM_L_CeilingLamp",
+    "Break"
+   ]
+  }
+ ],
+ "note": "frosted glass dome on a brass gallery and canopy, thumb screws, bulb",
+ "kept_slots": [
+  "LampShade",
+  "Bulb"
+ ],
+ "triangles": 2604,
+ "bbox_min_m": [
+  -0.1882,
+  -0.1882,
+  0.0
+ ],
+ "bbox_max_m": [
+  0.2,
+  0.1882,
+  0.1316
+ ],
+ "materials": [
+  "Hero_SM_L_CeilingLamp",
+  "LampShade",
+  "Bulb"
+ ],
+ "lod_triangles": [
+  2604,
+  910,
+  311
+ ],
+ "ucx": 1
+}

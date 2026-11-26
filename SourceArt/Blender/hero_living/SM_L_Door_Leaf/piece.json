@@ -1,0 +1,75 @@
+{
+ "name": "SM_L_Door_Leaf",
+ "file": "SM_L_Door_Leaf.fbx",
+ "set": "hero_living",
+ "break_class": "wood",
+ "textures": {
+  "C": "SM_L_Door_Leaf/tex/T_SM_L_Door_Leaf_C.png",
+  "N": "SM_L_Door_Leaf/tex/T_SM_L_Door_Leaf_N.png",
+  "R": "SM_L_Door_Leaf/tex/T_SM_L_Door_Leaf_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_L_Door_Leaf_Brk0",
+   "file": "SM_L_Door_Leaf_Brk0.fbx",
+   "triangles": 2156,
+   "bbox_min_m": [
+    -0.0,
+    -0.046,
+    -0.012
+   ],
+   "bbox_max_m": [
+    0.8441,
+    0.098,
+    1.984
+   ],
+   "materials": [
+    "Hero_SM_L_Door_Leaf",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_Door_Leaf_Brk1",
+   "file": "SM_L_Door_Leaf_Brk1.fbx",
+   "triangles": 5040,
+   "bbox_min_m": [
+    0.0,
+    0.0,
+    -0.012
+   ],
+   "bbox_max_m": [
+    0.7741,
+    0.0797,
+    1.8531
+   ],
+   "materials": [
+    "Hero_SM_L_Door_Leaf",
+    "Break"
+   ]
+  }
+ ],
+ "note": "panelled door: green paint, raised and fielded panels with beads, brass levers on roses, escutcheons, latch, three butt hinges",
+ "kept_slots": [],
+ "triangles": 7196,
+ "bbox_min_m": [
+  -0.0,
+  -0.046,
+  -0.012
+ ],
+ "bbox_max_m": [
+  0.8441,
+  0.098,
+  1.984
+ ],
+ "materials": [
+  "Hero_SM_L_Door_Leaf"
+ ],
+ "lod_triangles": [
+  7196,
+  2518,
+  1562
+ ],
+ "ucx": 1
+}

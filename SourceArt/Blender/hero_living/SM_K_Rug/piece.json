@@ -1,0 +1,94 @@
+{
+ "name": "SM_K_Rug",
+ "file": "SM_K_Rug.fbx",
+ "set": "hero_living",
+ "break_class": "cloth",
+ "textures": {
+  "C": "SM_K_Rug/tex/T_SM_K_Rug_C.png",
+  "N": "SM_K_Rug/tex/T_SM_K_Rug_N.png",
+  "R": "SM_K_Rug/tex/T_SM_K_Rug_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_K_Rug_Brk0",
+   "file": "SM_K_Rug_Brk0.fbx",
+   "triangles": 284,
+   "bbox_min_m": [
+    -0.4403,
+    -1.0968,
+    0.0
+   ],
+   "bbox_max_m": [
+    1.569,
+    1.0968,
+    0.0089
+   ],
+   "materials": [
+    "Hero_SM_K_Rug",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_K_Rug_Brk1",
+   "file": "SM_K_Rug_Brk1.fbx",
+   "triangles": 3984,
+   "bbox_min_m": [
+    -1.5877,
+    -1.1027,
+    -0.0011
+   ],
+   "bbox_max_m": [
+    1.5877,
+    1.1027,
+    0.01
+   ],
+   "materials": [
+    "Hero_SM_K_Rug",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_K_Rug_Brk2",
+   "file": "SM_K_Rug_Brk2.fbx",
+   "triangles": 284,
+   "bbox_min_m": [
+    -1.569,
+    -1.0968,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.0005,
+    1.0968,
+    0.0089
+   ],
+   "materials": [
+    "Hero_SM_K_Rug",
+    "Break"
+   ]
+  }
+ ],
+ "note": "flat-woven kilim under the table: striped wool, whipped edges, tassels",
+ "kept_slots": [],
+ "triangles": 4172,
+ "bbox_min_m": [
+  -1.5877,
+  -1.1027,
+  -0.0011
+ ],
+ "bbox_max_m": [
+  1.5877,
+  1.1027,
+  0.01
+ ],
+ "materials": [
+  "Hero_SM_K_Rug"
+ ],
+ "lod_triangles": [
+  4172,
+  1460,
+  500
+ ],
+ "ucx": 1
+}

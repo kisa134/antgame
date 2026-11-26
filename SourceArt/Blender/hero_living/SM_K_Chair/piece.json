@@ -1,0 +1,113 @@
+{
+ "name": "SM_K_Chair",
+ "file": "SM_K_Chair.fbx",
+ "set": "hero_living",
+ "break_class": "wood",
+ "textures": {
+  "C": "SM_K_Chair/tex/T_SM_K_Chair_C.png",
+  "N": "SM_K_Chair/tex/T_SM_K_Chair_N.png",
+  "R": "SM_K_Chair/tex/T_SM_K_Chair_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_K_Chair_Brk0",
+   "file": "SM_K_Chair_Brk0.fbx",
+   "triangles": 1372,
+   "bbox_min_m": [
+    -0.2368,
+    -0.2368,
+    0.4053
+   ],
+   "bbox_max_m": [
+    0.2368,
+    0.2789,
+    0.4632
+   ],
+   "materials": [
+    "Hero_SM_K_Chair",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_K_Chair_Brk1",
+   "file": "SM_K_Chair_Brk1.fbx",
+   "triangles": 336,
+   "bbox_min_m": [
+    -0.22,
+    -0.22,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.2,
+    -0.18,
+    0.4221
+   ],
+   "materials": [
+    "Hero_SM_K_Chair",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_K_Chair_Brk2",
+   "file": "SM_K_Chair_Brk2.fbx",
+   "triangles": 284,
+   "bbox_min_m": [
+    0.18,
+    -0.22,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.22,
+    -0.18,
+    0.4221
+   ],
+   "materials": [
+    "Hero_SM_K_Chair",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_K_Chair_Brk3",
+   "file": "SM_K_Chair_Brk3.fbx",
+   "triangles": 3116,
+   "bbox_min_m": [
+    -0.2211,
+    -0.2,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.2211,
+    0.2769,
+    1.1053
+   ],
+   "materials": [
+    "Hero_SM_K_Chair",
+    "Break"
+   ]
+  }
+ ],
+ "note": "kitchen chair: green seat and rails, turned walnut legs, stretchers, spindles, corner blocks",
+ "kept_slots": [],
+ "triangles": 5108,
+ "bbox_min_m": [
+  -0.2368,
+  -0.2368,
+  0.0
+ ],
+ "bbox_max_m": [
+  0.2368,
+  0.2789,
+  1.1053
+ ],
+ "materials": [
+  "Hero_SM_K_Chair"
+ ],
+ "lod_triangles": [
+  5108,
+  1786,
+  1040
+ ],
+ "ucx": 6
+}

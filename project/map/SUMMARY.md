@@ -1,10 +1,10 @@
-# Карта проекта Ant Kitchen: сводка (2026-11-26, 6428da2)
+# Карта проекта Ant Kitchen: сводка (2026-11-26, 6d25ad4)
 
 Интерактивная карта: https://claude.ai/artifact/8rs9aDgofMHhTbwH2vu8Y5 (артефакт claude.ai, slug `3fa651ed-b3ea-48d3-8daf-7abc4d247e16`). Правки со страницы лежат в базе артефакта, коллекция `edits`.
 
 Файл создаётся автоматически: `python Tools/projectmap/build_map.py`. Не правь руками. Ручные данные: `project/map/*.yaml`.
 
-Узлов: 1265, связей: 648. По типам: asset-part 430, asset 280, file 255, system 174, build 45, doc 42, area 13, decision 11, bug 9, character 6
+Узлов: 1278, связей: 686. По типам: asset-part 430, asset 281, file 263, system 175, build 47, doc 43, area 13, decision 11, bug 9, character 6
 
 ## Области и системы
 
@@ -39,6 +39,7 @@
 ### Предметы и еда
 Лут и еда по ярусам T0-T3, мебель и посуда, библиотека ассетов Meshy.
 - **Лут и еда** [in-game] (Claude): Еда ярусов T0-T3, разрезание на куски, добыча с существ, торт на день рождения. Код: KitchenLoot.cpp, KitchenLoot.h
+- **Из чего сделана еда (KAN-36)** [in-progress] (Claude): 9 видов переноски (крошится, тянется, мягкое, твёрдое, катится, липкое, тает, хрупкое, сочное) и состояния (мокрое, поджаренное, горелое, з… Код: AntFood.cpp, AntFood.h
 
 ### Физика и системность
 Вода, грязь, разрушения, материалы и цепные реакции.
@@ -65,7 +66,7 @@
 - **Ядро, типы, эффекты** [in-game] (Claude): Модуль игры, общие типы, масштаб (AntShrink), эффекты. Код: AntFx.cpp, AntFx.h, AntKitchen.Build.cs, AntKitchen.cpp
 - **Админ-режим** [in-game] (Claude): Панель и команды для тестов и съёмки. Код: AntAdmin.cpp, AntAdmin.h
 - **Сеть: listen server** [in-game] (Claude): Listen server, UDP 7777, клиент-авторитетное движение, реплицируется состояние.
-- **Прочий код** [in-game] (Claude): Модули, которые не попали в другие системы. Код: AntState.cpp, AntState.h
+- **Прочий код** [in-game] (Claude): Модули, которые не попали в другие системы. Код: AntDifficulty.cpp, AntDifficulty.h, AntMatter.cpp, AntMatter.h
 
 ### Инструменты и пайплайн
 Скрипты Tools/, Blender, импорт Meshy, карта проекта.

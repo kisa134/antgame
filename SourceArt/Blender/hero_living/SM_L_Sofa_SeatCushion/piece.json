@@ -1,0 +1,94 @@
+{
+ "name": "SM_L_Sofa_SeatCushion",
+ "file": "SM_L_Sofa_SeatCushion.fbx",
+ "set": "hero_living",
+ "break_class": "cloth",
+ "textures": {
+  "C": "SM_L_Sofa_SeatCushion/tex/T_SM_L_Sofa_SeatCushion_C.png",
+  "N": "SM_L_Sofa_SeatCushion/tex/T_SM_L_Sofa_SeatCushion_N.png",
+  "R": "SM_L_Sofa_SeatCushion/tex/T_SM_L_Sofa_SeatCushion_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_L_Sofa_SeatCushion_Brk0",
+   "file": "SM_L_Sofa_SeatCushion_Brk0.fbx",
+   "triangles": 7318,
+   "bbox_min_m": [
+    -0.0216,
+    -0.3622,
+    -0.0302
+   ],
+   "bbox_max_m": [
+    0.5455,
+    0.3643,
+    0.1598
+   ],
+   "materials": [
+    "Hero_SM_L_Sofa_SeatCushion",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_Sofa_SeatCushion_Brk1",
+   "file": "SM_L_Sofa_SeatCushion_Brk1.fbx",
+   "triangles": 1112,
+   "bbox_min_m": [
+    -0.513,
+    -0.3318,
+    0.0058
+   ],
+   "bbox_max_m": [
+    0.513,
+    0.3366,
+    0.1238
+   ],
+   "materials": [
+    "Hero_SM_L_Sofa_SeatCushion",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_Sofa_SeatCushion_Brk2",
+   "file": "SM_L_Sofa_SeatCushion_Brk2.fbx",
+   "triangles": 7974,
+   "bbox_min_m": [
+    -0.5455,
+    -0.3643,
+    -0.0307
+   ],
+   "bbox_max_m": [
+    0.1253,
+    0.3642,
+    0.1603
+   ],
+   "materials": [
+    "Hero_SM_L_Sofa_SeatCushion",
+    "Break"
+   ]
+  }
+ ],
+ "note": "seat cushion: boxed foam in a woven cover, piped, zip at the back",
+ "kept_slots": [],
+ "triangles": 14500,
+ "bbox_min_m": [
+  -0.5455,
+  -0.3643,
+  -0.0307
+ ],
+ "bbox_max_m": [
+  0.5455,
+  0.3643,
+  0.1603
+ ],
+ "materials": [
+  "Hero_SM_L_Sofa_SeatCushion"
+ ],
+ "lod_triangles": [
+  14500,
+  5074,
+  1740
+ ],
+ "ucx": 1
+}

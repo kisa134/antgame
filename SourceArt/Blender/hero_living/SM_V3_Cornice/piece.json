@@ -1,0 +1,75 @@
+{
+ "name": "SM_V3_Cornice",
+ "file": "SM_V3_Cornice.fbx",
+ "set": "hero_living",
+ "break_class": "plaster",
+ "textures": {
+  "C": "SM_V3_Cornice/tex/T_SM_V3_Cornice_C.png",
+  "N": "SM_V3_Cornice/tex/T_SM_V3_Cornice_N.png",
+  "R": "SM_V3_Cornice/tex/T_SM_V3_Cornice_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_V3_Cornice_Brk0",
+   "file": "SM_V3_Cornice_Brk0.fbx",
+   "triangles": 296,
+   "bbox_min_m": [
+    0.0445,
+    -0.0684,
+    -0.0684
+   ],
+   "bbox_max_m": [
+    0.5263,
+    0.0,
+    0.0
+   ],
+   "materials": [
+    "Hero_SM_V3_Cornice",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_V3_Cornice_Brk1",
+   "file": "SM_V3_Cornice_Brk1.fbx",
+   "triangles": 296,
+   "bbox_min_m": [
+    -0.5263,
+    -0.0684,
+    -0.0684
+   ],
+   "bbox_max_m": [
+    0.0588,
+    0.0,
+    0.0
+   ],
+   "materials": [
+    "Hero_SM_V3_Cornice",
+    "Break"
+   ]
+  }
+ ],
+ "note": "plaster cove cornice with fillets",
+ "kept_slots": [],
+ "triangles": 356,
+ "bbox_min_m": [
+  -0.5263,
+  -0.0684,
+  -0.0684
+ ],
+ "bbox_max_m": [
+  0.5263,
+  0.0,
+  0.0
+ ],
+ "materials": [
+  "Hero_SM_V3_Cornice"
+ ],
+ "lod_triangles": [
+  356,
+  124,
+  42
+ ],
+ "ucx": 1
+}

@@ -1,0 +1,56 @@
+{
+ "name": "SM_V3_ShelfBracket",
+ "file": "SM_V3_ShelfBracket.fbx",
+ "set": "hero_living",
+ "break_class": "metal",
+ "textures": {
+  "C": "SM_V3_ShelfBracket/tex/T_SM_V3_ShelfBracket_C.png",
+  "N": "SM_V3_ShelfBracket/tex/T_SM_V3_ShelfBracket_N.png",
+  "R": "SM_V3_ShelfBracket/tex/T_SM_V3_ShelfBracket_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_V3_ShelfBracket_Brk0",
+   "file": "SM_V3_ShelfBracket_Brk0.fbx",
+   "triangles": 568,
+   "bbox_min_m": [
+    -0.0084,
+    -0.2,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.0084,
+    0.0,
+    0.1285
+   ],
+   "materials": [
+    "Hero_SM_V3_ShelfBracket",
+    "Break"
+   ]
+  }
+ ],
+ "note": "black steel L bracket with gusset and screws",
+ "kept_slots": [],
+ "triangles": 568,
+ "bbox_min_m": [
+  -0.0084,
+  -0.2,
+  0.0
+ ],
+ "bbox_max_m": [
+  0.0084,
+  0.0,
+  0.1285
+ ],
+ "materials": [
+  "Hero_SM_V3_ShelfBracket"
+ ],
+ "lod_triangles": [
+  568,
+  198,
+  68
+ ],
+ "ucx": 2
+}

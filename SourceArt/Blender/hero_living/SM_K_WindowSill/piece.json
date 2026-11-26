@@ -1,0 +1,75 @@
+{
+ "name": "SM_K_WindowSill",
+ "file": "SM_K_WindowSill.fbx",
+ "set": "hero_living",
+ "break_class": "wood",
+ "textures": {
+  "C": "SM_K_WindowSill/tex/T_SM_K_WindowSill_C.png",
+  "N": "SM_K_WindowSill/tex/T_SM_K_WindowSill_N.png",
+  "R": "SM_K_WindowSill/tex/T_SM_K_WindowSill_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_K_WindowSill_Brk0",
+   "file": "SM_K_WindowSill_Brk0.fbx",
+   "triangles": 368,
+   "bbox_min_m": [
+    -0.8684,
+    -0.0474,
+    -0.0002
+   ],
+   "bbox_max_m": [
+    0.8684,
+    0.0474,
+    0.0421
+   ],
+   "materials": [
+    "Hero_SM_K_WindowSill",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_K_WindowSill_Brk1",
+   "file": "SM_K_WindowSill_Brk1.fbx",
+   "triangles": 240,
+   "bbox_min_m": [
+    -0.655,
+    -0.035,
+    0.0423
+   ],
+   "bbox_max_m": [
+    -0.585,
+    0.035,
+    0.0425
+   ],
+   "materials": [
+    "Hero_SM_K_WindowSill",
+    "Break"
+   ]
+  }
+ ],
+ "note": "oak window sill with nosing, drip groove, a pot ring",
+ "kept_slots": [],
+ "triangles": 552,
+ "bbox_min_m": [
+  -0.8684,
+  -0.0474,
+  -0.0002
+ ],
+ "bbox_max_m": [
+  0.8684,
+  0.0474,
+  0.0425
+ ],
+ "materials": [
+  "Hero_SM_K_WindowSill"
+ ],
+ "lod_triangles": [
+  552,
+  192,
+  66
+ ],
+ "ucx": 1
+}

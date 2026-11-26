@@ -1,0 +1,75 @@
+{
+ "name": "SM_L_Radiator",
+ "file": "SM_L_Radiator.fbx",
+ "set": "hero_living",
+ "break_class": "metal",
+ "textures": {
+  "C": "SM_L_Radiator/tex/T_SM_L_Radiator_C.png",
+  "N": "SM_L_Radiator/tex/T_SM_L_Radiator_N.png",
+  "R": "SM_L_Radiator/tex/T_SM_L_Radiator_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_L_Radiator_Brk0",
+   "file": "SM_L_Radiator_Brk0.fbx",
+   "triangles": 6164,
+   "bbox_min_m": [
+    -0.4526,
+    -0.0455,
+    -0.1579
+   ],
+   "bbox_max_m": [
+    0.4616,
+    0.0674,
+    0.5789
+   ],
+   "materials": [
+    "Hero_SM_L_Radiator",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_Radiator_Brk1",
+   "file": "SM_L_Radiator_Brk1.fbx",
+   "triangles": 8336,
+   "bbox_min_m": [
+    0.0737,
+    -0.0455,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.4526,
+    0.0447,
+    0.5789
+   ],
+   "materials": [
+    "Hero_SM_L_Radiator",
+    "Break"
+   ]
+  }
+ ],
+ "note": "cast column radiator: 9 two-column sections with casting seams, header nipples, chrome valves into the floor, wall brackets",
+ "kept_slots": [],
+ "triangles": 14500,
+ "bbox_min_m": [
+  -0.4526,
+  -0.0455,
+  -0.1579
+ ],
+ "bbox_max_m": [
+  0.4616,
+  0.0674,
+  0.5789
+ ],
+ "materials": [
+  "Hero_SM_L_Radiator"
+ ],
+ "lod_triangles": [
+  14500,
+  5074,
+  1896
+ ],
+ "ucx": 1
+}

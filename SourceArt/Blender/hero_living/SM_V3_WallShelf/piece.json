@@ -1,0 +1,75 @@
+{
+ "name": "SM_V3_WallShelf",
+ "file": "SM_V3_WallShelf.fbx",
+ "set": "hero_living",
+ "break_class": "wood",
+ "textures": {
+  "C": "SM_V3_WallShelf/tex/T_SM_V3_WallShelf_C.png",
+  "N": "SM_V3_WallShelf/tex/T_SM_V3_WallShelf_N.png",
+  "R": "SM_V3_WallShelf/tex/T_SM_V3_WallShelf_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_V3_WallShelf_Brk0",
+   "file": "SM_V3_WallShelf_Brk0.fbx",
+   "triangles": 604,
+   "bbox_min_m": [
+    0.0905,
+    -0.2368,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.5789,
+    0.0,
+    0.0215
+   ],
+   "materials": [
+    "Hero_SM_V3_WallShelf",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_V3_WallShelf_Brk1",
+   "file": "SM_V3_WallShelf_Brk1.fbx",
+   "triangles": 528,
+   "bbox_min_m": [
+    -0.5789,
+    -0.2368,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.1144,
+    0.0,
+    0.0215
+   ],
+   "materials": [
+    "Hero_SM_V3_WallShelf",
+    "Break"
+   ]
+  }
+ ],
+ "note": "oak wall shelf with jar rings",
+ "kept_slots": [],
+ "triangles": 908,
+ "bbox_min_m": [
+  -0.5789,
+  -0.2368,
+  0.0
+ ],
+ "bbox_max_m": [
+  0.5789,
+  0.0,
+  0.0215
+ ],
+ "materials": [
+  "Hero_SM_V3_WallShelf"
+ ],
+ "lod_triangles": [
+  908,
+  317,
+  108
+ ],
+ "ucx": 1
+}

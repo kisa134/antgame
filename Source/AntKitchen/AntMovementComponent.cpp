@@ -362,7 +362,7 @@ bool UAntMovementComponent::StepOverLip(const FHitResult& Hit, const FVector& N,
 	}
 	if (bLog && CharacterOwner)
 	{
-		UE_LOG(LogTemp, Display, TEXT("ANTSTEP up %.1f onto %s: %s at %s"), H, *GetNameSafe(Top.GetComponent()), *CharacterOwner->GetName(), *Loc.ToCompactString());
+		UE_LOG(LogTemp, Display, TEXT("ANTSTEP up %.1f onto %s: %s role %d at %s -> %s"), H, *GetNameSafe(Top.GetComponent()), *CharacterOwner->GetName(), (int32)CharacterOwner->GetLocalRole(), *Loc.ToCompactString(), *UpdatedComponent->GetComponentLocation().ToCompactString());
 	}
 	return true;
 }
@@ -434,6 +434,14 @@ void UAntMovementComponent::PhysCrawl(float DeltaTime)
 				{
 					const FVector Square = FVector::VectorPlaneProject(HN, N).GetSafeNormal();
 					if (!Square.IsNearlyZero()) { SlideN = Square; }
+					static const bool bSlideLog = FParse::Param(FCommandLine::Get(), TEXT("AntStuckLog"));
+					static double SlideLogAt = 0.0;
+					if (bSlideLog && FPlatformTime::Seconds() - SlideLogAt > 0.5)
+					{
+						SlideLogAt = FPlatformTime::Seconds();
+						UE_LOG(LogTemp, Display, TEXT("ANTSTEP square slide: %s role %d at %s along %s (hit normal %s, on %s)"), *CharacterOwner->GetName(), (int32)CharacterOwner->GetLocalRole(),
+							*UpdatedComponent->GetComponentLocation().ToCompactString(), *SlideN.ToCompactString(), *HN.ToCompactString(), *GetNameSafe(Hit.GetComponent()));
+					}
 				}
 				SlideAlongSurface(Delta, 1.f - Hit.Time, SlideN, Hit, true);
 			}
