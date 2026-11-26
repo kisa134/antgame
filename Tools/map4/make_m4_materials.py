@@ -291,12 +291,14 @@ STATE_EMIS = STATE_IN + r"""
 float3 em = float3(0, 0, 0);
 [branch] if (SX.y > 0.0)
 {
+    // (KAN-21 run 3: capped. Lumen takes an emissive surface as a light: a whole burning side at 10+ lit a cupboard white.
+    //  The embers read against the black char at ~1, the flames themselves are the cards of AAntMatterNet.)
     float s_gl = smoothstep(0.55, 1.0, s_heat);
-    em += lerp(float3(0.9, 0.05, 0.0), float3(3.2, 1.3, 0.35), s_gl) * s_gl * s_gl * 6.0;
+    em += lerp(float3(0.9, 0.05, 0.0), float3(3.2, 1.3, 0.35), s_gl) * s_gl * s_gl * 1.6;
     float s_fl = frac(sin(dot(floor(W.xy / 7.0 + W.zz / 9.0) + floor(Tm * 9.0) * 3.17, float2(41.3, 289.1))) * 15731.7);
-    float s_em = s_burn * saturate(s_fine * 1.6 - 0.35) * (0.55 + 0.45 * s_fl);
-    em += float3(3.5, 0.9, 0.12) * s_em * 3.0;
-    em += float3(5.0, 2.0, 0.4) * s_ring * (0.6 + 0.4 * s_fl) * 4.0;
+    float s_em = s_burn * smoothstep(0.45, 0.8, s_fine) * (0.55 + 0.45 * s_fl);
+    em += float3(1.6, 0.36, 0.04) * s_em;
+    em += float3(1.8, 0.65, 0.12) * s_ring * (0.6 + 0.4 * s_fl);
     float s_sp = frac(sin(dot(floor(W.xy / 5.0 + W.zz / 5.0) + floor(Tm * 14.0) * 7.31, float2(12.9898, 78.233))) * 43758.5453);
     em += float3(0.5, 0.8, 3.0) * s_chg * step(0.965, s_sp) * 6.0;
 }
@@ -490,8 +492,126 @@ def build_uv(name, two_sided=False):
     EAL.save_asset(MAT + "/" + name)
     unreal.log("M4MAT " + name)
 
-build_m4()
-build_m4("M_M4_2S", True)   # cloth sheets, leaves, blades, wings: one layer of polygons seen from both sides
+# ---- KAN-21: the cards of the matter system (AntFx looks Flame and Smoke, the flames of AAntMatterNet). Procedural, nothing
+# imported: the pattern is computed here. Drawn on SM_M4_Plane (1 m, face +Z) turned to the camera by the code; the pattern is
+# read in the plane's own space (x, y in -50..50: y up the flame), so it does not depend on its UVs. Parameters: Color (RGB
+# brightness / colour, A fade or opacity), Seed (a different pattern per card).
+FX_NOISE = r"""
+#ifndef ANT_FXN
+#define ANT_FXN
+#define ANT_H(p) frac(sin(dot(p, float2(127.1, 311.7))) * 43758.5453)
+#define ANT_VN(p, o) { float2 vi = floor(p), vf = frac(p); vf = vf * vf * (3.0 - 2.0 * vf); \
+    o = lerp(lerp(ANT_H(vi), ANT_H(vi + float2(1, 0)), vf.x), lerp(ANT_H(vi + float2(0, 1)), ANT_H(vi + float2(1, 1)), vf.x), vf.y); }
+#endif
+"""
+
+# Flame: tongues licking up from a wide hot base, torn by a rising noise; the colour follows the temperature (deep red at the
+# torn edges, orange, a yellow-white core low down). Additive, so its brightness is its colour; capped so it never blooms white.
+FX_FLAME = FX_NOISE + r"""
+float2 q = float2(LP.x / 50.0, LP.y / 100.0 + 0.5);
+float y = saturate(q.y);
+float t = Tm + Seed * 7.13;
+float n = 0.0, a = 0.5, v;
+float2 p = float2(q.x * 1.7 + Seed * 3.1, y * 2.1 - t * 2.2);
+for (int o = 0; o < 4; o++) { ANT_VN(p, v); n += a * v; p = p * 2.07 + float2(3.7, -t * 0.9); a *= 0.5; }
+float m = 0.0; float2 p2 = float2(q.x * 4.5 - Seed, y * 5.0 - t * 4.0);
+ANT_VN(p2, m);
+float sway = sin(t * 2.1 + Seed * 5.0 + y * 2.5) * 0.10 * y * y;
+float x = q.x + (n - 0.47) * 0.85 * y + (m - 0.5) * 0.12 + sway;
+float w = 0.8 * pow(saturate(1.0 - y), 0.55) * (0.7 + 0.3 * smoothstep(0.0, 0.25, y)) + 0.02;
+float d = abs(x) / w;
+float F = (1.0 - d) * 0.85 - y * 0.55 + (n - 0.47) * 1.4 * (0.3 + y) + 0.15;
+F -= (1.0 - smoothstep(0.0, 0.22, y)) * 0.35;   // a soft round foot, never a straight cut
+F *= smoothstep(1.0, 0.88, y) * smoothstep(1.0, 0.85, abs(q.x));
+float mk = smoothstep(0.0, 0.14, F);
+float core = smoothstep(0.3, 0.8, F) * (1.0 - 0.6 * y);
+float3 col = lerp(float3(0.5, 0.05, 0.01), float3(1.0, 0.33, 0.04), smoothstep(0.02, 0.3, F));
+col = lerp(col, float3(1.0, 0.66, 0.26), core);
+return col * mk * (0.5 + 0.9 * core);
+"""
+
+# Smoke / dust: a soft round puff whose edge is eaten by a slowly churning noise; each card turned by its Seed so that
+# the puffs never repeat. Returns the opacity (the colour is the Color parameter).
+FX_SMOKE = FX_NOISE + r"""
+float ang = Seed * 6.2832;
+float2 q = LP.xy / 50.0;
+q = float2(q.x * cos(ang) - q.y * sin(ang), q.x * sin(ang) + q.y * cos(ang));
+float r = length(q);
+float t = Tm * 0.22 + Seed * 3.7;
+float n = 0.0, a = 0.5, v;
+float2 p = q * 1.6 + float2(Seed * 1.3, -t);
+for (int o = 0; o < 3; o++) { ANT_VN(p, v); n += a * v; p = p * 2.1 + float2(t * 0.7, 1.9); a *= 0.5; }
+float body = 1.0 - smoothstep(0.15, 1.0, r + (n - 0.44) * 0.55);
+return saturate(body * (0.45 + 1.1 * n));
+"""
+
+def build_fx():
+    for name, code, additive in (("M_M4_FxFlame", FX_FLAME, True), ("M_M4_FxSmoke", FX_SMOKE, False)):
+        m = fresh(MAT, name)
+        m.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_UNLIT)
+        m.set_editor_property("blend_mode", unreal.BlendMode.BLEND_ADDITIVE if additive else unreal.BlendMode.BLEND_TRANSLUCENT)
+        m.set_editor_property("two_sided", True)
+        try:
+            m.set_editor_property("used_with_nanite", True)
+        except Exception as e:
+            unreal.log_warning("M4FX nanite usage: %s" % e)
+        try:
+            m.set_editor_property("enable_responsive_aa", True)   # flickering flames: no smear from the temporal AA
+        except Exception as e:
+            unreal.log_warning("M4FX responsive aa: %s" % e)
+        X = -1300
+        wp = MEL.create_material_expression(m, unreal.MaterialExpressionWorldPosition, X - 400, 0)
+        lp = MEL.create_material_expression(m, unreal.MaterialExpressionTransformPosition, X, 0)
+        lp.set_editor_property("transform_source_type", unreal.MaterialPositionTransformSource.TRANSFORMPOSSOURCE_WORLD)
+        lp.set_editor_property("transform_type", unreal.MaterialPositionTransformSource.TRANSFORMPOSSOURCE_LOCAL)
+        MEL.connect_material_expressions(wp, "", lp, "")
+        tm = MEL.create_material_expression(m, unreal.MaterialExpressionTime, X, 150)
+        seed = sp(m, "Seed", 0.0, X, 250)
+        colp = vp(m, "Color", (1, 1, 1, 1), X, 400)
+        c = custom(m, code, ["LP", "Tm", "Seed"], -800, 0, name, unreal.CustomMaterialOutputType.CMOT_FLOAT3 if additive else unreal.CustomMaterialOutputType.CMOT_FLOAT1)
+        MEL.connect_material_expressions(lp, "", c, "LP")
+        MEL.connect_material_expressions(tm, "", c, "Tm")
+        MEL.connect_material_expressions(seed, "", c, "Seed")
+        # soft where the card cuts into a surface
+        df = MEL.create_material_expression(m, unreal.MaterialExpressionDepthFade, -500, 300)
+        df.set_editor_property("fade_distance_default", 10.0 if additive else 24.0)
+        one = MEL.create_material_expression(m, unreal.MaterialExpressionConstant, -700, 300)
+        one.set_editor_property("r", 1.0)
+        MEL.connect_material_expressions(one, "", df, "Opacity")
+        alpha = MEL.create_material_expression(m, unreal.MaterialExpressionComponentMask, -700, 500)
+        for k, on in (("r", False), ("g", False), ("b", False), ("a", True)):
+            alpha.set_editor_property(k, on)
+        MEL.connect_material_expressions(colp, "RGBA", alpha, "")
+        rgb = MEL.create_material_expression(m, unreal.MaterialExpressionComponentMask, -700, 650)
+        for k, on in (("r", True), ("g", True), ("b", True), ("a", False)):
+            rgb.set_editor_property(k, on)
+        MEL.connect_material_expressions(colp, "RGBA", rgb, "")
+        if additive:
+            # emissive = pattern x colour x fade x depth fade
+            m1 = MEL.create_material_expression(m, unreal.MaterialExpressionMultiply, -400, 0)
+            MEL.connect_material_expressions(c, "", m1, "A"); MEL.connect_material_expressions(rgb, "", m1, "B")
+            m2 = MEL.create_material_expression(m, unreal.MaterialExpressionMultiply, -250, 100)
+            MEL.connect_material_expressions(alpha, "", m2, "A"); MEL.connect_material_expressions(df, "", m2, "B")
+            m3 = MEL.create_material_expression(m, unreal.MaterialExpressionMultiply, -100, 0)
+            MEL.connect_material_expressions(m1, "", m3, "A"); MEL.connect_material_expressions(m2, "", m3, "B")
+            MEL.connect_material_property(m3, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+        else:
+            # colour from the parameter (the game dims it with the room), opacity = pattern x A x depth fade
+            MEL.connect_material_property(rgb, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+            m1 = MEL.create_material_expression(m, unreal.MaterialExpressionMultiply, -400, 0)
+            MEL.connect_material_expressions(c, "", m1, "A"); MEL.connect_material_expressions(alpha, "", m1, "B")
+            m2 = MEL.create_material_expression(m, unreal.MaterialExpressionMultiply, -250, 100)
+            MEL.connect_material_expressions(m1, "", m2, "A"); MEL.connect_material_expressions(df, "", m2, "B")
+            MEL.connect_material_property(m2, "", unreal.MaterialProperty.MP_OPACITY)
+        MEL.recompile_material(m)
+        EAL.save_asset(MAT + "/" + name)
+        unreal.log("M4MAT " + name)
+
+ONLY_FX = os.environ.get("M4_ONLY_FX", "") == "1"   # only the cards (quick)
+build_fx()
+if not ONLY_FX:
+    build_m4()
+    build_m4("M_M4_2S", True)   # cloth sheets, leaves, blades, wings: one layer of polygons seen from both sides
 
 def paint_instance():
     name = "MI_M4_Paint"
@@ -505,8 +625,9 @@ def paint_instance():
     MEL.set_material_instance_scalar_parameter_value(mi, "NormalStrength", 0.7)
     EAL.save_asset(MAT + "/" + name)
     unreal.log("M4MAT " + name)
-paint_instance()
-if os.environ.get("M4_ONLY_M4", "") != "1":   # (rebuilt in place since KAN-21: the props' instances stay parented to them)
+if not ONLY_FX:
+    paint_instance()
+if not ONLY_FX and os.environ.get("M4_ONLY_M4", "") != "1":   # (rebuilt in place since KAN-21: the props' instances stay parented to them)
     build_uv("M_M4_UV")
     build_uv("M_M4_UV2", True)
 unreal.log("M4_DONE")

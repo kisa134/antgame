@@ -9,6 +9,8 @@ class UPrimitiveComponent;
 class UStaticMeshComponent;
 class UInstancedStaticMeshComponent;
 class UPointLightComponent;
+class UPostProcessComponent;
+class UMaterialInstanceDynamic;
 class AAntKitchenGameMode;
 struct FAntMatProps;
 
@@ -292,7 +294,26 @@ private:
 		TWeakObjectPtr<UPrimitiveComponent> C;
 		bool bHidden = false;
 		float SoundAt = 0.f;
+		// molten plastic sags (KAN-21 run 3): the scale it had and how far it has slumped, 0..1 (never back within a raid)
+		FVector OrigScale = FVector::OneVector;
+		float Sag = 0.f;
+		bool bSagged = false;
+		FLinearColor MeltColor = FLinearColor(-1.f, 0.f, 0.f);
 	};
+	/** The flames: a few camera-facing cards (M_M4_FxFlame) on every burning patch, every frame. */
+	struct FCard { FVector Base = FVector::ZeroVector; float H = 0.f; float Wd = 0.f; float Seed = 0.f; float Bright = 1.f; float D = 0.f; };
+	void DrawCards(const TArray<FCard>& Want, const FVector& Cam);
+	UPROPERTY() TArray<UStaticMeshComponent*> Cards;
+	UPROPERTY() TArray<UMaterialInstanceDynamic*> CardMids;
+	TArray<FVector2f> CardParams;   // the Seed and the brightness each card's material has now
+	/** Near a fire the highlights are compressed (local exposure), so the burning thing stays readable. */
+	UPROPERTY() UPostProcessComponent* FireGrade = nullptr;
+	UPROPERTY() UInstancedStaticMeshComponent* IceRim = nullptr;
+	/** -AntMatterWatch on a client: what this machine got of the matter, in the log every second and in its own shots. */
+	void ClientWatch(float Dt);
+	float WatchClock = 0.f, WatchShotAt = 0.f;
+	int32 WatchShots = 0;
+	TSet<uint16> WatchShotIds;
 	TMap<uint16, FShown> Shown;
 	bool bRecsDirty = true;
 	void LocalTick(float Dt);

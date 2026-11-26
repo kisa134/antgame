@@ -327,7 +327,13 @@ void AAntReactNet::ServerTick(float Dt)
 int32 AAntReactNet::AddCloud(uint8 Kind, const FVector& Center, float Radius, float Life, const FVector& Drift, const FVector& Source, float PourFor, const TCHAR* Chain)
 {
 	static uint8 NextId = 1;
-	if (Clouds.Num() >= 8) { Clouds.RemoveAt(0); }
+	if (Clouds.Num() >= 8)
+	{
+		// full: the oldest smoke or steam gives way first (KAN-21 run 3: a room of fires kept pushing a fresh flour cloud out)
+		int32 Out = 0;
+		for (int32 i = 0; i < Clouds.Num(); ++i) { if (Clouds[i].Kind != AntCloudKind::Flour && Clouds[i].Kind != AntCloudKind::Pepper) { Out = i; break; } }
+		Clouds.RemoveAt(Out);
+	}
 	FAntReactCloud& C = Clouds.AddDefaulted_GetRef();
 	C.Kind = Kind;
 	C.Id = NextId++;
@@ -1161,6 +1167,31 @@ void AAntReactNet::LocalTick(float Dt)
 			const FLinearColor Col = C.Kind == AntCloudKind::Pepper ? PepperCol : C.Kind == AntCloudKind::Flour ? FlourCol : C.Kind == AntCloudKind::Smoke ? FLinearColor(0.16f, 0.15f, 0.14f) : FLinearColor(0.9f, 0.9f, 0.9f);
 			const float Fade = 1.f - FMath::Clamp((Age - C.Life * 0.6f) / (C.Life * 0.4f), 0.f, 1.f);
 			const bool bFlourC = C.Kind == AntCloudKind::Flour;
+			if (C.Kind == AntCloudKind::Smoke)
+			{
+				// KAN-21 run 3: the smoke of a fire is a few big soft billows (AntFx's Smoke cards), not a swarm of little balls
+				// (those also kept the shared bit pool full, and the flames' own smoke and a flour bang's cloud never got a place)
+				const int32 M = FMath::RoundToInt(Step * 9.f * Fade + FMath::FRand());
+				for (int32 i = 0; i < M; ++i)
+				{
+					FAntFxBit B;
+					FVector O = FMath::VRand() * FMath::Sqrt(FMath::FRand()) * R * 0.75f;
+					O.Z *= 0.5f;
+					B.Look = EAntFxLook::Smoke;
+					B.Pos = Ctr + O;
+					B.Vel = FVector(C.Drift) + FMath::VRand() * 20.f + FVector(0.f, 0.f, 15.f);
+					B.Scale0 = FVector(R / 420.f);
+					B.Scale1 = FVector(R / FMath::FRandRange(150.f, 210.f));
+					B.Color = FLinearColor(Col.R * 0.6f, Col.G * 0.6f, Col.B * 0.6f, 0.32f * Fade);
+					B.Life = FMath::FRandRange(3.f, 4.5f);
+					B.FadeIn = 0.3f;
+					B.FadePow = 1.3f;
+					B.Drag = 0.5f;
+					B.MinAmbient = 0.45f;
+					Fx->Emit(B);
+				}
+				continue;
+			}
 			const int32 N = FMath::Max(1, FMath::RoundToInt(Step * (bFlourC ? 42.f : 70.f) * Fade));
 			for (int32 i = 0; i < N; ++i)
 			{

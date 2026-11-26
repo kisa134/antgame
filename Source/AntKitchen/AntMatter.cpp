@@ -20,6 +20,12 @@
 #include "Components/StaticMeshComponent.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Components/PointLightComponent.h"
+#include "Components/PostProcessComponent.h"
+#include "Materials/MaterialInstanceDynamic.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
+#include "Misc/Paths.h"
+#include "UnrealClient.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "GameFramework/Pawn.h"
@@ -208,6 +214,20 @@ void AAntMatterNet::BeginPlay()
 			L->RegisterComponent();
 			Lights.Add(L);
 		}
+		// near a fire: the highlights compressed by the local exposure, so a burning thing in a dark cupboard is not a white blot
+		FireGrade = NewObject<UPostProcessComponent>(this);
+		FireGrade->SetupAttachment(GetRootComponent());
+		FireGrade->bUnbound = true;
+		FireGrade->Priority = 5.f;
+		FireGrade->BlendWeight = 0.f;
+		FireGrade->Settings.bOverride_LocalExposureHighlightContrastScale = true;
+		FireGrade->Settings.LocalExposureHighlightContrastScale = 0.55f;
+		FireGrade->Settings.bOverride_LocalExposureShadowContrastScale = true;
+		FireGrade->Settings.LocalExposureShadowContrastScale = 0.85f;
+		// and the eye does not open up for the dark round a fire at night (that blew a lit cupboard out to white)
+		FireGrade->Settings.bOverride_AutoExposureMinBrightness = true;
+		FireGrade->Settings.AutoExposureMinBrightness = 0.f;   // EV100 (the project extends the luminance range); 1.5 blacked the night out
+		FireGrade->RegisterComponent();
 	}
 	UE_LOG(LogTemp, Display, TEXT("ANTMATTER net up (%s)"), HasAuthority() ? TEXT("server") : TEXT("client"));
 }
@@ -220,6 +240,7 @@ void AAntMatterNet::EndPlay(const EEndPlayReason::Type Reason)
 		if (UPrimitiveComponent* C = It.Value.C.Get())
 		{
 			if (It.Value.bHidden) { C->SetVisibility(true); }
+			if (It.Value.bSagged && C->Mobility == EComponentMobility::Movable) { C->SetWorldScale3D(It.Value.OrigScale); }
 			AntState::ClearSource(C, AntState::Matter);
 		}
 	}
@@ -263,8 +284,12 @@ void AAntMatterNet::Tick(float DeltaSeconds)
 
 FString AAntMatterNet::Describe() const
 {
-	return FString::Printf(TEXT("bodies %d (burning %d), records %d, pools %d, ice %d, registry %d (%d moving), sim %.3f ms (avg %.3f), local %.3f ms (avg %.3f), states shown %d"),
-		Bodies.Num(), NumBurning, Recs.Num(), Pools.Num(), Ices.Num(), Reg.Num(), Dyn.Num(), LastTickMs, AvgTickMs, LastLocalMs, AvgLocalMs, AntState::NumTracked());
+	int32 CardsOn = 0;
+	for (const UStaticMeshComponent* C : Cards) { if (C && C->IsVisible()) { ++CardsOn; } }
+	const AAntFxManager* Fx = AAntFxManager::Get(this);
+	return FString::Printf(TEXT("bodies %d (burning %d), records %d, pools %d, ice %d, registry %d (%d moving), sim %.3f ms (avg %.3f), local %.3f ms (avg %.3f), states shown %d, flame cards %d, fx bits %d/%d"),
+		Bodies.Num(), NumBurning, Recs.Num(), Pools.Num(), Ices.Num(), Reg.Num(), Dyn.Num(), LastTickMs, AvgTickMs, LastLocalMs, AvgLocalMs, AntState::NumTracked(),
+		CardsOn, Fx ? Fx->NumLive() : 0, AAntFxManager::MaxBits);
 }
 
 // =====================================================================================================================
@@ -1531,36 +1556,117 @@ void AAntMatterNet::MulticastFlash_Implementation(FVector_NetQuantize At, float 
 	if (GetNetMode() == NM_DedicatedServer) { return; }
 	AAntFxManager* Fx = AAntFxManager::Get(this);
 	if (!Fx) { return; }
-	const int32 N = Kind == 1 ? 70 : 34;
+	// KAN-21 run 3: real flame (cards of M_M4_FxFlame) bursting out, not glowing cones; the flour bang adds its own white cloud
+	// and the dust that settles after it
+	const bool bFlour = Kind == 1;
+	const int32 N = bFlour ? 18 : 12;
 	for (int32 i = 0; i < N; ++i)
 	{
 		FAntFxBit B;
 		FVector D = FMath::VRand();
-		if (Kind != 1) { D.Z = FMath::Abs(D.Z) * 0.6f + 0.3f; }   // a flash over a puddle goes up and out
-		B.Pos = FVector(At) + D * Radius * 0.15f;
-		B.Vel = D * Radius * (Kind == 1 ? 2.2f : 1.4f);
-		B.Scale0 = FVector(Radius / 900.f);
-		B.Scale1 = FVector(Radius / 260.f);
-		B.Color = FMath::Lerp(FLinearColor(6.f, 2.2f, 0.4f), FLinearColor(8.f, 5.f, 1.6f), FMath::FRand());
-		B.Life = FMath::FRandRange(0.35f, 0.7f);
+		if (!bFlour) { D.Z = FMath::Abs(D.Z) * 0.6f + 0.3f; }   // a flash over a puddle goes up and out
+		B.Look = EAntFxLook::Flame;
+		B.Pos = FVector(At) + D * Radius * 0.12f;
+		B.Vel = D * Radius * (bFlour ? 1.6f : 1.1f) + FVector(0.f, 0.f, Radius * 0.3f);
 		B.Drag = 3.f;
-		B.FadePow = 1.6f;
-		B.Look = EAntFxLook::Glow;
+		const float S0 = Radius / (bFlour ? 420.f : 380.f);
+		B.Scale0 = FVector(S0 * 0.7f, S0, 1.f);
+		B.Scale1 = FVector(S0 * 1.6f, S0 * 2.4f, 1.f);
+		B.Color = FLinearColor(1.2f, 1.2f, 1.2f, 1.f);
+		B.Life = FMath::FRandRange(0.45f, 0.9f);
+		B.FadeIn = 0.05f;
+		B.FadePow = 1.3f;
+		B.bKeep = true;
 		Fx->Emit(B);
 	}
-	for (int32 i = 0; i < N / 2; ++i)
+	// the flash itself: a short hot core
 	{
 		FAntFxBit B;
-		B.Pos = FVector(At) + FMath::VRand() * Radius * 0.3f + FVector(0.f, 0.f, Radius * 0.2f);
-		B.Vel = FMath::VRand() * Radius * 0.4f + FVector(0.f, 0.f, Radius * 0.5f);
-		B.Scale0 = FVector(Radius / 500.f);
-		B.Scale1 = FVector(Radius / 150.f);
-		B.Color = FLinearColor(0.12f, 0.11f, 0.1f, 0.5f);
-		B.Life = FMath::FRandRange(1.8f, 3.f);
+		B.Look = EAntFxLook::Glow;
+		B.Pos = FVector(At);
+		B.Scale0 = FVector(Radius / 700.f);
+		B.Scale1 = FVector(Radius / 260.f);
+		B.Color = FLinearColor(3.f, 2.f, 0.8f);
+		B.Life = 0.18f;
+		B.FadeIn = 0.f;
+		B.FadePow = 1.5f;
+		Fx->Emit(B);
+	}
+	if (bFlour)
+	{
+		// the flour that did not burn: a white cloud thrown out by the blast, rolling and hanging
+		for (int32 i = 0; i < 26; ++i)
+		{
+			FAntFxBit B;
+			const FVector D = FMath::VRand();
+			B.Look = EAntFxLook::Smoke;
+			B.Pos = FVector(At) + D * Radius * FMath::FRandRange(0.1f, 0.45f);
+			B.Vel = D * Radius * FMath::FRandRange(0.8f, 1.5f) + FVector(0.f, 0.f, Radius * 0.15f);
+			B.Drag = 2.4f;
+			B.Scale0 = FVector(Radius / 300.f);
+			B.Scale1 = FVector(Radius / FMath::FRandRange(100.f, 140.f));
+			const float Sh = FMath::FRandRange(0.88f, 1.f);
+			B.Color = FLinearColor(0.93f * Sh, 0.91f * Sh, 0.86f * Sh, FMath::FRandRange(0.55f, 0.8f));
+			B.Life = FMath::FRandRange(4.5f, 6.5f);
+			B.FadeIn = 0.12f;
+			B.FadePow = 1.6f;
+			B.MinAmbient = 0.65f;
+			B.bKeep = true;
+			Fx->Emit(B);
+		}
+		// and then it settles: a thin haze sinking to the floor, and white flecks drifting down onto everything
+		FHitResult H;
+		float FloorZ = (float)At.Z - Radius;
+		if (GetWorld()->LineTraceSingleByChannel(H, FVector(At), FVector(At) - FVector(0.f, 0.f, 4000.f), ECC_Visibility)) { FloorZ = (float)H.ImpactPoint.Z; }
+		for (int32 i = 0; i < 12; ++i)
+		{
+			FAntFxBit B;
+			B.Look = EAntFxLook::Smoke;
+			B.Pos = FVector(At) + FVector(FMath::FRandRange(-1.f, 1.f) * Radius * 0.8f, FMath::FRandRange(-1.f, 1.f) * Radius * 0.8f, FMath::FRandRange(-0.2f, 0.4f) * Radius);
+			B.Vel = FVector(FMath::FRandRange(-30.f, 30.f), FMath::FRandRange(-30.f, 30.f), -FMath::FRandRange(15.f, 35.f));
+			B.Scale0 = FVector(Radius / 200.f);
+			B.Scale1 = FVector(Radius / 110.f);
+			B.Color = FLinearColor(0.9f, 0.88f, 0.83f, 0.22f);
+			B.Life = FMath::FRandRange(7.f, 9.f);
+			B.FadeIn = 0.35f;
+			B.FadePow = 0.9f;
+			B.MinAmbient = 0.65f;
+			B.FloorZ = FloorZ + 30.f;
+			B.bKeep = true;
+			Fx->Emit(B);
+		}
+		for (int32 i = 0; i < 45; ++i)
+		{
+			FAntFxBit B;
+			B.Look = EAntFxLook::Solid;
+			B.Shape = EAntShape::Cube;
+			B.Pos = FVector(At) + FMath::VRand() * Radius * FMath::FRandRange(0.1f, 0.9f);
+			B.Vel = FMath::VRand() * Radius * 0.35f;
+			B.Gravity = 70.f;
+			B.Drag = 1.6f;
+			B.Rot = FQuat(FMath::VRand(), FMath::FRandRange(0.f, 6.f));
+			B.Scale0 = B.Scale1 = FVector(FMath::FRandRange(0.025f, 0.05f), FMath::FRandRange(0.025f, 0.05f), 0.01f);
+			B.Color = FLinearColor(0.92f, 0.9f, 0.85f, 1.f);
+			B.Life = FMath::FRandRange(6.f, 9.f);
+			B.FloorZ = FloorZ + 0.5f;
+			B.bKeep = true;
+			Fx->Emit(B);
+		}
+	}
+	// the smoke after it
+	for (int32 i = 0; i < (bFlour ? 8 : 6); ++i)
+	{
+		FAntFxBit B;
+		B.Look = EAntFxLook::Smoke;
+		B.Pos = FVector(At) + FMath::VRand() * Radius * 0.3f + FVector(0.f, 0.f, Radius * 0.25f);
+		B.Vel = FMath::VRand() * Radius * 0.25f + FVector(0.f, 0.f, Radius * 0.4f);
+		B.Scale0 = FVector(Radius / 450.f);
+		B.Scale1 = FVector(Radius / 130.f);
+		B.Color = FLinearColor(0.09f, 0.085f, 0.08f, 0.45f);
+		B.Life = FMath::FRandRange(2.2f, 3.4f);
 		B.FadeIn = 0.25f;
 		B.Drag = 1.2f;
-		B.MinAmbient = 0.4f;
-		B.Look = EAntFxLook::Soft;
+		B.MinAmbient = 0.35f;
 		Fx->Emit(B);
 	}
 	// a flash of light for a moment
@@ -1589,6 +1695,63 @@ void AAntMatterNet::LocalTick(float Dt)
 	if (GetNetMode() == NM_DedicatedServer) { return; }
 	if (bIceDirty) { bIceDirty = false; DrawIce(); }
 	DrawFires(Dt);
+	static const bool bWatch = FParse::Param(FCommandLine::Get(), TEXT("AntMatterWatch"));
+	if (bWatch && !HasAuthority()) { ClientWatch(Dt); }
+}
+
+void AAntMatterNet::ClientWatch(float Dt)
+{
+	WatchClock += Dt;
+	if (WatchClock < 1.f) { return; }
+	WatchClock = 0.f;
+	int32 Burn = 0, Live = 0, Melt = 0, Wet = 0, Charred = 0, Shown2 = 0, CardsOn = 0;
+	const FAntMatterRec* Pick = nullptr;
+	for (const FAntMatterRec& R : Recs)
+	{
+		if (R.Flags & AntMatterFlag::Burning) { ++Burn; }
+		if (R.Flags & AntMatterFlag::Live) { ++Live; }
+		if (R.Flags & AntMatterFlag::Melting) { ++Melt; }
+		if (R.S[AntState::Wet] > 25) { ++Wet; }
+		if (R.S[AntState::Char] > 25) { ++Charred; }
+		const FShown* S = Shown.Find(R.Id);
+		if (S && S->C.IsValid()) { ++Shown2; }
+		if (!Pick && S && S->C.IsValid() && (R.Flags & (AntMatterFlag::Burning | AntMatterFlag::Live)) && !WatchShotIds.Contains(R.Id)) { Pick = &R; }
+	}
+	for (const UStaticMeshComponent* C : Cards) { if (C && C->IsVisible()) { ++CardsOn; } }
+	UE_LOG(LogTemp, Display, TEXT("ANTMATTER watch (client): records %d (on things here %d), burning %d, live %d, melting %d, wet %d, charred %d, pools %d, ice %d, flame cards drawn %d"),
+		Recs.Num(), Shown2, Burn, Live, Melt, Wet, Charred, Pools.Num(), Ices.Num(), CardsOn);
+	// this machine's own picture of a burning / live thing: its camera on it, a shot now and one a few seconds later
+	if (Pick && LocalClock >= WatchShotAt && WatchShots < 10)
+	{
+		const FShown* S = Shown.Find(Pick->Id);
+		UPrimitiveComponent* C = S ? S->C.Get() : nullptr;
+		if (C)
+		{
+			WatchShotIds.Add(Pick->Id);
+			const FVector To = C->Bounds.Origin;
+			const float Dd = FMath::Clamp((float)C->Bounds.SphereRadius * 3.f + 500.f, 700.f, 2400.f);
+			FVector From = To + FVector(0.f, -Dd, Dd * 0.45f);
+			const FVector Offs[] = { FVector(0.f, -Dd, Dd * 0.45f), FVector(-Dd * 0.8f, -Dd * 0.6f, Dd * 0.5f), FVector(Dd * 0.8f, -Dd * 0.6f, Dd * 0.5f), FVector(0.f, Dd, Dd * 0.45f), FVector(Dd, 0.f, Dd * 0.45f), FVector(-Dd, 0.f, Dd * 0.45f) };
+			FCollisionQueryParams Q(SCENE_QUERY_STAT(AntMatterWatch), false);
+			for (TActorIterator<APawn> It(GetWorld()); It; ++It) { Q.AddIgnoredActor(*It); }
+			for (const FVector& O : Offs)
+			{
+				FHitResult H;
+				if (!GetWorld()->SweepSingleByChannel(H, To + O.GetSafeNormal() * (float)C->Bounds.SphereRadius * 1.1f, To + O, FQuat::Identity, ECC_Visibility, FCollisionShape::MakeSphere(20.f), Q)) { From = To + O; break; }
+			}
+			AntCloth::DevCam(GetWorld(), From, To, 55.f);
+			if (APlayerController* PC = GetWorld()->GetFirstPlayerController()) { if (PC->MyHUD) { PC->MyHUD->bShowHUD = false; } }
+			const FString Kind = (Pick->Flags & AntMatterFlag::Burning) ? TEXT("burning") : TEXT("live");
+			const FString Name = FString::Printf(TEXT("client_%02d_%s_%s"), WatchShots, *Kind, *GetNameSafe(C->GetOwner()).Left(24));
+			++WatchShots;
+			WatchShotAt = LocalClock + 6.f;
+			TWeakObjectPtr<UWorld> WW = GetWorld();
+			const float At = LocalClock;
+			Later(0.6f, [WW, Name]() { if (UWorld* W2 = WW.Get()) { AntCloth::DevShot(W2, TEXT("matter"), Name); } });
+			Later(4.5f, [WW, Name]() { if (UWorld* W2 = WW.Get()) { AntCloth::DevShot(W2, TEXT("matter"), Name + TEXT("_later")); } });
+			UE_LOG(LogTemp, Display, TEXT("ANTMATTER watch (client): shooting %s (%s) at %.1f"), *Name, *Kind, At);
+		}
+	}
 }
 
 UPrimitiveComponent* AAntMatterNet::Resolve(const FAntMatterRec& R)
@@ -1644,6 +1807,20 @@ void AAntMatterNet::ApplyRecords()
 			X.Local = FVector(F.Local); X.Radius = F.Radius; X.Kind = F.Kind; X.Strength = F.Str / 255.f;
 		}
 		AntState::SetSpots(C, AntState::Matter, Sp);
+		// molten plastic slumps: lower and wider, its foot where it was (only a thing that moves: never a fixed piece of the flat)
+		if ((R.Flags & AntMatterFlag::Melting) || S.bSagged)
+		{
+			const float Want = FMath::Clamp((R.S[AntState::Damage] / 255.f) / 0.85f, 0.f, 1.f);
+			if (C->Mobility == EComponentMobility::Movable && Want > S.Sag + 0.02f)
+			{
+				if (!S.bSagged) { S.bSagged = true; S.OrigScale = C->GetComponentScale(); }
+				S.Sag = Want;
+				const float FootZ = (float)C->Bounds.GetBox().Min.Z;
+				C->SetWorldScale3D(S.OrigScale * FVector(1.f + 0.16f * Want, 1.f + 0.16f * Want, 1.f - 0.5f * Want));
+				C->UpdateBounds();
+				C->AddWorldOffset(FVector(0.f, 0.f, FootZ - (float)C->Bounds.GetBox().Min.Z));
+			}
+		}
 		// burnt away: gone on every machine
 		const bool bGone = (R.Flags & AntMatterFlag::Gone) != 0;
 		if (bGone && !S.bHidden)
@@ -1660,6 +1837,7 @@ void AAntMatterNet::ApplyRecords()
 		if (UPrimitiveComponent* C = It.Value().C.Get())
 		{
 			AntState::ClearSource(C, AntState::Matter);
+			if (It.Value().bSagged && C->Mobility == EComponentMobility::Movable) { C->SetWorldScale3D(It.Value().OrigScale); }
 			if (It.Value().bHidden)
 			{
 				C->SetVisibility(true, true);
@@ -1670,22 +1848,51 @@ void AAntMatterNet::ApplyRecords()
 	}
 }
 
+namespace
+{
+	/** A stable 0..1 from two integers: the same every frame and on every machine (where a flame stands on its patch). */
+	float Hash01(uint32 A, uint32 B)
+	{
+		uint32 H = A * 0x9E3779B1u ^ (B + 0x7F4A7C15u) * 0x85EBCA77u;
+		H ^= H >> 15; H *= 0x2C1B3C6Du; H ^= H >> 12; H *= 0x297A2D39u; H ^= H >> 15;
+		return (float)(H & 0xFFFFFFu) / 16777216.f;
+	}
+
+	/** The colour of a thing (its material's Color / Tint), for what drips off it when it melts. */
+	FLinearColor ColorOf(const UPrimitiveComponent* C)
+	{
+		FLinearColor Out(0.35f, 0.35f, 0.36f);
+		if (const UMaterialInterface* M = C ? C->GetMaterial(0) : nullptr)
+		{
+			FLinearColor V;
+			if (M->GetVectorParameterValue(FHashedMaterialParameterInfo(TEXT("Color")), V) && !V.Equals(FLinearColor::White, 0.02f)) { Out = V; }
+			else if (M->GetVectorParameterValue(FHashedMaterialParameterInfo(TEXT("Tint")), V) && !V.Equals(FLinearColor::White, 0.02f)) { Out = V; }
+		}
+		return Out;
+	}
+}
+
 void AAntMatterNet::DrawFires(float Dt)
 {
 	UWorld* W = GetWorld();
 	AAntFxManager* Fx = AAntFxManager::Get(this);
-	if (!Fx) { return; }
-	FxAcc += Dt;
-	if (FxAcc < 0.05f) { return; }
-	const float Step = FxAcc;
-	FxAcc = 0.f;
 	const FVector Cam = CameraOf(W);
+	// the flames (cards) every frame; the bits (embers, smoke, drips) 20 times a second
+	FxAcc += Dt;
+	const bool bEmit = FxAcc >= 0.05f;
+	const float Step = bEmit ? FxAcc : 0.f;
+	if (bEmit) { FxAcc = 0.f; }
+	// the bit pool is shared with the whole game: fires never take the last of it (bangs, splashes, the slipper's dust)
+	const bool bRoom = Fx && Fx->NumLive() < AAntFxManager::MaxBits - 120;
 	struct FLit { FVector At; float Size; float D; };
 	TArray<FLit> Lit;
+	TArray<FCard> Want;
+	float Nearest = 1.e9f;
+	const float Now = NetNowOf(W);
 	for (const FAntMatterRec& R : Recs)
 	{
 		if (!(R.Flags & (AntMatterFlag::Burning | AntMatterFlag::Live | AntMatterFlag::Melting | AntMatterFlag::Steaming))) { continue; }
-		const FShown* S = Shown.Find(R.Id);
+		FShown* S = Shown.Find(R.Id);
 		UPrimitiveComponent* C = S ? S->C.Get() : nullptr;
 		if (!C || !C->IsVisible()) { continue; }
 		const FBox Box = C->Bounds.GetBox();
@@ -1698,63 +1905,80 @@ void AAntMatterNet::DrawFires(float Dt)
 			const float Size = FMath::Max(8.f, R.Fire * 4.f);
 			const float Big = R.S[AntState::Burn] > 0 ? (float)C->Bounds.SphereRadius : Size;
 			Lit.Add({ Front, Big, CamD });
-			// tongues of flame over the burning patch: born on the thing, rising and shrinking, orange to yellow
-			const int32 N = FMath::Clamp(FMath::RoundToInt32(Step * (30.f + Big * 0.5f) * Lod), 1, 16);
-			for (int32 i = 0; i < N; ++i)
+			Nearest = FMath::Min(Nearest, CamD);
+			// the flames: a few tongues standing on the burning patch, the same ones every frame (the material animates them);
+			// on a thin thing (a towel, a napkin) they stand in front of it, on a thick one on its face
+			FVector ToCam = Cam - Front;
+			ToCam.Z = 0.f;
+			ToCam = ToCam.GetSafeNormal(UE_SMALL_NUMBER, FVector(1.f, 0.f, 0.f));
+			const FVector Ext = Box.GetExtent();
+			const float Thick = (float)(FMath::Abs(ToCam.X) * Ext.X + FMath::Abs(ToCam.Y) * Ext.Y);
+			const int32 K = CamD < 2500.f ? FMath::Clamp(1 + FMath::RoundToInt32(Big / 45.f), 2, 6) : FMath::Clamp(1 + FMath::RoundToInt32(Big / 90.f), 1, 3);
+			for (int32 k = 0; k < K; ++k)
 			{
-				FAntFxBit B;
-				const FVector P = Box.ExpandBy(-1.f).GetClosestPointTo(Front + FMath::VRand() * Big * FMath::Sqrt(FMath::FRand()) * 0.85f);
-				const float Sz = FMath::Clamp(Big * FMath::FRandRange(0.12f, 0.26f), 4.f, 90.f);
-				B.Pos = P + FVector(0.f, 0.f, Sz * 0.3f);
-				B.Vel = FVector(FMath::FRandRange(-15.f, 15.f), FMath::FRandRange(-15.f, 15.f), 50.f + Sz * 3.f);
-				B.Gravity = -(120.f + Sz * 4.f);
-				B.Scale0 = FVector(Sz / 100.f, Sz / 100.f, Sz / 60.f);
-				B.Scale1 = FVector(Sz / 400.f, Sz / 400.f, Sz / 180.f);
-				B.Color = FMath::Lerp(FLinearColor(5.f, 1.1f, 0.12f), FLinearColor(7.f, 3.6f, 0.7f), FMath::FRand());
-				B.Life = FMath::FRandRange(0.28f, 0.55f);
-				B.FadeIn = 0.15f;
-				B.Drag = 1.2f;
-				B.Shape = FMath::FRand() < 0.5f ? EAntShape::Sphere : EAntShape::Cone;
-				B.Look = EAntFxLook::Glow;
-				Fx->Emit(B);
+				const float U = Hash01(R.Id, k * 4) * 2.f - 1.f, V = Hash01(R.Id, k * 4 + 1) * 2.f - 1.f, Sd = Hash01(R.Id, k * 4 + 2);
+				const float Spread = k == 0 ? 0.f : Big * 0.7f;
+				FVector P = Box.ExpandBy(-1.f).GetClosestPointTo(Front + FVector(U * Spread, V * Spread, -FMath::Abs(V) * Spread * 0.3f));
+				if (Thick < 60.f) { P += ToCam * ((float)FVector::DotProduct(Box.GetCenter() - P, ToCam) + Thick + 3.f); }
+				else { P += ToCam * 6.f; }
+				FCard Cd;
+				const float Breathe = 0.86f + 0.14f * FMath::Sin(LocalClock * (2.1f + Sd * 2.3f) + Sd * 40.f);
+				Cd.H = FMath::Clamp(Big * (0.9f + 0.7f * Sd), 30.f, 320.f) * Breathe * (k == 0 ? 1.15f : 1.f);
+				Cd.Wd = Cd.H * (0.75f + 0.3f * Hash01(R.Id, k * 4 + 3));
+				Cd.Base = P;
+				Cd.Seed = Sd * 100.f;
+				Cd.Bright = 1.f;
+				Cd.D = CamD;
+				Want.Add(Cd);
 			}
-			// smoke above, a spark now and then
-			if (FMath::FRand() < Step * (2.f + Big / 60.f) * Lod)
+			if (bEmit && (bRoom || CamD < 2000.f))
 			{
-				FAntFxBit B;
-				B.Pos = Front + FVector(FMath::FRandRange(-0.3f, 0.3f) * Big, FMath::FRandRange(-0.3f, 0.3f) * Big, Big * 0.6f + 20.f);
-				B.Vel = FVector(FMath::FRandRange(-20.f, 20.f), FMath::FRandRange(-20.f, 20.f), 90.f + Big * 0.8f);
-				B.Scale0 = FVector(FMath::Clamp(Big / 260.f, 0.08f, 1.2f));
-				B.Scale1 = B.Scale0 * 4.f;
-				B.Color = FLinearColor(0.09f, 0.085f, 0.08f, 0.42f);
-				B.Life = FMath::FRandRange(1.8f, 3.2f);
-				B.FadeIn = 0.2f;
-				B.Drag = 0.6f;
-				B.MinAmbient = 0.35f;
-				B.Look = EAntFxLook::Soft;
-				Fx->Emit(B);
+				// soft dark smoke rising off the flames
+				if (FMath::FRand() < Step * (1.2f + Big / 90.f) * Lod)
+				{
+					FAntFxBit B;
+					B.Look = EAntFxLook::Smoke;
+					B.Pos = Front + FVector(FMath::FRandRange(-0.3f, 0.3f) * Big, FMath::FRandRange(-0.3f, 0.3f) * Big, FMath::Clamp(Big * 0.9f, 25.f, 260.f));
+					B.Vel = FVector(FMath::FRandRange(-15.f, 15.f), FMath::FRandRange(-15.f, 15.f), 70.f + Big * 0.5f);
+					const float Sz = FMath::Clamp(Big / 110.f, 0.25f, 2.6f);
+					B.Scale0 = FVector(Sz);
+					B.Scale1 = FVector(Sz * 3.2f);
+					B.Color = FLinearColor(0.07f, 0.065f, 0.06f, 0.38f);
+					B.Life = FMath::FRandRange(2.6f, 4.f);
+					B.FadeIn = 0.25f;
+					B.FadePow = 1.4f;
+					B.Drag = 0.5f;
+					B.MinAmbient = 0.3f;
+					B.bKeep = CamD < 2000.f;   // the near fire's smoke is not pushed out of a full pool
+					Fx->Emit(B);
+				}
+				// embers flying up out of it
+				if (FMath::FRand() < Step * (2.f + Big / 120.f) * Lod)
+				{
+					FAntFxBit B;
+					B.Pos = Front + FMath::VRand() * Big * 0.4f + FVector(0.f, 0.f, Big * 0.3f);
+					B.Vel = FVector(FMath::FRandRange(-50.f, 50.f), FMath::FRandRange(-50.f, 50.f), FMath::FRandRange(140.f, 330.f));
+					B.Gravity = -40.f;
+					B.Drag = 0.9f;
+					B.Scale0 = FVector(0.035f, 0.012f, 0.012f);
+					B.Scale1 = B.Scale0 * 0.4f;
+					B.Color = FLinearColor(3.2f, 0.9f, 0.12f);
+					B.Life = FMath::FRandRange(0.7f, 1.4f);
+					B.FadeIn = 0.f;
+					B.FadePow = 0.7f;
+					B.Shape = EAntShape::Cube;
+					B.Look = EAntFxLook::Glow;
+					B.bStreak = true;
+					Fx->Emit(B);
+				}
 			}
-			if (FMath::FRand() < Step * 3.f * Lod)
+			if (S && LocalClock >= S->SoundAt && CamD < 4000.f)
 			{
-				FAntFxBit B;
-				B.Pos = Front + FMath::VRand() * Big * 0.5f;
-				B.Vel = FVector(FMath::FRandRange(-60.f, 60.f), FMath::FRandRange(-60.f, 60.f), FMath::FRandRange(150.f, 380.f));
-				B.Gravity = 200.f;
-				B.Scale0 = FVector(0.04f, 0.015f, 0.015f);
-				B.Scale1 = B.Scale0 * 0.5f;
-				B.Color = FLinearColor(8.f, 2.5f, 0.3f);
-				B.Life = FMath::FRandRange(0.5f, 1.1f);
-				B.Look = EAntFxLook::Glow;
-				B.bStreak = true;
-				Fx->Emit(B);
-			}
-			FShown* Sm = Shown.Find(R.Id);
-			if (Sm && LocalClock >= Sm->SoundAt && CamD < 4000.f)
-			{
-				Sm->SoundAt = LocalClock + FMath::FRandRange(0.9f, 1.6f);
+				S->SoundAt = LocalClock + FMath::FRandRange(0.9f, 1.6f);
 				AntAudio::Play(this, EAntSfx::Sizzle, Front, 0.35f + 0.5f * FMath::Clamp(Big / 300.f, 0.f, 1.f));
 			}
 		}
+		if (!bEmit) { continue; }
 		if ((R.Flags & AntMatterFlag::Live) && FMath::FRand() < Step * 6.f * Lod)
 		{
 			const FVector P(FMath::FRandRange(Box.Min.X, Box.Max.X), FMath::FRandRange(Box.Min.Y, Box.Max.Y), FMath::FRandRange(Box.Min.Z, Box.Max.Z));
@@ -1765,49 +1989,103 @@ void AAntMatterNet::DrawFires(float Dt)
 		{
 			AntFx::Steam(this, FVector(Box.GetCenter().X, Box.GetCenter().Y, Box.Max.Z), FMath::Clamp((float)C->Bounds.SphereRadius * 0.3f, 10.f, 120.f), 160.f);
 		}
-		if ((R.Flags & AntMatterFlag::Melting) && FMath::FRand() < Step * 3.f * Lod)
+		if ((R.Flags & AntMatterFlag::Melting) && Fx)   // (a few bits: not held back by a full pool, or a melt next to fires shows nothing)
 		{
-			// molten drips falling off its underside, and a wisp of acrid smoke
-			FAntFxBit B;
-			B.Pos = FVector(FMath::FRandRange(Box.Min.X, Box.Max.X), FMath::FRandRange(Box.Min.Y, Box.Max.Y), Box.Min.Z + 2.f);
-			B.Vel = FVector(0.f, 0.f, -30.f);
-			B.Gravity = 4000.f;
-			B.Scale0 = FVector(0.05f, 0.05f, 0.09f);
-			B.Scale1 = FVector(0.04f, 0.04f, 0.12f);
-			B.Color = FLinearColor(0.12f, 0.1f, 0.09f, 1.f);
-			B.Life = 0.9f;
-			B.Shape = EAntShape::Sphere;
-			B.Look = EAntFxLook::Solid;
-			Fx->Emit(B);
-			AntFx::Steam(this, FVector(Box.GetCenter().X, Box.GetCenter().Y, Box.Max.Z + 10.f), 30.f, 120.f);
+			const FVector Ext = Box.GetExtent();
+			const float Dim = (float)FMath::Max(Ext.X, Ext.Y);
+			// molten drops running down its sides and dropping to the floor, where they spread into little puddles
+			if (FMath::FRand() < Step * 4.f * Lod)
+			{
+				if (S && S->MeltColor.R < 0.f)
+				{
+					S->MeltColor = ColorOf(C);
+					UE_LOG(LogTemp, Display, TEXT("ANTMATTER melt fx: drips (%s) and smoke on %s, fx bits %d"), *S->MeltColor.ToString(), *GetNameSafe(C->GetOwner()), Fx->NumLive());
+				}
+				const float A = FMath::FRand() * 2.f * PI;
+				const FVector Side = Box.GetClosestPointTo(Box.GetCenter() + FVector(FMath::Cos(A) * Ext.X * 2.f, FMath::Sin(A) * Ext.Y * 2.f, Ext.Z * FMath::FRandRange(-0.3f, 0.6f)));
+				const FVector Out = FVector(Side.X - Box.GetCenter().X, Side.Y - Box.GetCenter().Y, 0.f).GetSafeNormal();
+				const float Dr = FMath::Clamp(Dim * 0.12f, 4.f, 22.f) / 100.f;   // (run 3: 4 uu drops did not read from a step away)
+				FAntFxBit B;
+				B.Look = EAntFxLook::Solid;
+				B.Shape = EAntShape::Sphere;
+				B.Pos = Side + Out * Dr * 40.f;
+				B.Vel = FVector(0.f, 0.f, -20.f);
+				B.Gravity = 260.f;
+				B.Drag = 0.4f;
+				B.Scale0 = FVector(Dr * 0.7f, Dr * 0.7f, Dr * 1.5f);
+				B.Scale1 = FVector(Dr * 2.2f, Dr * 2.2f, Dr * 0.3f);   // lands and spreads
+				const FLinearColor Mc = S ? S->MeltColor : FLinearColor(0.35f, 0.35f, 0.36f);
+				B.Color = FLinearColor(Mc.R * 0.8f, Mc.G * 0.8f, Mc.B * 0.8f, 1.f);
+				B.Life = FMath::FRandRange(3.f, 4.5f);
+				B.FloorZ = Box.Min.Z + 0.5f;
+				B.bKeep = CamD < 2500.f;
+				Fx->Emit(B);
+			}
+			// thick dark acrid smoke off its top
+			if (FMath::FRand() < Step * 3.5f * Lod)
+			{
+				FAntFxBit B;
+				B.Look = EAntFxLook::Smoke;
+				B.Pos = FVector(Box.GetCenter().X, Box.GetCenter().Y, Box.Max.Z) + FVector(FMath::FRandRange(-0.5f, 0.5f) * Ext.X, FMath::FRandRange(-0.5f, 0.5f) * Ext.Y, 10.f);
+				B.Vel = FVector(FMath::FRandRange(-12.f, 12.f), FMath::FRandRange(-12.f, 12.f), FMath::FRandRange(45.f, 80.f));
+				const float Sz = FMath::Clamp(Dim / 90.f, 0.4f, 2.2f);
+				B.Scale0 = FVector(Sz * 0.7f);
+				B.Scale1 = FVector(Sz * 3.2f);
+				B.Color = FLinearColor(0.16f, 0.15f, 0.14f, 0.6f);   // sooty grey: black smoke vanished against a dark room at night
+				B.Life = FMath::FRandRange(3.f, 4.5f);
+				B.FadeIn = 0.2f;
+				B.FadePow = 1.3f;
+				B.Drag = 0.35f;
+				B.MinAmbient = 0.3f;
+				B.bKeep = CamD < 2500.f;
+				Fx->Emit(B);
+			}
 		}
 	}
-	// burning oil and the fireballs
+	// burning oil and the fireballs: a bed of flames over the puddle, a ball of fire
 	for (const FAntMatterPool& P : Pools)
 	{
 		const float CamD = (float)FVector::Dist(FVector(P.Center), Cam);
 		if (CamD > 9000.f) { continue; }
 		Lit.Add({ FVector(P.Center), P.Radius, CamD });
-		const int32 N = FMath::Clamp(FMath::RoundToInt32(Step * (P.Kind == 1 ? 260.f : 40.f + P.Radius * 0.35f) * P.Power), 1, 26);
-		for (int32 i = 0; i < N; ++i)
+		Nearest = FMath::Min(Nearest, CamD);
+		const bool bBall = P.Kind == 1;
+		const int32 K = bBall ? 9 : FMath::Clamp(2 + FMath::RoundToInt32(P.Radius / 30.f), 3, 9);
+		for (int32 k = 0; k < K; ++k)
+		{
+			const float U = Hash01(P.Id + 1000u, k * 4), V = Hash01(P.Id + 1000u, k * 4 + 1), Sd = Hash01(P.Id + 1000u, k * 4 + 2);
+			const float A = U * 2.f * PI, Rr = FMath::Sqrt(V) * P.Radius * (bBall ? 0.55f : 0.8f);
+			FCard Cd;
+			Cd.Base = FVector(P.Center) + FVector(FMath::Cos(A) * Rr, FMath::Sin(A) * Rr, bBall ? (Sd - 0.6f) * P.Radius * 0.6f : 0.f);
+			const float Breathe = 0.85f + 0.15f * FMath::Sin(LocalClock * (2.4f + Sd * 2.f) + Sd * 30.f);
+			Cd.H = (bBall ? P.Radius * (0.55f + 0.5f * Sd) : FMath::Lerp(70.f, 160.f, Sd) * (0.5f + 0.5f * P.Power)) * Breathe;
+			Cd.Wd = Cd.H * (bBall ? 0.95f : 0.85f);
+			Cd.Seed = Sd * 100.f;
+			Cd.Bright = bBall ? 1.1f + 0.4f * P.Power : 1.f;
+			Cd.D = CamD;
+			Want.Add(Cd);
+		}
+		if (bEmit && bRoom && !bBall && FMath::FRand() < Step * (1.5f + P.Radius / 80.f))
 		{
 			FAntFxBit B;
-			const float A = FMath::FRand() * 2.f * PI, Rr = FMath::Sqrt(FMath::FRand()) * P.Radius;
-			const float Sz = P.Kind == 1 ? P.Radius * FMath::FRandRange(0.15f, 0.3f) : FMath::FRandRange(25.f, 70.f) * (0.6f + 0.4f * P.Power);
-			B.Pos = FVector(P.Center) + (P.Kind == 1 ? FMath::VRand() * Rr : FVector(FMath::Cos(A) * Rr, FMath::Sin(A) * Rr, Sz * 0.3f));
-			B.Vel = FVector(0.f, 0.f, 60.f + Sz * 3.f);
-			B.Gravity = -(150.f + Sz * 4.f);
-			B.Scale0 = FVector(Sz / 100.f, Sz / 100.f, Sz / 55.f);
-			B.Scale1 = B.Scale0 * 0.25f;
-			B.Color = FMath::Lerp(FLinearColor(5.f, 1.2f, 0.12f), FLinearColor(7.f, 3.8f, 0.8f), FMath::FRand());
-			B.Life = FMath::FRandRange(0.3f, 0.6f);
-			B.FadeIn = 0.12f;
-			B.Shape = EAntShape::Cone;
-			B.Look = EAntFxLook::Glow;
+			B.Look = EAntFxLook::Smoke;
+			B.Pos = FVector(P.Center) + FVector(FMath::FRandRange(-0.5f, 0.5f) * P.Radius, FMath::FRandRange(-0.5f, 0.5f) * P.Radius, 90.f);
+			B.Vel = FVector(FMath::FRandRange(-15.f, 15.f), FMath::FRandRange(-15.f, 15.f), 90.f);
+			B.Scale0 = FVector(FMath::Clamp(P.Radius / 140.f, 0.4f, 2.f));
+			B.Scale1 = B.Scale0 * 3.f;
+			B.Color = FLinearColor(0.06f, 0.055f, 0.05f, 0.42f);
+			B.Life = FMath::FRandRange(2.6f, 4.f);
+			B.FadeIn = 0.25f;
+			B.FadePow = 1.4f;
+			B.Drag = 0.5f;
+			B.MinAmbient = 0.3f;
 			Fx->Emit(B);
 		}
 	}
-	// the light of the nearest fires, flickering
+	(void)Now;
+	DrawCards(Want, Cam);
+	// the light of the nearest fires, flickering: a small kitchen fire, not a floodlight (KAN-21 run 3: lower again, the
+	// cupboards are white inside and Lumen bounces it all round them)
 	Lit.Sort([](const FLit& A, const FLit& B) { return A.D < B.D; });
 	const int32 NL = Lights.Num() - 1;   // the last one is the flash
 	for (int32 i = 0; i < NL; ++i)
@@ -1818,11 +2096,73 @@ void AAntMatterNet::DrawFires(float Dt)
 		const FLit& F = Lit[i];
 		const float Fl = 0.75f + 0.25f * FMath::Sin(LocalClock * 23.f + i * 1.7f) * FMath::Sin(LocalClock * 7.3f + i);
 		L->SetWorldLocation(F.At + FVector(0.f, 0.f, 30.f + F.Size * 0.4f));
-		L->SetAttenuationRadius(FMath::Min(300.f + F.Size * 2.f, 1400.f));
-		L->SetIntensity(FMath::Min(20.f + F.Size * 0.6f, 260.f) * Fl);   // candelas: a small kitchen fire, not a floodlight
+		L->SetAttenuationRadius(FMath::Min(250.f + F.Size * 1.6f, 1000.f));
+		L->SetIntensity(FMath::Min(10.f + F.Size * 0.25f, 80.f) * Fl);   // candelas
 		if (!L->IsVisible()) { L->SetVisibility(true); }
 	}
 	if (Lights.Num() > 0 && Lights.Last() && Lights.Last()->IsVisible() && LocalClock > FlashUntil) { Lights.Last()->SetVisibility(false); }
+	if (FireGrade)
+	{
+		const float Wt = Nearest < 1.e8f ? FMath::Clamp(1.f - (Nearest - 2000.f) / 1500.f, 0.f, 1.f) : 0.f;
+		FireGrade->BlendWeight = FMath::FInterpTo(FireGrade->BlendWeight, Wt, Dt, 2.f);
+	}
+}
+
+void AAntMatterNet::DrawCards(const TArray<FCard>& WantIn, const FVector& Cam)
+{
+	constexpr int32 MaxCards = 72;
+	TArray<FCard> Want = WantIn;
+	if (Want.Num() > MaxCards)
+	{
+		Want.Sort([](const FCard& A, const FCard& B) { return A.D < B.D; });
+		Want.SetNum(MaxCards);
+	}
+	UStaticMesh* Mesh = AntFx::CardMesh();
+	UMaterialInterface* Mat = AntFx::CardMaterial(EAntFxLook::Flame);
+	if (!Mesh || !Mat) { return; }
+	while (Cards.Num() < Want.Num())
+	{
+		UStaticMeshComponent* C = NewObject<UStaticMeshComponent>(this);
+		C->SetMobility(EComponentMobility::Movable);
+		C->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		C->SetGenerateOverlapEvents(false);
+		C->SetCanEverAffectNavigation(false);
+		C->SetCastShadow(false);
+		C->bAffectDistanceFieldLighting = false;
+		C->bAffectDynamicIndirectLighting = false;
+		C->bReceivesDecals = false;
+		C->SetAbsolute(true, true, true);
+		C->SetStaticMesh(Mesh);
+		UMaterialInstanceDynamic* M = UMaterialInstanceDynamic::Create(Mat, this);
+		C->SetMaterial(0, M);
+		C->ComponentTags.Add(TEXT("M4Fx"));
+		C->SetupAttachment(GetRootComponent());
+		C->RegisterComponent();
+		C->SetVisibility(false);
+		Cards.Add(C);
+		CardMids.Add(M);
+		CardParams.Add(FVector2f(-1.f, -1.f));
+	}
+	for (int32 i = 0; i < Cards.Num(); ++i)
+	{
+		UStaticMeshComponent* C = Cards[i];
+		if (!C) { continue; }
+		if (!Want.IsValidIndex(i))
+		{
+			if (C->IsVisible()) { C->SetVisibility(false); }
+			continue;
+		}
+		const FCard& Cd = Want[i];
+		const FVector Ctr = Cd.Base + FVector(0.f, 0.f, Cd.H * 0.38f);   // the card's soft foot just under the burning surface
+		C->SetWorldTransform(FTransform(AntFx::CardRot(Ctr, Cam, true), Ctr, FVector(Cd.Wd / 100.f, Cd.H / 100.f, 1.f)));
+		if (UMaterialInstanceDynamic* M = CardMids[i])
+		{
+			FVector2f& Pm = CardParams[i];
+			if (FMath::Abs(Pm.X - Cd.Seed) > 0.01f) { M->SetScalarParameterValue(TEXT("Seed"), Cd.Seed); Pm.X = Cd.Seed; }
+			if (FMath::Abs(Pm.Y - Cd.Bright) > 0.02f) { M->SetVectorParameterValue(TEXT("Color"), FLinearColor(Cd.Bright, Cd.Bright, Cd.Bright, 1.f)); Pm.Y = Cd.Bright; }
+		}
+		if (!C->IsVisible()) { C->SetVisibility(true); }
+	}
 }
 
 void AAntMatterNet::DrawIce()
@@ -1840,8 +2180,31 @@ void AAntMatterNet::DrawIce()
 		AddInstanceComponent(IceMesh);
 		KitchenArt::SetSolid(IceMesh, KitchenArt::ESolid::Static);   // ants and feet stand on it: a bridge over the puddle
 	}
+	// the rim (KAN-21 run 3): the cells at the edge of the sheet are drawn as low frosted domes that run out to nothing, so the
+	// sheet ends in a rounded, rimed lip of frozen water instead of a step of boxes (the boxes under them stay as the bridge)
+	if (!IceRim)
+	{
+		IceRim = NewObject<UInstancedStaticMeshComponent>(this, TEXT("AntIceRim"));
+		IceRim->SetStaticMesh(Map4Look::Shape(1));
+		IceRim->SetMobility(EComponentMobility::Movable);
+		IceRim->SetupAttachment(GetRootComponent());
+		IceRim->SetAbsolute(true, true, true);
+		if (const Map4Look::FLook* L = Map4Look::Named(TEXT("Ice"))) { IceRim->SetMaterial(0, Map4Look::Get(*L)); }
+		IceRim->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		IceRim->SetCastShadow(false);
+		IceRim->SetCustomPrimitiveDataFloat(AntState::Frost, 0.7f);   // the state layer's frost: white rime crystals
+		IceRim->RegisterComponent();
+		AddInstanceComponent(IceRim);
+	}
 	IceMesh->ClearInstances();
+	IceRim->ClearInstances();
 	int32 N = 0;
+	auto On = [](const FAntMatterIce& I, int32 x, int32 y)
+	{
+		if (x < 0 || y < 0 || x >= AntMatter::IceN || y >= AntMatter::IceN) { return false; }
+		const int32 Bit = y * AntMatter::IceN + x;
+		return I.Mask.IsValidIndex(Bit / 8) && (I.Mask[Bit / 8] & (1 << (Bit % 8))) != 0;
+	};
 	for (const FAntMatterIce& I : Ices)
 	{
 		const float Left = I.Left / 255.f;
@@ -1852,16 +2215,27 @@ void AAntMatterNet::DrawIce()
 			for (int32 x = 0; x < AntMatter::IceN; ++x)
 			{
 				const int32 Bit = y * AntMatter::IceN + x;
-				if (!I.Mask.IsValidIndex(Bit / 8) || !(I.Mask[Bit / 8] & (1 << (Bit % 8)))) { continue; }
+				if (!On(I, x, y)) { continue; }
 				// a melting sheet thins and its cells shrink unevenly
-				const float Shrink = FMath::Clamp(Left * 1.4f - 0.2f * FMath::Frac(FMath::Sin((float)Bit * 12.9898f) * 43758.5453f), 0.25f, 1.f);
-				const FVector P = O + FVector((x + 0.5f) * I.Cell, (y + 0.5f) * I.Cell, -Th * 0.5f + 0.5f);
-				IceMesh->AddInstance(FTransform(FRotator(0.f, (Bit * 37) % 11 - 5.f, 0.f), P, FVector(I.Cell * 1.04f * Shrink / 100.f, I.Cell * 1.04f * Shrink / 100.f, Th / 100.f)), true);
+				const float Rn = FMath::Frac(FMath::Sin((float)Bit * 12.9898f) * 43758.5453f);
+				const float Shrink = FMath::Clamp(Left * 1.4f - 0.2f * Rn, 0.25f, 1.f);
+				const bool bEdge = !On(I, x - 1, y) || !On(I, x + 1, y) || !On(I, x, y - 1) || !On(I, x, y + 1);
+				const float Tb = bEdge ? Th * 0.3f : Th;
+				const FVector P = O + FVector((x + 0.5f) * I.Cell, (y + 0.5f) * I.Cell, -Th + Tb * 0.5f + 0.5f);
+				IceMesh->AddInstance(FTransform(FRotator(0.f, (Bit * 37) % 11 - 5.f, 0.f), P, FVector(I.Cell * (bEdge ? 0.9f : 1.04f) * Shrink / 100.f, I.Cell * (bEdge ? 0.9f : 1.04f) * Shrink / 100.f, Tb / 100.f)), true);
+				if (bEdge)
+				{
+					// a dome over the edge cell (SM_M4_Ball, 1 m): as high as the ice in its middle, out to nothing past the cell
+					const float R = I.Cell * (0.95f + 0.35f * Rn) * Shrink;
+					const FVector Dc = O + FVector((x + 0.5f + (Rn - 0.5f) * 0.4f) * I.Cell, (y + 0.5f + (FMath::Frac(Rn * 7.31f) - 0.5f) * 0.4f) * I.Cell, -Th + 0.3f);
+					IceRim->AddInstance(FTransform(FRotator(0.f, Rn * 360.f, 0.f), Dc, FVector(R * 2.f / 100.f, R * 1.6f / 100.f, Th * 1.7f / 100.f)), true);
+				}
 				++N;
 			}
 		}
 	}
 	IceMesh->SetVisibility(N > 0);
+	IceRim->SetVisibility(N > 0);
 }
 
 void AAntMatterNet::WatchMess()
@@ -2147,31 +2521,92 @@ bool DevCommand(AAntKitchenGameMode* GM, const TArray<FString>& A)
 			return P;
 		};
 		auto ToRoom = [](const FVector& Ctr, bool bX) { return bX ? FVector(0.f, Ctr.Y > 0.f ? -1.f : 1.f, 0.f) : FVector(Ctr.X > 0.f ? -1.f : 1.f, 0.f, 0.f); };
+		// the first of the views (offsets from To) with nothing between it and To (a fat ray: a chair leg counts)
+		auto FreeView = [W](const FVector& To, TArray<FVector> Offs) -> FVector
+		{
+			FCollisionQueryParams Q(SCENE_QUERY_STAT(AntMatterCam), false);
+			for (TActorIterator<APawn> It(W); It; ++It) { Q.AddIgnoredActor(*It); }
+			for (const FVector& O : Offs)
+			{
+				FHitResult H;
+				if (!W->SweepSingleByChannel(H, To + O.GetSafeNormal() * 120.f, To + O, FQuat::Identity, ECC_Visibility, FCollisionShape::MakeSphere(25.f), Q)) { return To + O; }
+			}
+			return To + Offs[0];
+		};
+		// the side of a flat thing (a door) that faces the open room: the side with more free air in front of it (behind a
+		// cupboard's door there is the cupboard and the wall)
+		auto OpenSide = [W](UPrimitiveComponent* C, FVector Axis) -> FVector
+		{
+			const FBox B = C->Bounds.GetBox();
+			const FVector Ctr = B.GetCenter(), Sz = B.GetSize();
+			if (Axis.IsNearlyZero()) { Axis = Sz.X < Sz.Y ? FVector(1.f, 0.f, 0.f) : FVector(0.f, 1.f, 0.f); }
+			const float Half = (float)FVector::DotProduct(Sz, Axis.GetAbs()) * 0.5f;
+			FCollisionQueryParams Q(SCENE_QUERY_STAT(AntMatterCam), false);
+			for (TActorIterator<APawn> It(W); It; ++It) { Q.AddIgnoredActor(*It); }
+			Q.AddIgnoredComponent(C);
+			float Free[2] = { 0.f, 0.f };
+			for (int32 s = 0; s < 2; ++s)
+			{
+				const float Sg = s == 0 ? 1.f : -1.f;
+				for (const float Hz : { -0.25f, 0.f, 0.25f })
+				{
+					FHitResult H;
+					const FVector From = Ctr + Axis * Sg * (Half + 8.f) + FVector(0.f, 0.f, Sz.Z * Hz);
+					Free[s] += W->LineTraceSingleByChannel(H, From, From + Axis * Sg * 3000.f, ECC_Visibility, Q) ? (float)H.Distance : 3000.f;
+				}
+			}
+			UE_LOG(LogTemp, Display, TEXT("ANTMATTER test: free air in front of %s: +%.0f / -%.0f"), *C->GetName(), Free[0] / 3.f, Free[1] / 3.f);
+			return Axis * (Free[0] >= Free[1] ? 1.f : -1.f);
+		};
 		float T0 = 0.f;
 		const bool bAll = T == TEXT("all");
 		if (T == TEXT("door") || bAll)
 		{
-			N->Later(T0, [WN, FindMesh, Cam, Shot, Floor, ToRoom]()
+			N->Later(T0, [WN, FindMesh, Cam, Shot, Floor, OpenSide, FreeView]()
 			{
 				AAntMatterNet* N = WN.Get();
 				UPrimitiveComponent* C = N ? FindMesh(TEXT("SM_K_Base1400_DoorL"), false) : nullptr;
 				if (!C) { UE_LOG(LogTemp, Warning, TEXT("ANTMATTER test door: no door")); return; }
 				const FBox B = C->Bounds.GetBox();
 				const FVector Ctr = B.GetCenter(), Sz = B.GetSize();
-				const bool bX = Sz.X >= Sz.Y;
-				const FVector Along = bX ? FVector(1.f, 0.f, 0.f) : FVector(0.f, 1.f, 0.f);
-				const float Wd = bX ? (float)Sz.X : (float)Sz.Y, H = (float)Sz.Z;
-				const FVector Face = ToRoom(Ctr, bX);
+				// the door's own axes (it may stand open at an angle: its world box says nothing of its face): the thin one of its
+				// mesh is the face normal, which way of it faces the room is where there is free air
+				FVector Face = OpenSide(C, FVector::ZeroVector), Along = FVector::CrossProduct(FVector::UpVector, Face).GetSafeNormal();
+				float Wd = Sz.X >= Sz.Y ? (float)Sz.X : (float)Sz.Y;
+				const float H = (float)Sz.Z;
+				if (const UStaticMeshComponent* SM = Cast<UStaticMeshComponent>(C); SM && SM->GetStaticMesh())
+				{
+					const FVector Ext = SM->GetStaticMesh()->GetBoundingBox().GetExtent() * SM->GetComponentScale().GetAbs();
+					const FTransform& Tf = SM->GetComponentTransform();
+					const FVector Ax[2] = { Tf.GetUnitAxis(EAxis::X), Tf.GetUnitAxis(EAxis::Y) };
+					const int32 Thin = Ext.X <= Ext.Y ? 0 : 1;
+					FVector Nn = Ax[Thin];
+					Nn.Z = 0.f;
+					if (Nn.Normalize())
+					{
+						Face = OpenSide(C, Nn);
+						Along = FVector::CrossProduct(FVector::UpVector, Face).GetSafeNormal();
+						Wd = (float)(Thin == 0 ? Ext.Y : Ext.X) * 2.f;
+					}
+				}
 				const FVector L = Ctr - Along * Wd * 0.25f, R = Ctr + Along * Wd * 0.25f;
-				UE_LOG(LogTemp, Display, TEXT("ANTMATTER test door: %s box %s size %s"), *C->GetName(), *Ctr.ToCompactString(), *Sz.ToCompactString());
+				UE_LOG(LogTemp, Display, TEXT("ANTMATTER test door: %s box %s size %s, face %s, width %.0f"), *C->GetName(), *Ctr.ToCompactString(), *Sz.ToCompactString(), *Face.ToCompactString(), Wd);
 				// the left half wet (two splashes), a rag burning on the floor at the right half's foot
 				N->WetBody(C, L + FVector(0.f, 0.f, H * 0.25f), Wd * 0.42f, 1.f, AntFluid::Water);
 				N->WetBody(C, L - FVector(0.f, 0.f, H * 0.25f), Wd * 0.42f, 1.f, AntFluid::Water);
 				const FVector RagAt = Floor(R + Face * 90.f);
-				TArray<FString> Cmd = { TEXT("matter"), TEXT("thing"), TEXT("rag"), FString::SanitizeFloat(RagAt.X), FString::SanitizeFloat(RagAt.Y), FString::SanitizeFloat(RagAt.Z), TEXT("0"), FString::SanitizeFloat(Wd * 0.45f), TEXT("150"), TEXT("6") };
+				TArray<FString> Cmd = { TEXT("matter"), TEXT("thing"), TEXT("rag"), FString::SanitizeFloat(RagAt.X), FString::SanitizeFloat(RagAt.Y), FString::SanitizeFloat(RagAt.Z), FString::SanitizeFloat(Along.Rotation().Yaw), FString::SanitizeFloat(Wd * 0.45f), TEXT("150"), TEXT("6") };
 				DevCommand(N->GetWorld()->GetAuthGameMode<AAntKitchenGameMode>(), Cmd);
 				N->AddHeat(R - FVector(0.f, 0.f, H * 0.3f) + Face * 30.f, Wd * 0.16f, 520.f, 26.f);   // the rag's flames lick the door's foot
-				Cam(Ctr + Face * 2800.f + FVector(0.f, 0.f, 250.f), Ctr, 50.f);
+				{
+					// square on to the door's face, the whole door and the rag at its foot in the frame
+					const float Dist = FMath::Max(Wd, H) * 1.25f + 500.f;
+					const FVector To = Ctr - FVector(0.f, 0.f, H * 0.1f);
+					const FVector From = FreeView(To, { Face * Dist + FVector(0.f, 0.f, H * 0.15f), Face * Dist * 0.8f + Along * Wd * 0.3f + FVector(0.f, 0.f, H * 0.25f),
+						Face * Dist * 0.8f - Along * Wd * 0.3f + FVector(0.f, 0.f, H * 0.25f), Face * Dist * 0.6f + FVector(0.f, 0.f, H * 0.1f) });
+					UE_LOG(LogTemp, Display, TEXT("ANTMATTER test door: face %s"), *Face.ToCompactString());
+					Cam(From, To, 55.f);
+				}
 				N->Later(0.6f, [WN, RagAt]() { if (AAntMatterNet* N2 = WN.Get()) { TArray<int32> Q; N2->Query(RagAt + FVector(0.f, 0.f, 4.f), 30.f, Q); for (int32 I : Q) { if (UPrimitiveComponent* X = N2->Reg[I].C.Get()) { if (Cast<AAntMatterThing>(X->GetOwner())) { N2->Ignite(X, RagAt, TEXT("тест: горящая тряпка")); } } } } });
 				N->Later(1.f, [Shot]() { Shot(TEXT("door_0_wet_left")); });
 				N->Later(12.f, [Shot]() { Shot(TEXT("door_1_burning_right")); });
@@ -2187,8 +2622,19 @@ bool DevCommand(AAntKitchenGameMode* GM, const TArray<FString>& A)
 			N->Later(T0, [WN, FindMesh, Cam, Shot, ToRoom]()
 			{
 				AAntMatterNet* N = WN.Get();
-				UPrimitiveComponent* C = N ? FindMesh(TEXT("SM_K_Towel"), true) : nullptr;
-				if (!C) { C = N ? FindMesh(TEXT("Towel"), false) : nullptr; }
+				// the oven's towel (the one of run 2: the same scene to compare), not the first towel of the registry
+				UPrimitiveComponent* C = nullptr;
+				if (N)
+				{
+					float BestD = 1.e12f;
+					for (const AAntMatterNet::FReg& Rg : N->Reg)
+					{
+						UStaticMeshComponent* S = Cast<UStaticMeshComponent>(Rg.C.Get());
+						if (!S || !S->IsVisible() || !S->GetStaticMesh() || !S->GetStaticMesh()->GetName().Contains(TEXT("Towel"))) { continue; }
+						const float D = (float)FVector::DistSquared(S->Bounds.Origin, FVector(-750.f, 2853.f, 718.f));
+						if (D < BestD) { BestD = D; C = S; }
+					}
+				}
 				if (!C) { UE_LOG(LogTemp, Warning, TEXT("ANTMATTER test towel: no towel")); return; }
 				const FBox B = C->Bounds.GetBox();
 				const FVector Ctr = B.GetCenter(), Sz = B.GetSize();
@@ -2293,19 +2739,23 @@ bool DevCommand(AAntKitchenGameMode* GM, const TArray<FString>& A)
 		}
 		if (T == TEXT("flour") || bAll)
 		{
-			N->Later(T0, [WN, Cam, Shot, Floor]()
+			N->Later(T0, [WN, Cam, Shot, Floor, FreeView]()
 			{
 				AAntMatterNet* N = WN.Get();
 				if (!N) { return; }
 				const FVector P = Floor(FVector(2600.f, 1700.f, 0.f)) + FVector(0.f, 0.f, 420.f);
 				if (AAntReactNet* RN = AAntReactNet::Get(N->GetWorld())) { RN->AddCloud(AntCloudKind::Flour, P, 650.f, 14.f, FVector::ZeroVector, FVector::ZeroVector, 0.f, TEXT("matter test")); }
-				Cam(P + FVector(0.f, -2600.f, 500.f), P, 60.f);
+				// (run 2: a chair leg right in front of the lens) the first view with nothing in the way
+				// (run 3: from the table's side the bang threw its tablecloth over the lens: from the open side first)
+				Cam(FreeView(P, { FVector(2400.f, -700.f, 600.f), FVector(-2400.f, -700.f, 600.f), FVector(1800.f, 1800.f, 600.f), FVector(0.f, 2400.f, 600.f),
+					FVector(0.f, -2600.f, 500.f), FVector(0.f, -2000.f, 1300.f) }), P, 60.f);
 				N->Later(2.5f, [Shot]() { Shot(TEXT("flour_0_cloud")); });
 				N->Later(3.f, [WN, P]() { if (AAntMatterNet* N2 = WN.Get()) { N2->Spark(P, FVector::UpVector, TEXT("тест: искра в мучном облаке")); } });
 				N->Later(3.15f, [Shot]() { Shot(TEXT("flour_1_bang")); });
 				N->Later(3.6f, [Shot]() { Shot(TEXT("flour_2_fireball")); });
+				N->Later(8.f, [Shot]() { Shot(TEXT("flour_3_dust_settles")); });
 			});
-			T0 += 8.f;
+			T0 += 11.f;
 		}
 		if (T == TEXT("plastic") || bAll)
 		{
@@ -2313,16 +2763,58 @@ bool DevCommand(AAntKitchenGameMode* GM, const TArray<FString>& A)
 			{
 				AAntMatterNet* N = WN.Get();
 				if (!N) { return; }
-				const FVector P = Floor(FVector(2200.f, 900.f, 0.f));
+				// (run 2: the tub stood in the ice test's puddle, cooled by it, and nothing read) a dry spot of floor
+				FVector P = Floor(FVector(2200.f, 900.f, 0.f));
+				if (UAntFluidWorld* Fluid = UAntFluidWorld::Active(N))
+				{
+					const FVector Try[] = { FVector(2200.f, 900.f, 0.f), FVector(2200.f, -300.f, 0.f), FVector(3200.f, 300.f, 0.f), FVector(1200.f, -600.f, 0.f), FVector(-300.f, -900.f, 0.f), FVector(3400.f, -900.f, 0.f) };
+					for (const FVector& T2 : Try)
+					{
+						const FVector Q = Floor(T2);
+						AntFluid::FSample S;
+						const bool bWet = Fluid->SampleAt(Q + FVector(0.f, 0.f, 30.f), S) && S.Total > 0.05f;
+						if (!bWet && !AntMatter::IceAt(N->GetWorld(), Q, 200.f)) { P = Q; break; }
+						UE_LOG(LogTemp, Display, TEXT("ANTMATTER test plastic: %s is wet, next"), *Q.ToCompactString());
+					}
+				}
 				TArray<FString> Cmd = { TEXT("matter"), TEXT("thing"), TEXT("plastic"), FString::SanitizeFloat(P.X), FString::SanitizeFloat(P.Y), FString::SanitizeFloat(P.Z) };
 				DevCommand(N->GetWorld()->GetAuthGameMode<AAntKitchenGameMode>(), Cmd);
-				N->AddHeat(P + FVector(0.f, 0.f, 40.f), 160.f, 300.f, 14.f);   // a hot pan put down on it
-				Cam(P + FVector(0.f, -900.f, 380.f), P + FVector(0.f, 0.f, 50.f), 50.f);
+				N->AddHeat(P + FVector(0.f, 0.f, 40.f), 160.f, 420.f, 24.f);   // a hot pan put down on it (run 2: 300 C reached the melting point only at the end)
+				Cam(P + FVector(0.f, -700.f, 300.f), P + FVector(0.f, 0.f, 45.f), 50.f);
 				N->Later(1.f, [Shot]() { Shot(TEXT("plastic_0_cold")); });
-				N->Later(9.f, [Shot]() { Shot(TEXT("plastic_1_melting_smoke")); });
-				N->Later(14.f, [Shot, WN, P]() { Shot(TEXT("plastic_2_sagged")); if (AAntMatterNet* N2 = WN.Get()) { N2->LogAround(P, 200.f); } });
+				N->Later(12.f, [Shot]() { Shot(TEXT("plastic_1_melting_smoke")); });
+				N->Later(22.f, [Shot, WN, P]() { Shot(TEXT("plastic_2_sagged")); if (AAntMatterNet* N2 = WN.Get()) { N2->LogAround(P, 200.f); } });
 			});
-			T0 += 16.f;
+			T0 += 24.f;
+		}
+		if (T == TEXT("coop"))
+		{
+			// the co-op check (KAN-21 run 3): current through a puddle into a pot standing in it, a rag on fire, then put out (steam,
+			// wet, char). All on the host; a client started with -AntMatterWatch logs and shoots what it draws of it.
+			N->Later(T0, [WN, Cam, Shot, Floor, FreeView]()
+			{
+				AAntMatterNet* N = WN.Get();
+				if (!N) { return; }
+				AAntKitchenGameMode* GM = N->GetWorld()->GetAuthGameMode<AAntKitchenGameMode>();
+				const FVector P = Floor(FVector(1500.f, -600.f, 0.f));
+				if (UAntFluidWorld* Fluid = UAntFluidWorld::Active(N)) { Fluid->Spill(AntFluid::Water, P + FVector(0.f, 0.f, 30.f), 1.f * Litre, 120.f); }
+				const FVector Pot = P + FVector(60.f, 0.f, 0.f), Rag = Floor(P + FVector(-1300.f, 150.f, 0.f));   // (run 3a: at 650 the puddle reached it and soaked it)
+				TArray<FString> C1 = { TEXT("matter"), TEXT("thing"), TEXT("pot"), FString::SanitizeFloat(Pot.X), FString::SanitizeFloat(Pot.Y), FString::SanitizeFloat(Pot.Z) };
+				DevCommand(GM, C1);
+				TArray<FString> C2 = { TEXT("matter"), TEXT("thing"), TEXT("rag"), FString::SanitizeFloat(Rag.X), FString::SanitizeFloat(Rag.Y), FString::SanitizeFloat(Rag.Z) };
+				DevCommand(GM, C2);
+				UE_LOG(LogTemp, Display, TEXT("ANTMATTER test coop: puddle at %s, pot in it, rag at %s"), *P.ToCompactString(), *Rag.ToCompactString());
+				const FVector Mid = (P + Rag) * 0.5f;
+				Cam(FreeView(Mid, { FVector(0.f, -1500.f, 700.f), FVector(-900.f, -1300.f, 800.f), FVector(900.f, -1300.f, 800.f), FVector(0.f, 1500.f, 700.f) }), Mid, 60.f);
+				N->Later(4.f, [WN, P]() { if (AAntMatterNet* N2 = WN.Get()) { N2->Electrify(P + FVector(0.f, 0.f, 3.f), 80.f, 9.f, TEXT("тест: ток по луже")); } });
+				N->Later(5.f, [Shot]() { Shot(TEXT("coop_0_live_water")); });
+				N->Later(6.f, [WN, Rag]() { if (AAntMatterNet* N2 = WN.Get()) { TArray<int32> Q; N2->Query(Rag + FVector(0.f, 0.f, 4.f), 40.f, Q); for (int32 I : Q) { if (UPrimitiveComponent* X = N2->Reg[I].C.Get()) { if (Cast<AAntMatterThing>(X->GetOwner())) { N2->Ignite(X, Rag, TEXT("тест: тряпка")); } } } } });
+				N->Later(13.f, [Shot]() { Shot(TEXT("coop_1_fire")); });
+				N->Later(15.f, [WN, Rag]() { if (AAntMatterNet* N2 = WN.Get()) { N2->Douse(Rag + FVector(0.f, 0.f, 40.f), 260.f, 1.f); } });
+				N->Later(15.4f, [Shot]() { Shot(TEXT("coop_2_douse_steam")); });
+				N->Later(19.f, [Shot, WN]() { Shot(TEXT("coop_3_after")); if (AAntMatterNet* N2 = WN.Get()) { UE_LOG(LogTemp, Display, TEXT("ANTMATTER test coop: %s"), *N2->Describe()); } });
+			});
+			T0 += 21.f;
 		}
 		if (T == TEXT("perf") || bAll)
 		{
@@ -2332,6 +2824,8 @@ bool DevCommand(AAntKitchenGameMode* GM, const TArray<FString>& A)
 				if (!N) { return; }
 				UWorld* W2 = N->GetWorld();
 				if (APlayerController* PC = W2->GetFirstPlayerController()) { PC->ConsoleCommand(TEXT("stat unit"), false); }
+				// (run 2 lit none: the earlier scenes already held the fire cap) a clean flat, then the cap's worth of fires in view
+				N->ResetMatter();
 				const FVector P(-2500.f, 3400.f, 1700.f);
 				TArray<int32> Near;
 				N->Query(P, 3500.f, Near);
@@ -2340,7 +2834,7 @@ bool DevCommand(AAntKitchenGameMode* GM, const TArray<FString>& A)
 				{
 					UPrimitiveComponent* C = N->Reg[Idx].C.Get();
 					const FAntMatProps* M = N->Reg[Idx].M;
-					if (C && M && M->IgniteAt > 0.f && M->IgniteAt < 320.f && C->Bounds.SphereRadius < 900.f && N->Ignite(C, C->Bounds.Origin, TEXT("тест производительности")) && ++Lit >= 8) { break; }
+					if (C && M && M->IgniteAt > 0.f && M->IgniteAt < 320.f && C->Bounds.SphereRadius < 900.f && N->Ignite(C, C->Bounds.Origin, TEXT("тест производительности")) && ++Lit >= MaxBurning) { break; }
 				}
 				UE_LOG(LogTemp, Display, TEXT("ANTMATTER test perf: %d fires"), Lit);
 				Cam(P + FVector(0.f, -3800.f, 900.f), P, 70.f);
@@ -2348,8 +2842,10 @@ bool DevCommand(AAntKitchenGameMode* GM, const TArray<FString>& A)
 				{
 					N->Later(k * 2.f, [WN, k]() { if (AAntMatterNet* N2 = WN.Get()) { UE_LOG(LogTemp, Display, TEXT("ANTMATTER perf %d: frame %.2f ms, %s"), k, FApp::GetDeltaTime() * 1000.0, *N2->Describe()); } });
 				}
-				N->Later(6.f, [Shot]() { Shot(TEXT("perf_0_fires_stat_unit")); });
-				N->Later(12.f, [Shot]() { Shot(TEXT("perf_1_fires_stat_unit")); });
+				// with the UI: "stat unit" is drawn over the picture (the other shots leave it out)
+				auto ShotUI = [](const FString& Name) { FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir() / TEXT("Screenshots") / TEXT("matter") / (Name + TEXT(".png")), true, false); UE_LOG(LogTemp, Display, TEXT("ANTMATTER test shot %s (with stat unit)"), *Name); };
+				N->Later(6.f, [ShotUI]() { ShotUI(TEXT("perf_0_fires_stat_unit")); });
+				N->Later(12.f, [ShotUI]() { ShotUI(TEXT("perf_1_fires_stat_unit")); });
 			});
 			T0 += 18.f;
 		}
