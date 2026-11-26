@@ -9,6 +9,7 @@
 #include "GameFramework/Actor.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
+#include "Misc/PackageName.h"
 #include "UObject/Package.h"
 #include "Engine/World.h"
 #include "Engine/HitResult.h"
@@ -363,8 +364,26 @@ void ApplyLook(UStaticMeshComponent* C, const TCHAR* Name, int32 Index)
 		const FString Slot = Slots[i].MaterialSlotName.ToString();
 		if (Slot.StartsWith(TEXT("Hero_")) && Slots[i].MaterialInterface)
 		{
-			// Hero props (KAN-22): their own baked texture set and the state layer (M_Hero, Tools/art/make_hero_material.py)
-			C->SetMaterial(i, Slots[i].MaterialInterface);
+			// Hero props (KAN-22): their own baked texture set and the state layer (M_Hero, Tools/art/make_hero_material.py).
+			// The kitchen block wears the owner's own colours (MI_<Name>_Owner, rule 2); -AntHeroPalette=new shows the painted set.
+			UMaterialInterface* Mat = Slots[i].MaterialInterface;
+			static int32 bNewPalette = -1;
+			if (bNewPalette < 0)
+			{
+				FString P;
+				bNewPalette = FParse::Value(FCommandLine::Get(), TEXT("AntHeroPalette="), P) && P.Equals(TEXT("new"), ESearchCase::IgnoreCase) ? 1 : 0;
+			}
+			if (bNewPalette == 1 && Mat->GetName().EndsWith(TEXT("_Owner")))
+			{
+				// MI_<Name>_Owner -> MI_<Name> next to it
+				const FString Pkg = FPackageName::GetLongPackagePath(Mat->GetOutermost()->GetName());
+				const FString Plain = Mat->GetName().LeftChop(6);
+				if (UMaterialInterface* NewMat = LoadObject<UMaterialInterface>(nullptr, *FString::Printf(TEXT("%s/%s.%s"), *Pkg, *Plain, *Plain), nullptr, LOAD_NoWarn | LOAD_Quiet))
+				{
+					Mat = NewMat;
+				}
+			}
+			C->SetMaterial(i, Mat);
 			if (i == 0) { C->ComponentTags.AddUnique(TEXT("HeroArt")); }
 			continue;
 		}
