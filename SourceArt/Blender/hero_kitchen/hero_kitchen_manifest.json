@@ -748,6 +748,80 @@
    "ucx": 2
   },
   {
+   "name": "SM_K_Bin_Pedal",
+   "file": "SM_K_Bin_Pedal.fbx",
+   "set": "hero_kitchen",
+   "dest": "/Game/Hero/SM_K_Bin_Pedal",
+   "break_class": "",
+   "textures": {
+    "C": "SM_K_Bin_Pedal/tex/T_SM_K_Bin_Pedal_C.png",
+    "N": "SM_K_Bin_Pedal/tex/T_SM_K_Bin_Pedal_N.png",
+    "R": "SM_K_Bin_Pedal/tex/T_SM_K_Bin_Pedal_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [],
+   "source": "kitchen/SM_K_Bin_Pedal.fbx (the owner's kitchen model, same frame)",
+   "old_slots": [
+    "Plinth"
+   ],
+   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
+   "triangles": 376,
+   "bbox_min_m": [
+    -0.0842,
+    -0.1263,
+    -0.0132
+   ],
+   "bbox_max_m": [
+    0.0842,
+    0.0263,
+    0.0132
+   ],
+   "materials": [
+    "Hero_SM_K_Bin_Pedal"
+   ],
+   "lod_triangles": [
+    376,
+    188,
+    94
+   ],
+   "ucx": 2
+  },
+  {
+   "name": "SM_V3_WireRack",
+   "file": "SM_V3_WireRack.fbx",
+   "set": "hero",
+   "textures": {
+    "C": "SM_V3_WireRack/tex/T_SM_V3_WireRack_C.png",
+    "N": "SM_V3_WireRack/tex/T_SM_V3_WireRack_N.png",
+    "R": "SM_V3_WireRack/tex/T_SM_V3_WireRack_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [],
+   "note": "KAN-23 hero rebuild of the v3.2 piece (same frame and box)",
+   "triangles": 1724,
+   "bbox_min_m": [
+    -0.1603,
+    -0.1287,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.1603,
+    0.1287,
+    0.2594
+   ],
+   "materials": [
+    "Hero_SM_V3_WireRack"
+   ],
+   "lod_triangles": [
+    1724,
+    689,
+    257
+   ],
+   "ucx": 5
+  },
+  {
    "name": "SM_K_Base1400",
    "file": "SM_K_Base1400.fbx",
    "set": "hero_kitchen",
@@ -864,16 +938,16 @@
     {
      "name": "SM_K_Base1400_DoorL_Brk0",
      "file": "SM_K_Base1400_DoorL_Brk0.fbx",
-     "triangles": 530,
+     "triangles": 552,
      "bbox_min_m": [
       0.0,
       -0.028,
-      0.373
+      0.3724
      ],
      "bbox_max_m": [
       0.3621,
       -0.0,
-      0.5803
+      0.5797
      ],
      "materials": [
       "Hero_SM_K_Base1400_DoorL",
@@ -883,16 +957,16 @@
     {
      "name": "SM_K_Base1400_DoorL_Brk1",
      "file": "SM_K_Base1400_DoorL_Brk1.fbx",
-     "triangles": 740,
+     "triangles": 1240,
      "bbox_min_m": [
-      0.0,
+      -0.018,
       -0.028,
       0.0
      ],
      "bbox_max_m": [
       0.3621,
-      -0.0,
-      0.4026
+      0.012,
+      0.402
      ],
      "materials": [
       "Hero_SM_K_Base1400_DoorL",
@@ -902,15 +976,15 @@
     {
      "name": "SM_K_Base1400_DoorL_Brk2",
      "file": "SM_K_Base1400_DoorL_Brk2.fbx",
-     "triangles": 1114,
+     "triangles": 1610,
      "bbox_min_m": [
-      0.0,
-      -0.0626,
-      0.5554
+      -0.018,
+      -0.0628,
+      0.5547
      ],
      "bbox_max_m": [
       0.3621,
-      -0.0,
+      0.012,
       0.7553
      ],
      "materials": [
@@ -926,24 +1000,24 @@
     "Brass"
    ],
    "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 1320,
+   "triangles": 2304,
    "bbox_min_m": [
-    0.0,
-    -0.0626,
+    -0.018,
+    -0.0628,
     0.0
    ],
    "bbox_max_m": [
     0.3621,
-    -0.0,
+    0.012,
     0.7553
    ],
    "materials": [
     "Hero_SM_K_Base1400_DoorL"
    ],
    "lod_triangles": [
-    1320,
-    660,
-    330
+    2304,
+    1152,
+    576
    ],
    "ucx": 5
   },
@@ -964,16 +1038,16 @@
     {
      "name": "SM_K_Base1400_DoorR_Brk0",
      "file": "SM_K_Base1400_DoorR_Brk0.fbx",
-     "triangles": 530,
+     "triangles": 546,
      "bbox_min_m": [
       -0.3621,
       -0.028,
-      0.373
+      0.3736
      ],
      "bbox_max_m": [
       0.0,
       -0.0,
-      0.5803
+      0.5811
      ],
      "materials": [
       "Hero_SM_K_Base1400_DoorR",
@@ -983,16 +1057,16 @@
     {
      "name": "SM_K_Base1400_DoorR_Brk1",
      "file": "SM_K_Base1400_DoorR_Brk1.fbx",
-     "triangles": 740,
+     "triangles": 1240,
      "bbox_min_m": [
       -0.3621,
       -0.028,
       0.0
      ],
      "bbox_max_m": [
-      0.0,
-      -0.0,
-      0.4026
+      0.018,
+      0.012,
+      0.4032
      ],
      "materials": [
       "Hero_SM_K_Base1400_DoorR",
@@ -1002,15 +1076,15 @@
     {
      "name": "SM_K_Base1400_DoorR_Brk2",
      "file": "SM_K_Base1400_DoorR_Brk2.fbx",
-     "triangles": 1114,
+     "triangles": 1610,
      "bbox_min_m": [
       -0.3621,
-      -0.0626,
-      0.5554
+      -0.0628,
+      0.556
      ],
      "bbox_max_m": [
-      0.0,
-      -0.0,
+      0.018,
+      0.012,
       0.7553
      ],
      "materials": [
@@ -1026,24 +1100,24 @@
     "Brass"
    ],
    "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 1320,
+   "triangles": 2304,
    "bbox_min_m": [
     -0.3621,
-    -0.0626,
+    -0.0628,
     0.0
    ],
    "bbox_max_m": [
-    0.0,
-    -0.0,
+    0.018,
+    0.012,
     0.7553
    ],
    "materials": [
     "Hero_SM_K_Base1400_DoorR"
    ],
    "lod_triangles": [
-    1320,
-    660,
-    330
+    2304,
+    1152,
+    576
    ],
    "ucx": 5
   },
@@ -1164,16 +1238,16 @@
     {
      "name": "SM_K_Base1300_DoorL_Brk0",
      "file": "SM_K_Base1300_DoorL_Brk0.fbx",
-     "triangles": 548,
+     "triangles": 556,
      "bbox_min_m": [
       0.0,
       -0.028,
-      0.3739
+      0.3733
      ],
      "bbox_max_m": [
       0.3358,
       -0.0,
-      0.5793
+      0.5787
      ],
      "materials": [
       "Hero_SM_K_Base1300_DoorL",
@@ -1183,16 +1257,16 @@
     {
      "name": "SM_K_Base1300_DoorL_Brk1",
      "file": "SM_K_Base1300_DoorL_Brk1.fbx",
-     "triangles": 748,
+     "triangles": 1242,
      "bbox_min_m": [
-      0.0,
+      -0.018,
       -0.028,
       0.0
      ],
      "bbox_max_m": [
       0.3358,
-      -0.0,
-      0.4017
+      0.012,
+      0.4011
      ],
      "materials": [
       "Hero_SM_K_Base1300_DoorL",
@@ -1202,15 +1276,15 @@
     {
      "name": "SM_K_Base1300_DoorL_Brk2",
      "file": "SM_K_Base1300_DoorL_Brk2.fbx",
-     "triangles": 1122,
+     "triangles": 1610,
      "bbox_min_m": [
-      0.0,
-      -0.0626,
-      0.5564
+      -0.018,
+      -0.0628,
+      0.5556
      ],
      "bbox_max_m": [
       0.3358,
-      -0.0,
+      0.012,
       0.7553
      ],
      "materials": [
@@ -1226,24 +1300,24 @@
     "Brass"
    ],
    "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 1320,
+   "triangles": 2304,
    "bbox_min_m": [
-    0.0,
-    -0.0626,
+    -0.018,
+    -0.0628,
     0.0
    ],
    "bbox_max_m": [
     0.3358,
-    -0.0,
+    0.012,
     0.7553
    ],
    "materials": [
     "Hero_SM_K_Base1300_DoorL"
    ],
    "lod_triangles": [
-    1320,
-    660,
-    330
+    2304,
+    1152,
+    576
    ],
    "ucx": 5
   },
@@ -1264,16 +1338,16 @@
     {
      "name": "SM_K_Base1300_DoorR_Brk0",
      "file": "SM_K_Base1300_DoorR_Brk0.fbx",
-     "triangles": 548,
+     "triangles": 554,
      "bbox_min_m": [
       -0.3358,
       -0.028,
-      0.3739
+      0.3745
      ],
      "bbox_max_m": [
       0.0,
       -0.0,
-      0.5793
+      0.5801
      ],
      "materials": [
       "Hero_SM_K_Base1300_DoorR",
@@ -1283,16 +1357,16 @@
     {
      "name": "SM_K_Base1300_DoorR_Brk1",
      "file": "SM_K_Base1300_DoorR_Brk1.fbx",
-     "triangles": 748,
+     "triangles": 1244,
      "bbox_min_m": [
       -0.3358,
       -0.028,
       0.0
      ],
      "bbox_max_m": [
-      0.0,
-      -0.0,
-      0.4017
+      0.018,
+      0.012,
+      0.4023
      ],
      "materials": [
       "Hero_SM_K_Base1300_DoorR",
@@ -1302,15 +1376,15 @@
     {
      "name": "SM_K_Base1300_DoorR_Brk2",
      "file": "SM_K_Base1300_DoorR_Brk2.fbx",
-     "triangles": 1122,
+     "triangles": 1612,
      "bbox_min_m": [
       -0.3358,
-      -0.0626,
-      0.5564
+      -0.0628,
+      0.557
      ],
      "bbox_max_m": [
-      0.0,
-      -0.0,
+      0.018,
+      0.012,
       0.7553
      ],
      "materials": [
@@ -1326,24 +1400,24 @@
     "Brass"
    ],
    "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 1320,
+   "triangles": 2304,
    "bbox_min_m": [
     -0.3358,
-    -0.0626,
+    -0.0628,
     0.0
    ],
    "bbox_max_m": [
-    0.0,
-    -0.0,
+    0.018,
+    0.012,
     0.7553
    ],
    "materials": [
     "Hero_SM_K_Base1300_DoorR"
    ],
    "lod_triangles": [
-    1320,
-    660,
-    330
+    2304,
+    1152,
+    576
    ],
    "ucx": 5
   },
@@ -1464,16 +1538,16 @@
     {
      "name": "SM_K_Base1200_DoorL_Brk0",
      "file": "SM_K_Base1200_DoorL_Brk0.fbx",
-     "triangles": 518,
+     "triangles": 538,
      "bbox_min_m": [
       0.0,
       -0.028,
-      0.3748
+      0.3741
      ],
      "bbox_max_m": [
       0.3095,
       -0.0,
-      0.5782
+      0.5777
      ],
      "materials": [
       "Hero_SM_K_Base1200_DoorL",
@@ -1483,16 +1557,16 @@
     {
      "name": "SM_K_Base1200_DoorL_Brk1",
      "file": "SM_K_Base1200_DoorL_Brk1.fbx",
-     "triangles": 730,
+     "triangles": 1234,
      "bbox_min_m": [
-      0.0,
+      -0.018,
       -0.028,
       0.0
      ],
      "bbox_max_m": [
       0.3095,
-      -0.0,
-      0.4008
+      0.012,
+      0.3999
      ],
      "materials": [
       "Hero_SM_K_Base1200_DoorL",
@@ -1502,15 +1576,15 @@
     {
      "name": "SM_K_Base1200_DoorL_Brk2",
      "file": "SM_K_Base1200_DoorL_Brk2.fbx",
-     "triangles": 1102,
+     "triangles": 1606,
      "bbox_min_m": [
-      0.0,
-      -0.0626,
-      0.5574
+      -0.018,
+      -0.0628,
+      0.5567
      ],
      "bbox_max_m": [
       0.3095,
-      -0.0,
+      0.012,
       0.7553
      ],
      "materials": [
@@ -1526,24 +1600,24 @@
     "Brass"
    ],
    "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 1320,
+   "triangles": 2304,
    "bbox_min_m": [
-    0.0,
-    -0.0626,
+    -0.018,
+    -0.0628,
     0.0
    ],
    "bbox_max_m": [
     0.3095,
-    -0.0,
+    0.012,
     0.7553
    ],
    "materials": [
     "Hero_SM_K_Base1200_DoorL"
    ],
    "lod_triangles": [
-    1320,
-    660,
-    330
+    2304,
+    1152,
+    576
    ],
    "ucx": 5
   },
@@ -1564,16 +1638,16 @@
     {
      "name": "SM_K_Base1200_DoorR_Brk0",
      "file": "SM_K_Base1200_DoorR_Brk0.fbx",
-     "triangles": 518,
+     "triangles": 532,
      "bbox_min_m": [
       -0.3095,
       -0.028,
-      0.3748
+      0.3756
      ],
      "bbox_max_m": [
       0.0,
       -0.0,
-      0.5782
+      0.579
      ],
      "materials": [
       "Hero_SM_K_Base1200_DoorR",
@@ -1583,16 +1657,16 @@
     {
      "name": "SM_K_Base1200_DoorR_Brk1",
      "file": "SM_K_Base1200_DoorR_Brk1.fbx",
-     "triangles": 730,
+     "triangles": 1236,
      "bbox_min_m": [
       -0.3095,
       -0.028,
       0.0
      ],
      "bbox_max_m": [
-      0.0,
-      -0.0,
-      0.4008
+      0.018,
+      0.012,
+      0.4014
      ],
      "materials": [
       "Hero_SM_K_Base1200_DoorR",
@@ -1602,15 +1676,15 @@
     {
      "name": "SM_K_Base1200_DoorR_Brk2",
      "file": "SM_K_Base1200_DoorR_Brk2.fbx",
-     "triangles": 1102,
+     "triangles": 1604,
      "bbox_min_m": [
       -0.3095,
-      -0.0626,
-      0.5574
+      -0.0628,
+      0.558
      ],
      "bbox_max_m": [
-      0.0,
-      -0.0,
+      0.018,
+      0.012,
       0.7553
      ],
      "materials": [
@@ -1626,24 +1700,24 @@
     "Brass"
    ],
    "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 1320,
+   "triangles": 2304,
    "bbox_min_m": [
     -0.3095,
-    -0.0626,
+    -0.0628,
     0.0
    ],
    "bbox_max_m": [
-    0.0,
-    -0.0,
+    0.018,
+    0.012,
     0.7553
    ],
    "materials": [
     "Hero_SM_K_Base1200_DoorR"
    ],
    "lod_triangles": [
-    1320,
-    660,
-    330
+    2304,
+    1152,
+    576
    ],
    "ucx": 5
   },
@@ -2167,15 +2241,15 @@
     {
      "name": "SM_K_BaseSink_DoorL_Brk0",
      "file": "SM_K_BaseSink_DoorL_Brk0.fbx",
-     "triangles": 1164,
+     "triangles": 1676,
      "bbox_min_m": [
-      -0.0,
-      -0.0626,
-      0.2394
+      -0.018,
+      -0.0628,
+      0.2388
      ],
      "bbox_max_m": [
       0.3621,
-      -0.0,
+      0.012,
       0.4921
      ],
      "materials": [
@@ -2186,16 +2260,16 @@
     {
      "name": "SM_K_BaseSink_DoorL_Brk1",
      "file": "SM_K_BaseSink_DoorL_Brk1.fbx",
-     "triangles": 790,
+     "triangles": 1304,
      "bbox_min_m": [
-      -0.0,
+      -0.018,
       -0.028,
       0.0
      ],
      "bbox_max_m": [
       0.3621,
-      -0.0,
-      0.2659
+      0.012,
+      0.2654
      ],
      "materials": [
       "Hero_SM_K_BaseSink_DoorL",
@@ -2210,26 +2284,26 @@
     "Brass"
    ],
    "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 1320,
+   "triangles": 2304,
    "bbox_min_m": [
-    -0.0,
-    -0.0626,
+    -0.018,
+    -0.0628,
     0.0
    ],
    "bbox_max_m": [
     0.3621,
-    -0.0,
+    0.012,
     0.4921
    ],
    "materials": [
     "Hero_SM_K_BaseSink_DoorL"
    ],
    "lod_triangles": [
-    1320,
-    660,
-    330
+    2304,
+    1152,
+    576
    ],
-   "ucx": 6
+   "ucx": 5
   },
   {
    "name": "SM_K_BaseSink_DoorR",
@@ -2248,15 +2322,15 @@
     {
      "name": "SM_K_BaseSink_DoorR_Brk0",
      "file": "SM_K_BaseSink_DoorR_Brk0.fbx",
-     "triangles": 1170,
+     "triangles": 1684,
      "bbox_min_m": [
       -0.3621,
-      -0.0626,
-      0.2394
+      -0.0628,
+      0.24
      ],
      "bbox_max_m": [
-      0.0,
-      -0.0,
+      0.018,
+      0.012,
       0.4921
      ],
      "materials": [
@@ -2267,16 +2341,16 @@
     {
      "name": "SM_K_BaseSink_DoorR_Brk1",
      "file": "SM_K_BaseSink_DoorR_Brk1.fbx",
-     "triangles": 790,
+     "triangles": 1296,
      "bbox_min_m": [
       -0.3621,
       -0.028,
       0.0
      ],
      "bbox_max_m": [
-      0.0,
-      -0.0,
-      0.2659
+      0.018,
+      0.012,
+      0.2665
      ],
      "materials": [
       "Hero_SM_K_BaseSink_DoorR",
@@ -2291,26 +2365,26 @@
     "Brass"
    ],
    "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 1320,
+   "triangles": 2304,
    "bbox_min_m": [
     -0.3621,
-    -0.0626,
+    -0.0628,
     0.0
    ],
    "bbox_max_m": [
-    0.0,
-    -0.0,
+    0.018,
+    0.012,
     0.4921
    ],
    "materials": [
     "Hero_SM_K_BaseSink_DoorR"
    ],
    "lod_triangles": [
-    1320,
-    660,
-    330
+    2304,
+    1152,
+    576
    ],
-   "ucx": 6
+   "ucx": 5
   },
   {
    "name": "SM_K_Sink",
@@ -2333,7 +2407,7 @@
     "Iron"
    ],
    "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 1524,
+   "triangles": 2024,
    "bbox_min_m": [
     -0.3421,
     -0.3947,
@@ -2348,9 +2422,9 @@
     "Hero_SM_K_Sink"
    ],
    "lod_triangles": [
-    1524,
-    762,
-    380
+    2024,
+    1012,
+    506
    ],
    "ucx": 6
   },
@@ -2533,16 +2607,16 @@
     {
      "name": "SM_K_WorktopA_Brk0",
      "file": "SM_K_WorktopA_Brk0.fbx",
-     "triangles": 240,
+     "triangles": 454,
      "bbox_min_m": [
-      -0.0758,
-      -0.5395,
-      0.0
+      -1.447,
+      -0.5405,
+      0.0005
      ],
      "bbox_max_m": [
-      0.8461,
-      0.5395,
-      0.0316
+      0.8424,
+      0.5384,
+      0.0358
      ],
      "materials": [
       "Hero_SM_K_WorktopA",
@@ -2552,16 +2626,16 @@
     {
      "name": "SM_K_WorktopA_Brk1",
      "file": "SM_K_WorktopA_Brk1.fbx",
-     "triangles": 528,
+     "triangles": 596,
      "bbox_min_m": [
       -1.4474,
       -0.5395,
       0.0
      ],
      "bbox_max_m": [
-      0.0607,
+      1.4474,
       0.5395,
-      0.0316
+      0.0358
      ],
      "materials": [
       "Hero_SM_K_WorktopA",
@@ -2571,16 +2645,16 @@
     {
      "name": "SM_K_WorktopA_Brk2",
      "file": "SM_K_WorktopA_Brk2.fbx",
-     "triangles": 208,
+     "triangles": 238,
      "bbox_min_m": [
-      0.7115,
-      -0.5395,
-      0.0
+      0.7111,
+      -0.5405,
+      0.0005
      ],
      "bbox_max_m": [
-      1.4474,
-      0.5395,
-      0.0316
+      1.447,
+      0.5385,
+      0.0358
      ],
      "materials": [
       "Hero_SM_K_WorktopA",
@@ -2593,24 +2667,24 @@
     "Butcher"
    ],
    "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 512,
+   "triangles": 836,
    "bbox_min_m": [
     -1.4474,
-    -0.5395,
+    -0.5405,
     0.0
    ],
    "bbox_max_m": [
     1.4474,
     0.5395,
-    0.0316
+    0.0358
    ],
    "materials": [
     "Hero_SM_K_WorktopA"
    ],
    "lod_triangles": [
-    512,
-    256,
-    128
+    836,
+    418,
+    209
    ],
    "ucx": 1
   },
@@ -2631,16 +2705,16 @@
     {
      "name": "SM_K_WorktopB_Brk0",
      "file": "SM_K_WorktopB_Brk0.fbx",
-     "triangles": 316,
+     "triangles": 258,
      "bbox_min_m": [
-      -0.0652,
-      -0.5395,
-      0.0
+      -0.654,
+      0.5316,
+      0.0292
      ],
      "bbox_max_m": [
-      0.4171,
-      0.5395,
-      0.0316
+      0.4126,
+      0.5384,
+      0.0358
      ],
      "materials": [
       "Hero_SM_K_WorktopB",
@@ -2650,16 +2724,16 @@
     {
      "name": "SM_K_WorktopB_Brk1",
      "file": "SM_K_WorktopB_Brk1.fbx",
-     "triangles": 252,
+     "triangles": 516,
      "bbox_min_m": [
-      -0.6579,
-      -0.5395,
+      -0.658,
+      -0.5405,
       0.0
      ],
      "bbox_max_m": [
-      0.0652,
+      0.658,
       0.5395,
-      0.0316
+      0.0358
      ],
      "materials": [
       "Hero_SM_K_WorktopB",
@@ -2669,16 +2743,16 @@
     {
      "name": "SM_K_WorktopB_Brk2",
      "file": "SM_K_WorktopB_Brk2.fbx",
-     "triangles": 412,
+     "triangles": 106,
      "bbox_min_m": [
-      0.2896,
-      -0.5395,
-      0.0
+      0.4175,
+      0.5315,
+      0.0292
      ],
      "bbox_max_m": [
-      0.6579,
-      0.5395,
-      0.0316
+      0.654,
+      0.5385,
+      0.0358
      ],
      "materials": [
       "Hero_SM_K_WorktopB",
@@ -2691,24 +2765,24 @@
     "Butcher"
    ],
    "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 188,
+   "triangles": 512,
    "bbox_min_m": [
-    -0.6579,
-    -0.5395,
+    -0.658,
+    -0.5405,
     0.0
    ],
    "bbox_max_m": [
-    0.6579,
+    0.658,
     0.5395,
-    0.0316
+    0.0358
    ],
    "materials": [
     "Hero_SM_K_WorktopB"
    ],
    "lod_triangles": [
-    188,
-    94,
-    46
+    512,
+    255,
+    128
    ],
    "ucx": 1
   },
@@ -2832,12 +2906,12 @@
      "bbox_min_m": [
       0.0,
       -0.028,
-      0.2398
+      0.2377
      ],
      "bbox_max_m": [
       0.3226,
       0.0,
-      0.5254
+      0.5239
      ],
      "materials": [
       "Hero_SM_K_WallCab1250_DoorL",
@@ -2847,16 +2921,16 @@
     {
      "name": "SM_K_WallCab1250_DoorL_Brk1",
      "file": "SM_K_WallCab1250_DoorL_Brk1.fbx",
-     "triangles": 1116,
+     "triangles": 1608,
      "bbox_min_m": [
-      0.0,
-      -0.0626,
+      -0.018,
+      -0.0628,
       0.0
      ],
      "bbox_max_m": [
       0.3226,
-      0.0,
-      0.3214
+      0.012,
+      0.3193
      ],
      "materials": [
       "Hero_SM_K_WallCab1250_DoorL",
@@ -2866,15 +2940,15 @@
     {
      "name": "SM_K_WallCab1250_DoorL_Brk2",
      "file": "SM_K_WallCab1250_DoorL_Brk2.fbx",
-     "triangles": 758,
+     "triangles": 1242,
      "bbox_min_m": [
-      0.0,
+      -0.018,
       -0.028,
-      0.4459
+      0.4451
      ],
      "bbox_max_m": [
       0.3226,
-      0.0,
+      0.012,
       0.6947
      ],
      "materials": [
@@ -2890,24 +2964,24 @@
     "Brass"
    ],
    "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 1320,
+   "triangles": 2304,
    "bbox_min_m": [
-    0.0,
-    -0.0626,
+    -0.018,
+    -0.0628,
     0.0
    ],
    "bbox_max_m": [
     0.3226,
-    0.0,
+    0.012,
     0.6947
    ],
    "materials": [
     "Hero_SM_K_WallCab1250_DoorL"
    ],
    "lod_triangles": [
-    1320,
-    660,
-    330
+    2304,
+    1152,
+    576
    ],
    "ucx": 5
   },
@@ -2932,12 +3006,12 @@
      "bbox_min_m": [
       -0.3226,
       -0.028,
-      0.2398
+      0.2418
      ],
      "bbox_max_m": [
       0.0,
       0.0,
-      0.5254
+      0.528
      ],
      "materials": [
       "Hero_SM_K_WallCab1250_DoorR",
@@ -2947,16 +3021,16 @@
     {
      "name": "SM_K_WallCab1250_DoorR_Brk1",
      "file": "SM_K_WallCab1250_DoorR_Brk1.fbx",
-     "triangles": 1116,
+     "triangles": 1604,
      "bbox_min_m": [
       -0.3226,
-      -0.0626,
+      -0.0628,
       0.0
      ],
      "bbox_max_m": [
-      0.0,
-      0.0,
-      0.3214
+      0.018,
+      0.012,
+      0.3234
      ],
      "materials": [
       "Hero_SM_K_WallCab1250_DoorR",
@@ -2966,15 +3040,15 @@
     {
      "name": "SM_K_WallCab1250_DoorR_Brk2",
      "file": "SM_K_WallCab1250_DoorR_Brk2.fbx",
-     "triangles": 758,
+     "triangles": 1246,
      "bbox_min_m": [
       -0.3226,
       -0.028,
-      0.4459
+      0.4493
      ],
      "bbox_max_m": [
-      0.0,
-      0.0,
+      0.018,
+      0.012,
       0.6947
      ],
      "materials": [
@@ -2990,24 +3064,24 @@
     "Brass"
    ],
    "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 1320,
+   "triangles": 2304,
    "bbox_min_m": [
     -0.3226,
-    -0.0626,
+    -0.0628,
     0.0
    ],
    "bbox_max_m": [
-    0.0,
-    0.0,
+    0.018,
+    0.012,
     0.6947
    ],
    "materials": [
     "Hero_SM_K_WallCab1250_DoorR"
    ],
    "lod_triangles": [
-    1320,
-    660,
-    330
+    2304,
+    1152,
+    576
    ],
    "ucx": 5
   },
@@ -3127,16 +3201,16 @@
     {
      "name": "SM_K_WallCab1500_DoorL_Brk0",
      "file": "SM_K_WallCab1500_DoorL_Brk0.fbx",
-     "triangles": 590,
+     "triangles": 596,
      "bbox_min_m": [
       0.0,
       -0.028,
-      0.2334
+      0.2317
      ],
      "bbox_max_m": [
       0.3884,
       0.0,
-      0.5333
+      0.5317
      ],
      "materials": [
       "Hero_SM_K_WallCab1500_DoorL",
@@ -3146,16 +3220,16 @@
     {
      "name": "SM_K_WallCab1500_DoorL_Brk1",
      "file": "SM_K_WallCab1500_DoorL_Brk1.fbx",
-     "triangles": 1124,
+     "triangles": 1618,
      "bbox_min_m": [
-      0.0,
-      -0.0626,
+      -0.018,
+      -0.0628,
       0.0
      ],
      "bbox_max_m": [
       0.3884,
-      0.0,
-      0.3277
+      0.012,
+      0.3261
      ],
      "materials": [
       "Hero_SM_K_WallCab1500_DoorL",
@@ -3165,15 +3239,15 @@
     {
      "name": "SM_K_WallCab1500_DoorL_Brk2",
      "file": "SM_K_WallCab1500_DoorL_Brk2.fbx",
-     "triangles": 768,
+     "triangles": 1266,
      "bbox_min_m": [
-      0.0,
+      -0.018,
       -0.028,
-      0.4385
+      0.4379
      ],
      "bbox_max_m": [
       0.3884,
-      0.0,
+      0.012,
       0.6947
      ],
      "materials": [
@@ -3189,24 +3263,24 @@
     "Brass"
    ],
    "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 1320,
+   "triangles": 2304,
    "bbox_min_m": [
-    0.0,
-    -0.0626,
+    -0.018,
+    -0.0628,
     0.0
    ],
    "bbox_max_m": [
     0.3884,
-    0.0,
+    0.012,
     0.6947
    ],
    "materials": [
     "Hero_SM_K_WallCab1500_DoorL"
    ],
    "lod_triangles": [
-    1320,
-    660,
-    330
+    2304,
+    1152,
+    576
    ],
    "ucx": 5
   },
@@ -3227,16 +3301,16 @@
     {
      "name": "SM_K_WallCab1500_DoorR_Brk0",
      "file": "SM_K_WallCab1500_DoorR_Brk0.fbx",
-     "triangles": 590,
+     "triangles": 582,
      "bbox_min_m": [
       -0.3884,
       -0.028,
-      0.2334
+      0.235
      ],
      "bbox_max_m": [
       0.0,
       0.0,
-      0.5333
+      0.5361
      ],
      "materials": [
       "Hero_SM_K_WallCab1500_DoorR",
@@ -3246,16 +3320,16 @@
     {
      "name": "SM_K_WallCab1500_DoorR_Brk1",
      "file": "SM_K_WallCab1500_DoorR_Brk1.fbx",
-     "triangles": 1124,
+     "triangles": 1628,
      "bbox_min_m": [
       -0.3884,
-      -0.0626,
+      -0.0628,
       0.0
      ],
      "bbox_max_m": [
-      0.0,
-      0.0,
-      0.3277
+      0.018,
+      0.012,
+      0.3295
      ],
      "materials": [
       "Hero_SM_K_WallCab1500_DoorR",
@@ -3265,15 +3339,15 @@
     {
      "name": "SM_K_WallCab1500_DoorR_Brk2",
      "file": "SM_K_WallCab1500_DoorR_Brk2.fbx",
-     "triangles": 768,
+     "triangles": 1254,
      "bbox_min_m": [
       -0.3884,
       -0.028,
-      0.4385
+      0.4418
      ],
      "bbox_max_m": [
-      0.0,
-      0.0,
+      0.018,
+      0.012,
       0.6947
      ],
      "materials": [
@@ -3289,24 +3363,24 @@
     "Brass"
    ],
    "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 1320,
+   "triangles": 2304,
    "bbox_min_m": [
     -0.3884,
-    -0.0626,
+    -0.0628,
     0.0
    ],
    "bbox_max_m": [
-    0.0,
-    0.0,
+    0.018,
+    0.012,
     0.6947
    ],
    "materials": [
     "Hero_SM_K_WallCab1500_DoorR"
    ],
    "lod_triangles": [
-    1320,
-    660,
-    330
+    2304,
+    1152,
+    576
    ],
    "ucx": 5
   },
@@ -3333,7 +3407,7 @@
     "Iron"
    ],
    "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 1968,
+   "triangles": 4224,
    "bbox_min_m": [
     -0.5263,
     -0.4395,
@@ -3348,9 +3422,9 @@
     "Hero_SM_K_Fridge"
    ],
    "lod_triangles": [
-    1968,
-    984,
-    492
+    4224,
+    2112,
+    1056
    ],
    "ucx": 5
   },
@@ -3380,7 +3454,7 @@
     "Paper"
    ],
    "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 3324,
+   "triangles": 4556,
    "bbox_min_m": [
     0.0,
     -0.1096,
@@ -3395,11 +3469,11 @@
     "Hero_SM_K_Fridge_DoorMain"
    ],
    "lod_triangles": [
-    3324,
-    1662,
-    830
+    4556,
+    2278,
+    1139
    ],
-   "ucx": 8
+   "ucx": 9
   },
   {
    "name": "SM_K_Fridge_DoorFreezer",
@@ -3423,7 +3497,7 @@
     "Chrome"
    ],
    "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 1312,
+   "triangles": 1808,
    "bbox_min_m": [
     0.0,
     -0.1096,
@@ -3438,11 +3512,11 @@
     "Hero_SM_K_Fridge_DoorFreezer"
    ],
    "lod_triangles": [
-    1312,
-    656,
-    328
+    1808,
+    904,
+    451
    ],
-   "ucx": 4
+   "ucx": 5
   },
   {
    "name": "SM_K_Fridge_Crisper",
@@ -3522,7 +3596,8 @@
     0.9632
    ],
    "materials": [
-    "Hero_SM_K_Range"
+    "Hero_SM_K_Range",
+    "HeatGlow"
    ],
    "lod_triangles": [
     3708,
@@ -3553,7 +3628,7 @@
     "Chrome"
    ],
    "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 936,
+   "triangles": 1936,
    "bbox_min_m": [
     -0.3842,
     -0.0611,
@@ -3568,9 +3643,9 @@
     "Hero_SM_K_Range_OvenDoor"
    ],
    "lod_triangles": [
-    936,
-    468,
-    234
+    1936,
+    968,
+    484
    ],
    "ucx": 4
   },
@@ -3636,7 +3711,7 @@
     "BurnerRing"
    ],
    "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 1720,
+   "triangles": 2224,
    "bbox_min_m": [
     -0.1368,
     -0.1368,
@@ -3645,17 +3720,17 @@
    "bbox_max_m": [
     0.1368,
     0.1368,
-    0.0188
+    0.03
    ],
    "materials": [
     "Hero_SM_K_Range_Burner"
    ],
    "lod_triangles": [
-    1720,
-    860,
-    430
+    2224,
+    1112,
+    556
    ],
-   "ucx": 4
+   "ucx": 6
   },
   {
    "name": "SM_K_Range_Rack",
@@ -3758,7 +3833,7 @@
     "BlackGlass"
    ],
    "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 996,
+   "triangles": 2340,
    "bbox_min_m": [
     -0.4474,
     -0.2137,
@@ -3773,9 +3848,9 @@
     "Hero_SM_K_Hood"
    ],
    "lod_triangles": [
-    996,
-    498,
-    248
+    2340,
+    1170,
+    585
    ],
    "ucx": 4
   },
@@ -3928,10 +4003,10 @@
     "Steel"
    ],
    "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 1648,
+   "triangles": 3340,
    "bbox_min_m": [
     -0.2895,
-    -0.2421,
+    -0.2445,
     0.0
    ],
    "bbox_max_m": [
@@ -3943,9 +4018,9 @@
     "Hero_SM_K_Microwave"
    ],
    "lod_triangles": [
-    1648,
-    824,
-    412
+    3340,
+    1670,
+    834
    ],
    "ucx": 1
   },
@@ -4052,10 +4127,10 @@
     "Plinth"
    ],
    "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 1008,
+   "triangles": 1540,
    "bbox_min_m": [
     -0.1842,
-    -0.1597,
+    -0.17,
     0.0
    ],
    "bbox_max_m": [
@@ -4067,9 +4142,9 @@
     "Hero_SM_K_Toaster"
    ],
    "lod_triangles": [
-    1008,
-    504,
-    252
+    1540,
+    770,
+    384
    ],
    "ucx": 1
   },
@@ -4334,80 +4409,6 @@
     146
    ],
    "ucx": 3
-  },
-  {
-   "name": "SM_K_Bin_Pedal",
-   "file": "SM_K_Bin_Pedal.fbx",
-   "set": "hero_kitchen",
-   "dest": "/Game/Hero/SM_K_Bin_Pedal",
-   "break_class": "",
-   "textures": {
-    "C": "SM_K_Bin_Pedal/tex/T_SM_K_Bin_Pedal_C.png",
-    "N": "SM_K_Bin_Pedal/tex/T_SM_K_Bin_Pedal_N.png",
-    "R": "SM_K_Bin_Pedal/tex/T_SM_K_Bin_Pedal_R.png"
-   },
-   "collision_lod": 0,
-   "movers": [],
-   "breaks": [],
-   "source": "kitchen/SM_K_Bin_Pedal.fbx (the owner's kitchen model, same frame)",
-   "old_slots": [
-    "Plinth"
-   ],
-   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 376,
-   "bbox_min_m": [
-    -0.0842,
-    -0.1263,
-    -0.0132
-   ],
-   "bbox_max_m": [
-    0.0842,
-    0.0263,
-    0.0132
-   ],
-   "materials": [
-    "Hero_SM_K_Bin_Pedal"
-   ],
-   "lod_triangles": [
-    376,
-    188,
-    94
-   ],
-   "ucx": 2
-  },
-  {
-   "name": "SM_V3_WireRack",
-   "file": "SM_V3_WireRack.fbx",
-   "set": "hero",
-   "textures": {
-    "C": "SM_V3_WireRack/tex/T_SM_V3_WireRack_C.png",
-    "N": "SM_V3_WireRack/tex/T_SM_V3_WireRack_N.png",
-    "R": "SM_V3_WireRack/tex/T_SM_V3_WireRack_R.png"
-   },
-   "collision_lod": 0,
-   "movers": [],
-   "breaks": [],
-   "note": "KAN-23 hero rebuild of the v3.2 piece (same frame and box)",
-   "triangles": 1724,
-   "bbox_min_m": [
-    -0.1603,
-    -0.1287,
-    0.0
-   ],
-   "bbox_max_m": [
-    0.1603,
-    0.1287,
-    0.2594
-   ],
-   "materials": [
-    "Hero_SM_V3_WireRack"
-   ],
-   "lod_triangles": [
-    1724,
-    689,
-    257
-   ],
-   "ucx": 5
   }
  ],
  "note": "Kitchen hero art (Tools/blender/hero_kitchen_a.py, hero_kitchen_sink.py, hero_kitchen_block.py): -> /Game/Hero/<Name>/<Name>"
