@@ -816,8 +816,9 @@ void AAntMatterNet::StepBody(FBody& B, float Dt)
 				{
 					// a big live thing (a cabinet run, a rail): its box takes in the shelves above it; the spark leaves its real surface
 					FVector OnC;
-					if (C->GetClosestPointOnCollision(O->Bounds.Origin, OnC) < 0.f) { continue; }
-					P = OnC;
+					// (fire pass 4: a mesh with no collision to ask - the hero pot, 800 uu wide - keeps its box point; skipping
+					//  it left the napkin by the live pot unlit)
+					if (C->GetClosestPointOnCollision(O->Bounds.Origin, OnC) >= 0.f) { P = OnC; }
 				}
 				const FVector Q = O->Bounds.GetBox().GetClosestPointTo(P);
 				const float Gap = (float)FVector::Dist(P, Q) + FMath::FRand() * 15.f;
