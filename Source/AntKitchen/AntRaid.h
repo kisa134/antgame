@@ -156,7 +156,8 @@ public:
 	float ClanRespawn() const;
 
 	bool InRaid() const { return Phase == AntRaidPhase::Raid; }
-	const AntTier::FDef& TierDef() const { return AntTier::Def(Tier); }
+	/** The tier's row with the difficulty applied (AntDifficulty.h: time, the Human's phone, loot, the Queen's ask, the pets, the red clan). */
+	const AntTier::FDef& TierDef() const;
 	/** Is this ant inside a nest entrance (the nest in the wall or the south entrance at the house corner)? Works on every machine. */
 	static bool IsHome(const AAntCharacter* Ant);
 

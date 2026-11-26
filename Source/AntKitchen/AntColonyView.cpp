@@ -1,5 +1,7 @@
 ﻿#include "AntColonyView.h"
 #include "AntColony.h"
+#include "AntColonyVote.h"
+#include "AntDifficulty.h"
 #include "AntMetaBus.h"
 #include "AntFighter.h"
 #include "AntFighterUi.h"
@@ -1171,6 +1173,17 @@ namespace
 		AntUiCanvas::Text(Cv, FString::Printf(TEXT("Королева %s"), AntNest::MoodName(Mood)), MX, 12.f * Fs, EFont::Bold, 14.f * Fs, MC);
 		AntUiCanvas::Bar(Cv, MX, 40.f * Fs, MW, 14.f * Fs, Mood / 100.f, MC);
 		if (Hot(MX, 0.f, MW, BH)) { St().Tip = TEXT("Настроение Королевы: торт, перевыполненный запрос, разная еда, трофеи и приказы радуют; смерти и потерянный торт огорчают. Довольная (60) разрешает III ярусы"); }
+		// Under the bar: the difficulty, and in co-op who decides (KAN-30, KAN-31). Both are set in the squad muster.
+		{
+			const float BW = AntDifficulty::DrawBadge(Cv, Raid, 22.f * Fs, BH + 8.f * Fs, Fs, 0);
+			if (Hot(22.f * Fs, BH + 8.f * Fs, BW, 26.f * Fs)) { St().Tip = FString::Printf(TEXT("Сложность «%s»: %s. Меняет хост в сборе отряда (Esc — Сбор отряда)"), AntDifficulty::Cur(Raid).Name, AntDifficulty::Cur(Raid).Text); }
+			if (Raid->GetWorld()->GetNetMode() != NM_Standalone)
+			{
+				const bool bVote = AntColonyVote::Mode(Raid) == AntVoteMode::Vote, bOn = AntColonyVote::VotingOn(Raid);
+				AntUiCanvas::Text(Cv, bOn ? TEXT("РЕШАЕТ ОТРЯД: голосование") : bVote ? TEXT("ГОЛОСОВАНИЕ: ждёт второго игрока") : TEXT("РЕШАЕТ ХОСТ"),
+					22.f * Fs + BW + 12.f * Fs, BH + 11.f * Fs, EFont::Bold, 14.f * Fs, bOn ? C::Leaf : C::Amber, 0, 0.6f);
+			}
+		}
 		// Buttons: the planning sheet, and go.
 		if (Btn(Cv, TEXT("ШТАБ  [Tab]"), W - 446.f * Fs, 16.f * Fs, 196.f * Fs, 52.f * Fs, true, TEXT("Планшет штаба: угроза, приказы Королевы, отряд и карманы, усиления на рейд"), Fs))
 		{
@@ -1197,7 +1210,9 @@ namespace
 		AntUiCanvas::Text(Cv, TEXT("ЛЕТОПИСЬ"), 28.f * Fs, Y + 13.f * Fs, EFont::Display, 13.f * Fs, C::JamDeep);
 		const FString Last = N.Chronicle.Num() > 0 ? N.Chronicle.Last() : FString(TEXT("Пусто. Первая запись появится после первого рейда."));
 		AntUiCanvas::TextFit(Cv, Last, 158.f * Fs, Y + 13.f * Fs, PW - 158.f * Fs, EFont::Mono, 13.f * Fs, C::Graphite);
+		const FString VoteHint = AntColonyVote::HintLine(Raid);   // co-op: who decides (KAN-31)
 		const FString Hint = !Raid->NestNote.IsEmpty() ? Raid->NestNote
+			: !VoteHint.IsEmpty() ? VoteHint
 			: bHost ? FString(TEXT("Клик по залу — карточка и стройка · колесо — зум · тяни — двигать · пунктир — ещё не прорыто"))
 			: FString(TEXT("Колония хоста: строит он · клик по залу — карточка · колесо — зум · тяни — двигать"));
 		AntUiCanvas::Rect(Cv, PW + 26.f * Fs, Y, W - PW - 40.f * Fs, BH, FLinearColor(0.012f, 0.006f, 0.003f, 0.72f));
@@ -1450,6 +1465,7 @@ void Draw(AHUD* Hud, UCanvas* Cv, AAntRaid* Raid, AAntGameState* GS, AAntPlayerC
 	S.Clock += Dt;
 	const FAntNestState& N = Raid->Nest;
 	const bool bHost = Hud->GetWorld()->GetNetMode() != NM_Client;
+	const bool bBuild = AntColonyVote::CanBuild(Hud);   // the host; with the colony vote on, anybody (his press is a proposal: KAN-31)
 	const float W = Cv->ClipX, H = Cv->ClipY;
 	const float Fs = FMath::Max(0.6f, FMath::Min(W / 1920.f, H / 1080.f));
 
@@ -1584,7 +1600,7 @@ void Draw(AHUD* Hud, UCanvas* Cv, AAntRaid* Raid, AAntGameState* GS, AAntPlayerC
 	for (uint8 c = 0; c < AntColony::Count; ++c) { DrawContents(Cv, V, N, Raid, c); }
 	DrawQueen(Cv, V, N, bShowing ? S.ShowR : Raid->Result);
 	DrawAnts(Cv, V, false);
-	for (uint8 c = 0; c < AntColony::Count; ++c) { DrawLabel(Cv, V, N, c, HoverC == c || S.Open == c, bHost && AntColony::CanUpgrade(N, c)); }
+	for (uint8 c = 0; c < AntColony::Count; ++c) { DrawLabel(Cv, V, N, c, HoverC == c || S.Open == c, bBuild && AntColony::CanUpgrade(N, c)); }
 	const int32 HotDig = DrawDigTags(Cv, V, N, Fs, !bOverUi);
 	DrawMotes(Cv, V, Dt);
 	AntUiCanvas::Tile(Cv, AntUi::Tex(TEXT("Materials/T_UI_Vignette")), -0.06f * W - (S.Center.X - WW * 0.5f) * 0.04f, -0.06f * H, W * 1.12f, H * 1.12f, FLinearColor(1.f, 1.f, 1.f, 0.85f));
@@ -1613,8 +1629,8 @@ void Draw(AHUD* Hud, UCanvas* Cv, AAntRaid* Raid, AAntGameState* GS, AAntPlayerC
 	else
 	{
 		DrawTopBar(Cv, Raid, GS, PC, W, Fs, bHost);
-		if (S.Open >= 0) { DrawSheet(Cv, N, PC, W, H, Fs, bHost); }
-		DrawBottom(Cv, N, Raid, W, H, Fs, bHost);
+		if (S.Open >= 0) { DrawSheet(Cv, N, PC, W, H, Fs, bBuild); }
+		DrawBottom(Cv, N, Raid, W, H, Fs, bBuild);
 	}
 	if (AAntHUD::DevClickAt.X > 0.f || AAntHUD::DevClickAt.Y > 0.f)
 	{

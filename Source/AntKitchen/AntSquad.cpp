@@ -1,4 +1,5 @@
 ﻿#include "AntSquad.h"
+#include "AntDifficulty.h"
 #include "AntArmy.h"
 #include "AntChain.h"
 #include "AntRaid.h"
@@ -142,7 +143,7 @@ int32 SpawnAll(AAntRaid* Raid)
 		A->SquadOwner = PC;
 		A->OwnerPS = PS;
 		A->Mode = EArmyMode::Follow;
-		A->WorkerStr = AntNest::WorkerStrength(N);
+		A->WorkerStr = AntNest::WorkerStrength(N) * AntDifficulty::SquadCarryMul(Raid);   // (KAN-30: the food is lighter / heavier for the squad too)
 		A->BiteMul = N.Tier_(AntUp::Soldiers) >= 1 ? 2.f : 1.f;
 		A->bArmor = N.Tier_(AntUp::Soldiers) >= 3;
 		A->bHaulHome = N.Tier_(AntUp::Carriers) >= 1;

@@ -12,6 +12,8 @@
 #include "AntVersus.h"
 #include "AntTutorial.h"
 #include "AntLab.h"
+#include "AntDifficulty.h"
+#include "AntColonyVote.h"
 #include "GenericPlatform/GenericPlatformProcess.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
@@ -1132,11 +1134,55 @@ void SAntUiMenu::PaintLobby(FUiDraw& D) const
 	const bool bGiant = Me && Me->bIsHuman;
 	Button(DC, TEXT("l.giant"), bGiant ? L(TEXT("lobby.giant.off")) : L(TEXT("lobby.giant.on")), RX + 20.f, 804.f, 460.f, 58.f, [WPC]() { if (WPC.IsValid()) { WPC->ServerToggleHuman(); } }, false, true, TEXT("Slipper"));
 
+	// ---- the difficulty (KAN-30) and who decides for the colony (KAN-31): the host's switches, replicated, shown to everybody
+	{
+		const uint8 Diff = World ? AntDifficulty::Level(World) : (uint8)AntDiff::Normal;
+		DC.Glass(70.f, 750.f, 620.f, 170.f, 0.9f);
+		DC.Text(L(TEXT("lobby.diff")), 94.f, 764.f, EFont::Display, 22.f, C::Honey);
+		if (!bHost) { DC.Text(L(TEXT("lobby.diff.host")), 666.f, 768.f, EFont::Hand, 18.f, C::Muted, 2); }
+		for (int32 i = 0; i < AntDiff::Count; ++i)
+		{
+			Button(DC, FString::Printf(TEXT("l.diff%d"), i), L(*FString::Printf(TEXT("lobby.diff.%d"), i)), 90.f + 196.f * i, 800.f, 186.f, 52.f, [WPC, i]()
+			{
+				if (WPC.IsValid()) { WPC->ServerRaid(AntRaidCmdX::Difficulty, i, 0); }
+			}, Diff == i, bHost && Raid != nullptr);
+		}
+		const TArray<FString> Lines = AntDifficulty::Lines(Diff);
+		for (int32 i = 0; i < Lines.Num() && i < 3; ++i)
+		{
+			DC.TextFit(Lines[i], 94.f, 860.f + 19.f * i, 580.f, EFont::Body, 15.f, i == 0 ? AntDifficulty::Color(Diff) : C::Sugar);
+		}
+	}
+	if (World && World->GetNetMode() != NM_Standalone)
+	{
+		const bool bVote = AntColonyVote::Mode(World) == AntVoteMode::Vote;
+		DC.Glass(710.f, 750.f, 600.f, 170.f, 0.9f);
+		DC.Text(L(TEXT("lobby.vote")), 734.f, 764.f, EFont::Display, 22.f, C::Honey);
+		Button(DC, TEXT("l.vote0"), L(TEXT("lobby.vote.host")), 730.f, 800.f, 276.f, 52.f, [WPC]() { if (WPC.IsValid()) { WPC->ServerRaid(AntRaidCmdX::VoteMode, 0, 0); } }, !bVote, bHost && Raid != nullptr);
+		Button(DC, TEXT("l.vote1"), L(TEXT("lobby.vote.squad")), 1016.f, 800.f, 276.f, 52.f, [WPC]() { if (WPC.IsValid()) { WPC->ServerRaid(AntRaidCmdX::VoteMode, 1, 0); } }, bVote, bHost && Raid != nullptr);
+		DC.Wrap(L(bVote ? TEXT("lobby.vote.text.1") : TEXT("lobby.vote.text.0")), 734.f, 862.f, 560.f, EFont::Body, 15.f, C::Sugar, 3, 1.1f);
+		// A vote running while this screen is open (the HUD's slip is under it): the same proposal, the same two buttons.
+		const AAntColonyVote* V = AntColonyVote::Info(World);
+		if (V && V->bActive && GS)
+		{
+			const float Left = FMath::Max(0.f, V->Ends - GS->GetServerWorldTimeSeconds());
+			const FString MyName = Me ? Me->GetPlayerName() : FString();
+			const bool bVoted = V->Yes.Contains(MyName) || V->No.Contains(MyName);
+			DC.Glass(640.f, 20.f, 690.f, 132.f, 0.95f);
+			DC.Rect(640.f, 20.f, 690.f, 5.f, C::Amber);
+			DC.Text(FString::Printf(TEXT("ГОЛОСОВАНИЕ КОЛОНИИ · %d с"), FMath::CeilToInt(Left)), 660.f, 32.f, EFont::Display, 20.f, C::Honey);
+			DC.TextFit(V->What, 660.f, 62.f, 650.f, EFont::Bold, 18.f, C::Sugar);
+			DC.TextFit(FString::Printf(TEXT("предложил %s · за %d · против %d · голосуют %d"), *V->By, V->Yes.Num(), V->No.Num(), (int32)V->Voters), 660.f, 88.f, 380.f, EFont::Body, 15.f, C::Muted);
+			Button(DC, TEXT("l.vyes"), FString::Printf(TEXT("ЗА · %d"), V->Yes.Num()), 1050.f, 84.f, 130.f, 52.f, [WPC]() { if (WPC.IsValid()) { WPC->ServerRaid(AntRaidCmdX::Vote, 1, 0); } }, V->Yes.Contains(MyName), !bVoted);
+			Button(DC, TEXT("l.vno"), FString::Printf(TEXT("ПРОТИВ · %d"), V->No.Num()), 1188.f, 84.f, 130.f, 52.f, [WPC]() { if (WPC.IsValid()) { WPC->ServerRaid(AntRaidCmdX::Vote, 0, 0); } }, V->No.Contains(MyName), !bVoted);
+		}
+	}
+
 	// ---- start
 	const float Left = Raid && Raid->StartEnds > 0.f && GS ? Raid->StartEnds - GS->GetServerWorldTimeSeconds() : -1.f;
 	if (Left > 0.f)
 	{
-		DC.Text(Lf(TEXT("lobby.countdown"), { FMath::CeilToInt(Left) }), 660.f, 780.f, EFont::Display, 44.f, C::Amber, 1, 0.6f);
+		DC.Text(Lf(TEXT("lobby.countdown"), { FMath::CeilToInt(Left) }), 660.f, 690.f, EFont::Display, 44.f, C::Amber, 1, 0.6f);   // (above the two panels)
 	}
 	if (bHost)
 	{
