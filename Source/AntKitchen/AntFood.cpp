@@ -311,6 +311,7 @@ struct FAntFoodAccess
 	static void ShatterSoon(AKitchenLoot* L, const FVector& At) { if (!L->bShatterPending) { L->bShatterPending = true; L->ShatterAt = At; } }
 	static TSharedPtr<FAntFoodServer>& Srv(AKitchenLoot* L) { return L->FoodSrv; }
 	static float BreakableAfter(const AKitchenLoot* L) { return L->BreakableAfter; }
+	static float LastKick(const AKitchenLoot* L) { return L->LastKickTime; }
 	static void ResizeBody(AKitchenLoot* L, const FVector& E) { L->Body->SetBoxExtent(E, true); }
 	static AKitchenLoot* SpawnCrumb(AKitchenLoot* L, const FString& Name, int32 V, const FVector& Where, const FVector& Fling)
 	{
@@ -916,17 +917,19 @@ void OnImpact(AKitchenLoot* L, float Speed, const FVector& At, AActor* Other)
 	const EAntFoodKind Kd0 = KindNow(L);
 	const bool bFrozen = S.Frozen > 0.5f;
 	const float Now = L->GetWorld()->GetTimeSeconds();
-	if (Now < FAntFoodAccess::BreakableAfter(L) - 1.f) { return; }   // just spawned / just broke
+	if (Now < FAntFoodAccess::BreakableAfter(L) || Now < 12.f) { return; }   // just spawned / just broke / the level settling at the start
+	// the fragile reactions (snap, squirt, smash) only when somebody had a hand in it: carried, dropped, kicked, thrown
+	const bool bHandled = L->IsCarried() || L->CarryNet.Grips.Num() > 0 || L->LastCarrier.IsValid() || Now - FAntFoodAccess::LastKick(L) < 4.f;
 	switch (Kd0)
 	{
 	case EAntFoodKind::Crumbly:
 		if (!bFrozen) { LoseCrumbs(L, S, FMath::Clamp((Speed - 150.f) / 1500.f * 0.06f, 0.f, 0.06f), TEXT("bump")); }
 		break;
 	case EAntFoodKind::Brittle:
-		if (Speed > 380.f) { Snap(L, TEXT("hit")); }
+		if (Speed > 380.f && bHandled) { Snap(L, TEXT("hit")); }
 		break;
 	case EAntFoodKind::Juicy:
-		if (Speed > 300.f && !bFrozen) { Squirt(L, S, TEXT("hit")); }
+		if (Speed > 300.f && !bFrozen && bHandled) { Squirt(L, S, TEXT("hit")); }
 		break;
 	case EAntFoodKind::Elastic:
 		if (Speed > 400.f && !bFrozen) { AntSfx::Everyone(L, AntSfx::Squish, At, 1.4f); }   // boing

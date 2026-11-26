@@ -18,7 +18,11 @@ CPD = dict(Wet=0, Char=1, Dirt=2, Toast=12, Frozen=13, Spoil=14, Bite=15, Sag=16
 
 def fresh(name):
     full = DIR + "/" + name
-    if EAL.does_asset_exist(full): EAL.delete_asset(full)
+    if EAL.does_asset_exist(full):
+        # rebuilt in place: the food instances keep their parent
+        m = unreal.load_asset(full)
+        MEL.delete_all_material_expressions(m)
+        return m
     return AT.create_asset(name, DIR, unreal.Material, unreal.MaterialFactoryNew())
 
 def custom(m, code, inputs, x, y, desc, out=unreal.CustomMaterialOutputType.CMOT_FLOAT3):
@@ -156,7 +160,8 @@ def build_outer():
     X = -1600
     c = tex(m, "C", "/Engine/EngineResources/WhiteSquareTexture", X, -700)
     n = tex(m, "N", "/Engine/EngineMaterials/FlatNormal", X, -450, "normal")
-    r = tex(m, "R", "/Engine/EngineResources/WhiteSquareTexture", X, -200, "masks")
+    # (a masks sampler needs a masks texture as its default: the cake's own AO/rough, imported by import_food_v2.py)
+    r = tex(m, "R", "/Game/FoodV2/SM_FoodV2_Cake/T_FoodV2_Cake_R", X, -200, "masks")
     st = {}
     for i, k in enumerate(("TToast", "TBurnt", "TSpoil", "TFrozen")):
         st[k] = tex(m, k, "/Engine/EngineResources/WhiteSquareTexture", X, 50 + i * 250)
