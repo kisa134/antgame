@@ -214,7 +214,8 @@ void AAntMatterNet::BeginPlay()
 			//  niche / hob orange: Lumen bounced the point light round the white box. The flame lights what it faces, the bounce is faint.)
 			L->SetIndirectLightingIntensity(0.15f);
 			L->SetVolumetricScatteringIntensity(0.f);
-			L->SetSourceRadius(25.f);
+			L->SetSourceRadius(0.f);   // (a 25 uu source was a white disc mirrored in a puddle of oil, a blob on a wet napkin)
+			L->SetSpecularScale(0.25f);
 			L->SetVisibility(false);
 			L->RegisterComponent();
 			Lights.Add(L);
@@ -800,19 +801,21 @@ void AAntMatterNet::StepBody(FBody& B, float Dt)
 			TArray<int32> Near;
 			Query(Ctr, Bd.SphereRadius + 140.f, Near);
 			bool bSparked = false;
+			// the spark jumps across the shortest gap between the live edge and thin fuel (fire pass 4: it took the first in the
+			// registry's order - a cardboard box at the far end of the hob every time, never the napkin right by the pot)
+			float BestGap = 120.f; FVector BP, BQ;
 			for (int32 Idx : Near)
 			{
 				UPrimitiveComponent* O = Reg[Idx].C.Get();
 				const FAntMatProps* OM = Reg[Idx].M;
 				if (!O || O == C || !Burns(OM) || OM->IgniteAt > 270.f) { continue; }
-				// the spark jumps across the gap between the live edge and the paper
+				if (const FBody* OB = BodyOf(O, false)) { if (OB->bBurning || OB->bGone) { continue; } }   // (not again into what already burns)
 				const FVector P = Bd.GetBox().GetClosestPointTo(O->Bounds.Origin);
 				const FVector Q = O->Bounds.GetBox().GetClosestPointTo(P);
-				if (FVector::Dist(P, Q) > 120.f) { continue; }
-				Spark((P + Q) * 0.5f, (Q - P).GetSafeNormal(), TEXT("искра с металла под током"));
-				bSparked = true;
-				break;
+				const float Gap = (float)FVector::Dist(P, Q) + FMath::FRand() * 15.f;
+				if (Gap < BestGap) { BestGap = Gap; BP = P; BQ = Q; bSparked = true; }
 			}
+			if (bSparked) { Spark((BP + BQ) * 0.5f, (BQ - BP).GetSafeNormal(), TEXT("искра с металла под током")); }
 			if (!bSparked)
 			{
 				const FVector E = Ctr + FVector(FMath::FRandRange(-1.f, 1.f) * Bd.BoxExtent.X, FMath::FRandRange(-1.f, 1.f) * Bd.BoxExtent.Y, Bd.BoxExtent.Z);

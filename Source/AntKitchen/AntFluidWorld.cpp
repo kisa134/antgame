@@ -557,10 +557,10 @@ void UAntFluidWorld::BuildViews()
 					//  Dense enough that a few uu of it already shows its own colour, not the floor: over a raised board, the tiles
 					//  or the runner it reads as one puddle; only the thin rim lets the floor through. A little rough: the fire's
 					//  light is a soft glint in it, not a white disc.
-					V.MID->SetVectorParameterValue(TEXT("Absorb"), FLinearColor(0.02f, 0.045f, 0.2f, 0.f));
-					V.MID->SetVectorParameterValue(TEXT("AbsorbDye"), FLinearColor(0.02f, 0.045f, 0.2f, 0.f));
-					V.MID->SetVectorParameterValue(TEXT("Scatter"), FLinearColor(0.06f, 0.033f, 0.0075f, 0.f));
-					V.MID->SetVectorParameterValue(TEXT("ScatterDye"), FLinearColor(0.06f, 0.033f, 0.0075f, 0.f));
+					V.MID->SetVectorParameterValue(TEXT("Absorb"), FLinearColor(0.05f, 0.1f, 0.45f, 0.f));
+					V.MID->SetVectorParameterValue(TEXT("AbsorbDye"), FLinearColor(0.05f, 0.1f, 0.45f, 0.f));
+					V.MID->SetVectorParameterValue(TEXT("Scatter"), FLinearColor(0.16f, 0.09f, 0.02f, 0.f));
+					V.MID->SetVectorParameterValue(TEXT("ScatterDye"), FLinearColor(0.16f, 0.09f, 0.02f, 0.f));
 					V.MID->SetVectorParameterValue(TEXT("Rip"), FLinearColor(0.f, 0.02f, 9.f, 0.f));
 					V.MID->SetScalarParameterValue(TEXT("Roughness"), 0.07f);
 					V.MID->SetScalarParameterValue(TEXT("Irid"), 1.f);
