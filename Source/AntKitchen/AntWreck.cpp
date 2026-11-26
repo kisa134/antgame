@@ -1,5 +1,8 @@
 ﻿#include "AntWreck.h"
+#include "AntState.h"
 #include "AntWreckGeo.h"
+#include "AntFluidWorld.h"
+#include "AntFluidSim.h"
 #include "AntSwing.h"
 #include "AntAudio.h"
 #include "AntTypes.h"
@@ -575,6 +578,10 @@ void AAntWreckBody::Setup()
 	for (int32 i = 0; i < Orig->GetNumMaterials(); ++i) { Mesh->SetMaterial(i, Orig->GetMaterial(i)); }
 	Mesh->ComponentTags = Orig->ComponentTags;
 	{
+		const FString Sn = Orig->GetStaticMesh()->GetName();
+		bRoller = Sn == TEXT("SM_K_Bucket") || Sn == TEXT("SM_V3_Pail");   // KAN-22: round and tall: goes over and rolls
+	}
+	{
 		// its visible state goes with it (wet, charred, dirty, damaged: AntState.h)
 		const TArray<float>& Cpd = Orig->GetCustomPrimitiveData().Data;
 		for (int32 i = 0; i < Cpd.Num(); ++i) { Mesh->SetCustomPrimitiveDataFloat(i, Cpd[i]); }
@@ -842,7 +849,9 @@ bool AAntWreckBody::Wake(const FVector& Impulse, const FVector& At, bool bForce)
 	// A shove, not a cannon: the change of speed is capped (2 m/s at the point struck).
 	FVector J = Impulse;
 	const float Dv = (float)J.Size() / FMath::Max(0.05f, Mass);
-	if (Dv > 2.f) { J *= 2.f / Dv; }
+	const float DvCap = bRoller ? 3.5f : 2.f;   // (a bucket knocked hard enough goes over; 2 m/s only rocked it 9 degrees)
+	if (Dv > DvCap) { J *= DvCap / Dv; }
+	TipDir = FVector(Impulse.X, Impulse.Y, 0.f).GetSafeNormal();
 	Root->AddImpulseAtLocation(J * AntWreck::UuPerM, At);
 	SetNetUpdateFrequency(15.f);
 	PushPose();
@@ -1037,6 +1046,24 @@ void AAntWreckBody::RebuildLook()
 	LookStage = Stage;
 	LookLost = LostMask;
 	LookDents = Dents.Num();
+	// the state layer (AntState.h, KAN-21): the stage shows as damage over the whole piece, the dents as damaged spots;
+	// on every machine, from the replicated stage and dents
+	for (UPrimitiveComponent* P : { (UPrimitiveComponent*)Mesh, (UPrimitiveComponent*)Chunks })
+	{
+		TArray<AntState::FSpot, TInlineAllocator<AntState::MaxSpots>> Sp;
+		const float Sc = (float)Mesh->GetComponentScale().GetAbsMax();
+		for (int32 i = Dents.Num() - 1; i >= 0 && Sp.Num() < AntState::MaxSpots; --i)
+		{
+			const FVector W = Mesh->GetComponentTransform().TransformPosition(FVector(Dents[i].At));
+			AntState::FSpot& S = Sp.AddDefaulted_GetRef();
+			S.Local = P->GetComponentTransform().InverseTransformPosition(W);
+			S.Radius = FMath::Max(25.f, Dents[i].Radius * Sc * 1.6f);
+			S.Kind = AntState::Damage;
+			S.Strength = FMath::Clamp(0.55f + Dents[i].Depth * Sc / 30.f, 0.f, 1.f);
+		}
+		AntState::SetSource(P, AntState::Wreck, AntState::Damage, FMath::Clamp(Stage * 0.22f, 0.f, 0.9f));
+		AntState::SetSpots(P, AntState::Wreck, Sp);
+	}
 	if (IsBroken())
 	{
 		const TSharedPtr<const AntWreckGeo::FGeo> B0 = AntWreckGeo::Base(Mesh->GetStaticMesh());
@@ -1178,6 +1205,15 @@ void AAntWreckBody::BreakApart(const FVector& Dir)
 		return;
 	}
 	KnockFixtures(Dir, TEXT("break"));
+	if (bRoller && !bPoured && Mesh->GetStaticMesh() && Mesh->GetStaticMesh()->GetName() == TEXT("SM_K_Bucket"))
+	{
+		// a split bucket lets all its water go at once, where it stands (KAN-22)
+		bPoured = true;
+		if (UAntFluidWorld* F = UAntFluidWorld::Get(this))
+		{
+			F->AddSource(AntFluid::Water, Mesh->Bounds.Origin, 6.f, 1.0f, 90.f);
+		}
+	}
 	const TSharedPtr<const AntWreckGeo::FGeo> B0 = AntWreckGeo::Base(Mesh->GetStaticMesh());
 	const bool bCollapse = B0.IsValid() && B0->bProxy;
 	const TArray<TSharedPtr<const AntWreckGeo::FGeo>>& Cut = AntWreckGeo::Cut(this, Mesh->GetStaticMesh(), Seed, AntWreckGeo::ChunkCount((float)WorldBox().GetSize().GetMax()));
@@ -1395,13 +1431,14 @@ void AAntWreckBody::Tick(float Dt)
 	TickDrops(Dt);
 	if (Mesh && Dt > 0.f && Mesh->ComponentHasTag(TEXT("HeroArt")))
 	{
-		// hero props: what hangs loose (the mop's yarn, the broom's bristles: vertex colour R) sways while it moves (M_Hero, custom data 4)
+		// hero props: what hangs loose (the mop's yarn, the broom's bristles: vertex colour R) sways while it moves (M_Hero, custom
+		// data 15: 0..12 and 16..35 are AntState's layer, which M_Hero reads too)
 		const FVector L = Mesh->GetComponentLocation();
 		const float Speed = bSwayLast ? (float)FVector::Dist(L, SwayLast) / Dt : 0.f;
 		SwayLast = L; bSwayLast = true;
 		const float Target = FMath::Clamp(Speed / 1500.f, 0.f, 1.f);
 		Sway = Target > Sway ? FMath::FInterpTo(Sway, Target, Dt, 12.f) : FMath::FInterpTo(Sway, 0.f, Dt, 0.8f);
-		Mesh->SetCustomPrimitiveDataFloat(4, Sway < 0.01f ? 0.f : Sway);
+		Mesh->SetCustomPrimitiveDataFloat(15, Sway < 0.01f ? 0.f : Sway);
 	}
 	if (HasAuthority())
 	{
@@ -1429,6 +1466,49 @@ void AAntWreckBody::Tick(float Dt)
 	SetActorLocationAndRotation(FMath::Lerp(FVector(PrevPose.Loc), FVector(CurPose.Loc), A), FQuat::Slerp(PrevPose.Rot.Quaternion(), CurPose.Rot.Quaternion(), A));
 }
 
+void AAntWreckBody::RollerTick(float Dt)
+{
+	// KAN-22: a bucket knocked over goes all the way onto its side, rolls, and pours its water out (the old box hulls let a
+	// knocked bucket rock 9 degrees and settle back upright)
+	if (!bRoller || !bAwake || !Mesh || !Root)
+	{
+		return;
+	}
+	const FVector Up = GetActorUpVector();
+	const float Tilt = TiltDeg();
+	FVector Lean(Up.X, Up.Y, 0.f);
+	if (Lean.SizeSquared() < 1.e-4f) { Lean = TipDir; }
+	Lean = Lean.GetSafeNormal();
+	if (!bRolled && Tilt > 6.f && Tilt < 78.f && !Lean.IsNearlyZero())
+	{
+		// past the rim it is gravity's: keep it going over (an angular acceleration about the floor line it pivots on)
+		const FVector Axis = FVector::CrossProduct(FVector::UpVector, Lean).GetSafeNormal();
+		Root->AddTorqueInRadians(Axis * 26.f, NAME_None, true);
+	}
+	if (!bRolled && Tilt >= 75.f)
+	{
+		bRolled = true;
+		// on its side now: a roll about its own axis (which lies along the floor), a little sideways, damped slowly
+		const float Sign = FMath::FRand() < 0.5f ? -1.f : 1.f;
+		Root->SetPhysicsAngularVelocityInRadians(Root->GetPhysicsAngularVelocityInRadians() * 0.3f + Up * Sign * FMath::FRandRange(4.5f, 6.5f));
+		Root->SetAngularDamping(0.3f);
+		AwakeSince = GetWorld()->GetTimeSeconds() - 2.f;   // (a few more seconds to roll before the 12 s sleep)
+		UE_LOG(LogTemp, Display, TEXT("ANTWRECK roller %s: on its side, rolling"), *PieceName());
+	}
+	UStaticMesh* SM = Mesh->GetStaticMesh();
+	if (!bPoured && Tilt > 50.f && SM && SM->GetName() == TEXT("SM_K_Bucket"))
+	{
+		bPoured = true;
+		// the water it held goes into the real water: poured from the mouth over ~2.5 s (it runs down the side to the floor)
+		const FVector Mouth = Mesh->GetComponentTransform().TransformPosition(FVector(0.f, 0.f, SM->GetBoundingBox().Max.Z * 0.92f));
+		if (UAntFluidWorld* F = UAntFluidWorld::Get(this))
+		{
+			F->AddSource(AntFluid::Water, Mouth, 2.4f, 2.5f, 60.f);
+			UE_LOG(LogTemp, Display, TEXT("ANTWRECK roller %s: pours 6 l of water at %s"), *PieceName(), *Mouth.ToCompactString());
+		}
+	}
+}
+
 void AAntWreckBody::ServerPhysicsTick(float Dt)
 {
 	if (!bAwake)
@@ -1447,8 +1527,10 @@ void AAntWreckBody::ServerPhysicsTick(float Dt)
 	{
 		SpillRiders(V);
 	}
+	RollerTick(Dt);
 	if (V.Size() < 60.f && W.Size() < 0.5f) { StillFor += Dt; } else { StillFor = 0.f; }
 	const float Age = Now - AwakeSince;
+	if (bRoller && !bRolled && Age < 4.f && TiltDeg() > 6.f) { StillFor = 0.f; }   // still going over: not asleep yet
 	if ((StillFor > 0.6f && Age > 0.5f) || Age > 12.f || GetActorLocation().Z < -3000.f)
 	{
 		Sleep();

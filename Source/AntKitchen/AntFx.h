@@ -6,6 +6,7 @@
 #include "AntFx.generated.h"
 
 class UStaticMeshComponent;
+class UStaticMesh;
 class UMaterialInstanceDynamic;
 class UMaterialInterface;
 
@@ -15,7 +16,11 @@ enum class EAntFxLook : uint8
 	Solid,   // lit opaque basic-shape material: grit, crumbs
 	Soft,    // unlit translucent (/Engine/EngineDebugMaterials/M_SimpleUnlitTranslucent): dust, steam, spray, water
 	Glow,    // additive emissive (/Engine/EngineMaterials/EmissiveMeshMaterial): sparks, beams
+	// KAN-21: camera-facing cards of the project's own procedural materials (Tools/map4/make_m4_materials.py), on SM_M4_Plane
+	Flame,   // /Game/Map4/Materials/M_M4_FxFlame: animated tongues of flame, additive; stays upright. Color RGB = brightness, A = fade
+	Smoke,   // /Game/Map4/Materials/M_M4_FxSmoke: a soft billowing puff (smoke, flour dust); faces the camera. A = peak opacity
 };
+constexpr int32 AntFxLooks = 5;
 
 /** One cosmetic particle: a basic shape that flies, grows and fades. Sizes are scales of a 100-unit shape. */
 struct FAntFxBit
@@ -36,6 +41,8 @@ struct FAntFxBit
 	EAntShape Shape = EAntShape::Sphere;
 	EAntFxLook Look = EAntFxLook::Soft;
 	bool bStreak = false;      // keeps its X axis along the velocity (sparks)
+	float Seed = -1.f;         // Flame / Smoke: the pattern of the card (< 0: a random one)
+	bool bKeep = false;        // a one-off that must be seen (a bang's cloud): a full pool gives up other bits before it
 };
 
 /**
@@ -61,7 +68,7 @@ public:
 	float Ambient = 1.f;
 	FLinearColor AmbientTint = FLinearColor::White;
 
-	static constexpr int32 MaxBits = 420;
+	static constexpr int32 MaxBits = 600;   // (KAN-21 run 3: 420 -> 600: a room of fires and their smoke clouds kept it full)
 
 private:
 	struct FLive
@@ -74,10 +81,13 @@ private:
 	UMaterialInterface* BaseFor(EAntFxLook Look);
 
 	UPROPERTY() TArray<UStaticMeshComponent*> Comps;
-	UPROPERTY() TArray<UMaterialInstanceDynamic*> Mids;   // 3 per component (one per look), made on demand
+	UPROPERTY() TArray<UMaterialInstanceDynamic*> Mids;   // AntFxLooks per component (one per look), made on demand
 	UPROPERTY() UMaterialInterface* SolidBase = nullptr;
 	UPROPERTY() UMaterialInterface* SoftBase = nullptr;
 	UPROPERTY() UMaterialInterface* GlowBase = nullptr;
+	UPROPERTY() UMaterialInterface* FlameBase = nullptr;
+	UPROPERTY() UMaterialInterface* SmokeBase = nullptr;
+	FVector CamLoc = FVector::ZeroVector;   // this frame's camera: the cards face it
 	TArray<FLive> Live;
 	int32 Cursor = 0;
 	int32 NumOn = 0;
@@ -107,6 +117,11 @@ namespace AntFx
 	/** A lamp bulb / glowing bit: makes a basic-shape component additive-emissive. */
 	ANTKITCHEN_API UMaterialInstanceDynamic* MakeGlow(UStaticMeshComponent* Comp, const FLinearColor& Color);
 	ANTKITCHEN_API void SetAmbient(const UObject* Ctx, float Brightness, const FLinearColor& Tint);
+	/** A card (SM_M4_Plane, its face +Z) at Pos turned to the camera: upright (flames: only around the vertical) or fully facing. */
+	ANTKITCHEN_API FQuat CardRot(const FVector& Pos, const FVector& Cam, bool bUpright);
+	/** The card mesh and the materials of the Flame / Smoke looks (nullptr if the project's assets are missing). */
+	ANTKITCHEN_API UStaticMesh* CardMesh();
+	ANTKITCHEN_API UMaterialInterface* CardMaterial(EAntFxLook Look);
 	/** Dev (-AntFxTest): every effect once, laid out in front of the viewer. */
 	ANTKITCHEN_API void TestAll(const UObject* Ctx, const FVector& ViewLoc, const FRotator& ViewRot);
 }

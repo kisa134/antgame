@@ -268,13 +268,27 @@ def _target(o, im):
         for n in nt.nodes: n.select = False
         t.select = True; nt.nodes.active = t
 
+BAKE_FROM = {"hi": None, "ext": 0.004}       # set by bake_set: the high-poly source (selected to active) and the cage extrusion
+
+def _rays(o, on):
+    """the low-poly target must not shadow / occlude the high-poly it sits inside while baking"""
+    for a in ("visible_camera", "visible_diffuse", "visible_glossy", "visible_transmission", "visible_volume_scatter", "visible_shadow"):
+        try: setattr(o, a, on)
+        except Exception: pass
+
 def _bake(o, kind, im, samples, **kw):
     _target(o, im)
     S().cycles.samples = samples
     for x in S().objects: x.select_set(False)
+    hi = BAKE_FROM["hi"]
+    if hi is not None:
+        hi.select_set(True)
+        kw.update(use_selected_to_active=True, cage_extrusion=BAKE_FROM["ext"], max_ray_distance=BAKE_FROM["ext"] * 2.5)
+        _rays(o, False)
     o.select_set(True); bpy.context.view_layer.objects.active = o
     S().render.bake.margin = 12; S().render.bake.use_clear = True
     bpy.ops.object.bake(type=kind, **kw)
+    if hi is not None: _rays(o, True)
 
 def _emit_swap(o, key):
     """per material: the emission shows one constant (metal or porosity); returns the undo list"""
@@ -300,25 +314,58 @@ def _px(im):
     a = np.empty(im.size[0] * im.size[1] * 4, dtype=np.float32); im.pixels.foreach_get(a)
     return a.reshape(im.size[1], im.size[0], 4)
 
-def bake_set(o, name, out_dir, size=TEX, samples=48):
-    """T_<name>_C (rgb colour), _N (tangent normal, OpenGL), _R (ao, rough, metal, a = porosity) as PNG in out_dir"""
+def bake_set(o, name, out_dir, size=TEX, samples=48, hi=None, ext=0.004, grime=0.5, ao_dist=0.06):
+    """T_<name>_C (rgb colour), _N (tangent normal, OpenGL), _R (ao, rough, metal, a = porosity) as PNG in out_dir.
+    hi: the high-poly the low-poly o is baked from (selected to active: its bevels, ribs and bumps go into N and AO).
+    grime: dirt and wear where the AO says it collects (grooves, creases, the foot of a rib): darker, browner, rougher."""
     import numpy as np
     t0 = time.time()
+    BAKE_FROM["hi"] = hi; BAKE_FROM["ext"] = ext
     cycles(samples)
     os.makedirs(out_dir, exist_ok=True)
     if not S().world:                                              # (AO bakes against the world: none -> black)
         wd = bpy.data.worlds.new("BakeWorld"); S().world = wd; wd.use_nodes = True
         wd.node_tree.nodes["Background"].inputs["Color"].default_value = (1, 1, 1, 1)
-    S().world.light_settings.distance = 0.06                       # occlusion within 6 cm: the creases, the inside of the bucket
-    col = _img(name + "_col", size); _bake(o, "DIFFUSE", col, 1, pass_filter={"COLOR"})
+    S().world.light_settings.distance = ao_dist                    # occlusion within 6 cm: the creases, the inside of the bucket
+    # colour: a metal has no diffuse and baked BLACK (brass, zinc, chrome) - metallic off for this pass (the metal mask is R.b);
+    # 16 samples per texel, not 1 (one sample of a fine procedural pattern is moire)
+    mu = []
+    for s in o.material_slots:
+        p = s.material.node_tree.nodes.get("Principled BSDF") if s.material else None
+        if not p: continue
+        lk = [(l.from_socket, l.to_socket) for l in s.material.node_tree.links if l.to_socket == p.inputs["Metallic"]]
+        for l in [l for l in s.material.node_tree.links if l.to_socket == p.inputs["Metallic"]]: s.material.node_tree.links.remove(l)
+        mu.append((s.material, p, p.inputs["Metallic"].default_value, lk)); p.inputs["Metallic"].default_value = 0.0
+    col = _img(name + "_col", size); _bake(o, "DIFFUSE", col, 16, pass_filter={"COLOR"})
+    for m_, p, v, lk in mu:
+        p.inputs["Metallic"].default_value = v
+        for a, b in lk: m_.node_tree.links.new(a, b)
     nrm = _img(name + "_nrm", size, data=True); _bake(o, "NORMAL", nrm, 4, normal_space="TANGENT")
     rgh = _img(name + "_rgh", size, data=True); _bake(o, "ROUGHNESS", rgh, 1)
     ao = _img(name + "_ao", size, data=True); _bake(o, "AO", ao, samples)
     u = _emit_swap(o, "hero_metal"); met = _img(name + "_met", size, data=True); _bake(o, "EMIT", met, 1); _emit_restore(u)
     u = _emit_swap(o, "hero_porosity"); por = _img(name + "_por", size, data=True); _bake(o, "EMIT", por, 1); _emit_restore(u)
+    BAKE_FROM["hi"] = None
     C = _px(col); C[..., 3] = 1.0
+    A = _px(ao)[..., 0]; RG = _px(rgh)[..., 0]; MT = _px(met)[..., 0]
+    if grime > 0:
+        # grime: dust and dirt settle where the AO says (the grooves between ribs, the foot of a rim, inside corners);
+        # fine mottling so it is not a clean gradient; metal shows it less (wiped), but still in the creases
+        h, w = A.shape
+        rnd = np.random.default_rng(len(name))
+        yy, xx = np.mgrid[0:h, 0:w].astype(np.float32) * (2048.0 / max(h, w))
+        n = np.zeros((h, w), np.float32)
+        for k in range(5):                                         # smooth mottling: a few random waves
+            a, f, ph = rnd.uniform(0, math.pi), rnd.uniform(0.01, 0.05), rnd.uniform(0, 6.3)
+            n += np.sin((xx * math.cos(a) + yy * math.sin(a)) * f + ph) / 5.0
+        n = n * 0.5 + 0.5
+        g = np.clip((0.92 - A) / 0.55, 0.0, 1.0) ** 1.4 * grime * (0.7 + 0.6 * n)
+        g *= 1.0 - 0.4 * MT
+        dirt = np.array([0.16, 0.13, 0.10], np.float32)
+        C[..., :3] = C[..., :3] * (1.0 - 0.6 * g[..., None]) + dirt * 0.6 * g[..., None]
+        RG = np.clip(RG + g * 0.28, 0.0, 1.0)
     # (porosity rides in R's alpha: an alpha in the colour map gets premultiplied on the way through PNG)
-    R = np.stack([_px(ao)[..., 0], _px(rgh)[..., 0], _px(met)[..., 0], _px(por)[..., 0]], -1)
+    R = np.stack([A, RG, MT, _px(por)[..., 0]], -1)
     paths = {}
     for kind, arr, src, data in (("C", C, None, False), ("N", None, nrm, True), ("R", R, None, True)):
         im = src or _img("T_%s_%s" % (name, kind), size, alpha=(kind == "R"), data=data)
@@ -578,23 +625,49 @@ def produce(spec, out_root, rev_root, nobake=False):
         m = bake_mesh(o) if (o.type != "MESH" or o.modifiers) else o
         set_part(m, part)
         objs.append(m)
+    # KAN-22 pass 2: the high-poly (every bevel, rib and strand as modelled, + hi_sub more subdivision) is only the bake source.
+    # The game mesh (LOD0) is the same shape decimated part by part to an honest budget (<= 15k): what it loses is in N and AO.
+    hi = join(objs, name + "_HI")
+    if spec.get("hi_sub"):
+        sm = hi.modifiers.new("hs", "SUBSURF"); sm.levels = spec["hi_sub"]; sm.render_levels = spec["hi_sub"]
+        hi = bake_mesh(hi, name + "_HI")
+    budget = min(15000, spec.get("tris0", 12000))
+    total = max(1, tris(hi))
+    pids = sorted(set(a.value for a in hi.data.attributes["part"].data))
+    lows = []
+    for p in pids:
+        sub = keep_parts(hi, [p], "%s_p%d" % (name, p))
+        want = budget * tris(sub) / float(total)
+        if tris(sub) > want * 1.05:
+            d = sub.modifiers.new("dec", "DECIMATE"); d.decimate_type = "COLLAPSE"; d.ratio = max(0.02, want / tris(sub)); d.use_collapse_triangulate = True
+            for x in S().objects: x.select_set(False)
+            sub.select_set(True); bpy.context.view_layer.objects.active = sub
+            bpy.ops.object.modifier_apply(modifier="dec")
+        set_part(sub, p)
+        lows.append(sub)
+    lod0 = join(lows, name)
+    for p_ in lod0.data.polygons: p_.use_smooth = True
     # sway weight (vertex colour R): 0 at the top of the swaying part, 1 at its far ends
     sway = spec.get("sway")
-    for m in objs:
-        ca = m.data.color_attributes.get("Col") or m.data.color_attributes.new("Col", "BYTE_COLOR", "POINT")
-        part = m.data.attributes["part"].data[0].value if len(m.data.polygons) else 0
-        for i, v in enumerate(m.data.vertices):
-            wgt = 0.0
-            if sway and part in sway.get("parts", ()):
-                wgt = max(0.0, min(1.0, (sway["from"] - (m.matrix_world @ v.co).z) / sway["span"]))
-            ca.data[i].color = (wgt, 0.0, 0.0, 1.0)
-    lod0 = join(objs, name)
+    ca = lod0.data.color_attributes.get("Col") or lod0.data.color_attributes.new("Col", "BYTE_COLOR", "POINT")
+    wv = [0.0] * len(lod0.data.vertices)
+    if sway:
+        pa = lod0.data.attributes["part"].data
+        for f in lod0.data.polygons:
+            if pa[f.index].value in sway.get("parts", ()):
+                for vi in f.vertices:
+                    wv[vi] = max(0.0, min(1.0, (sway["from"] - lod0.data.vertices[vi].co.z) / sway["span"]))
+    for i in range(len(wv)): ca.data[i].color = (wv[i], 0.0, 0.0, 1.0)
+    print("HERO %s: high-poly %d tris -> LOD0 %d" % (name, total, tris(lod0)))
     unwrap(lod0, spec.get("uv_angle", 60.0))
     tdir = os.path.join(out, "tex")
     if nobake and os.path.exists(os.path.join(tdir, "T_%s_C.png" % name)):
         paths = {k: os.path.join(tdir, "T_%s_%s.png" % (name, k)) for k in "CNR"}
     else:
-        paths = bake_set(lod0, name, tdir, spec.get("tex", TEX))
+        mn_, mx_ = bounds([hi])
+        ext = spec.get("cage", max(0.002, min(0.012, (mx_ - mn_).length * 0.006)))
+        paths = bake_set(lod0, name, tdir, spec.get("tex", TEX), hi=hi, ext=ext, grime=spec.get("grime", 0.5), ao_dist=spec.get("ao_dist", 0.06))
+    bpy.data.objects.remove(hi)
     game_material(lod0, name)
     man = {"name": name, "file": name + ".fbx", "set": "hero", "textures": {k: os.path.relpath(v, out_root).replace("\\", "/") for k, v in paths.items()},
            "collision_lod": spec.get("collision_lod", 0), "movers": [], "breaks": [], "note": spec.get("note", "")}

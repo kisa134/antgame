@@ -224,7 +224,7 @@ def main():
     t0 = time.time()
     H.reset()                                                      # (--factory-startup still brings the default cube, light and camera)
     os.makedirs(OUT, exist_ok=True); os.makedirs(REV, exist_ok=True)
-    mpath = os.path.join(OUT, "hero_manifest.json")
+    mpath = os.path.join(OUT, os.environ.get("HERO_MANIFEST", "hero_kitchen_manifest.json"))
     doc = json.load(open(mpath, encoding="utf-8")) if os.path.exists(mpath) else {"pieces": []}
     done = {}
     want = lambda n: ONLY is None or n in ONLY
@@ -232,18 +232,18 @@ def main():
     if want("SM_K_Bucket") or want("SM_K_Mop"):
         parts, zp = bucket_parts()
         spec = {"name": "SM_K_Bucket", "parts": parts, "movers": {2: ("SM_K_Bucket_Handle", (0, 0, zp), (1, 0, 0), 112.0, 118.0)},
-                "hulls": bucket_hulls, "lods": (0.4, 0.12), "collision_lod": 0, "breaks": bucket_breaks,
+                "hulls": bucket_hulls, "lods": (0.4, 0.12), "collision_lod": 0, "breaks": bucket_breaks, "hi_sub": 1, "tris0": 12000, "grime": 0.8,
                 "note": "20 l bucket (KAN-22, the owner's reference x1.25): hollow, 4 break pieces (plastic), handle on pins"}
         done["SM_K_Bucket"] = H.produce(spec, OUT, REV, NOBAKE)
         parts, tips = mop_parts()
-        spec = {"name": "SM_K_Mop", "parts": parts, "hulls": lambda n: mop_hulls(n, tips), "lods": (0.3, 0.08), "collision_lod": 1,
+        spec = {"name": "SM_K_Mop", "parts": parts, "hulls": lambda n: mop_hulls(n, tips), "lods": (0.35, 0.1), "collision_lod": 1, "tris0": 14500, "grime": 0.08, "ao_dist": 0.012,   # (the yarn's own AO is deep: more grime / longer AO made it charcoal)
                 "breaks": mop_breaks, "sway": {"parts": (0,), "from": H0, "span": 0.2},
                 "level_box": ((-0.02, -0.02, 0.0), (0.02, 0.02, H0 + 0.07 + STICK + 0.012)),   # the stick: the yarn is a 4 cm pad on the floor (a tilted box of it would reach through the wall)
                 "note": "1.47 m cotton mop (KAN-22, the owner's reference): yarn laid on the floor of the 12 deg lean, sways (vertex colour R), stick snaps"}
         done["SM_K_Mop"] = H.produce(spec, OUT, REV, NOBAKE)
     if want("SM_V31_Broom"):
         parts, hb = broom_parts()
-        spec = {"name": "SM_V31_Broom", "parts": parts, "hulls": lambda n: broom_hulls(n, hb), "lods": (0.3, 0.1), "collision_lod": 1,
+        spec = {"name": "SM_V31_Broom", "parts": parts, "hulls": lambda n: broom_hulls(n, hb), "lods": (0.35, 0.1), "collision_lod": 1, "tris0": 12000,
                 "breaks": broom_breaks, "sway": {"parts": (0,), "from": 0.106, "span": 0.1},
                 "note": "long-handled sweeping broom (KAN-22): sisal tufts in a lacquered block, beech handle in a ferrule; handle snaps"}
         done["SM_V31_Broom"] = H.produce(spec, OUT, REV, NOBAKE)

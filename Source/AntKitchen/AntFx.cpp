@@ -88,8 +88,20 @@ UMaterialInterface* AAntFxManager::BaseFor(EAntFxLook Look)
 		UE_LOG(LogTemp, Display, TEXT("AntFx: materials solid=%d soft=%d glow=%d"), SolidBase ? 1 : 0, SoftBase ? 1 : 0, GlowBase ? 1 : 0);
 		if (!SoftBase) { SoftBase = SolidBase; }
 		if (!GlowBase) { GlowBase = SolidBase; }
+		FlameBase = AntFx::CardMaterial(EAntFxLook::Flame);
+		SmokeBase = AntFx::CardMaterial(EAntFxLook::Smoke);
+		UE_LOG(LogTemp, Display, TEXT("AntFx: cards flame=%d smoke=%d mesh=%d"), FlameBase ? 1 : 0, SmokeBase ? 1 : 0, AntFx::CardMesh() ? 1 : 0);
+		if (!FlameBase) { FlameBase = GlowBase; }
+		if (!SmokeBase) { SmokeBase = SoftBase; }
 	}
-	return Look == EAntFxLook::Soft ? SoftBase : Look == EAntFxLook::Glow ? GlowBase : SolidBase;
+	switch (Look)
+	{
+	case EAntFxLook::Soft: return SoftBase;
+	case EAntFxLook::Glow: return GlowBase;
+	case EAntFxLook::Flame: return FlameBase;
+	case EAntFxLook::Smoke: return SmokeBase;
+	default: return SolidBase;
+	}
 }
 
 void AAntFxManager::Emit(const FAntFxBit& Bit)
@@ -114,11 +126,12 @@ void AAntFxManager::Emit(const FAntFxBit& Bit)
 		{
 			Slot = Live.AddDefaulted();
 			Comps.Add(nullptr);
-			Mids.AddZeroed(3);
+			Mids.AddZeroed(AntFxLooks);
 		}
 		else
 		{
 			Slot = Cursor % Live.Num();   // full: the bit that has been around longest gives way
+			for (int32 n = 0; n < 64 && Live[Slot].B.bKeep; ++n) { Slot = (Slot + 1) % Live.Num(); }   // ...unless it is one to keep
 		}
 	}
 	Cursor = (Slot + 1) % FMath::Max(1, Live.Num());
@@ -143,7 +156,13 @@ void AAntFxManager::Emit(const FAntFxBit& Bit)
 		Comps[Slot] = C;
 	}
 	UStaticMesh* Mesh = AntKit::ShapeMesh(Bit.Shape);
-	if (Map4Look::Enabled())
+	const bool bCard = Bit.Look == EAntFxLook::Flame || Bit.Look == EAntFxLook::Smoke;
+	if (bCard && AntFx::CardMesh())
+	{
+		Mesh = AntFx::CardMesh();
+		C->ComponentTags.AddUnique(TEXT("M4Fx"));
+	}
+	else if (Map4Look::Enabled())
 	{
 		// map v4: puffs are clouds, solid bits are drops (bluish) or chips, flecks are flakes; rings and beams stay cylinders (glow)
 		const bool bBlue = Bit.Color.B > Bit.Color.R + 0.08f;
@@ -157,7 +176,7 @@ void AAntFxManager::Emit(const FAntFxBit& Bit)
 	{
 		C->SetStaticMesh(Mesh);
 	}
-	const int32 MidIndex = Slot * 3 + (int32)Bit.Look;
+	const int32 MidIndex = Slot * AntFxLooks + (int32)Bit.Look;
 	if (!Mids[MidIndex])
 	{
 		if (UMaterialInterface* Base = BaseFor(Bit.Look))
@@ -172,6 +191,10 @@ void AAntFxManager::Emit(const FAntFxBit& Bit)
 	if (Bit.Look == EAntFxLook::Solid && Mids[MidIndex])
 	{
 		Mids[MidIndex]->SetVectorParameterValue(FxColorName, FLinearColor(Bit.Color.R, Bit.Color.G, Bit.Color.B, 1.f));
+	}
+	if (bCard && Mids[MidIndex])
+	{
+		Mids[MidIndex]->SetScalarParameterValue(TEXT("Seed"), Bit.Seed >= 0.f ? Bit.Seed : FMath::FRand() * 100.f);
 	}
 
 	FLive& L = Live[Slot];
@@ -203,14 +226,14 @@ void AAntFxManager::Apply(int32 Slot)
 		A *= FMath::Min(1.f, T / B.FadeIn);
 	}
 	FVector Scale = FMath::Lerp(B.Scale0, B.Scale1, Grow);
-	UMaterialInstanceDynamic* M = Mids[Slot * 3 + (int32)B.Look];
+	UMaterialInstanceDynamic* M = Mids[Slot * AntFxLooks + (int32)B.Look];
 	if (B.Look == EAntFxLook::Solid)
 	{
 		Scale *= FMath::Min(1.f, (1.f - T) * 5.f);   // opaque bits can't fade: they shrink away at the end
 	}
 	else if (M)
 	{
-		if (B.Look == EAntFxLook::Soft)
+		if (B.Look == EAntFxLook::Soft || B.Look == EAntFxLook::Smoke)
 		{
 			const float Amb = FMath::Max(Ambient, B.MinAmbient);
 			M->SetVectorParameterValue(FxColorName, FLinearColor(B.Color.R * Amb * AmbientTint.R, B.Color.G * Amb * AmbientTint.G, B.Color.B * Amb * AmbientTint.B, B.Color.A * A));
@@ -225,6 +248,11 @@ void AAntFxManager::Apply(int32 Slot)
 	{
 		Rot = FRotationMatrix::MakeFromX(B.Vel).ToQuat();
 	}
+	else if (B.Look == EAntFxLook::Flame || B.Look == EAntFxLook::Smoke)
+	{
+		Rot = AntFx::CardRot(B.Pos, CamLoc, B.Look == EAntFxLook::Flame);
+		Scale.Z = 1.f;
+	}
 	C->SetWorldTransform(FTransform(Rot, B.Pos, Scale.ComponentMax(FVector(0.0005f))));
 }
 
@@ -234,6 +262,10 @@ void AAntFxManager::Tick(float DeltaSeconds)
 	if (NumOn <= 0)
 	{
 		return;
+	}
+	if (const APlayerController* PC = GetWorld()->GetFirstPlayerController())
+	{
+		if (PC->PlayerCameraManager) { CamLoc = PC->PlayerCameraManager->GetCameraLocation(); }
 	}
 	for (int32 i = 0; i < Live.Num(); ++i)
 	{
@@ -613,6 +645,28 @@ void SetAmbient(const UObject* Ctx, float Brightness, const FLinearColor& Tint)
 		M->Ambient = Brightness;
 		M->AmbientTint = Tint;
 	}
+}
+
+FQuat CardRot(const FVector& Pos, const FVector& Cam, bool bUpright)
+{
+	FVector To = Cam - Pos;
+	if (bUpright) { To.Z = 0.f; }
+	if (!To.Normalize()) { To = FVector(1.f, 0.f, 0.f); }
+	// the card's face (+Z) to the camera, its Y (the flame's height) as close to world up as it can be
+	const FVector Up = FMath::Abs(To.Z) > 0.98f ? FVector(1.f, 0.f, 0.f) : FVector::UpVector;
+	return FRotationMatrix::MakeFromZY(To, Up).ToQuat();
+}
+
+UStaticMesh* CardMesh()
+{
+	return Map4Look::Shape(4);   // SM_M4_Plane: the project's own 1 m plane (Tools/map4/blender_shapes.py), always cooked with /Game/Map4
+}
+
+UMaterialInterface* CardMaterial(EAntFxLook Look)
+{
+	const TCHAR* Path = Look == EAntFxLook::Flame ? TEXT("/Game/Map4/Materials/M_M4_FxFlame.M_M4_FxFlame")
+		: Look == EAntFxLook::Smoke ? TEXT("/Game/Map4/Materials/M_M4_FxSmoke.M_M4_FxSmoke") : nullptr;
+	return Path ? LoadObject<UMaterialInterface>(nullptr, Path, nullptr, LOAD_NoWarn | LOAD_Quiet) : nullptr;
 }
 
 void TestAll(const UObject* Ctx, const FVector& ViewLoc, const FRotator& ViewRot)

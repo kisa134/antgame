@@ -2,6 +2,7 @@
 #include "AntTutorial.h"
 #include "AntLab.h"
 #include "AntState.h"
+#include "AntMatter.h"
 #include "AntWreck.h"
 #include "AntLife.h"
 #include "AntFluidWorld.h"
@@ -1617,7 +1618,7 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 	{
 		return;
 	}
-	if (AntState::DevCommand(this, A) || AntWreck::DevCommand(this, A) || AntWeapons::DevCommand(this, A) || AntVersus::DevCommand(this, A) || AHumanCharacter::HeavyDevCommand(this, A))
+	if (AntState::DevCommand(this, A) || AntMatter::DevCommand(this, A) || AntWreck::DevCommand(this, A) || AntWeapons::DevCommand(this, A) || AntVersus::DevCommand(this, A) || AHumanCharacter::HeavyDevCommand(this, A))
 	{
 		return;   // wreck ..., weapon ..., rage N, versus ... (AntWreck.cpp, AntWeapon.cpp, AntVersus.cpp)
 	}

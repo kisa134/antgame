@@ -6,6 +6,7 @@
 #include "Engine/StaticMesh.h"
 #include "Materials/MaterialInterface.h"
 #include "Misc/FileHelper.h"
+#include "Misc/ScopeExit.h"
 #include "Misc/Paths.h"
 #include "Dom/JsonObject.h"
 #include "Serialization/JsonReader.h"
@@ -153,6 +154,82 @@ namespace
 		  M.Does = TEXT("ничего не делает — фон"); }
 	}
 
+	/**
+	 * The matter columns (KAN-21, docs/MATERIALS.md "Вещество"): fire, water and the body of the thing, by id over Defaults().
+	 * Ignition: the temperature a small flame or a spark lights it at in a home (paper 233 °C - "451 °F", cotton 255-260,
+	 * wood ~300, PE / PS plastic softens 120-170 and burns ~350-400, vegetable oil's fire point ~320). Burn rate: cm/s of
+	 * flame front over it (paper ~2, cotton cloth ~1.5, cardboard ~0.6, wood chars, does not run).
+	 */
+	struct FMatterRow
+	{
+		const TCHAR* Id; float Ign; float Rate; const TCHAR* Into; float WetS; float DryS; float Stiff; float Tear; float Crumb; float Plast;
+		float Spoil; float Juicy; const TCHAR* Smell; float MeltAt;
+	};
+	const FMatterRow GMatter[] =
+	{
+		//  id             ign °C  cm/s  into       wet   dry     stiff tear  crumb plast spoil  juicy smell                 melt °C (-1000 keep)
+		{ TEXT("pepper"),     300.f, 0.3f, TEXT("ash"),   0.5f, 0.02f,   0.f,  0.f,  0.f,  0.f,  0.f,   0.f,  TEXT(""),             -1000.f },
+		{ TEXT("flour"),      380.f, 0.2f, TEXT("ash"),   0.6f, 0.01f,   0.f,  0.f,  0.f,  0.f,  0.002f,0.f,  TEXT("ants"),         -1000.f },
+		{ TEXT("sugar"),      350.f, 0.1f, TEXT("toast"), 0.9f, 0.01f,   0.8f, 0.2f, 0.5f, 0.3f, 0.f,   0.f,  TEXT("ants,fly"),     -1000.f },
+		{ TEXT("salt"),       -1.f,  0.f,  TEXT(""),      0.9f, 0.01f,   0.9f, 0.2f, 0.5f, 0.f,  0.f,   0.f,  TEXT(""),             -1000.f },
+		{ TEXT("chocolate"),  300.f, 0.1f, TEXT("melt"),  0.05f,0.01f,   0.6f, 0.3f, 0.2f, 0.9f, 0.005f,0.f,  TEXT("ants,dog"),     -1000.f },
+		{ TEXT("butter"),     300.f, 0.2f, TEXT("melt"),  0.05f,0.005f,  0.3f, 0.2f, 0.1f, 1.f,  0.02f, 0.2f, TEXT("ants,cat,dog"), -1000.f },
+		{ TEXT("icecream"),   -1.f,  0.f,  TEXT(""),      0.3f, 0.f,     0.2f, 0.1f, 0.3f, 1.f,  0.05f, 0.6f, TEXT("ants,fly,cat"), -1000.f },
+		{ TEXT("ice"),        -1.f,  0.f,  TEXT(""),      0.f,  0.f,     1.f,  0.3f, 0.f,  0.f,  0.f,   0.f,  TEXT(""),             -1000.f },
+		{ TEXT("pea"),        350.f, 0.05f,TEXT("toast"), 0.2f, 0.005f,  0.7f, 0.4f, 0.1f, 0.1f, 0.01f, 0.5f, TEXT("ants"),         -1000.f },
+		{ TEXT("bread"),      300.f, 0.15f,TEXT("toast"), 0.6f, 0.004f,  0.3f, 0.3f, 0.8f, 0.3f, 0.004f,0.1f, TEXT("ants,fly,dog"), -1000.f },
+		{ TEXT("crumbs"),     280.f, 0.5f, TEXT("toast"), 0.7f, 0.006f,  0.2f, 0.1f, 0.9f, 0.f,  0.004f,0.f,  TEXT("ants"),         -1000.f },
+		{ TEXT("jam"),        -1.f,  0.f,  TEXT(""),      0.f,  0.001f,  0.f,  0.f,  0.f,  0.8f, 0.002f,0.9f, TEXT("ants,fly"),     -1000.f },
+		{ TEXT("heavyfood"),  350.f, 0.05f,TEXT("toast"), 0.2f, 0.005f,  0.6f, 0.5f, 0.2f, 0.3f, 0.01f, 0.5f, TEXT("ants,dog,cat,fly"), -1000.f },
+		{ TEXT("oil"),        320.f, 0.f,  TEXT(""),      1.f,  0.f,     0.f,  0.f,  0.f,  0.f,  0.f,   0.f,  TEXT(""),             -1000.f },
+		{ TEXT("cola"),       -1.f,  0.f,  TEXT(""),      1.f,  0.003f,  0.f,  0.f,  0.f,  0.f,  0.f,   0.f,  TEXT("ants,fly"),     -1000.f },
+		{ TEXT("water"),      -1.f,  0.f,  TEXT(""),      1.f,  0.01f,   0.f,  0.f,  0.f,  0.f,  0.f,   0.f,  TEXT(""),             -1000.f },
+		{ TEXT("magnet"),     -1.f,  0.f,  TEXT(""),      0.1f, 0.03f,   1.f,  1.f,  0.f,  0.f,  0.f,   0.f,  TEXT(""),             -1000.f },
+		{ TEXT("cable"),      450.f, 0.1f, TEXT("melt"),  0.1f, 0.03f,   0.4f, 0.8f, 0.f,  0.6f, 0.f,   0.f,  TEXT(""),             160.f },
+		{ TEXT("sponge"),     300.f, 0.4f, TEXT("melt"),  1.f,  0.002f,  0.2f, 0.5f, 0.1f, 0.4f, 0.f,   0.f,  TEXT(""),             180.f },
+		{ TEXT("papertowel"), 230.f, 2.5f, TEXT("ash"),   0.9f, 0.008f,  0.05f,0.1f, 0.6f, 0.f,  0.f,   0.f,  TEXT(""),             -1000.f },
+		{ TEXT("latex"),      350.f, 0.5f, TEXT("melt"),  0.05f,0.03f,   0.1f, 0.4f, 0.f,  0.7f, 0.f,   0.f,  TEXT(""),             180.f },
+		{ TEXT("rubber"),     350.f, 0.2f, TEXT("melt"),  0.05f,0.03f,   0.3f, 0.9f, 0.f,  0.5f, 0.f,   0.f,  TEXT(""),             200.f },
+		{ TEXT("glass"),      -1.f,  0.f,  TEXT(""),      0.3f, 0.04f,   1.f,  0.1f, 0.f,  0.f,  0.f,   0.f,  TEXT(""),             -1000.f },
+		{ TEXT("ceramic"),    -1.f,  0.f,  TEXT(""),      0.3f, 0.03f,   1.f,  0.1f, 0.f,  0.f,  0.f,   0.f,  TEXT(""),             -1000.f },
+		{ TEXT("terracotta"), -1.f,  0.f,  TEXT(""),      0.2f, 0.004f,  0.9f, 0.1f, 0.f,  0.f,  0.f,   0.f,  TEXT(""),             -1000.f },
+		{ TEXT("tile"),       -1.f,  0.f,  TEXT(""),      0.3f, 0.02f,   1.f,  0.5f, 0.f,  0.f,  0.f,   0.f,  TEXT(""),             -1000.f },
+		{ TEXT("metal"),      -1.f,  0.f,  TEXT(""),      0.3f, 0.03f,   1.f,  1.f,  0.f,  0.f,  0.f,   0.f,  TEXT(""),             -1000.f },
+		{ TEXT("enamel"),     -1.f,  0.f,  TEXT(""),      0.3f, 0.03f,   0.9f, 0.9f, 0.f,  0.f,  0.f,   0.f,  TEXT(""),             -1000.f },
+		{ TEXT("pet"),        440.f, 0.3f, TEXT("melt"),  0.3f, 0.03f,   0.4f, 0.8f, 0.f,  0.6f, 0.f,   0.f,  TEXT(""),             250.f },
+		{ TEXT("plastic"),    380.f, 0.3f, TEXT("melt"),  0.3f, 0.03f,   0.6f, 0.7f, 0.f,  0.6f, 0.f,   0.f,  TEXT(""),             160.f },
+		{ TEXT("cardboard"),  260.f, 0.6f, TEXT("ash"),   0.4f, 0.005f,  0.5f, 0.4f, 0.2f, 0.f,  0.f,   0.f,  TEXT(""),             -1000.f },
+		{ TEXT("paper"),      233.f, 2.f,  TEXT("ash"),   0.8f, 0.006f,  0.1f, 0.2f, 0.1f, 0.f,  0.f,   0.f,  TEXT(""),             -1000.f },
+		{ TEXT("wool"),       450.f, 0.2f, TEXT("char"),  0.5f, 0.004f,  0.05f,0.6f, 0.f,  0.f,  0.f,   0.f,  TEXT(""),             -1000.f },
+		{ TEXT("cloth"),      260.f, 1.5f, TEXT("ash"),   0.6f, 0.004f,  0.05f,0.5f, 0.f,  0.f,  0.f,   0.f,  TEXT(""),             -1000.f },
+		{ TEXT("leather"),    400.f, 0.1f, TEXT("char"),  0.1f, 0.005f,  0.5f, 0.9f, 0.f,  0.f,  0.f,   0.f,  TEXT(""),             -1000.f },
+		{ TEXT("wood"),       300.f, 0.3f, TEXT("char"),  0.03f,0.002f,  0.9f, 0.8f, 0.f,  0.f,  0.f,   0.f,  TEXT(""),             -1000.f },
+		{ TEXT("soil"),       -1.f,  0.f,  TEXT(""),      0.5f, 0.003f,  0.2f, 0.1f, 0.6f, 0.2f, 0.f,   0.f,  TEXT(""),             -1000.f },
+		{ TEXT("plant"),      260.f, 0.6f, TEXT("ash"),   0.3f, 0.004f,  0.2f, 0.3f, 0.f,  0.f,  0.003f,0.3f, TEXT(""),             -1000.f },
+		{ TEXT("stone"),      -1.f,  0.f,  TEXT(""),      0.1f, 0.01f,   1.f,  1.f,  0.f,  0.f,  0.f,   0.f,  TEXT(""),             -1000.f },
+	};
+
+	void MatterDefaults()
+	{
+		for (const FMatterRow& R : GMatter)
+		{
+			FAntMatProps* M = GMats.FindByPredicate([&R](const FAntMatProps& X) { return X.Id == R.Id; });
+			if (!M) { continue; }
+			M->IgniteAt = R.Ign; M->BurnRate = R.Rate; M->BurnsInto = R.Into; M->WetSpeed = R.WetS; M->DrySpeed = R.DryS;
+			M->Stiffness = R.Stiff; M->Tear = R.Tear; M->Crumbly = R.Crumb; M->Plastic = R.Plast;
+			M->SpoilRate = R.Spoil; M->Juicy = R.Juicy; M->Smell = R.Smell;
+			if (R.MeltAt > -999.f) { M->MeltAt = R.MeltAt; }
+		}
+	}
+
+	/** Names the matter system relies on (kept even when the JSON's "match" replaces a row's list). */
+	void MatterKeys()
+	{
+		// the ice sheet of a frozen puddle (AntMatter) and the paper napkin go by these names
+		if (FAntMatProps* Ice = GMats.FindByPredicate([](const FAntMatProps& X) { return X.Id == TEXT("ice"); })) { Ice->Match.AddUnique(TEXT("surf_ice")); Ice->Match.AddUnique(TEXT("anticesheet")); }
+		if (FAntMatProps* P = GMats.FindByPredicate([](const FAntMatProps& X) { return X.Id == TEXT("paper"); })) { P->Match.AddUnique(TEXT("napkin")); P->Match.AddUnique(AntMaterials::Lower(TEXT("салфет"))); }
+	}
+
 	FString Join(const TArray<FString>& A) { return FString::Join(A, TEXT(",")); }
 }
 
@@ -173,6 +250,8 @@ FString Lower(const FString& S)
 void Load()
 {
 	Defaults();
+	MatterDefaults();
+	MatterKeys();
 	GLoaded = true;
 	const FString Path = FPaths::ProjectConfigDir() / TEXT("AntMaterials.json");
 	FString Text;
@@ -193,6 +272,7 @@ void Load()
 	{
 		return;
 	}
+	ON_SCOPE_EXIT { MatterKeys(); };
 	int32 Changed = 0, Added = 0;
 	for (const TSharedPtr<FJsonValue>& V : *Rows)
 	{
@@ -215,6 +295,11 @@ void Load()
 		B(TEXT("dissolves"), M->bDissolves); B(TEXT("powder"), M->bPowder); B(TEXT("rolls"), M->bRolls); B(TEXT("magnetic"), M->bMagnetic);
 		J->TryGetStringField(TEXT("melts_into"), M->MeltsInto); J->TryGetStringField(TEXT("stain"), M->Stain); J->TryGetStringField(TEXT("breaks"), M->Breaks);
 		J->TryGetStringField(TEXT("sound"), M->Sound); J->TryGetStringField(TEXT("does"), M->Does);
+		// matter (KAN-21)
+		F(TEXT("ignite_at"), M->IgniteAt); F(TEXT("burn_rate"), M->BurnRate); J->TryGetStringField(TEXT("burns_into"), M->BurnsInto);
+		F(TEXT("wet_speed"), M->WetSpeed); F(TEXT("dry_speed"), M->DrySpeed); F(TEXT("stiffness"), M->Stiffness); F(TEXT("tear"), M->Tear);
+		F(TEXT("crumbly"), M->Crumbly); F(TEXT("plasticity"), M->Plastic);
+		F(TEXT("spoil_rate"), M->SpoilRate); F(TEXT("juicy"), M->Juicy); J->TryGetStringField(TEXT("smell"), M->Smell);
 	}
 	UE_LOG(LogTemp, Display, TEXT("ANTMAT %d materials (%s: %d tuned, %d added)"), GMats.Num(), *Path, Changed, Added);
 }
@@ -320,6 +405,15 @@ FString Describe(const FAntMatProps& M)
 	if (M.Elastic > 0.f) { P.Add(FString::Printf(TEXT("упругость %.1f"), M.Elastic)); }
 	if (!M.Breaks.IsEmpty()) { P.Add(FString::Printf(TEXT("бьётся как «%s»"), *M.Breaks)); }
 	if (M.Noise > 0.f) { P.Add(FString::Printf(TEXT("шум падения %.1f"), M.Noise)); }
+	if (M.IgniteAt > 0.f) { P.Add(FString::Printf(TEXT("горит с %.0f °C, %.1f см/с → %s"), M.IgniteAt, M.BurnRate, M.BurnsInto.IsEmpty() ? TEXT("-") : *M.BurnsInto)); }
+	else { P.Add(TEXT("не горит")); }
+	P.Add(FString::Printf(TEXT("мокнет %.2f/с, сохнет %.3f/с"), M.WetSpeed, M.DrySpeed));
+	P.Add(FString::Printf(TEXT("жёсткость %.1f, на разрыв %.1f"), M.Stiffness, M.Tear));
+	if (M.Crumbly > 0.f) { P.Add(FString::Printf(TEXT("крошится %.1f"), M.Crumbly)); }
+	if (M.Plastic > 0.f) { P.Add(FString::Printf(TEXT("пластичность %.1f"), M.Plastic)); }
+	if (M.SpoilRate > 0.f) { P.Add(FString::Printf(TEXT("портится %.3f/мин"), M.SpoilRate)); }
+	if (M.Juicy > 0.f) { P.Add(FString::Printf(TEXT("сочность %.1f"), M.Juicy)); }
+	if (!M.Smell.IsEmpty()) { P.Add(FString::Printf(TEXT("запах манит: %s"), *M.Smell)); }
 	return FString::Printf(TEXT("%s [%s]: %s. %s"), *M.Ru, *M.Id, *FString::Join(P, TEXT(", ")), *M.Does);
 }
 
@@ -355,6 +449,18 @@ bool DumpJson(const FString& Path)
 		J->SetStringField(TEXT("sound"), M.Sound);
 		J->SetNumberField(TEXT("noise"), M.Noise);
 		J->SetStringField(TEXT("does"), M.Does);
+		J->SetNumberField(TEXT("ignite_at"), M.IgniteAt);
+		J->SetNumberField(TEXT("burn_rate"), M.BurnRate);
+		J->SetStringField(TEXT("burns_into"), M.BurnsInto);
+		J->SetNumberField(TEXT("wet_speed"), M.WetSpeed);
+		J->SetNumberField(TEXT("dry_speed"), M.DrySpeed);
+		J->SetNumberField(TEXT("stiffness"), M.Stiffness);
+		J->SetNumberField(TEXT("tear"), M.Tear);
+		J->SetNumberField(TEXT("crumbly"), M.Crumbly);
+		J->SetNumberField(TEXT("plasticity"), M.Plastic);
+		J->SetNumberField(TEXT("spoil_rate"), M.SpoilRate);
+		J->SetNumberField(TEXT("juicy"), M.Juicy);
+		J->SetStringField(TEXT("smell"), M.Smell);
 		Rows.Add(MakeShared<FJsonValueObject>(J));
 	}
 	Root->SetArrayField(TEXT("materials"), Rows);
