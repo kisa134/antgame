@@ -18,6 +18,7 @@ class AAntKitchenGameMode;
  * Drawn by the common materials M_M4, M_M4_2S (triplanar) and M_M4_UV, M_M4_UV2 (generated props, prints), built by
  * Tools/map4/make_m4_materials.py, through custom primitive data - no material instance per object, all zero costs nothing:
  *   floats 0..12   the overall value of each EKind (index = kind)
+ *   floats 13..15  NOT this layer's: the food's deformation (AntFood.h, packed); a new kind must not take them
  *   floats 16..35  five spots, a float4 each: xyz = position in the component's LOCAL space (it moves with the thing: a door
  *                  that opens keeps its wet corner), w = packed round(radius_local * 4) * 1024 + kind * 64 + round(strength * 63).
  * A component whose material is not one of these simply does not show it (the values are still kept and can be queried).

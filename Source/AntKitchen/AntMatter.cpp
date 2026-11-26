@@ -1506,6 +1506,12 @@ void AAntMatterNet::ResetMatter()
 	UE_LOG(LogTemp, Display, TEXT("ANTMATTER reset: nothing wet, hot, burning or frozen"));
 }
 
+float AAntMatterNet::BodyTemp(const UPrimitiveComponent* C) const
+{
+	const int32* I = C ? BodyIndex.Find(TWeakObjectPtr<UPrimitiveComponent>(const_cast<UPrimitiveComponent*>(C))) : nullptr;
+	return I && Bodies.IsValidIndex(*I) ? Bodies[*I].T : -1000.f;
+}
+
 void AAntMatterNet::LogAround(const FVector& At, float Radius) const
 {
 	TArray<int32> Near;
