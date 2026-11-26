@@ -1,0 +1,94 @@
+{
+ "name": "SM_L_TVStand_Door",
+ "file": "SM_L_TVStand_Door.fbx",
+ "set": "hero_living",
+ "break_class": "wood",
+ "textures": {
+  "C": "SM_L_TVStand_Door/tex/T_SM_L_TVStand_Door_C.png",
+  "N": "SM_L_TVStand_Door/tex/T_SM_L_TVStand_Door_N.png",
+  "R": "SM_L_TVStand_Door/tex/T_SM_L_TVStand_Door_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_L_TVStand_Door_Brk0",
+   "file": "SM_L_TVStand_Door_Brk0.fbx",
+   "triangles": 1304,
+   "bbox_min_m": [
+    -0.3566,
+    -0.0215,
+    -0.006
+   ],
+   "bbox_max_m": [
+    0.3566,
+    0.0,
+    0.4929
+   ],
+   "materials": [
+    "Hero_SM_L_TVStand_Door",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_TVStand_Door_Brk1",
+   "file": "SM_L_TVStand_Door_Brk1.fbx",
+   "triangles": 192,
+   "bbox_min_m": [
+    -0.0411,
+    -0.012,
+    0.055
+   ],
+   "bbox_max_m": [
+    0.3016,
+    -0.004,
+    0.4379
+   ],
+   "materials": [
+    "Hero_SM_L_TVStand_Door",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_TVStand_Door_Brk2",
+   "file": "SM_L_TVStand_Door_Brk2.fbx",
+   "triangles": 192,
+   "bbox_min_m": [
+    -0.3016,
+    -0.012,
+    0.055
+   ],
+   "bbox_max_m": [
+    0.1441,
+    -0.004,
+    0.4379
+   ],
+   "materials": [
+    "Hero_SM_L_TVStand_Door",
+    "Break"
+   ]
+  }
+ ],
+ "note": "sliding door: green lacquered frame and panel, brass pull, nylon rollers",
+ "kept_slots": [],
+ "triangles": 1412,
+ "bbox_min_m": [
+  -0.3566,
+  -0.0215,
+  -0.006
+ ],
+ "bbox_max_m": [
+  0.3566,
+  0.0,
+  0.4929
+ ],
+ "materials": [
+  "Hero_SM_L_TVStand_Door"
+ ],
+ "lod_triangles": [
+  1412,
+  494,
+  168
+ ],
+ "ucx": 1
+}

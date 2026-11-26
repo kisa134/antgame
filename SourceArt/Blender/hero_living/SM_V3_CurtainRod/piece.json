@@ -1,0 +1,56 @@
+{
+ "name": "SM_V3_CurtainRod",
+ "file": "SM_V3_CurtainRod.fbx",
+ "set": "hero_living",
+ "break_class": "metal",
+ "textures": {
+  "C": "SM_V3_CurtainRod/tex/T_SM_V3_CurtainRod_C.png",
+  "N": "SM_V3_CurtainRod/tex/T_SM_V3_CurtainRod_N.png",
+  "R": "SM_V3_CurtainRod/tex/T_SM_V3_CurtainRod_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_V3_CurtainRod_Brk0",
+   "file": "SM_V3_CurtainRod_Brk0.fbx",
+   "triangles": 776,
+   "bbox_min_m": [
+    -1.1776,
+    -0.017,
+    -0.017
+   ],
+   "bbox_max_m": [
+    1.1776,
+    0.017,
+    0.017
+   ],
+   "materials": [
+    "Hero_SM_V3_CurtainRod",
+    "Break"
+   ]
+  }
+ ],
+ "note": "brass curtain pole with acorn finials",
+ "kept_slots": [],
+ "triangles": 776,
+ "bbox_min_m": [
+  -1.1776,
+  -0.017,
+  -0.017
+ ],
+ "bbox_max_m": [
+  1.1776,
+  0.017,
+  0.017
+ ],
+ "materials": [
+  "Hero_SM_V3_CurtainRod"
+ ],
+ "lod_triangles": [
+  776,
+  270,
+  92
+ ],
+ "ucx": 3
+}

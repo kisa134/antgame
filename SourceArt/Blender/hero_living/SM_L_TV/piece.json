@@ -1,0 +1,135 @@
+{
+ "name": "SM_L_TV",
+ "file": "SM_L_TV.fbx",
+ "set": "hero_living",
+ "break_class": "plastic",
+ "textures": {
+  "C": "SM_L_TV/tex/T_SM_L_TV_C.png",
+  "N": "SM_L_TV/tex/T_SM_L_TV_N.png",
+  "R": "SM_L_TV/tex/T_SM_L_TV_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_L_TV_Brk0",
+   "file": "SM_L_TV_Brk0.fbx",
+   "triangles": 488,
+   "bbox_min_m": [
+    -0.28,
+    -0.1053,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.28,
+    0.1053,
+    0.115
+   ],
+   "materials": [
+    "Hero_SM_L_TV",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_TV_Brk1",
+   "file": "SM_L_TV_Brk1.fbx",
+   "triangles": 380,
+   "bbox_min_m": [
+    -1.0263,
+    0.0293,
+    0.085
+   ],
+   "bbox_max_m": [
+    1.0263,
+    0.0758,
+    1.1579
+   ],
+   "materials": [
+    "Hero_SM_L_TV",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_TV_Brk2",
+   "file": "SM_L_TV_Brk2.fbx",
+   "triangles": 1020,
+   "bbox_min_m": [
+    -0.6158,
+    0.0708,
+    0.0193
+   ],
+   "bbox_max_m": [
+    0.6158,
+    0.1078,
+    0.7502
+   ],
+   "materials": [
+    "Hero_SM_L_TV",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_TV_Brk3",
+   "file": "SM_L_TV_Brk3.fbx",
+   "triangles": 112,
+   "bbox_min_m": [
+    0.0767,
+    0.0293,
+    0.115
+   ],
+   "bbox_max_m": [
+    1.0143,
+    0.0323,
+    1.1459
+   ],
+   "materials": [
+    "Hero_SM_L_TV",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_TV_Brk4",
+   "file": "SM_L_TV_Brk4.fbx",
+   "triangles": 112,
+   "bbox_min_m": [
+    -1.0143,
+    0.0293,
+    0.115
+   ],
+   "bbox_max_m": [
+    0.4871,
+    0.0323,
+    1.1459
+   ],
+   "materials": [
+    "Hero_SM_L_TV",
+    "Break"
+   ]
+  }
+ ],
+ "note": "flat TV on a pedestal: bezel, vented back, ports and cord; the Screen slot is kept for the channels",
+ "kept_slots": [
+  "Screen"
+ ],
+ "triangles": 1900,
+ "bbox_min_m": [
+  -1.0263,
+  -0.1053,
+  0.0
+ ],
+ "bbox_max_m": [
+  1.0263,
+  0.1078,
+  1.1579
+ ],
+ "materials": [
+  "Hero_SM_L_TV",
+  "Screen"
+ ],
+ "lod_triangles": [
+  1900,
+  664,
+  228
+ ],
+ "ucx": 3
+}

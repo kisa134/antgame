@@ -20,6 +20,8 @@ namespace AntWreckGeo
 		FBox Box = FBox(ForceInit);
 		/** The collision is a simplified stand-in, not the drawn model (a table whose cloth is a skirt to the floor for the ants): its chunks must not be shown in place. */
 		bool bProxy = false;
+		/** Pre-cut pieces (hero props): the material of the fracture faces (sections with Slot -1). Null: the piece's own. */
+		UMaterialInterface* BreakMat = nullptr;
 		bool IsValid() const { return Sections.Num() > 0 && Box.IsValid != 0; }
 	};
 

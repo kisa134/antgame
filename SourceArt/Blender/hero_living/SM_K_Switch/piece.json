@@ -1,0 +1,56 @@
+{
+ "name": "SM_K_Switch",
+ "file": "SM_K_Switch.fbx",
+ "set": "hero_living",
+ "break_class": "plastic",
+ "textures": {
+  "C": "SM_K_Switch/tex/T_SM_K_Switch_C.png",
+  "N": "SM_K_Switch/tex/T_SM_K_Switch_N.png",
+  "R": "SM_K_Switch/tex/T_SM_K_Switch_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_K_Switch_Brk0",
+   "file": "SM_K_Switch_Brk0.fbx",
+   "triangles": 1328,
+   "bbox_min_m": [
+    -0.0368,
+    -0.0066,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.0368,
+    0.0063,
+    0.1053
+   ],
+   "materials": [
+    "Hero_SM_K_Switch",
+    "Break"
+   ]
+  }
+ ],
+ "note": "light switch plate with the rocker frame",
+ "kept_slots": [],
+ "triangles": 1328,
+ "bbox_min_m": [
+  -0.0368,
+  -0.0066,
+  0.0
+ ],
+ "bbox_max_m": [
+  0.0368,
+  0.0063,
+  0.1053
+ ],
+ "materials": [
+  "Hero_SM_K_Switch"
+ ],
+ "lod_triangles": [
+  1328,
+  464,
+  292
+ ],
+ "ucx": 1
+}

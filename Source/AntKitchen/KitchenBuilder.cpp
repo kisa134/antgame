@@ -808,8 +808,10 @@ UStaticMeshComponent* AKitchenBuilder::Ball(const FVector& Center, const FVector
 		const TCHAR* LookName = nullptr;
 		if (bFlat) { MeshName = TEXT("SM_M4_Pheromone"); C->ComponentTags.AddUnique(TEXT("M4Fx")); }
 		else if (Lum > 0.5f && H.R > 30.f && H.R < 60.f && H.G > 0.55f) { MeshName = TEXT("SM_M4_Droplet"); LookName = TEXT("Spark"); C->ComponentTags.AddUnique(TEXT("M4Fx")); }   // a flame
-		else if (Lum < 0.03f && Radii.GetMax() >= 150.f) { MeshName = TEXT("SM_M4_TrashBag"); LookName = TEXT("TrashBag"); }
+		// earth before the bin bags: dark dirt (60,40,25) is darker than the bags' 0.03 cut, and the nest's dark heaps stood round
+		// the hole as glossy black bin bags (KAN-39)
 		else if (bEarth) { MeshName = TEXT("SM_M4_Crumb"); LookName = TEXT("Soil"); }
+		else if (Lum < 0.03f && Radii.GetMax() >= 150.f) { MeshName = TEXT("SM_M4_TrashBag"); LookName = TEXT("TrashBag"); }
 		else if (H.G < 0.18f && Lum > 0.15f && Lum < 0.6f) { MeshName = TEXT("SM_M4_DustBunny"); LookName = TEXT("Dust"); }
 		else { MeshName = TEXT("SM_M4_Crumb"); }
 		if (UStaticMesh* M = Map4Look::Prop(MeshName))
@@ -1446,7 +1448,10 @@ void AKitchenBuilder::BuildArt()
 	// The pavement slabs have open joints: a bed under them, so nobody drops through a joint into the void.
 	Box(FVector(-11000.f, -5200.f, -260.f), FVector(-9400.f, 5800.f, -200.f), Hex(110, 108, 102));
 	// The mop bucket is hollow now: the water in it is ours (wet zone in EnvironmentFor, a loot spot floats on it).
-	Cyl(FVector(6200.f, 3900.f, 600.f), 400.f, 40.f, Hex(150, 200, 255));
+	if (UStaticMeshComponent* Water = Cyl(FVector(6200.f, 3900.f, 600.f), 305.f, 40.f, Hex(150, 200, 255)))   // (KAN-22: the hero bucket is 310 inside at this height)
+	{
+		Water->ComponentTags.AddUnique(TEXT("AntBucketWater"));   // spilled when the bucket tips or breaks (AntWreck)
+	}
 	if (Map4Look::Enabled())
 	{
 		// map v4 set dressing: things of the family that tell the evening (each stands on whatever is under it; ants climb them)
@@ -2017,7 +2022,7 @@ void AKitchenBuilder::EnvironmentFor(const AAntCharacter* Ant, FAntEnv& Env)
 		Env.Flags |= AntStatus::Wet;
 		Env.Temp(16.f, 6.f);
 	}
-	if (FVector::Dist2D(P, FVector(6200.f, 3900.f, 0.f)) < 400.f && P.Z > 600.f && P.Z < 720.f)
+	if (FVector::Dist2D(P, FVector(6200.f, 3900.f, 0.f)) < 305.f && P.Z > 600.f && P.Z < 720.f)
 	{
 		Env.Flags |= AntStatus::Wet;
 		Env.Temp(15.f, 6.f);
@@ -2279,7 +2284,9 @@ void AKitchenBuilder::ApplyLights()
 	}
 	for (UStaticMeshComponent* S : LampShades)
 	{
-		if (UMaterialInstanceDynamic* M = S ? Cast<UMaterialInstanceDynamic>(S->GetMaterial(0)) : nullptr)
+		// (hero lamps, /Game/Hero: slot 0 is the baked Hero_ set, the shade is its own "LampShade" slot)
+		const int32 ShadeSlot = S ? FMath::Max(0, S->GetMaterialIndex(TEXT("LampShade"))) : 0;
+		if (UMaterialInstanceDynamic* M = S ? Cast<UMaterialInstanceDynamic>(S->GetMaterial(ShadeSlot)) : nullptr)
 		{
 			M->SetVectorParameterValue(TEXT("Color"), FMath::Lerp(FLinearColor(0.2f, 0.2f, 0.2f), FLinearColor(3.f, 2.8f, 2.4f), FMath::Clamp(Lamps * 1.4f, 0.f, 1.f)));
 		}

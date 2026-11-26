@@ -97,6 +97,16 @@ public:
 	UFUNCTION(NetMulticast, Reliable) void MulticastDry();
 };
 
+/** One connected body of liquid (UAntFluidWorld::WaterBodyAt): the current of a short runs through this, not through every
+ *  puddle of the flat, and not up to the shelves over it. */
+struct FAntWaterBody
+{
+	int32 Basin = -1;
+	TBitArray<> Cells;   // Nx * Ny of the basin
+	int32 Num = 0;       // cells in it
+	bool bCapped = false;
+};
+
 /**
  * The liquid of the kitchen (docs/FEATURES.md, section 29). On by default since v12; -AntNoFluid turns it off.
  *
@@ -146,8 +156,17 @@ public:
 	void Flood(float Seconds, float LitresPerSecond = 30.f);
 	/** Wet enough under P for a shoe to lose its grip (water film or an oil film). */
 	bool IsSlippery(const FVector& P) const;
-	/** Depth of all liquid at P (0 = dry). */
+	/** Depth of all liquid in the column under P (0 = dry). NB: P may be far above that liquid (a shelf over a wet worktop): for
+	 *  "is this point in the water" use DepthIn. */
 	float DepthAt(const FVector& P) const;
+	/** Depth of the liquid at P only when P is in it: not more than Above over its surface. 0 for a shelf over a wet worktop. */
+	float DepthIn(const FVector& P, float Above = 15.f) const;
+	/** Server: the body of liquid at At: its basin and the cells joined to the wet cells within SeedRadius of At, level with it (wet
+	 *  deeper than MinDepth). False if there is no liquid there. */
+	bool WaterBodyAt(const FVector& At, float MinDepth, FAntWaterBody& Out, float SeedRadius = 150.f) const;
+	/** Something with these bounds stands in that body of liquid: a cell of the body under it (or right by it) whose surface is above
+	 *  its bottom (Tol). A shelf over the water, or a puddle of its own across the room, is not in it. */
+	bool InWaterBody(const FAntWaterBody& Body, const FBox& Box, float Tol = 10.f) const;
 	/** Server: a towel or a mop takes the liquid in a disc away (about 6 uu of depth a second). */
 	void Mop(const FVector& At, float Radius, float Dt);
 	/** Server: takes Depth (uu) of one layer (AntFluid::ELayer) in a disc: the oil a fire burns up, the water that freezes (AntMatter). */

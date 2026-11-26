@@ -103,6 +103,8 @@ private:
 	void React(int32 i, float Now);
 	void PostPose(float Dt);
 	void LocalView(float Dt);
+	/** Dev (-AntLocalDo "t:probe tag"): the local ant, its movement mode, its camera, and what is drawn at its feet (KAN-39). */
+	static void DevProbe(UWorld* W, const FString& Tag);
 	void BuildRoom(uint8 Spot, uint8 Who);
 	void FlyingSlipper(const FVector& From, const FVector& Vel);
 	float LocalClock = 0.f;

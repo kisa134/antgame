@@ -1,0 +1,61 @@
+{
+ "name": "SM_K_CeilingLamp",
+ "file": "SM_K_CeilingLamp.fbx",
+ "set": "hero_living",
+ "break_class": "glass",
+ "textures": {
+  "C": "SM_K_CeilingLamp/tex/T_SM_K_CeilingLamp_C.png",
+  "N": "SM_K_CeilingLamp/tex/T_SM_K_CeilingLamp_N.png",
+  "R": "SM_K_CeilingLamp/tex/T_SM_K_CeilingLamp_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_K_CeilingLamp_Brk0",
+   "file": "SM_K_CeilingLamp_Brk0.fbx",
+   "triangles": 1824,
+   "bbox_min_m": [
+    -0.1902,
+    -0.1902,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.1902,
+    0.1902,
+    0.1316
+   ],
+   "materials": [
+    "Hero_SM_K_CeilingLamp",
+    "Break"
+   ]
+  }
+ ],
+ "note": "opal drum light on an enamel ceiling plate, ball bulb",
+ "kept_slots": [
+  "LampShade",
+  "Bulb"
+ ],
+ "triangles": 1824,
+ "bbox_min_m": [
+  -0.1902,
+  -0.1902,
+  0.0
+ ],
+ "bbox_max_m": [
+  0.1902,
+  0.1902,
+  0.1316
+ ],
+ "materials": [
+  "Hero_SM_K_CeilingLamp",
+  "LampShade",
+  "Bulb"
+ ],
+ "lod_triangles": [
+  1824,
+  637,
+  218
+ ],
+ "ucx": 1
+}

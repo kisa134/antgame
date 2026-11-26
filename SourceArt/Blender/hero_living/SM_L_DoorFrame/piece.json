@@ -1,0 +1,113 @@
+{
+ "name": "SM_L_DoorFrame",
+ "file": "SM_L_DoorFrame.fbx",
+ "set": "hero_living",
+ "break_class": "wood",
+ "textures": {
+  "C": "SM_L_DoorFrame/tex/T_SM_L_DoorFrame_C.png",
+  "N": "SM_L_DoorFrame/tex/T_SM_L_DoorFrame_N.png",
+  "R": "SM_L_DoorFrame/tex/T_SM_L_DoorFrame_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_L_DoorFrame_Brk0",
+   "file": "SM_L_DoorFrame_Brk0.fbx",
+   "triangles": 1040,
+   "bbox_min_m": [
+    -0.4421,
+    -0.0737,
+    0.0
+   ],
+   "bbox_max_m": [
+    -0.4091,
+    0.0737,
+    2.0211
+   ],
+   "materials": [
+    "Hero_SM_L_DoorFrame",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_DoorFrame_Brk1",
+   "file": "SM_L_DoorFrame_Brk1.fbx",
+   "triangles": 352,
+   "bbox_min_m": [
+    0.4091,
+    -0.0737,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.4421,
+    0.0737,
+    2.0211
+   ],
+   "materials": [
+    "Hero_SM_L_DoorFrame",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_DoorFrame_Brk2",
+   "file": "SM_L_DoorFrame_Brk2.fbx",
+   "triangles": 220,
+   "bbox_min_m": [
+    0.0983,
+    -0.0737,
+    1.988
+   ],
+   "bbox_max_m": [
+    0.4421,
+    0.0737,
+    2.0211
+   ],
+   "materials": [
+    "Hero_SM_L_DoorFrame",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_DoorFrame_Brk3",
+   "file": "SM_L_DoorFrame_Brk3.fbx",
+   "triangles": 220,
+   "bbox_min_m": [
+    -0.4421,
+    -0.0737,
+    1.988
+   ],
+   "bbox_max_m": [
+    0.1161,
+    0.0737,
+    2.0211
+   ],
+   "materials": [
+    "Hero_SM_L_DoorFrame",
+    "Break"
+   ]
+  }
+ ],
+ "note": "door lining: oak jambs and head with a planted stop bead, brass hinge leaves and strike plate, screws",
+ "kept_slots": [],
+ "triangles": 1688,
+ "bbox_min_m": [
+  -0.4421,
+  -0.0737,
+  0.0
+ ],
+ "bbox_max_m": [
+  0.4421,
+  0.0737,
+  2.0211
+ ],
+ "materials": [
+  "Hero_SM_L_DoorFrame"
+ ],
+ "lod_triangles": [
+  1688,
+  590,
+  202
+ ],
+ "ucx": 3
+}

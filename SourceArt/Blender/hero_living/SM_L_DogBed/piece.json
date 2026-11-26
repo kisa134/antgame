@@ -1,0 +1,75 @@
+{
+ "name": "SM_L_DogBed",
+ "file": "SM_L_DogBed.fbx",
+ "set": "hero_living",
+ "break_class": "cloth",
+ "textures": {
+  "C": "SM_L_DogBed/tex/T_SM_L_DogBed_C.png",
+  "N": "SM_L_DogBed/tex/T_SM_L_DogBed_N.png",
+  "R": "SM_L_DogBed/tex/T_SM_L_DogBed_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_L_DogBed_Brk0",
+   "file": "SM_L_DogBed_Brk0.fbx",
+   "triangles": 672,
+   "bbox_min_m": [
+    -0.385,
+    -0.385,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.385,
+    0.385,
+    0.09
+   ],
+   "materials": [
+    "Hero_SM_L_DogBed",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_DogBed_Brk1",
+   "file": "SM_L_DogBed_Brk1.fbx",
+   "triangles": 12160,
+   "bbox_min_m": [
+    -0.45,
+    -0.3708,
+    -0.0
+   ],
+   "bbox_max_m": [
+    0.45,
+    0.3708,
+    0.175
+   ],
+   "materials": [
+    "Hero_SM_L_DogBed",
+    "Break"
+   ]
+  }
+ ],
+ "note": "oval dog bed: quilted red bolster, sherpa cushion, non-slip base",
+ "kept_slots": [],
+ "triangles": 12832,
+ "bbox_min_m": [
+  -0.45,
+  -0.385,
+  -0.0
+ ],
+ "bbox_max_m": [
+  0.45,
+  0.385,
+  0.175
+ ],
+ "materials": [
+  "Hero_SM_L_DogBed"
+ ],
+ "lod_triangles": [
+  12832,
+  4490,
+  1539
+ ],
+ "ucx": 1
+}
