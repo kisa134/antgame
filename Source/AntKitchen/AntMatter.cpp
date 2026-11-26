@@ -2164,7 +2164,8 @@ void AAntMatterNet::DrawFires(float Dt)
 				FHitResult H;
 				const bool bHit = GetWorld()->LineTraceSingleByChannel(H, LP, LP + Dd * 300.f, ECC_Visibility, Q);
 				Open += bHit ? (float)H.Distance / 300.f : 1.f;
-				if (bHit && Dd.Z >= 0.f) { MinD = FMath::Min(MinD, (float)H.Distance); }   // (the floor under it is meant to be lit)
+				// (the floor under it is meant to be lit, but not burnt white: it counts from closer - a burning tub's own top was)
+				if (bHit) { MinD = FMath::Min(MinD, (float)H.Distance * (Dd.Z < 0.f ? 1.6f : 1.f)); }
 			}
 			Open /= 6.f;
 		}
