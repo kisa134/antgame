@@ -260,10 +260,9 @@ namespace AntDifficulty
 			return Out;
 		}
 		auto Pct = [](float M) { return FMath::RoundToInt((M - 1.f) * 100.f); };
-		Out.Add(FString::Printf(TEXT("жильцы замечают %s (%+d%%)"), D.Notice < 1.f ? TEXT("ближе") : TEXT("дальше"), Pct(D.Notice)));
-		Out.Add(FString::Printf(TEXT("урон от жильцов %+d%%, питомцы %s"), Pct(D.Damage), D.NpcAdd < 0 ? TEXT("спокойнее") : TEXT("злее")));
-		Out.Add(FString::Printf(TEXT("еда %s (%+d%% сила носки), время рейда %+d%%"), D.Carry > 1.f ? TEXT("легче") : TEXT("тяжелее"), Pct(D.Carry), Pct(D.Time)));
-		Out.Add(FString::Printf(TEXT("личинки %+d, красных %+d%%, опыт %+d%%"), D.LarvaeAdd, Pct(D.Clan), Pct(D.Xp)));
+		Out.Add(FString::Printf(TEXT("Жильцы: замечают %+d%%, урон %+d%%, питомцы %s"), Pct(D.Notice), Pct(D.Damage), D.NpcAdd < 0 ? TEXT("спокойнее") : TEXT("злее")));
+		Out.Add(FString::Printf(TEXT("Еда %s (сила носки %+d%%), время рейда %+d%%"), D.Carry > 1.f ? TEXT("легче") : TEXT("тяжелее"), Pct(D.Carry), Pct(D.Time)));
+		Out.Add(FString::Printf(TEXT("Личинки %+d, красных %+d%%, опыт %+d%%"), D.LarvaeAdd, Pct(D.Clan), Pct(D.Xp)));
 		return Out;
 	}
 

@@ -1179,8 +1179,9 @@ namespace
 			if (Hot(22.f * Fs, BH + 8.f * Fs, BW, 26.f * Fs)) { St().Tip = FString::Printf(TEXT("Сложность «%s»: %s. Меняет хост в сборе отряда (Esc — Сбор отряда)"), AntDifficulty::Cur(Raid).Name, AntDifficulty::Cur(Raid).Text); }
 			if (Raid->GetWorld()->GetNetMode() != NM_Standalone)
 			{
-				const bool bVote = AntColonyVote::Mode(Raid) == AntVoteMode::Vote;
-				AntUiCanvas::Text(Cv, bVote ? TEXT("РЕШАЕТ ОТРЯД: голосование") : TEXT("РЕШАЕТ ХОСТ"), 22.f * Fs + BW + 12.f * Fs, BH + 11.f * Fs, EFont::Bold, 14.f * Fs, bVote ? C::Leaf : C::Amber, 0, 0.6f);
+				const bool bVote = AntColonyVote::Mode(Raid) == AntVoteMode::Vote, bOn = AntColonyVote::VotingOn(Raid);
+				AntUiCanvas::Text(Cv, bOn ? TEXT("РЕШАЕТ ОТРЯД: голосование") : bVote ? TEXT("ГОЛОСОВАНИЕ: ждёт второго игрока") : TEXT("РЕШАЕТ ХОСТ"),
+					22.f * Fs + BW + 12.f * Fs, BH + 11.f * Fs, EFont::Bold, 14.f * Fs, bOn ? C::Leaf : C::Amber, 0, 0.6f);
 			}
 		}
 		// Buttons: the planning sheet, and go.

@@ -392,7 +392,9 @@ namespace AntMinimap
 				Used.Add(FBox2D(Q - FVector2D(Size, Size), Q + FVector2D(Size, Size)));   // (no district's name over a player)
 				if (!P.bMe)
 				{
-					const FString Name = P.PS->GetPlayerName().Left(10);
+					// (a long name keeps its head and its tail: "DESKT…47C0" tells two machines apart, a Steam name is shown whole up to 12)
+					const FString Full = P.PS->GetPlayerName();
+					const FString Name = Full.Len() <= 12 ? Full : Full.Left(5) + TEXT("…") + Full.Right(4);
 					const FLinearColor NC = WithA(P.Col, bOff ? 0.75f : 1.f);
 					if (!Label(Name, Q.X + Size + 3.f * S, Q.Y - Px * 0.62f, NC, 0)) { Label(Name, Q.X - Size - 3.f * S, Q.Y - Px * 0.62f, NC, 2); }
 				}

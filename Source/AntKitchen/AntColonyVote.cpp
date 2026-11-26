@@ -284,6 +284,7 @@ namespace AntColonyVote
 		if (VotingOn(Ctx)) { return TEXT("ГОЛОСОВАНИЕ: любой предлагает стройку — отряд решает (За/Против, 20 с; при равенстве решает хост)"); }
 		const UWorld* W = Ctx ? Ctx->GetWorld() : nullptr;
 		if (W && W->GetNetMode() == NM_Standalone) { return FString(); }
+		if (Mode(Ctx) == AntVoteMode::Vote) { return TEXT("ГОЛОСОВАНИЕ включено: начнётся, когда в отряде будет двое и больше. Пока строит хост"); }
 		return TEXT("РЕШАЕТ ХОСТ: колонию строит он (переключатель «Решает хост / Голосование» — в сборе отряда)");
 	}
 
