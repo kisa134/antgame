@@ -748,46 +748,6 @@
    "ucx": 2
   },
   {
-   "name": "SM_K_Bin_Pedal",
-   "file": "SM_K_Bin_Pedal.fbx",
-   "set": "hero_kitchen",
-   "dest": "/Game/Hero/SM_K_Bin_Pedal",
-   "break_class": "",
-   "textures": {
-    "C": "SM_K_Bin_Pedal/tex/T_SM_K_Bin_Pedal_C.png",
-    "N": "SM_K_Bin_Pedal/tex/T_SM_K_Bin_Pedal_N.png",
-    "R": "SM_K_Bin_Pedal/tex/T_SM_K_Bin_Pedal_R.png"
-   },
-   "collision_lod": 0,
-   "movers": [],
-   "breaks": [],
-   "source": "kitchen/SM_K_Bin_Pedal.fbx (the owner's kitchen model, same frame)",
-   "old_slots": [
-    "Plinth"
-   ],
-   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 376,
-   "bbox_min_m": [
-    -0.0842,
-    -0.1263,
-    -0.0132
-   ],
-   "bbox_max_m": [
-    0.0842,
-    0.0263,
-    0.0132
-   ],
-   "materials": [
-    "Hero_SM_K_Bin_Pedal"
-   ],
-   "lod_triangles": [
-    376,
-    188,
-    94
-   ],
-   "ucx": 2
-  },
-  {
    "name": "SM_V3_WireRack",
    "file": "SM_V3_WireRack.fbx",
    "set": "hero",
@@ -4409,6 +4369,46 @@
     146
    ],
    "ucx": 3
+  },
+  {
+   "name": "SM_K_Bin_Pedal",
+   "file": "SM_K_Bin_Pedal.fbx",
+   "set": "hero_kitchen",
+   "dest": "/Game/Hero/SM_K_Bin_Pedal",
+   "break_class": "",
+   "textures": {
+    "C": "SM_K_Bin_Pedal/tex/T_SM_K_Bin_Pedal_C.png",
+    "N": "SM_K_Bin_Pedal/tex/T_SM_K_Bin_Pedal_N.png",
+    "R": "SM_K_Bin_Pedal/tex/T_SM_K_Bin_Pedal_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [],
+   "source": "kitchen/SM_K_Bin_Pedal.fbx (the owner's kitchen model, same frame)",
+   "old_slots": [
+    "Plinth"
+   ],
+   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
+   "triangles": 376,
+   "bbox_min_m": [
+    -0.0842,
+    -0.1263,
+    -0.0132
+   ],
+   "bbox_max_m": [
+    0.0842,
+    0.0263,
+    0.0132
+   ],
+   "materials": [
+    "Hero_SM_K_Bin_Pedal"
+   ],
+   "lod_triangles": [
+    376,
+    188,
+    94
+   ],
+   "ucx": 2
   }
  ],
  "note": "Kitchen hero art (Tools/blender/hero_kitchen_a.py, hero_kitchen_sink.py, hero_kitchen_block.py): -> /Game/Hero/<Name>/<Name>"
