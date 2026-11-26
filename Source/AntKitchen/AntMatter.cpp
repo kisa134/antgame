@@ -675,7 +675,12 @@ void AAntMatterNet::StepBody(FBody& B, float Dt)
 		if (Bd.GetBox().ComputeSquaredDistanceToPoint(H.At) < H.Radius * H.Radius && H.Temp > B.HeatIn) { B.HeatIn = H.Temp; B.HeatFrom = Bd.GetBox().GetClosestPointTo(H.At); }
 	}
 	const float Target = B.bBurning ? FMath::Max(650.f, B.HeatIn) : (B.HeatIn > -999.f ? (Env < Room ? Env : FMath::Max(Env, B.HeatIn)) : Env);
-	const float K = FMath::Clamp(M.HeatTake, 0.05f, 1.f) * (B.bBurning ? 1.5f : 0.6f);
+	// (KAN-21 fire pass 4: by its size too. The oven, the hob and the cupboard round it are each ONE big metal body; a napkin or
+	//  a towel burning by it took the whole of it to 700 C in seconds, and all of it glowed orange - the niche and the hob of the
+	//  v14.9 shots. A big thing that does not burn (metal, enamel, glass) warms slowly; what burns keeps its pace, so fire
+	//  still spreads from a rag to a door as before.)
+	const float Mass = (B.bBurning || Burns(B.M)) ? 1.f : FMath::Clamp(80.f / FMath::Max(1.f, (float)Bd.SphereRadius), 0.03f, 1.f);
+	const float K = FMath::Clamp(M.HeatTake, 0.05f, 1.f) * (B.bBurning ? 1.5f : 0.6f) * Mass;
 	B.T += (Target - B.T) * (1.f - FMath::Exp(-K * Dt));
 	// water boils off before it gets any hotter
 	if (B.Wet > 0.02f && B.T > 100.f)
@@ -2117,7 +2122,7 @@ void AAntMatterNet::DrawFires(float Dt)
 		// it burnt a hot orange disc into it. And in a box (a cupboard niche, under the hood) it is dimmer: six short rays say how
 		// shut in it is; open on most sides is a fire in the room, shut on most is a fire in a cupboard that would light it all up.
 		FVector LP = F.At + FVector(0.f, 0.f, FMath::Clamp(60.f + F.Size * 0.35f, 60.f, 260.f));
-		float Open = 0.f;
+		float Open = 0.f, MinD = 1.e6f;
 		{
 			static const FVector Dirs[6] = { FVector(1, 0, 0), FVector(-1, 0, 0), FVector(0, 1, 0), FVector(0, -1, 0), FVector(0, 0, 1), FVector(0, 0, -1) };
 			FCollisionQueryParams Q(SCENE_QUERY_STAT(AntMatterLight), false);
@@ -2126,11 +2131,14 @@ void AAntMatterNet::DrawFires(float Dt)
 			for (const FVector& Dd : Dirs)
 			{
 				FHitResult H;
-				Open += GetWorld()->LineTraceSingleByChannel(H, LP, LP + Dd * 300.f, ECC_Visibility, Q) ? (float)H.Distance / 300.f : 1.f;
+				const bool bHit = GetWorld()->LineTraceSingleByChannel(H, LP, LP + Dd * 300.f, ECC_Visibility, Q);
+				Open += bHit ? (float)H.Distance / 300.f : 1.f;
+				if (bHit && Dd.Z >= 0.f) { MinD = FMath::Min(MinD, (float)H.Distance); }   // (the floor under it is meant to be lit)
 			}
 			Open /= 6.f;
 		}
-		const float Shut = FMath::Clamp((Open - 0.2f) / 0.6f, 0.25f, 1.f);
+		// and a wall (a pot's side) right by it does not get a white hot spot
+		const float Shut = FMath::Clamp((Open - 0.2f) / 0.6f, 0.25f, 1.f) * FMath::Clamp(FMath::Square(MinD / 110.f), 0.3f, 1.f);
 		L->SetWorldLocation(LP);
 		L->SetAttenuationRadius(FMath::Min(250.f + F.Size * 1.6f, 1000.f) * (0.6f + 0.4f * Shut));
 		L->SetIntensity(FMath::Min(8.f + F.Size * 0.2f, 60.f) * Fl * Shut);   // candelas

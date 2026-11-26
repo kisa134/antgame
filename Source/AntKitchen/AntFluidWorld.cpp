@@ -554,12 +554,15 @@ void UAntFluidWorld::BuildViews()
 					// (KAN-21 fire pass 4: without scattering a deep puddle had no colour of its own: where the floor under it was
 					//  seen far through (the tiles) it went black, over the runner it was gold - one puddle in two halves with a
 					//  seam at the runner's edge. Oil scatters amber: deep or thin, it is the same golden oil.)
-					V.MID->SetVectorParameterValue(TEXT("Absorb"), FLinearColor(0.006f, 0.014f, 0.06f, 0.f));
-					V.MID->SetVectorParameterValue(TEXT("AbsorbDye"), FLinearColor(0.006f, 0.014f, 0.06f, 0.f));
-					V.MID->SetVectorParameterValue(TEXT("Scatter"), FLinearColor(0.02f, 0.011f, 0.0025f, 0.f));
-					V.MID->SetVectorParameterValue(TEXT("ScatterDye"), FLinearColor(0.02f, 0.011f, 0.0025f, 0.f));
+					//  Dense enough that a few uu of it already shows its own colour, not the floor: over a raised board, the tiles
+					//  or the runner it reads as one puddle; only the thin rim lets the floor through. A little rough: the fire's
+					//  light is a soft glint in it, not a white disc.
+					V.MID->SetVectorParameterValue(TEXT("Absorb"), FLinearColor(0.02f, 0.045f, 0.2f, 0.f));
+					V.MID->SetVectorParameterValue(TEXT("AbsorbDye"), FLinearColor(0.02f, 0.045f, 0.2f, 0.f));
+					V.MID->SetVectorParameterValue(TEXT("Scatter"), FLinearColor(0.06f, 0.033f, 0.0075f, 0.f));
+					V.MID->SetVectorParameterValue(TEXT("ScatterDye"), FLinearColor(0.06f, 0.033f, 0.0075f, 0.f));
 					V.MID->SetVectorParameterValue(TEXT("Rip"), FLinearColor(0.f, 0.02f, 9.f, 0.f));
-					V.MID->SetScalarParameterValue(TEXT("Roughness"), 0.015f);
+					V.MID->SetScalarParameterValue(TEXT("Roughness"), 0.07f);
 					V.MID->SetScalarParameterValue(TEXT("Irid"), 1.f);
 					V.MID->SetScalarParameterValue(TEXT("MaskMin"), 0.01f);
 				}
