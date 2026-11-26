@@ -38,7 +38,7 @@ public:
 
 	/** Team 0: our colony (west baseboard). Team 1: rival fire ants (east, by the trash). */
 	static FVector NestLocation(uint8 Team = 0);
-	static float NestRadius(uint8 Team = 0) { return Team == 0 ? 950.f : 560.f; }
+	static float NestRadius(uint8 Team = 0);
 	/** Where a carrier of this colony standing at From takes its load. Level v2: from the yard our ants use the south entrance
 	 *  of the nest at the house corner (LevelV2::SouthEntrance), from everywhere else the nest itself. */
 	static FVector HomeFor(uint8 Team, const FVector& From);
@@ -93,8 +93,13 @@ public:
 	/** Time of day for a shift: 0 morning, 1 golden evening, 2 night with the lamps on. Cycles. */
 	static int32 TimeOfDayFor(int32 Shift) { return ((FMath::Max(1, Shift) - 1) % 3); }
 
+	/** KAN-37: this machine built the lab's grey box (AntLab.h), not the kitchen. */
+	bool bLab = false;
+
 private:
 	void Build();
+	/** KAN-37: the boxes, lights and nest of the active lab variant (KitchenBuilderLab.cpp). */
+	void BuildLab();
 	UStaticMeshComponent* Part(EAntShape Shape, const FVector& Center, const FVector& Size, const FRotator& Rot, const FLinearColor& Color, bool bCollide);
 	UStaticMeshComponent* Box(const FVector& Min, const FVector& Max, const FLinearColor& Color, bool bCollide = true);
 	/** Map v4: paper-thin skins on the faces of a wall box that look into another room, outside or into a reveal. */

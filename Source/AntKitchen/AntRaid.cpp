@@ -37,6 +37,7 @@
 #include "AntColony.h"
 #include "AntFighter.h"
 #include "AntTutorial.h"
+#include "AntLab.h"
 
 namespace
 {
@@ -316,7 +317,7 @@ void AAntRaid::EnterNest(bool bFirst)
 			if (Ant && !Ant->bDead && Ant->Creature == 0)
 			{
 				Ant->LetGo();
-				Ant->ApplyTeleport(AKitchenBuilder::NestLocation(0) + FVector(FMath::FRandRange(150.f, 350.f), FMath::FRandRange(-250.f, 250.f), 60.f));
+				Ant->ApplyTeleport(AntLab::Get() ? AntLab::SpawnPoint() : AKitchenBuilder::NestLocation(0) + FVector(FMath::FRandRange(150.f, 350.f), FMath::FRandRange(-250.f, 250.f), 60.f));
 			}
 			else if (!Cast<AHumanCharacter>(PC->GetPawn()) && (!Ant || Ant->bDead))
 			{
@@ -683,7 +684,7 @@ void AAntRaid::CountStartCost()
 
 void AAntRaid::StartClan()
 {
-	if (!InRaid() || !GM || FParse::Param(FCommandLine::Get(), TEXT("AntNoClan")) || AntTut::OwnsRaid(this))   // (dev: a raid without the red clan; the training)
+	if (!InRaid() || !GM || FParse::Param(FCommandLine::Get(), TEXT("AntNoClan")) || AntTut::OwnsRaid(this) || AntLab::Get())   // (KAN-37 lab: no red clan)   // (dev: a raid without the red clan; the training)
 	{
 		return;
 	}
