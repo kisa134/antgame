@@ -429,10 +429,14 @@ def pix(img):
     a = array.array("f", [0.0]) * (img.size[0] * img.size[1] * 4); img.pixels.foreach_get(a); return a
 
 def save_png(img, path, cs="sRGB"):
+    # (no colour space change here: on a generated image it regenerates the buffer and the baked pixels are lost -
+    #  every texture came out black. The colour space is set when the image is made, before the bake.)
     img.filepath_raw = path; img.file_format = "PNG"
-    try: img.colorspace_settings.name = cs
-    except Exception: pass
-    img.save(); log("TEX", os.path.basename(path))
+    img.save()
+    import array
+    a = array.array("f", [0.0]) * (img.size[0] * img.size[1] * 4); img.pixels.foreach_get(a)
+    mx = max(a[i] + a[i + 1] + a[i + 2] for i in range(0, len(a), 4 * 61))
+    log("TEX", os.path.basename(path), "max %.3f" % mx)
 
 def compose(path, size, rgb_from, a_from=None, chans=None):
     """chans: list of 3 (array, channel) for R G B (and A from a_from channel 0)"""
