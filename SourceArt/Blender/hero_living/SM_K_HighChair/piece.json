@@ -90,6 +90,11 @@
  ],
  "note": "high chair: beech, splayed legs, teal pads, footrest, white tray, strap",
  "kept_slots": [],
+ "textures_owner": {
+  "C": "SM_K_HighChair/tex_owner/T_SM_K_HighChair_C.png",
+  "N": "SM_K_HighChair/tex_owner/T_SM_K_HighChair_N.png",
+  "R": "SM_K_HighChair/tex_owner/T_SM_K_HighChair_R.png"
+ },
  "triangles": 14500,
  "bbox_min_m": [
   -0.2458,

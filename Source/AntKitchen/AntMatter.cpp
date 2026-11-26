@@ -670,6 +670,30 @@ void AAntMatterNet::ProbeWater(FBody& B, float Dt, bool bWasRest)
 // one body, one step
 // ---------------------------------------------------------------------------------------------------------------------
 
+namespace
+{
+	// fix14: a thing that tears (soaked) or cracks (thermal shock) takes the hit itself - its own wreck piece or body, if it is one.
+	// (It was AntWreck::Hit at its centre: every piece whose box holds that point took the 80 too. A soaked crumb in the sink
+	//  broke the hero sink and the cabinet under it - fixed pieces of 33 and 68 hp - and the running tap had no sink to fill.)
+	void HitOnlyItself(UWorld* W, UPrimitiveComponent* C, const FVector& At, const FVector& Impulse, float Damage, const TCHAR* Why)
+	{
+		if (!W || !C || W->GetNetMode() == NM_Client) { return; }
+		if (AAntWreckBody* Body = Cast<AAntWreckBody>(C->GetOwner()))
+		{
+			Body->TakeHit(At, Impulse, Damage, nullptr);
+		}
+		else if (const int32 Inst = AntWreck::PieceOfComponent(W, C); Inst >= 0)
+		{
+			AntWreck::HitPiece(W, Inst, At, Impulse, Damage, nullptr);
+		}
+		else
+		{
+			return;
+		}
+		UE_LOG(LogTemp, Display, TEXT("ANTMATTER %s/%s: %s, %.0f damage to itself"), *GetNameSafe(C->GetOwner()), *C->GetName(), Why, Damage);
+	}
+}
+
 void AAntMatterNet::StepBody(FBody& B, float Dt)
 {
 	UWorld* W = GetWorld();
@@ -755,7 +779,7 @@ void AAntMatterNet::StepBody(FBody& B, float Dt)
 	{
 		B.bTorn = true;
 		B.Dmg = FMath::Max(B.Dmg, 0.7f);
-		AntWreck::Hit(W, Ctr, Bd.SphereRadius * 0.6f, FVector(0.f, 0.f, -0.5f), 80.f, this, TEXT("размок и порвался"));
+		HitOnlyItself(W, C, Ctr, FVector(0.f, 0.f, -0.5f), 80.f, TEXT("размок и порвался"));
 		UE_LOG(LogTemp, Display, TEXT("ANTMATTER %s/%s [%s] soaked through and tore (tear %.2f wet %.2f)"), *GetNameSafe(C->GetOwner()), *C->GetName(), *M.Id, M.Tear, B.Wet);
 	}
 	if (!B.bCrumbled && M.Crumbly > 0.5f && B.Wet > 0.7f && B.SoakedFor > 6.f)
@@ -771,7 +795,7 @@ void AAntMatterNet::StepBody(FBody& B, float Dt)
 		B.bCracked = true;
 		B.Dmg = FMath::Max(B.Dmg, 0.65f);
 		AddServerSpot(B, B.HeatFrom.IsZero() ? Ctr : B.HeatFrom, FMath::Max(40.f, (float)Bd.SphereRadius * 0.6f), AntState::Damage, 1.f);
-		AntWreck::Hit(W, Ctr, FMath::Min(80.f, (float)Bd.SphereRadius), FVector::ZeroVector, 60.f, this, TEXT("термоудар"));
+		HitOnlyItself(W, C, Ctr, FVector::ZeroVector, 60.f, TEXT("термоудар"));
 		AntAudio::Everyone(this, M.Breaks == TEXT("glass") ? EAntSfx::CrashGlass : EAntSfx::CrashCeramic, Ctr, 0.5f);
 		MulticastSteam(Ctr, 80.f);
 		UE_LOG(LogTemp, Display, TEXT("ANTMATTER %s/%s [%s] cracked: hot (%.0f C) and suddenly wet (thermal shock)"), *GetNameSafe(C->GetOwner()), *C->GetName(), *M.Id, B.T);
