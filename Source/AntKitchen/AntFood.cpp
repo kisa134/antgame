@@ -757,7 +757,7 @@ static void SlowTick(AKitchenLoot* L, FAntFoodServer& S, float T, EAntFoodKind K
 	N.Soak = B(S.Soak); N.Toast = B(S.Toast); N.Burn = B(S.Burn); N.Frozen = B(S.Frozen); N.Dirt = B(S.Dirt); N.Spoil = B(S.Spoil); N.Melt = B(S.Melt);
 	N.Bitten = B(S.Bitten); N.Squeeze = B(S.Squeeze);
 	ApplyMass(L, S);
-	if ((S.bLog || GLogAll) && Now >= S.NextLog)
+	if ((S.bLog || (GLogAll && bCarried)) && Now >= S.NextLog)   // (all of them: only the ones being carried, or the log drowns)
 	{
 		S.NextLog = Now + 0.5f;
 		UE_LOG(LogTemp, Display, TEXT("ANTFOOD state t=%.1f «%s» [%s] carriers %d speed %.0f mass %.1f%% w %d v %d stretch %.2f squeeze %.2f temp %.0f %s"),
