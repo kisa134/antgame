@@ -90,7 +90,7 @@
   {
    "name": "SM_L_TVStand_Brk4",
    "file": "SM_L_TVStand_Brk4.fbx",
-   "triangles": 852,
+   "triangles": 1860,
    "bbox_min_m": [
     -1.4454,
     0.3161,
@@ -98,7 +98,7 @@
    ],
    "bbox_max_m": [
     1.4454,
-    0.3421,
+    0.3428,
     0.5529
    ],
    "materials": [
@@ -147,7 +147,7 @@
  ],
  "note": "TV stand: walnut carcass, oak top, open bay with a shelf on brass pins, aluminium door tracks, cable grommets",
  "kept_slots": [],
- "triangles": 3376,
+ "triangles": 4384,
  "bbox_min_m": [
   -1.4474,
   -0.3421,
@@ -155,16 +155,16 @@
  ],
  "bbox_max_m": [
   1.4474,
-  0.3421,
+  0.3428,
   0.5789
  ],
  "materials": [
   "Hero_SM_L_TVStand"
  ],
  "lod_triangles": [
-  3376,
-  1180,
-  405
+  4384,
+  1534,
+  526
  ],
  "ucx": 6
 }

@@ -1,0 +1,75 @@
+{
+ "name": "SM_V3_ToyBox_Lid",
+ "file": "SM_V3_ToyBox_Lid.fbx",
+ "set": "hero_living",
+ "break_class": "wood",
+ "textures": {
+  "C": "SM_V3_ToyBox_Lid/tex/T_SM_V3_ToyBox_Lid_C.png",
+  "N": "SM_V3_ToyBox_Lid/tex/T_SM_V3_ToyBox_Lid_N.png",
+  "R": "SM_V3_ToyBox_Lid/tex/T_SM_V3_ToyBox_Lid_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_V3_ToyBox_Lid_Brk0",
+   "file": "SM_V3_ToyBox_Lid_Brk0.fbx",
+   "triangles": 812,
+   "bbox_min_m": [
+    0.0154,
+    -0.4921,
+    -0.003
+   ],
+   "bbox_max_m": [
+    0.3789,
+    0.0,
+    0.0319
+   ],
+   "materials": [
+    "Hero_SM_V3_ToyBox_Lid",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_V3_ToyBox_Lid_Brk1",
+   "file": "SM_V3_ToyBox_Lid_Brk1.fbx",
+   "triangles": 964,
+   "bbox_min_m": [
+    -0.3789,
+    -0.4926,
+    -0.003
+   ],
+   "bbox_max_m": [
+    0.0864,
+    0.0,
+    0.0319
+   ],
+   "materials": [
+    "Hero_SM_V3_ToyBox_Lid",
+    "Break"
+   ]
+  }
+ ],
+ "note": "toy box lid: beech boards with breadboard ends, painted star, finger pull, hinge leaves",
+ "kept_slots": [],
+ "triangles": 1104,
+ "bbox_min_m": [
+  -0.3789,
+  -0.4926,
+  -0.003
+ ],
+ "bbox_max_m": [
+  0.3789,
+  0.0,
+  0.0319
+ ],
+ "materials": [
+  "Hero_SM_V3_ToyBox_Lid"
+ ],
+ "lod_triangles": [
+  1104,
+  386,
+  132
+ ],
+ "ucx": 1
+}

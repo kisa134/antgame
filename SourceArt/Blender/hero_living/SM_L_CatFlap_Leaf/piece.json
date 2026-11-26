@@ -1,0 +1,75 @@
+{
+ "name": "SM_L_CatFlap_Leaf",
+ "file": "SM_L_CatFlap_Leaf.fbx",
+ "set": "hero_living",
+ "break_class": "plastic",
+ "textures": {
+  "C": "SM_L_CatFlap_Leaf/tex/T_SM_L_CatFlap_Leaf_C.png",
+  "N": "SM_L_CatFlap_Leaf/tex/T_SM_L_CatFlap_Leaf_N.png",
+  "R": "SM_L_CatFlap_Leaf/tex/T_SM_L_CatFlap_Leaf_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_L_CatFlap_Leaf_Brk0",
+   "file": "SM_L_CatFlap_Leaf_Brk0.fbx",
+   "triangles": 654,
+   "bbox_min_m": [
+    -0.0084,
+    -0.0395,
+    -0.2884
+   ],
+   "bbox_max_m": [
+    0.0084,
+    0.1344,
+    0.0
+   ],
+   "materials": [
+    "Hero_SM_L_CatFlap_Leaf",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_CatFlap_Leaf_Brk1",
+   "file": "SM_L_CatFlap_Leaf_Brk1.fbx",
+   "triangles": 700,
+   "bbox_min_m": [
+    -0.0084,
+    -0.1344,
+    -0.2884
+   ],
+   "bbox_max_m": [
+    0.0084,
+    0.0743,
+    0.0
+   ],
+   "materials": [
+    "Hero_SM_L_CatFlap_Leaf",
+    "Break"
+   ]
+  }
+ ],
+ "note": "cat flap leaf: smoked pane in a white frame, weighted bar, claw scratches",
+ "kept_slots": [],
+ "triangles": 712,
+ "bbox_min_m": [
+  -0.0084,
+  -0.1344,
+  -0.2884
+ ],
+ "bbox_max_m": [
+  0.0084,
+  0.1344,
+  0.0
+ ],
+ "materials": [
+  "Hero_SM_L_CatFlap_Leaf"
+ ],
+ "lod_triangles": [
+  712,
+  248,
+  84
+ ],
+ "ucx": 1
+}

@@ -14,14 +14,14 @@
   {
    "name": "SM_L_Bookshelf_Brk0",
    "file": "SM_L_Bookshelf_Brk0.fbx",
-   "triangles": 2428,
+   "triangles": 2844,
    "bbox_min_m": [
     -1.3684,
     -0.2632,
     0.0
    ],
    "bbox_max_m": [
-    -1.3153,
+    -1.3146,
     0.2632,
     2.4211
    ],
@@ -33,9 +33,9 @@
   {
    "name": "SM_L_Bookshelf_Brk1",
    "file": "SM_L_Bookshelf_Brk1.fbx",
-   "triangles": 2428,
+   "triangles": 2844,
    "bbox_min_m": [
-    1.3153,
+    1.3146,
     -0.2632,
     0.0
    ],
@@ -52,7 +52,7 @@
   {
    "name": "SM_L_Bookshelf_Brk2",
    "file": "SM_L_Bookshelf_Brk2.fbx",
-   "triangles": 88,
+   "triangles": 2048,
    "bbox_min_m": [
     -1.3644,
     0.2432,
@@ -60,7 +60,7 @@
    ],
    "bbox_max_m": [
     1.3644,
-    0.2632,
+    0.2639,
     2.4211
    ],
    "materials": [
@@ -223,7 +223,7 @@
  ],
  "note": "bookshelf: walnut sides with pin-hole rows, oak shelves with walnut lipping on brass pins, HDF back, anti-tip strap",
  "kept_slots": [],
- "triangles": 7700,
+ "triangles": 10492,
  "bbox_min_m": [
   -1.3684,
   -0.2642,
@@ -231,16 +231,16 @@
  ],
  "bbox_max_m": [
   1.3684,
-  0.2632,
+  0.2639,
   2.4526
  ],
  "materials": [
   "Hero_SM_L_Bookshelf"
  ],
  "lod_triangles": [
-  7700,
-  2694,
-  924
+  10492,
+  3672,
+  1258
  ],
  "ucx": 10
 }

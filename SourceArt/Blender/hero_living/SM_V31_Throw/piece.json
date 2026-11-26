@@ -1,0 +1,37 @@
+{
+ "name": "SM_V31_Throw",
+ "file": "SM_V31_Throw.fbx",
+ "set": "hero_living",
+ "break_class": "cloth",
+ "tiling": true,
+ "textures": {
+  "C": "SM_V31_Throw/tex/T_SM_V31_Throw_C.png",
+  "N": "SM_V31_Throw/tex/T_SM_V31_Throw_N.png",
+  "R": "SM_V31_Throw/tex/T_SM_V31_Throw_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [],
+ "note": "wool tartan throw: a seamless 300 uu check (AntCloth tiles it), tasselled ends",
+ "kept_slots": [],
+ "triangles": 7676,
+ "bbox_min_m": [
+  -0.3713,
+  -0.6138,
+  -0.0278
+ ],
+ "bbox_max_m": [
+  0.3743,
+  0.6138,
+  0.5196
+ ],
+ "materials": [
+  "Hero_SM_V31_Throw"
+ ],
+ "lod_triangles": [
+  7676,
+  3069,
+  1151
+ ],
+ "ucx": 1
+}

@@ -753,7 +753,7 @@
     {
      "name": "SM_L_Armchair_Brk0",
      "file": "SM_L_Armchair_Brk0.fbx",
-     "triangles": 2770,
+     "triangles": 2732,
      "bbox_min_m": [
       -0.5589,
       -0.4473,
@@ -762,7 +762,7 @@
      "bbox_max_m": [
       0.5589,
       0.4274,
-      0.3421
+      0.6337
      ],
      "materials": [
       "Hero_SM_L_Armchair",
@@ -772,14 +772,14 @@
     {
      "name": "SM_L_Armchair_Brk1",
      "file": "SM_L_Armchair_Brk1.fbx",
-     "triangles": 1518,
+     "triangles": 1754,
      "bbox_min_m": [
       -0.583,
       -0.4536,
       0.056
      ],
      "bbox_max_m": [
-      -0.4697,
+      0.5274,
       0.4513,
       0.6356
      ],
@@ -791,9 +791,9 @@
     {
      "name": "SM_L_Armchair_Brk2",
      "file": "SM_L_Armchair_Brk2.fbx",
-     "triangles": 1516,
+     "triangles": 1750,
      "bbox_min_m": [
-      0.4697,
+      -0.5274,
       -0.4536,
       0.056
      ],
@@ -810,10 +810,10 @@
     {
      "name": "SM_L_Armchair_Brk3",
      "file": "SM_L_Armchair_Brk3.fbx",
-     "triangles": 1496,
+     "triangles": 1398,
      "bbox_min_m": [
       -0.5819,
-      0.3386,
+      -0.4389,
       0.057
      ],
      "bbox_max_m": [
@@ -829,16 +829,16 @@
     {
      "name": "SM_L_Armchair_Brk4",
      "file": "SM_L_Armchair_Brk4.fbx",
-     "triangles": 4054,
+     "triangles": 3558,
      "bbox_min_m": [
-      -0.4724,
+      -0.5274,
       -0.4461,
       0.3193
      ],
      "bbox_max_m": [
-      0.4724,
-      0.3449,
-      0.4319
+      0.5274,
+      0.4231,
+      0.6337
      ],
      "materials": [
       "Hero_SM_L_Armchair",
@@ -848,15 +848,15 @@
     {
      "name": "SM_L_Armchair_Brk5",
      "file": "SM_L_Armchair_Brk5.fbx",
-     "triangles": 2856,
+     "triangles": 3018,
      "bbox_min_m": [
-      -0.4499,
-      0.2859,
+      -0.5274,
+      -0.4389,
       0.3948
      ],
      "bbox_max_m": [
-      0.4499,
-      0.3583,
+      0.5274,
+      0.4231,
       0.9362
      ],
      "materials": [
@@ -904,14 +904,14 @@
     {
      "name": "SM_L_Bookshelf_Brk0",
      "file": "SM_L_Bookshelf_Brk0.fbx",
-     "triangles": 2428,
+     "triangles": 2844,
      "bbox_min_m": [
       -1.3684,
       -0.2632,
       0.0
      ],
      "bbox_max_m": [
-      -1.3153,
+      -1.3146,
       0.2632,
       2.4211
      ],
@@ -923,9 +923,9 @@
     {
      "name": "SM_L_Bookshelf_Brk1",
      "file": "SM_L_Bookshelf_Brk1.fbx",
-     "triangles": 2428,
+     "triangles": 2844,
      "bbox_min_m": [
-      1.3153,
+      1.3146,
       -0.2632,
       0.0
      ],
@@ -942,7 +942,7 @@
     {
      "name": "SM_L_Bookshelf_Brk2",
      "file": "SM_L_Bookshelf_Brk2.fbx",
-     "triangles": 88,
+     "triangles": 2048,
      "bbox_min_m": [
       -1.3644,
       0.2432,
@@ -950,7 +950,7 @@
      ],
      "bbox_max_m": [
       1.3644,
-      0.2632,
+      0.2639,
       2.4211
      ],
      "materials": [
@@ -1113,7 +1113,7 @@
    ],
    "note": "bookshelf: walnut sides with pin-hole rows, oak shelves with walnut lipping on brass pins, HDF back, anti-tip strap",
    "kept_slots": [],
-   "triangles": 7700,
+   "triangles": 10492,
    "bbox_min_m": [
     -1.3684,
     -0.2642,
@@ -1121,16 +1121,16 @@
    ],
    "bbox_max_m": [
     1.3684,
-    0.2632,
+    0.2639,
     2.4526
    ],
    "materials": [
     "Hero_SM_L_Bookshelf"
    ],
    "lod_triangles": [
-    7700,
-    2694,
-    924
+    10492,
+    3672,
+    1258
    ],
    "ucx": 10
   },
@@ -1225,6 +1225,137 @@
     12244,
     4284,
     1468
+   ],
+   "ucx": 1
+  },
+  {
+   "name": "SM_L_CatFlap",
+   "file": "SM_L_CatFlap.fbx",
+   "set": "hero_living",
+   "break_class": "plastic",
+   "textures": {
+    "C": "SM_L_CatFlap/tex/T_SM_L_CatFlap_C.png",
+    "N": "SM_L_CatFlap/tex/T_SM_L_CatFlap_N.png",
+    "R": "SM_L_CatFlap/tex/T_SM_L_CatFlap_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_L_CatFlap_Brk0",
+     "file": "SM_L_CatFlap_Brk0.fbx",
+     "triangles": 2528,
+     "bbox_min_m": [
+      -0.0589,
+      -0.1432,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.0589,
+      0.1432,
+      0.3179
+     ],
+     "materials": [
+      "Hero_SM_L_CatFlap",
+      "Break"
+     ]
+    }
+   ],
+   "note": "cat flap liner: white tunnel with rims both faces, hinge bosses, magnet strip, screw caps",
+   "kept_slots": [],
+   "triangles": 2528,
+   "bbox_min_m": [
+    -0.0589,
+    -0.1432,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.0589,
+    0.1432,
+    0.3179
+   ],
+   "materials": [
+    "Hero_SM_L_CatFlap"
+   ],
+   "lod_triangles": [
+    2528,
+    884,
+    302
+   ],
+   "ucx": 4
+  },
+  {
+   "name": "SM_L_CatFlap_Leaf",
+   "file": "SM_L_CatFlap_Leaf.fbx",
+   "set": "hero_living",
+   "break_class": "plastic",
+   "textures": {
+    "C": "SM_L_CatFlap_Leaf/tex/T_SM_L_CatFlap_Leaf_C.png",
+    "N": "SM_L_CatFlap_Leaf/tex/T_SM_L_CatFlap_Leaf_N.png",
+    "R": "SM_L_CatFlap_Leaf/tex/T_SM_L_CatFlap_Leaf_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_L_CatFlap_Leaf_Brk0",
+     "file": "SM_L_CatFlap_Leaf_Brk0.fbx",
+     "triangles": 654,
+     "bbox_min_m": [
+      -0.0084,
+      -0.0395,
+      -0.2884
+     ],
+     "bbox_max_m": [
+      0.0084,
+      0.1344,
+      0.0
+     ],
+     "materials": [
+      "Hero_SM_L_CatFlap_Leaf",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_L_CatFlap_Leaf_Brk1",
+     "file": "SM_L_CatFlap_Leaf_Brk1.fbx",
+     "triangles": 700,
+     "bbox_min_m": [
+      -0.0084,
+      -0.1344,
+      -0.2884
+     ],
+     "bbox_max_m": [
+      0.0084,
+      0.0743,
+      0.0
+     ],
+     "materials": [
+      "Hero_SM_L_CatFlap_Leaf",
+      "Break"
+     ]
+    }
+   ],
+   "note": "cat flap leaf: smoked pane in a white frame, weighted bar, claw scratches",
+   "kept_slots": [],
+   "triangles": 712,
+   "bbox_min_m": [
+    -0.0084,
+    -0.1344,
+    -0.2884
+   ],
+   "bbox_max_m": [
+    0.0084,
+    0.1344,
+    0.0
+   ],
+   "materials": [
+    "Hero_SM_L_CatFlap_Leaf"
+   ],
+   "lod_triangles": [
+    712,
+    248,
+    84
    ],
    "ucx": 1
   },
@@ -1399,14 +1530,14 @@
     {
      "name": "SM_L_CoffeeTable_Brk0",
      "file": "SM_L_CoffeeTable_Brk0.fbx",
-     "triangles": 966,
+     "triangles": 1002,
      "bbox_min_m": [
-      -0.6579,
+      -0.6583,
       0.0129,
       0.4737
      ],
      "bbox_max_m": [
-      0.6579,
+      0.6581,
       0.4211,
       0.5162
      ],
@@ -1418,7 +1549,7 @@
     {
      "name": "SM_L_CoffeeTable_Brk1",
      "file": "SM_L_CoffeeTable_Brk1.fbx",
-     "triangles": 812,
+     "triangles": 1180,
      "bbox_min_m": [
       -0.6383,
       -0.4014,
@@ -1494,14 +1625,14 @@
     {
      "name": "SM_L_CoffeeTable_Brk5",
      "file": "SM_L_CoffeeTable_Brk5.fbx",
-     "triangles": 726,
+     "triangles": 798,
      "bbox_min_m": [
-      -0.6579,
+      -0.6583,
       -0.4211,
       0.4737
      ],
      "bbox_max_m": [
-      0.6579,
+      0.6581,
       0.0779,
       0.5162
      ],
@@ -1513,14 +1644,14 @@
    ],
    "note": "coffee table: solid oak top and shelf, turned walnut legs, aprons with corner blocks, coffee rings",
    "kept_slots": [],
-   "triangles": 2920,
+   "triangles": 3396,
    "bbox_min_m": [
-    -0.6579,
+    -0.6583,
     -0.4211,
     0.0
    ],
    "bbox_max_m": [
-    0.6579,
+    0.6581,
     0.4211,
     0.5162
    ],
@@ -1528,9 +1659,9 @@
     "Hero_SM_L_CoffeeTable"
    ],
    "lod_triangles": [
-    2920,
-    1022,
-    349
+    3396,
+    1188,
+    407
    ],
    "ucx": 6
   },
@@ -2476,16 +2607,16 @@
     {
      "name": "SM_L_Sofa_Brk0",
      "file": "SM_L_Sofa_Brk0.fbx",
-     "triangles": 4528,
+     "triangles": 4984,
      "bbox_min_m": [
-      -1.7373,
+      -1.8429,
       -0.4519,
       0.002
      ],
      "bbox_max_m": [
-      1.7373,
+      1.8429,
       0.4474,
-      0.3689
+      1.0761
      ],
      "materials": [
       "Hero_SM_L_Sofa",
@@ -2495,16 +2626,16 @@
     {
      "name": "SM_L_Sofa_Brk1",
      "file": "SM_L_Sofa_Brk1.fbx",
-     "triangles": 2756,
+     "triangles": 3458,
      "bbox_min_m": [
       -1.9576,
-      -0.4534,
+      -0.4597,
       0.1368
      ],
      "bbox_max_m": [
-      -1.7266,
+      1.8429,
       0.4474,
-      0.7147
+      1.0761
      ],
      "materials": [
       "Hero_SM_L_Sofa",
@@ -2514,16 +2645,16 @@
     {
      "name": "SM_L_Sofa_Brk2",
      "file": "SM_L_Sofa_Brk2.fbx",
-     "triangles": 2756,
+     "triangles": 3458,
      "bbox_min_m": [
-      1.7266,
-      -0.4534,
+      -1.8429,
+      -0.456,
       0.1368
      ],
      "bbox_max_m": [
       1.9576,
       0.4474,
-      0.7147
+      1.0761
      ],
      "materials": [
       "Hero_SM_L_Sofa",
@@ -2533,14 +2664,14 @@
     {
      "name": "SM_L_Sofa_Brk3",
      "file": "SM_L_Sofa_Brk3.fbx",
-     "triangles": 4460,
+     "triangles": 2520,
      "bbox_min_m": [
-      -1.7368,
-      0.2932,
+      -1.8429,
+      -0.45,
       0.3384
      ],
      "bbox_max_m": [
-      1.7368,
+      1.8429,
       0.4474,
       1.1053
      ],
@@ -2552,10 +2683,10 @@
    ],
    "note": "3-seat sofa: rolled piped arms, sprung platform, show-wood rails, turned walnut legs in brass cups, stapled dust cover",
    "kept_slots": [],
-   "triangles": 14500,
+   "triangles": 14420,
    "bbox_min_m": [
     -1.9576,
-    -0.4534,
+    -0.4597,
     0.002
    ],
    "bbox_max_m": [
@@ -2567,9 +2698,9 @@
     "Hero_SM_L_Sofa"
    ],
    "lod_triangles": [
-    14500,
-    5074,
-    1739
+    14420,
+    5046,
+    1730
    ],
    "ucx": 8
   },
@@ -2988,7 +3119,7 @@
     {
      "name": "SM_L_TVStand_Brk4",
      "file": "SM_L_TVStand_Brk4.fbx",
-     "triangles": 852,
+     "triangles": 1860,
      "bbox_min_m": [
       -1.4454,
       0.3161,
@@ -2996,7 +3127,7 @@
      ],
      "bbox_max_m": [
       1.4454,
-      0.3421,
+      0.3428,
       0.5529
      ],
      "materials": [
@@ -3045,7 +3176,7 @@
    ],
    "note": "TV stand: walnut carcass, oak top, open bay with a shelf on brass pins, aluminium door tracks, cable grommets",
    "kept_slots": [],
-   "triangles": 3376,
+   "triangles": 4384,
    "bbox_min_m": [
     -1.4474,
     -0.3421,
@@ -3053,16 +3184,16 @@
    ],
    "bbox_max_m": [
     1.4474,
-    0.3421,
+    0.3428,
     0.5789
    ],
    "materials": [
     "Hero_SM_L_TVStand"
    ],
    "lod_triangles": [
-    3376,
-    1180,
-    405
+    4384,
+    1534,
+    526
    ],
    "ucx": 6
   },
@@ -3236,6 +3367,43 @@
    "ucx": 1
   },
   {
+   "name": "SM_V3_CurtainPanel",
+   "file": "SM_V3_CurtainPanel.fbx",
+   "set": "hero_living",
+   "break_class": "cloth",
+   "tiling": true,
+   "textures": {
+    "C": "SM_V3_CurtainPanel/tex/T_SM_V3_CurtainPanel_C.png",
+    "N": "SM_V3_CurtainPanel/tex/T_SM_V3_CurtainPanel_N.png",
+    "R": "SM_V3_CurtainPanel/tex/T_SM_V3_CurtainPanel_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [],
+   "note": "linen curtain: a seamless 300 uu slub weave (AntCloth tiles it), turned hem, heading tape with hooks",
+   "kept_slots": [],
+   "triangles": 4800,
+   "bbox_min_m": [
+    -0.1474,
+    -0.0421,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.1474,
+    0.0421,
+    2.7593
+   ],
+   "materials": [
+    "Hero_SM_V3_CurtainPanel"
+   ],
+   "lod_triangles": [
+    4800,
+    1920,
+    719
+   ],
+   "ucx": 1
+  },
+  {
    "name": "SM_V3_CurtainRing",
    "file": "SM_V3_CurtainRing.fbx",
    "set": "hero_living",
@@ -3346,6 +3514,137 @@
     92
    ],
    "ucx": 3
+  },
+  {
+   "name": "SM_V3_FloorCushion",
+   "file": "SM_V3_FloorCushion.fbx",
+   "set": "hero_living",
+   "break_class": "cloth",
+   "textures": {
+    "C": "SM_V3_FloorCushion/tex/T_SM_V3_FloorCushion_C.png",
+    "N": "SM_V3_FloorCushion/tex/T_SM_V3_FloorCushion_N.png",
+    "R": "SM_V3_FloorCushion/tex/T_SM_V3_FloorCushion_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_V3_FloorCushion_Brk0",
+     "file": "SM_V3_FloorCushion_Brk0.fbx",
+     "triangles": 7860,
+     "bbox_min_m": [
+      -0.1043,
+      -0.3042,
+      0.0062
+     ],
+     "bbox_max_m": [
+      0.3094,
+      0.3094,
+      0.1298
+     ],
+     "materials": [
+      "Hero_SM_V3_FloorCushion",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_V3_FloorCushion_Brk1",
+     "file": "SM_V3_FloorCushion_Brk1.fbx",
+     "triangles": 8388,
+     "bbox_min_m": [
+      -0.3094,
+      -0.3094,
+      0.0061
+     ],
+     "bbox_max_m": [
+      0.1461,
+      0.3067,
+      0.1299
+     ],
+     "materials": [
+      "Hero_SM_V3_FloorCushion",
+      "Break"
+     ]
+    }
+   ],
+   "note": "floor cushion: honey corduroy, piped, carry handle",
+   "kept_slots": [],
+   "triangles": 14500,
+   "bbox_min_m": [
+    -0.3094,
+    -0.3149,
+    0.0061
+   ],
+   "bbox_max_m": [
+    0.3094,
+    0.3094,
+    0.1299
+   ],
+   "materials": [
+    "Hero_SM_V3_FloorCushion"
+   ],
+   "lod_triangles": [
+    14500,
+    5074,
+    1740
+   ],
+   "ucx": 1
+  },
+  {
+   "name": "SM_V3_Hinge",
+   "file": "SM_V3_Hinge.fbx",
+   "set": "hero_living",
+   "break_class": "metal",
+   "textures": {
+    "C": "SM_V3_Hinge/tex/T_SM_V3_Hinge_C.png",
+    "N": "SM_V3_Hinge/tex/T_SM_V3_Hinge_N.png",
+    "R": "SM_V3_Hinge/tex/T_SM_V3_Hinge_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_V3_Hinge_Brk0",
+     "file": "SM_V3_Hinge_Brk0.fbx",
+     "triangles": 728,
+     "bbox_min_m": [
+      -0.0158,
+      -0.046,
+      -0.0263
+     ],
+     "bbox_max_m": [
+      0.0158,
+      0.0,
+      0.0263
+     ],
+     "materials": [
+      "Hero_SM_V3_Hinge",
+      "Break"
+     ]
+    }
+   ],
+   "note": "concealed cup hinge: cup, arm, mounting plate, cover cap, screws",
+   "kept_slots": [],
+   "triangles": 728,
+   "bbox_min_m": [
+    -0.0158,
+    -0.046,
+    -0.0263
+   ],
+   "bbox_max_m": [
+    0.0158,
+    0.0,
+    0.0263
+   ],
+   "materials": [
+    "Hero_SM_V3_Hinge"
+   ],
+   "lod_triangles": [
+    728,
+    254,
+    86
+   ],
+   "ucx": 2
   },
   {
    "name": "SM_V3_Outlet",
@@ -3575,6 +3874,213 @@
    "ucx": 2
   },
   {
+   "name": "SM_V3_ToyBox",
+   "file": "SM_V3_ToyBox.fbx",
+   "set": "hero_living",
+   "break_class": "wood",
+   "textures": {
+    "C": "SM_V3_ToyBox/tex/T_SM_V3_ToyBox_C.png",
+    "N": "SM_V3_ToyBox/tex/T_SM_V3_ToyBox_N.png",
+    "R": "SM_V3_ToyBox/tex/T_SM_V3_ToyBox_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_V3_ToyBox_Brk0",
+     "file": "SM_V3_ToyBox_Brk0.fbx",
+     "triangles": 528,
+     "bbox_min_m": [
+      -0.4073,
+      -0.2381,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.353,
+      0.2381,
+      0.4105
+     ],
+     "materials": [
+      "Hero_SM_V3_ToyBox",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_V3_ToyBox_Brk1",
+     "file": "SM_V3_ToyBox_Brk1.fbx",
+     "triangles": 528,
+     "bbox_min_m": [
+      -0.353,
+      -0.2381,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.4073,
+      0.2381,
+      0.4105
+     ],
+     "materials": [
+      "Hero_SM_V3_ToyBox",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_V3_ToyBox_Brk2",
+     "file": "SM_V3_ToyBox_Brk2.fbx",
+     "triangles": 556,
+     "bbox_min_m": [
+      -0.3535,
+      -0.2397,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.3535,
+      0.06,
+      0.4105
+     ],
+     "materials": [
+      "Hero_SM_V3_ToyBox",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_V3_ToyBox_Brk3",
+     "file": "SM_V3_ToyBox_Brk3.fbx",
+     "triangles": 188,
+     "bbox_min_m": [
+      -0.3535,
+      -0.06,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.3535,
+      0.2381,
+      0.4105
+     ],
+     "materials": [
+      "Hero_SM_V3_ToyBox",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_V3_ToyBox_Brk4",
+     "file": "SM_V3_ToyBox_Brk4.fbx",
+     "triangles": 284,
+     "bbox_min_m": [
+      -0.3535,
+      -0.2221,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.3535,
+      0.2221,
+      0.3205
+     ],
+     "materials": [
+      "Hero_SM_V3_ToyBox",
+      "Break"
+     ]
+    }
+   ],
+   "note": "beech toy box: finger joints, painted panels with stencilled letters, rope handles",
+   "kept_slots": [],
+   "triangles": 2084,
+   "bbox_min_m": [
+    -0.4073,
+    -0.2397,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.4073,
+    0.2381,
+    0.4105
+   ],
+   "materials": [
+    "Hero_SM_V3_ToyBox"
+   ],
+   "lod_triangles": [
+    2084,
+    728,
+    250
+   ],
+   "ucx": 5
+  },
+  {
+   "name": "SM_V3_ToyBox_Lid",
+   "file": "SM_V3_ToyBox_Lid.fbx",
+   "set": "hero_living",
+   "break_class": "wood",
+   "textures": {
+    "C": "SM_V3_ToyBox_Lid/tex/T_SM_V3_ToyBox_Lid_C.png",
+    "N": "SM_V3_ToyBox_Lid/tex/T_SM_V3_ToyBox_Lid_N.png",
+    "R": "SM_V3_ToyBox_Lid/tex/T_SM_V3_ToyBox_Lid_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_V3_ToyBox_Lid_Brk0",
+     "file": "SM_V3_ToyBox_Lid_Brk0.fbx",
+     "triangles": 812,
+     "bbox_min_m": [
+      0.0154,
+      -0.4921,
+      -0.003
+     ],
+     "bbox_max_m": [
+      0.3789,
+      0.0,
+      0.0319
+     ],
+     "materials": [
+      "Hero_SM_V3_ToyBox_Lid",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_V3_ToyBox_Lid_Brk1",
+     "file": "SM_V3_ToyBox_Lid_Brk1.fbx",
+     "triangles": 964,
+     "bbox_min_m": [
+      -0.3789,
+      -0.4926,
+      -0.003
+     ],
+     "bbox_max_m": [
+      0.0864,
+      0.0,
+      0.0319
+     ],
+     "materials": [
+      "Hero_SM_V3_ToyBox_Lid",
+      "Break"
+     ]
+    }
+   ],
+   "note": "toy box lid: beech boards with breadboard ends, painted star, finger pull, hinge leaves",
+   "kept_slots": [],
+   "triangles": 1104,
+   "bbox_min_m": [
+    -0.3789,
+    -0.4926,
+    -0.003
+   ],
+   "bbox_max_m": [
+    0.3789,
+    0.0,
+    0.0319
+   ],
+   "materials": [
+    "Hero_SM_V3_ToyBox_Lid"
+   ],
+   "lod_triangles": [
+    1104,
+    386,
+    132
+   ],
+   "ucx": 1
+  },
+  {
    "name": "SM_V3_WallShelf",
    "file": "SM_V3_WallShelf.fbx",
    "set": "hero_living",
@@ -3650,77 +4156,39 @@
    "ucx": 1
   },
   {
-   "name": "SM_V3_FloorCushion",
-   "file": "SM_V3_FloorCushion.fbx",
+   "name": "SM_V31_Throw",
+   "file": "SM_V31_Throw.fbx",
    "set": "hero_living",
    "break_class": "cloth",
+   "tiling": true,
    "textures": {
-    "C": "SM_V3_FloorCushion/tex/T_SM_V3_FloorCushion_C.png",
-    "N": "SM_V3_FloorCushion/tex/T_SM_V3_FloorCushion_N.png",
-    "R": "SM_V3_FloorCushion/tex/T_SM_V3_FloorCushion_R.png"
+    "C": "SM_V31_Throw/tex/T_SM_V31_Throw_C.png",
+    "N": "SM_V31_Throw/tex/T_SM_V31_Throw_N.png",
+    "R": "SM_V31_Throw/tex/T_SM_V31_Throw_R.png"
    },
    "collision_lod": 0,
    "movers": [],
-   "breaks": [
-    {
-     "name": "SM_V3_FloorCushion_Brk0",
-     "file": "SM_V3_FloorCushion_Brk0.fbx",
-     "triangles": 7860,
-     "bbox_min_m": [
-      -0.1043,
-      -0.3042,
-      0.0062
-     ],
-     "bbox_max_m": [
-      0.3094,
-      0.3094,
-      0.1298
-     ],
-     "materials": [
-      "Hero_SM_V3_FloorCushion",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_V3_FloorCushion_Brk1",
-     "file": "SM_V3_FloorCushion_Brk1.fbx",
-     "triangles": 8388,
-     "bbox_min_m": [
-      -0.3094,
-      -0.3094,
-      0.0061
-     ],
-     "bbox_max_m": [
-      0.1461,
-      0.3067,
-      0.1299
-     ],
-     "materials": [
-      "Hero_SM_V3_FloorCushion",
-      "Break"
-     ]
-    }
-   ],
-   "note": "floor cushion: honey corduroy, piped, carry handle",
+   "breaks": [],
+   "note": "wool tartan throw: a seamless 300 uu check (AntCloth tiles it), tasselled ends",
    "kept_slots": [],
-   "triangles": 14500,
+   "triangles": 7676,
    "bbox_min_m": [
-    -0.3094,
-    -0.3149,
-    0.0061
+    -0.3713,
+    -0.6138,
+    -0.0278
    ],
    "bbox_max_m": [
-    0.3094,
-    0.3094,
-    0.1299
+    0.3743,
+    0.6138,
+    0.5196
    ],
    "materials": [
-    "Hero_SM_V3_FloorCushion"
+    "Hero_SM_V31_Throw"
    ],
    "lod_triangles": [
-    14500,
-    5074,
-    1740
+    7676,
+    3069,
+    1151
    ],
    "ucx": 1
   }

@@ -1,0 +1,56 @@
+{
+ "name": "SM_V3_Hinge",
+ "file": "SM_V3_Hinge.fbx",
+ "set": "hero_living",
+ "break_class": "metal",
+ "textures": {
+  "C": "SM_V3_Hinge/tex/T_SM_V3_Hinge_C.png",
+  "N": "SM_V3_Hinge/tex/T_SM_V3_Hinge_N.png",
+  "R": "SM_V3_Hinge/tex/T_SM_V3_Hinge_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_V3_Hinge_Brk0",
+   "file": "SM_V3_Hinge_Brk0.fbx",
+   "triangles": 728,
+   "bbox_min_m": [
+    -0.0158,
+    -0.046,
+    -0.0263
+   ],
+   "bbox_max_m": [
+    0.0158,
+    0.0,
+    0.0263
+   ],
+   "materials": [
+    "Hero_SM_V3_Hinge",
+    "Break"
+   ]
+  }
+ ],
+ "note": "concealed cup hinge: cup, arm, mounting plate, cover cap, screws",
+ "kept_slots": [],
+ "triangles": 728,
+ "bbox_min_m": [
+  -0.0158,
+  -0.046,
+  -0.0263
+ ],
+ "bbox_max_m": [
+  0.0158,
+  0.0,
+  0.0263
+ ],
+ "materials": [
+  "Hero_SM_V3_Hinge"
+ ],
+ "lod_triangles": [
+  728,
+  254,
+  86
+ ],
+ "ucx": 2
+}
