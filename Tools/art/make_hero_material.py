@@ -68,7 +68,8 @@ float cm = smoothstep(1.05 - Char * 1.25, 1.30 - Char * 1.25, fine + 0.15) * sat
 """
 
 COLOR = NOISE + r"""
-float3 col = lerp(Tint, C.rgb * Tint * lerp(1.0, R.r, 0.45), UseTex);
+float3 tn = Tint.rgb;
+float3 col = lerp(tn, C.rgb * tn * lerp(1.0, R.r, 0.45), UseTex);
 float por = lerp(0.3, R.a, UseTex);
 col = lerp(col, float3(0.24, 0.20, 0.15), saturate(Dirt * (0.25 + fine)) * 0.85);
 col *= lerp(1.0, lerp(0.78, 0.36, por), saturate(Wet));
@@ -125,17 +126,18 @@ def build():
     wet = cpd(m, "StateWet", 0, X, 1100); char = cpd(m, "StateChar", 1, X, 1200); dirt = cpd(m, "StateDirt", 2, X, 1300); dmg = cpd(m, "StateDamage", 3, X, 1400)
     sway = cpd(m, "StateSway", 4, X, 1500)
     col = custom(m, COLOR, ["C", "R", "W", "Tint", "UseTex", "Wet", "Char", "Dirt", "Dmg"], -700, -400, "Hero colour + state")
-    for src, pin, out in [(c, "C", "RGBA"), (r, "R", "RGBA"), (wp, "W", ""), (tint, "Tint", "RGB"), (use, "UseTex", ""), (wet, "Wet", ""), (char, "Char", ""), (dirt, "Dirt", ""), (dmg, "Dmg", "")]:
-        MEL.connect_material_expressions(src, out, col, pin)
+    for src, pin, out in [(c, "C", "RGBA"), (r, "R", "RGBA"), (wp, "W", ""), (tint, "Tint", ""), (use, "UseTex", ""), (wet, "Wet", ""), (char, "Char", ""), (dirt, "Dirt", ""), (dmg, "Dmg", "")]:
+        ok = MEL.connect_material_expressions(src, out, col, pin)
+        if not ok: unreal.log_warning("ART: HERO connect FAILED " + pin)
     orm = custom(m, ORM, ["C", "R", "W", "UseTex", "BreakRough", "Wet", "Char", "Dirt"], -700, 200, "Hero AO rough metal + state")
     for src, pin, out in [(c, "C", "RGBA"), (r, "R", "RGBA"), (wp, "W", ""), (use, "UseTex", ""), (brough, "BreakRough", ""), (wet, "Wet", ""), (char, "Char", ""), (dirt, "Dirt", "")]:
-        MEL.connect_material_expressions(src, out, orm, pin)
+        if not MEL.connect_material_expressions(src, out, orm, pin): unreal.log_warning("ART: HERO connect FAILED orm " + pin)
     emb = custom(m, EMBER, ["W", "T", "Char"], -700, 700, "Hero embers")
     for src, pin in [(wp, "W"), (tm, "T"), (char, "Char")]:
-        MEL.connect_material_expressions(src, "", emb, pin)
+        if not MEL.connect_material_expressions(src, "", emb, pin): unreal.log_warning("ART: HERO connect FAILED emb " + pin)
     sw = custom(m, SWAY, ["W", "T", "VC", "Sway", "Amp"], -700, 1100, "Hero sway (WPO)")
     for src, pin, out in [(wp, "W", ""), (tm, "T", ""), (vc, "VC", "R"), (sway, "Sway", ""), (amp, "Amp", "")]:
-        MEL.connect_material_expressions(src, out, sw, pin)
+        if not MEL.connect_material_expressions(src, out, sw, pin): unreal.log_warning("ART: HERO connect FAILED sway " + pin)
     def mask(src, ch, x, y):
         k = MEL.create_material_expression(m, unreal.MaterialExpressionComponentMask, x, y)
         k.set_editor_property("r", ch == 0); k.set_editor_property("g", ch == 1); k.set_editor_property("b", ch == 2); k.set_editor_property("a", False)

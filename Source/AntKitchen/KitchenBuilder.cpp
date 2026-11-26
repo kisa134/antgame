@@ -1401,7 +1401,10 @@ void AKitchenBuilder::BuildArt()
 	// The pavement slabs have open joints: a bed under them, so nobody drops through a joint into the void.
 	Box(FVector(-11000.f, -5200.f, -260.f), FVector(-9400.f, 5800.f, -200.f), Hex(110, 108, 102));
 	// The mop bucket is hollow now: the water in it is ours (wet zone in EnvironmentFor, a loot spot floats on it).
-	Cyl(FVector(6200.f, 3900.f, 600.f), 305.f, 40.f, Hex(150, 200, 255));   // (KAN-22: the hero bucket is 310 inside at this height)
+	if (UStaticMeshComponent* Water = Cyl(FVector(6200.f, 3900.f, 600.f), 305.f, 40.f, Hex(150, 200, 255)))   // (KAN-22: the hero bucket is 310 inside at this height)
+	{
+		Water->ComponentTags.AddUnique(TEXT("AntBucketWater"));   // spilled when the bucket tips or breaks (AntWreck)
+	}
 	if (Map4Look::Enabled())
 	{
 		// map v4 set dressing: things of the family that tell the evening (each stands on whatever is under it; ants climb them)

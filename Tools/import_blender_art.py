@@ -154,10 +154,12 @@ def hero_mesh(fbx, dest, name, ucx=False):
 
 def hero_slots(mesh, mats):
     """slot i gets mats[i] (keeping the slot names: Hero_<Name>, Break)"""
-    sms = mesh.get_editor_property("static_materials")
-    for i, s in enumerate(sms):
-        if i < len(mats) and mats[i]: s.set_editor_property("material_interface", mats[i])
-    mesh.set_editor_property("static_materials", sms)
+    # (set_material, not a copied static_materials list: the copy came back as WorldGridMaterial in the cook)
+    for i in range(len(mesh.get_editor_property("static_materials"))):
+        if i < len(mats) and mats[i]:
+            mesh.set_material(i, mats[i])
+    got = [mesh.get_material(i) for i in range(len(mesh.get_editor_property("static_materials")))]
+    log("hero slots %s: %s" % (mesh.get_name(), [g.get_name() if g else None for g in got]))
 
 def hero_collision(mesh, complex_as_simple=True, keep_convex=True):
     bs = mesh.get_editor_property("body_setup")

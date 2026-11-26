@@ -36,6 +36,27 @@ namespace
 {
 	using namespace AntWreck;
 
+	// KAN-22: the mop bucket's water (the builder's "AntBucketWater" disc) goes with the bucket standing in its place
+	void SetBucketWater(UStaticMeshComponent* Orig, bool bOn)
+	{
+		const UStaticMesh* SM = Orig ? Orig->GetStaticMesh() : nullptr;
+		AActor* Owner = Orig ? Orig->GetOwner() : nullptr;
+		if (!SM || !Owner || SM->GetName() != TEXT("SM_K_Bucket"))
+		{
+			return;
+		}
+		TArray<UStaticMeshComponent*> Comps;
+		Owner->GetComponents(Comps);
+		for (UStaticMeshComponent* C : Comps)
+		{
+			if (C && C->ComponentHasTag(TEXT("AntBucketWater")))
+			{
+				C->SetVisibility(bOn);
+				C->SetCollisionEnabled(bOn ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
+			}
+		}
+	}
+
 	const FClassDef GClasses[] =
 	{
 		//  name        kg/m2 wakeK hp/kg  minHp breaks noise
@@ -569,6 +590,8 @@ void AAntWreckBody::Setup()
 		{
 			if (UAntSwingComponent* Sw = Cast<UAntSwingComponent>(K)) { Sw->AttachToComponent(Mesh, FAttachmentTransformRules::KeepRelativeTransform); Sw->Kick(60.f); }
 		}
+		// the mop bucket's water does not hang in the air once the bucket moves (KAN-22): it is spilled
+		SetBucketWater(Orig, false);
 	}
 	Chunks = NewObject<UProceduralMeshComponent>(this, TEXT("WreckChunks"));
 	Chunks->SetupAttachment(Root);
@@ -611,6 +634,7 @@ void AAntWreckBody::EndPlay(const EEndPlayReason::Type Reason)
 				}
 				Orig->SetVisibility(true);
 				Orig->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+				SetBucketWater(Orig, true);
 			}
 		}
 		if (AAntWreckPiles* P = AAntWreckPiles::Get(GetWorld()))
