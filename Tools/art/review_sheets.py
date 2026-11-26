@@ -44,6 +44,6 @@ tile([os.path.join(REF, "hero_mop_bucket.jpg"), f("new_mop_bucket_wide"),
       "эталон: горит", "в игре: уголь + кромка огня", "эталон: -", "в игре: опрокинуто, катится, вода", "эталон: -", "в игре: расколото"],
      os.path.join(OUT, "etalon_vs_game.jpg"))
 # old | new for every shot
-for s in ("mop_bucket_wide", "mop_bucket_ant", "run", "fridge", "range", "sink", "micro", "toaster", "table", "bin", "radiator",
-          "cab_ant", "wallcab", "wet", "table_wet", "char", "cab_char", "tip1", "tipped", "bucket_broken", "chair_broken", "mop_broken"):
+for s in ("mop_bucket_wide", "mop_bucket_ant", "run", "fridge", "range", "sink", "micro", "toaster", "table", "bin",
+          "cab_ant", "wallcab", "wet", "table_wet", "char", "cab_char", "tip1", "tipped", "bucket_broken", "table_broken", "mop_broken"):
     tile([f("old_" + s), f("new_" + s)], ["было (-AntHeroArt=0)", "стало"], os.path.join(OUT, s + ".jpg"))
