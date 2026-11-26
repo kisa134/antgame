@@ -646,6 +646,11 @@ def produce(spec, out_root, rev_root, nobake=False):
         set_part(sub, p)
         lows.append(sub)
     lod0 = join(lows, name)
+    # triangles out of Blender (an n-gon - a lathe's bottom cap, a foot - is triangulated by the FBX importer its own way,
+    # and the tangents the normal map was baked against must be the ones the game uses)
+    bm = bmesh.new(); bm.from_mesh(lod0.data)
+    bmesh.ops.triangulate(bm, faces=[f for f in bm.faces if len(f.verts) > 3], quad_method="BEAUTY", ngon_method="BEAUTY")
+    bm.to_mesh(lod0.data); bm.free()
     for p_ in lod0.data.polygons: p_.use_smooth = True
     # sway weight (vertex colour R): 0 at the top of the swaying part, 1 at its far ends
     sway = spec.get("sway")
