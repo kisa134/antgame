@@ -801,6 +801,10 @@ void AAntKitchenGameMode::RespawnAnt(AController* C)
 		C->UnPossess();
 		P->Destroy();
 	}
+	if (AntRts::RespawnInSquad(C))
+	{
+		return;   // the snowball raid: he is back as one of his squad ants near where he fell (KAN-32)
+	}
 	RestartPlayer(C);
 }
 
