@@ -1,0 +1,786 @@
+{
+ "pieces": [
+  {
+   "name": "SM_K_Bucket",
+   "file": "SM_K_Bucket.fbx",
+   "set": "hero",
+   "textures": {
+    "C": "SM_K_Bucket/tex/T_SM_K_Bucket_C.png",
+    "N": "SM_K_Bucket/tex/T_SM_K_Bucket_N.png",
+    "R": "SM_K_Bucket/tex/T_SM_K_Bucket_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [
+    {
+     "name": "SM_K_Bucket_Handle",
+     "file": "SM_K_Bucket_Handle.fbx",
+     "pivot_m": [
+      0,
+      0,
+      0.3070510948905109
+     ],
+     "axis": [
+      1,
+      0,
+      0
+     ],
+     "rest_deg": 112.0,
+     "limit_deg": 118.0,
+     "triangles": 4236,
+     "bbox_min_m": [
+      -0.1971,
+      -0.1822,
+      0.0021
+     ],
+     "bbox_max_m": [
+      0.1971,
+      0.1822,
+      0.5344
+     ],
+     "materials": [
+      "Hero_SM_K_Bucket"
+     ]
+    }
+   ],
+   "breaks": [
+    {
+     "name": "SM_K_Bucket_Brk0",
+     "file": "SM_K_Bucket_Brk0.fbx",
+     "triangles": 7302,
+     "bbox_min_m": [
+      -0.0614,
+      -0.0574,
+      0.0021
+     ],
+     "bbox_max_m": [
+      0.1947,
+      0.1822,
+      0.3417
+     ],
+     "materials": [
+      "Hero_SM_K_Bucket",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_Bucket_Brk1",
+     "file": "SM_K_Bucket_Brk1.fbx",
+     "triangles": 8080,
+     "bbox_min_m": [
+      -0.1947,
+      -0.1822,
+      0.0624
+     ],
+     "bbox_max_m": [
+      0.0729,
+      0.1715,
+      0.3417
+     ],
+     "materials": [
+      "Hero_SM_K_Bucket",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_Bucket_Brk2",
+     "file": "SM_K_Bucket_Brk2.fbx",
+     "triangles": 2572,
+     "bbox_min_m": [
+      0.0257,
+      -0.1733,
+      0.0021
+     ],
+     "bbox_max_m": [
+      0.173,
+      0.0465,
+      0.3417
+     ],
+     "materials": [
+      "Hero_SM_K_Bucket",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_Bucket_Brk3",
+     "file": "SM_K_Bucket_Brk3.fbx",
+     "triangles": 2932,
+     "bbox_min_m": [
+      -0.1396,
+      -0.1385,
+      0.0021
+     ],
+     "bbox_max_m": [
+      0.0734,
+      0.1349,
+      0.0931
+     ],
+     "materials": [
+      "Hero_SM_K_Bucket",
+      "Break"
+     ]
+    }
+   ],
+   "note": "20 l bucket (KAN-22, the owner's reference x1.25): hollow, 4 break pieces (plastic), handle on pins",
+   "triangles": 18072,
+   "bbox_min_m": [
+    -0.1947,
+    -0.1822,
+    0.0021
+   ],
+   "bbox_max_m": [
+    0.1947,
+    0.1822,
+    0.3417
+   ],
+   "materials": [
+    "Hero_SM_K_Bucket"
+   ],
+   "lod_triangles": [
+    18072,
+    7228,
+    2168
+   ],
+   "ucx": 9
+  },
+  {
+   "name": "SM_K_Mop",
+   "file": "SM_K_Mop.fbx",
+   "set": "hero",
+   "textures": {
+    "C": "SM_K_Mop/tex/T_SM_K_Mop_C.png",
+    "N": "SM_K_Mop/tex/T_SM_K_Mop_N.png",
+    "R": "SM_K_Mop/tex/T_SM_K_Mop_R.png"
+   },
+   "collision_lod": 1,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_K_Mop_Brk0",
+     "file": "SM_K_Mop_Brk0.fbx",
+     "triangles": 41804,
+     "bbox_min_m": [
+      -0.201,
+      -0.1988,
+      -0.0404
+     ],
+     "bbox_max_m": [
+      0.2376,
+      0.2779,
+      1.467
+     ],
+     "materials": [
+      "Hero_SM_K_Mop",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_Mop_Brk1",
+     "file": "SM_K_Mop_Brk1.fbx",
+     "triangles": 968,
+     "bbox_min_m": [
+      -0.0127,
+      -0.0127,
+      0.275
+     ],
+     "bbox_max_m": [
+      0.0127,
+      0.0127,
+      1.466
+     ],
+     "materials": [
+      "Hero_SM_K_Mop",
+      "Break"
+     ]
+    }
+   ],
+   "note": "1.47 m cotton mop (KAN-22, the owner's reference): yarn laid on the floor of the 12 deg lean, sways (vertex colour R), stick snaps",
+   "level_bbox_min_m": [
+    -0.02,
+    -0.02,
+    0.0
+   ],
+   "level_bbox_max_m": [
+    0.02,
+    0.02,
+    1.467
+   ],
+   "triangles": 41980,
+   "bbox_min_m": [
+    -0.201,
+    -0.1988,
+    -0.0404
+   ],
+   "bbox_max_m": [
+    0.2376,
+    0.2779,
+    1.467
+   ],
+   "materials": [
+    "Hero_SM_K_Mop"
+   ],
+   "lod_triangles": [
+    41980,
+    12594,
+    3357
+   ],
+   "ucx": 3
+  },
+  {
+   "name": "SM_V31_Broom",
+   "file": "SM_V31_Broom.fbx",
+   "set": "hero",
+   "textures": {
+    "C": "SM_V31_Broom/tex/T_SM_V31_Broom_C.png",
+    "N": "SM_V31_Broom/tex/T_SM_V31_Broom_N.png",
+    "R": "SM_V31_Broom/tex/T_SM_V31_Broom_R.png"
+   },
+   "collision_lod": 1,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_V31_Broom_Brk0",
+     "file": "SM_V31_Broom_Brk0.fbx",
+     "triangles": 13848,
+     "bbox_min_m": [
+      -0.1548,
+      -0.6846,
+      0.0016
+     ],
+     "bbox_max_m": [
+      0.1611,
+      0.1536,
+      0.6156
+     ],
+     "materials": [
+      "Hero_SM_V31_Broom",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_V31_Broom_Brk1",
+     "file": "SM_V31_Broom_Brk1.fbx",
+     "triangles": 960,
+     "bbox_min_m": [
+      0.0076,
+      -0.5306,
+      0.1724
+     ],
+     "bbox_max_m": [
+      0.1648,
+      0.7459,
+      0.9967
+     ],
+     "materials": [
+      "Hero_SM_V31_Broom",
+      "Break"
+     ]
+    }
+   ],
+   "note": "long-handled sweeping broom (KAN-22): sisal tufts in a lacquered block, beech handle in a ferrule; handle snaps",
+   "triangles": 14184,
+   "bbox_min_m": [
+    -0.1548,
+    -0.6846,
+    0.0016
+   ],
+   "bbox_max_m": [
+    0.1648,
+    0.7459,
+    0.9967
+   ],
+   "materials": [
+    "Hero_SM_V31_Broom"
+   ],
+   "lod_triangles": [
+    14184,
+    4254,
+    1417
+   ],
+   "ucx": 2
+  },
+  {
+   "name": "SM_V3_Pail",
+   "file": "SM_V3_Pail.fbx",
+   "set": "hero",
+   "textures": {
+    "C": "SM_V3_Pail/tex/T_SM_V3_Pail_C.png",
+    "N": "SM_V3_Pail/tex/T_SM_V3_Pail_N.png",
+    "R": "SM_V3_Pail/tex/T_SM_V3_Pail_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [
+    {
+     "name": "SM_V3_Pail_Handle",
+     "file": "SM_V3_Pail_Handle.fbx",
+     "pivot_m": [
+      0,
+      0,
+      0.23343065693430656
+     ],
+     "axis": [
+      1,
+      0,
+      0
+     ],
+     "rest_deg": 112.0,
+     "limit_deg": 116.0,
+     "triangles": 3996,
+     "bbox_min_m": [
+      -0.1497,
+      -0.2476,
+      0.0016
+     ],
+     "bbox_max_m": [
+      0.1502,
+      0.1385,
+      0.4442
+     ],
+     "materials": [
+      "Hero_SM_V3_Pail"
+     ]
+    }
+   ],
+   "breaks": [
+    {
+     "name": "SM_V3_Pail_Brk0",
+     "file": "SM_V3_Pail_Brk0.fbx",
+     "triangles": 13336,
+     "bbox_min_m": [
+      -0.0394,
+      -0.1837,
+      0.0016
+     ],
+     "bbox_max_m": [
+      0.148,
+      0.1385,
+      0.2708
+     ],
+     "materials": [
+      "Hero_SM_V3_Pail",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_V3_Pail_Brk1",
+     "file": "SM_V3_Pail_Brk1.fbx",
+     "triangles": 23356,
+     "bbox_min_m": [
+      -0.148,
+      -0.1758,
+      0.0427
+     ],
+     "bbox_max_m": [
+      0.0724,
+      0.1327,
+      0.271
+     ],
+     "materials": [
+      "Hero_SM_V3_Pail",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_V3_Pail_Brk2",
+     "file": "SM_V3_Pail_Brk2.fbx",
+     "triangles": 13978,
+     "bbox_min_m": [
+      -0.1048,
+      -0.2476,
+      0.0016
+     ],
+     "bbox_max_m": [
+      0.0871,
+      0.1021,
+      0.0719
+     ],
+     "materials": [
+      "Hero_SM_V3_Pail",
+      "Break"
+     ]
+    }
+   ],
+   "note": "KAN-23 hero rebuild of the v3.2 piece (same frame and box)",
+   "triangles": 46968,
+   "bbox_min_m": [
+    -0.148,
+    -0.2476,
+    0.0016
+   ],
+   "bbox_max_m": [
+    0.148,
+    0.1385,
+    0.271
+   ],
+   "materials": [
+    "Hero_SM_V3_Pail"
+   ],
+   "lod_triangles": [
+    46968,
+    18786,
+    5636
+   ],
+   "ucx": 10
+  },
+  {
+   "name": "SM_V3_WireRack",
+   "file": "SM_V3_WireRack.fbx",
+   "set": "hero",
+   "textures": {
+    "C": "SM_V3_WireRack/tex/T_SM_V3_WireRack_C.png",
+    "N": "SM_V3_WireRack/tex/T_SM_V3_WireRack_N.png",
+    "R": "SM_V3_WireRack/tex/T_SM_V3_WireRack_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [],
+   "note": "KAN-23 hero rebuild of the v3.2 piece (same frame and box)",
+   "triangles": 1420,
+   "bbox_min_m": [
+    -0.1563,
+    -0.1246,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.1563,
+    0.1246,
+    0.2594
+   ],
+   "materials": [
+    "Hero_SM_V3_WireRack"
+   ],
+   "lod_triangles": [
+    1420,
+    568,
+    213
+   ],
+   "ucx": 5
+  },
+  {
+   "name": "SM_V3_RagPile",
+   "file": "SM_V3_RagPile.fbx",
+   "set": "hero",
+   "textures": {
+    "C": "SM_V3_RagPile/tex/T_SM_V3_RagPile_C.png",
+    "N": "SM_V3_RagPile/tex/T_SM_V3_RagPile_N.png",
+    "R": "SM_V3_RagPile/tex/T_SM_V3_RagPile_R.png"
+   },
+   "collision_lod": 1,
+   "movers": [],
+   "breaks": [],
+   "note": "KAN-23 hero rebuild of the v3.2 piece (same frame and box)",
+   "triangles": 25944,
+   "bbox_min_m": [
+    -0.1178,
+    -0.0873,
+    -0.0005
+   ],
+   "bbox_max_m": [
+    0.1172,
+    0.0783,
+    0.0525
+   ],
+   "materials": [
+    "Hero_SM_V3_RagPile"
+   ],
+   "lod_triangles": [
+    25944,
+    9080,
+    3112
+   ],
+   "ucx": 1
+  },
+  {
+   "name": "SM_V3_Sprayer",
+   "file": "SM_V3_Sprayer.fbx",
+   "set": "hero",
+   "textures": {
+    "C": "SM_V3_Sprayer/tex/T_SM_V3_Sprayer_C.png",
+    "N": "SM_V3_Sprayer/tex/T_SM_V3_Sprayer_N.png",
+    "R": "SM_V3_Sprayer/tex/T_SM_V3_Sprayer_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_V3_Sprayer_Brk0",
+     "file": "SM_V3_Sprayer_Brk0.fbx",
+     "triangles": 2988,
+     "bbox_min_m": [
+      -0.0376,
+      -0.031,
+      0.0003
+     ],
+     "bbox_max_m": [
+      0.0376,
+      0.031,
+      0.1789
+     ],
+     "materials": [
+      "Hero_SM_V3_Sprayer",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_V3_Sprayer_Brk1",
+     "file": "SM_V3_Sprayer_Brk1.fbx",
+     "triangles": 3216,
+     "bbox_min_m": [
+      -0.023,
+      -0.0196,
+      0.1559
+     ],
+     "bbox_max_m": [
+      0.0616,
+      0.0196,
+      0.2251
+     ],
+     "materials": [
+      "Hero_SM_V3_Sprayer",
+      "Break"
+     ]
+    }
+   ],
+   "note": "KAN-23 hero rebuild of the v3.2 piece (same frame and box)",
+   "triangles": 6204,
+   "bbox_min_m": [
+    -0.0376,
+    -0.031,
+    0.0003
+   ],
+   "bbox_max_m": [
+    0.0616,
+    0.031,
+    0.2251
+   ],
+   "materials": [
+    "Hero_SM_V3_Sprayer"
+   ],
+   "lod_triangles": [
+    6204,
+    2480,
+    930
+   ],
+   "ucx": 2
+  },
+  {
+   "name": "SM_V3_Plunger",
+   "file": "SM_V3_Plunger.fbx",
+   "set": "hero",
+   "textures": {
+    "C": "SM_V3_Plunger/tex/T_SM_V3_Plunger_C.png",
+    "N": "SM_V3_Plunger/tex/T_SM_V3_Plunger_N.png",
+    "R": "SM_V3_Plunger/tex/T_SM_V3_Plunger_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_V3_Plunger_Brk0",
+     "file": "SM_V3_Plunger_Brk0.fbx",
+     "triangles": 3622,
+     "bbox_min_m": [
+      -0.0804,
+      -0.0804,
+      0.0004
+     ],
+     "bbox_max_m": [
+      0.0804,
+      0.0804,
+      0.4032
+     ],
+     "materials": [
+      "Hero_SM_V3_Plunger",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_V3_Plunger_Brk1",
+     "file": "SM_V3_Plunger_Brk1.fbx",
+     "triangles": 790,
+     "bbox_min_m": [
+      -0.0116,
+      -0.0116,
+      0.2468
+     ],
+     "bbox_max_m": [
+      0.0116,
+      0.0116,
+      0.4021
+     ],
+     "materials": [
+      "Hero_SM_V3_Plunger",
+      "Break"
+     ]
+    }
+   ],
+   "note": "KAN-23 hero rebuild of the v3.2 piece (same frame and box)",
+   "triangles": 4044,
+   "bbox_min_m": [
+    -0.0804,
+    -0.0804,
+    0.0004
+   ],
+   "bbox_max_m": [
+    0.0804,
+    0.0804,
+    0.4032
+   ],
+   "materials": [
+    "Hero_SM_V3_Plunger"
+   ],
+   "lod_triangles": [
+    4044,
+    1616,
+    606
+   ],
+   "ucx": 2
+  },
+  {
+   "name": "SM_V3_SoakBoard",
+   "file": "SM_V3_SoakBoard.fbx",
+   "set": "hero",
+   "textures": {
+    "C": "SM_V3_SoakBoard/tex/T_SM_V3_SoakBoard_C.png",
+    "N": "SM_V3_SoakBoard/tex/T_SM_V3_SoakBoard_N.png",
+    "R": "SM_V3_SoakBoard/tex/T_SM_V3_SoakBoard_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_V3_SoakBoard_Brk0",
+     "file": "SM_V3_SoakBoard_Brk0.fbx",
+     "triangles": 382,
+     "bbox_min_m": [
+      0.0206,
+      -0.3773,
+      0.0016
+     ],
+     "bbox_max_m": [
+      0.142,
+      0.0084,
+      0.271
+     ],
+     "materials": [
+      "Hero_SM_V3_SoakBoard",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_V3_SoakBoard_Brk1",
+     "file": "SM_V3_SoakBoard_Brk1.fbx",
+     "triangles": 522,
+     "bbox_min_m": [
+      -0.142,
+      -0.3773,
+      0.0016
+     ],
+     "bbox_max_m": [
+      0.0358,
+      0.0085,
+      0.2711
+     ],
+     "materials": [
+      "Hero_SM_V3_SoakBoard",
+      "Break"
+     ]
+    }
+   ],
+   "note": "KAN-23 hero rebuild of the v3.2 piece (same frame and box)",
+   "triangles": 524,
+   "bbox_min_m": [
+    -0.142,
+    -0.3773,
+    0.0016
+   ],
+   "bbox_max_m": [
+    0.142,
+    0.0085,
+    0.2711
+   ],
+   "materials": [
+    "Hero_SM_V3_SoakBoard"
+   ],
+   "lod_triangles": [
+    524,
+    208,
+    78
+   ],
+   "ucx": 1
+  },
+  {
+   "name": "SM_V3_DishSoap",
+   "file": "SM_V3_DishSoap.fbx",
+   "set": "hero",
+   "textures": {
+    "C": "SM_V3_DishSoap/tex/T_SM_V3_DishSoap_C.png",
+    "N": "SM_V3_DishSoap/tex/T_SM_V3_DishSoap_N.png",
+    "R": "SM_V3_DishSoap/tex/T_SM_V3_DishSoap_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_V3_DishSoap_Brk0",
+     "file": "SM_V3_DishSoap_Brk0.fbx",
+     "triangles": 2276,
+     "bbox_min_m": [
+      -0.0303,
+      -0.0244,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.0303,
+      0.0236,
+      0.1789
+     ],
+     "materials": [
+      "Hero_SM_V3_DishSoap",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_V3_DishSoap_Brk1",
+     "file": "SM_V3_DishSoap_Brk1.fbx",
+     "triangles": 1008,
+     "bbox_min_m": [
+      -0.0144,
+      -0.0144,
+      0.1516
+     ],
+     "bbox_max_m": [
+      0.0144,
+      0.0144,
+      0.1789
+     ],
+     "materials": [
+      "Hero_SM_V3_DishSoap",
+      "Break"
+     ]
+    }
+   ],
+   "note": "KAN-23 hero rebuild of the v3.2 piece (same frame and box)",
+   "triangles": 3284,
+   "bbox_min_m": [
+    -0.0303,
+    -0.0244,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.0303,
+    0.0236,
+    0.1789
+   ],
+   "materials": [
+    "Hero_SM_V3_DishSoap"
+   ],
+   "lod_triangles": [
+    3284,
+    1312,
+    492
+   ],
+   "ucx": 2
+  }
+ ],
+ "note": "Hero props (Tools/blender/hero_lib.py): LOD0 + UCX in <name>.fbx, _LOD1/_LOD2, movers, _Brk<i> pieces; textures tex/T_<name>_{C,N,R}.png (C.a porosity; R = AO, rough, metal; N OpenGL)"
+}

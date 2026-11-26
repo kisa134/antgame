@@ -23,6 +23,9 @@ def load_base():
     B = {'D2': D2, 'M2': M2, 'NP': NP}
     B['piece_v2'] = {p['name']: p for p in M2['pieces']}
     B['piece_v3'] = {p['name']: p for p in NP['pieces']} if NP else {}
+    # KAN-22: hero props replace pieces in place (same name and frame, their own size): SourceArt/Blender/hero/hero_manifest.json
+    hj = os.path.join(ART, 'hero', 'hero_manifest.json')
+    B['piece_hero'] = {p['name']: p for p in json.load(open(hj, encoding='utf-8'))['pieces']} if os.path.exists(hj) else {}
     # every placed instance of v2, tagged with its object id
     obj_by_mesh = {}
     for o in D2['objects']:
@@ -77,6 +80,8 @@ def align_z(d):
 
 def local_box(B, name):
     """Local box of a mesh in metres (Blender piece frame, relative to the mesh origin)."""
+    if name in B.get('piece_hero', {}):
+        p = B['piece_hero'][name]; return np.array(p.get('level_bbox_min_m', p['bbox_min_m'])), np.array(p.get('level_bbox_max_m', p['bbox_max_m']))
     if name in B['piece_v3']:
         p = B['piece_v3'][name]; return np.array(p['bbox_min_m']), np.array(p['bbox_max_m'])
     if name in L.PIECES:

@@ -1,5 +1,6 @@
 ﻿#include "AntWreck.h"
 #include "AntWreckGeo.h"
+#include "AntSwing.h"
 #include "AntAudio.h"
 #include "AntTypes.h"
 #include "AntRun.h"
@@ -79,6 +80,7 @@ namespace
 		if (Has(N, { TEXT("microwave"), TEXT("toaster"), TEXT("_tv"), TEXT("gameconsole") })) { return Appliance; }
 		if (Has(N, { TEXT("glasses"), TEXT("jar"), TEXT("bottle"), TEXT("vase"), TEXT("spicejar") })) { return Glass; }
 		if (Has(N, { TEXT("plate"), TEXT("mug"), TEXT("k_bowl"), TEXT("plantpot"), TEXT("pottedplant"), TEXT("cup"), TEXT("sugarbowl"), TEXT("snackbowl"), TEXT("shaker"), TEXT("fruitbowl"), TEXT("picture") })) { return China; }
+		if (Has(N, { TEXT("k_bucket") })) { return Plastic; }   // KAN-22: the hero bucket is moulded plastic (cracks and splits, AntWreckGeo pre-cut pieces)
 		if (Has(N, { TEXT("_pot"), TEXT("ladle"), TEXT("whisk"), TEXT("fork"), TEXT("knife"), TEXT("tincan"), TEXT("kettle"), TEXT("bucket"), TEXT("k_bin"), TEXT("cookietin"), TEXT("petbowl"),
 			TEXT("utensilrail"), TEXT("sodacan"), TEXT("coin"), TEXT("dogbowl"), TEXT("wateringcan"), TEXT("colacap"), TEXT("wirerack") })) { return Metal; }
 		if (Has(N, { TEXT("sofa"), TEXT("armchair"), TEXT("pillow"), TEXT("cushion"), TEXT("towel"), TEXT("sock"), TEXT("slipper"), TEXT("dogbed"), TEXT("throw"), TEXT("backpack"),
@@ -551,10 +553,23 @@ void AAntWreckBody::Setup()
 	Mesh->SetRelativeTransform(MeshRel);
 	for (int32 i = 0; i < Orig->GetNumMaterials(); ++i) { Mesh->SetMaterial(i, Orig->GetMaterial(i)); }
 	Mesh->ComponentTags = Orig->ComponentTags;
+	{
+		// its visible state goes with it (wet, charred, dirty, damaged: AntState.h)
+		const TArray<float>& Cpd = Orig->GetCustomPrimitiveData().Data;
+		for (int32 i = 0; i < Cpd.Num(); ++i) { Mesh->SetCustomPrimitiveDataFloat(i, Cpd[i]); }
+	}
 	KitchenArt::SetSolid(Mesh, KitchenArt::ESolid::Moving);
 	Mesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);   // ants, the Human and the camera; the boxes are its physics
 	Mesh->SetCanEverAffectNavigation(false);
 	Mesh->RegisterComponent();
+	{
+		// parts on pins (the bucket's handle) ride the body now
+		const TArray<TObjectPtr<USceneComponent>> Kids = Orig->GetAttachChildren();
+		for (USceneComponent* K : Kids)
+		{
+			if (UAntSwingComponent* Sw = Cast<UAntSwingComponent>(K)) { Sw->AttachToComponent(Mesh, FAttachmentTransformRules::KeepRelativeTransform); Sw->Kick(60.f); }
+		}
+	}
 	Chunks = NewObject<UProceduralMeshComponent>(this, TEXT("WreckChunks"));
 	Chunks->SetupAttachment(Root);
 	Chunks->SetRelativeTransform(MeshRel);
@@ -586,6 +601,14 @@ void AAntWreckBody::EndPlay(const EEndPlayReason::Type Reason)
 		{
 			if (UStaticMeshComponent* Orig = B->ArtComponent(Inst))
 			{
+				if (Mesh)
+				{
+					const TArray<TObjectPtr<USceneComponent>> Kids = Mesh->GetAttachChildren();
+					for (USceneComponent* K : Kids)
+					{
+						if (UAntSwingComponent* Sw = Cast<UAntSwingComponent>(K)) { Sw->AttachToComponent(Orig, FAttachmentTransformRules::KeepRelativeTransform); }
+					}
+				}
 				Orig->SetVisibility(true);
 				Orig->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 			}
@@ -1046,9 +1069,13 @@ void AAntWreckBody::RebuildLook()
 			}
 			Chunks->SetProcMeshSection(S, Sec);
 			const int32 Slot = Cut[c]->Slot[k];
-			Chunks->SetMaterial(S, Slot >= 0 && Slot < Mesh->GetNumMaterials() ? Mesh->GetMaterial(Slot) : Inside);
+			Chunks->SetMaterial(S, Slot >= 0 && Slot < Mesh->GetNumMaterials() ? Mesh->GetMaterial(Slot) : Cut[c]->BreakMat ? Cut[c]->BreakMat : Inside);
 			++S;
 		}
+	}
+	{
+		const TArray<float>& Cpd = Mesh->GetCustomPrimitiveData().Data;   // the chunks keep its state (wet, charred: AntState.h)
+		for (int32 i = 0; i < Cpd.Num() && i < 4; ++i) { Chunks->SetCustomPrimitiveDataFloat(i, Cpd[i]); }
 	}
 	Mesh->SetVisibility(false);
 	Chunks->SetVisibility(true);
@@ -1203,7 +1230,7 @@ void AAntWreckBody::OnRep_Drops()
 		{
 			F->SetProcMeshSection(k, G->Sections[k]);
 			const int32 Slot = G->Slot[k];
-			F->SetMaterial(k, Slot >= 0 && Slot < Mesh->GetNumMaterials() ? Mesh->GetMaterial(Slot) : Mesh->GetMaterial(0));
+			F->SetMaterial(k, Slot >= 0 && Slot < Mesh->GetNumMaterials() ? Mesh->GetMaterial(Slot) : G->BreakMat ? G->BreakMat : Mesh->GetMaterial(0));
 		}
 		F->SetWorldTransform(D.From);
 		DropFx[i] = F;
@@ -1342,6 +1369,16 @@ void AAntWreckBody::Tick(float Dt)
 		return;
 	}
 	TickDrops(Dt);
+	if (Mesh && Dt > 0.f && Mesh->ComponentHasTag(TEXT("HeroArt")))
+	{
+		// hero props: what hangs loose (the mop's yarn, the broom's bristles: vertex colour R) sways while it moves (M_Hero, custom data 4)
+		const FVector L = Mesh->GetComponentLocation();
+		const float Speed = bSwayLast ? (float)FVector::Dist(L, SwayLast) / Dt : 0.f;
+		SwayLast = L; bSwayLast = true;
+		const float Target = FMath::Clamp(Speed / 1500.f, 0.f, 1.f);
+		Sway = Target > Sway ? FMath::FInterpTo(Sway, Target, Dt, 12.f) : FMath::FInterpTo(Sway, 0.f, Dt, 0.8f);
+		Mesh->SetCustomPrimitiveDataFloat(4, Sway < 0.01f ? 0.f : Sway);
+	}
 	if (HasAuthority())
 	{
 		ServerPhysicsTick(Dt);

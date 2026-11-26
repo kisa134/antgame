@@ -231,6 +231,10 @@ MOVE = {
     'new5':   ((19250, -620), 90, None, 'вторая гостевая тапка'),
     'new6':   ((8600, -700), 0, None, 'тапки малыша — парой у обувницы (на их месте теперь ящик для игрушек)'),
     'new7':   ((9250, -700), 0, None, 'вторая тапка малыша'),
+    # KAN-22: the hero mop (real 1.47 m, SourceArt/Blender/hero) stands beside the bucket, its yarn on the floor, the stick's top on the
+    # north wall (origin 6600, 4390, 0; the 12° lean of the table kept); the hero bucket keeps its place (its new box: 20 l, 342 mm)
+    'art85':  ((6600, 4679.8), None, -7.9, 'швабра (KAN-22, настоящая 1,47 м) — рядом с ведром, тряпка на полу, черенок опирается на северную стену'),
+    'art84':  ((6200, 3900), None, None, 'ведро (KAN-22): то же место, новый размер (20 л, 342 мм)'),
 }
 # per-instance scale of v2 props that were 1.7-2.6 times real size (visual; the pushable physics props of the code are separate actors)
 SCALE = {

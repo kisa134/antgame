@@ -1401,7 +1401,7 @@ void AKitchenBuilder::BuildArt()
 	// The pavement slabs have open joints: a bed under them, so nobody drops through a joint into the void.
 	Box(FVector(-11000.f, -5200.f, -260.f), FVector(-9400.f, 5800.f, -200.f), Hex(110, 108, 102));
 	// The mop bucket is hollow now: the water in it is ours (wet zone in EnvironmentFor, a loot spot floats on it).
-	Cyl(FVector(6200.f, 3900.f, 600.f), 400.f, 40.f, Hex(150, 200, 255));
+	Cyl(FVector(6200.f, 3900.f, 600.f), 305.f, 40.f, Hex(150, 200, 255));   // (KAN-22: the hero bucket is 310 inside at this height)
 	if (Map4Look::Enabled())
 	{
 		// map v4 set dressing: things of the family that tell the evening (each stands on whatever is under it; ants climb them)
@@ -1967,7 +1967,7 @@ void AKitchenBuilder::EnvironmentFor(const AAntCharacter* Ant, FAntEnv& Env)
 		Env.Flags |= AntStatus::Wet;
 		Env.Temp(16.f, 6.f);
 	}
-	if (FVector::Dist2D(P, FVector(6200.f, 3900.f, 0.f)) < 400.f && P.Z > 600.f && P.Z < 720.f)
+	if (FVector::Dist2D(P, FVector(6200.f, 3900.f, 0.f)) < 305.f && P.Z > 600.f && P.Z < 720.f)
 	{
 		Env.Flags |= AntStatus::Wet;
 		Env.Temp(15.f, 6.f);

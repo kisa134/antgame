@@ -1,7 +1,7 @@
 {
  "meta": {
   "title": "Ant Kitchen — level v3 (design data, not in the game yet)",
-  "generated": "2026-11-25 23:39",
+  "generated": "2026-11-26 14:26",
   "units": "Unreal units (uu); 1 m = 1900 uu; X west(-) -> east(+), Y south(-) -> north(+), floor Z = 0",
   "tool": "Tools/level/build_level_v3.py from level_v2.json + Tools/level/level_v3_layout.py",
   "version": "v3.0 (2026-11-21)",
@@ -5075,22 +5075,22 @@
     0.0
    ],
    "bb": [
-    5759.0,
-    3466.0,
-    6641.0,
-    4334.0
+    5830.1,
+    3553.8,
+    6569.9,
+    4246.2
    ],
    "z": [
-    0.0,
-    650.0
+    4.0,
+    649.2
    ],
    "c": [
     6200.0,
     3900.0
    ],
    "s": [
-    882.0,
-    867.9
+    739.7999999999993,
+    692.3999999999996
    ],
    "yaw": 180.0,
    "area": "kitchen",
@@ -5098,7 +5098,8 @@
    "tops": [
     650.0
    ],
-   "art_note": "hollow, 20 uu wall; the water surface is left to the engine"
+   "art_note": "hollow, 20 uu wall; the water surface is left to the engine",
+   "v3": "moved"
   },
   {
    "id": "art85",
@@ -5111,32 +5112,33 @@
    "climbable": true,
    "src": "KitchenArtData.inl:92",
    "origin": [
-    6450.0,
-    3953.0,
-    25.0
+    6600.0,
+    4390.1,
+    0.0
    ],
    "bb": [
-    6180.8,
-    3908.8,
-    6719.2,
-    4892.0
+    6562.0,
+    4352.9,
+    6638.0,
+    5006.7
    ],
    "z": [
-    19.0,
-    4240.7
+    -7.9,
+    2734.3
    ],
    "c": [
-    6450.0,
-    4400.4
+    6600.0,
+    4679.799999999999
    ],
    "s": [
-    538.5,
-    983.2
+    76.0,
+    653.8000000000002
    ],
    "yaw": 0.0,
    "tilted": true,
    "area": "kitchen",
-   "art_note": "modelled upright (head at the bottom); the instance leans 12 deg towards the north wall with its head in the bucket"
+   "art_note": "modelled upright (head at the bottom); the instance leans 12 deg towards the north wall with its head in the bucket",
+   "v3": "moved"
   },
   {
    "id": "art86",
@@ -45930,7 +45932,7 @@
   "loot_clamped": 37,
   "objects": 634,
   "v3_new": 123,
-  "v3_moved": 6,
+  "v3_moved": 8,
   "v3_scaled": 20,
   "variants": 45,
   "hides": 54
@@ -51569,6 +51571,24 @@
      "yaw": 0,
      "z0": null,
      "why": "вторая тапка малыша"
+    },
+    "art85": {
+     "to": [
+      6600,
+      4679.8
+     ],
+     "yaw": null,
+     "z0": -7.9,
+     "why": "швабра (KAN-22, настоящая 1,47 м) — рядом с ведром, тряпка на полу, черенок опирается на северную стену"
+    },
+    "art84": {
+     "to": [
+      6200,
+      3900
+     ],
+     "yaw": null,
+     "z0": null,
+     "why": "ведро (KAN-22): то же место, новый размер (20 л, 342 мм)"
     }
    },
    "scaled": {

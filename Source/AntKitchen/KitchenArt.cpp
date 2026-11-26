@@ -16,6 +16,8 @@
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
+#include "AntSwing.h"
+
 #include "KitchenArtData.inl"
 #include "LevelV3.h"
 #include "Map4Look.h"
@@ -263,7 +265,8 @@ UStaticMesh* Mesh(const TCHAR* Name)
 	{
 		// map v4: a generated replacement fitted to the same frame and footprint (SM_M4R_<name>), or a map v4 prop by name
 		// Owner's rule (26.11): the generated mop and broom read as foreign next to our own set. They keep their own Blender models.
-		const bool bKeepOwn = N == TEXT("SM_K_Mop") || N == TEXT("SM_V31_Broom");
+		// KAN-22: the hero mop, bucket and broom (SourceArt/Blender/hero, approved by the owner 26.11) replace their own meshes in place.
+		const bool bKeepOwn = N == TEXT("SM_K_Mop") || N == TEXT("SM_V31_Broom") || N == TEXT("SM_K_Bucket");
 		if (!bKeepOwn) { M = Map4Look::Prop(*(TEXT("SM_M4R_") + N.Mid(3))); }
 		if (!M && N.StartsWith(TEXT("SM_M4_"))) { M = Map4Look::Prop(*N); }
 	}
@@ -339,6 +342,13 @@ void ApplyLook(UStaticMeshComponent* C, const TCHAR* Name, int32 Index)
 	for (int32 i = 0; i < Slots.Num(); ++i)
 	{
 		const FString Slot = Slots[i].MaterialSlotName.ToString();
+		if (Slot.StartsWith(TEXT("Hero_")) && Slots[i].MaterialInterface)
+		{
+			// Hero props (KAN-22): their own baked texture set and the state layer (M_Hero, Tools/art/make_hero_material.py)
+			C->SetMaterial(i, Slots[i].MaterialInterface);
+			if (i == 0) { C->ComponentTags.AddUnique(TEXT("HeroArt")); }
+			continue;
+		}
 		if (Map4Look::Enabled())
 		{
 			// Map v4: real texture sets (M_M4). The driven lamp shades get their own instance (the light switch sets "Color").
@@ -426,6 +436,7 @@ UStaticMeshComponent* Add(AActor* Owner, USceneComponent* Parent, const TCHAR* N
 	ApplyLook(C, Name, Index);
 	C->RegisterComponent();
 	Owner->AddInstanceComponent(C);
+	UAntSwingComponent::AddTo(C, Name);   // a part on pins (the bucket's handle), if the piece has one
 	return C;
 }
 

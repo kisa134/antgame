@@ -231,6 +231,10 @@ private:
 	uint16 LookLost = 0xffff;
 	int32 LookDents = -1;
 	bool bWasRiding = false;
+	/** hero props: how much the loose parts sway (custom primitive data 4), from how fast it moves */
+	float Sway = 0.f;
+	FVector SwayLast = FVector::ZeroVector;
+	bool bSwayLast = false;
 };
 
 /** Per-world bits: the merged debris piles (local on every machine) and the awake count. */
