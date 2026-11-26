@@ -436,7 +436,140 @@ def cereal():
     save(im, "cereal_side")
     save(Image.new("RGB", (600, 400), (236, 150, 30)), "cereal_top")
 
+# ------------------------------------------------------------------------------------------------ batch 9: packets, jars, bottles, tubs, boxes
+def brand(name, W, H, bg, title, sub, ink, accent, tfont="georgiab.ttf", tsize=None, extra=None, seed=1, bands=True, small=""):
+    """one printed face: a band top and bottom, the title, a line under it, a small print corner, a drawing (extra)"""
+    im = paper(W, H, bg, 6, seed); d = ImageDraw.Draw(im)
+    if bands:
+        d.rectangle([0, 0, W, int(H * 0.1)], fill=accent); d.rectangle([0, int(H * 0.9), W, H], fill=accent)
+    if extra: extra(d, W, H)
+    ctext(d, W * 0.5, H * 0.16, title, F(tfont, tsize or int(H * 0.2)), ink)
+    ctext(d, W * 0.5, H * 0.45, sub, F("georgiai.ttf", int(min(H * 0.07, W * 0.045))), ink)
+    if small: d.text((W * 0.05, H * 0.8), small, font=F("arialbd.ttf", int(H * 0.045)), fill=ink)
+    save(im, name)
+
+def _ears(d, W, H):   # wheat ears
+    for cx in (W * 0.3, W * 0.5, W * 0.7):
+        d.line([(cx, H * 0.86), (cx, H * 0.58)], fill=(200, 150, 60), width=6)
+        for k in range(6):
+            y = H * 0.6 + k * 28
+            d.ellipse([cx - 30, y, cx - 4, y + 22], fill=(220, 170, 70)); d.ellipse([cx + 4, y, cx + 30, y + 22], fill=(220, 170, 70))
+
+def _paws(d, W, H):
+    R = random.Random(3)
+    for _ in range(9):
+        x, y = R.uniform(W * 0.1, W * 0.9), R.uniform(H * 0.55, H * 0.85)
+        d.ellipse([x - 26, y - 20, x + 26, y + 22], fill=(250, 220, 200))
+        for dx, dy in ((-30, -34), (-10, -46), (12, -46), (32, -34)): d.ellipse([x + dx - 9, y + dy - 11, x + dx + 9, y + dy + 11], fill=(250, 220, 200))
+    d.rounded_rectangle([W * 0.3, H * 0.6, W * 0.7, H * 0.68], 30, fill=(250, 240, 220))
+
+def _flakes(d, W, H):
+    R = random.Random(5)
+    for _ in range(60):
+        x, y, r = R.uniform(0, W), R.uniform(H * 0.1, H * 0.9), R.uniform(8, 22)
+        for a in range(3): d.line([(x - r * math.cos(a * 1.047), y - r * math.sin(a * 1.047)), (x + r * math.cos(a * 1.047), y + r * math.sin(a * 1.047))], fill=(235, 240, 250), width=3)
+
+def _berries(d, W, H):
+    for cx in (W * 0.15, W * 0.85, W * 0.35, W * 0.65):
+        d.ellipse([cx - 50, H * 0.62, cx + 50, H * 0.84], fill=(220, 40, 70)); d.polygon([(cx - 30, H * 0.62), (cx, H * 0.56), (cx + 30, H * 0.62)], fill=(60, 140, 60))
+
+def _cuke(d, W, H):
+    for cx in (W * 0.12, W * 0.88):
+        d.rounded_rectangle([cx - 40, H * 0.25, cx + 40, H * 0.85], 40, fill=(70, 120, 40))
+        for k in range(8): d.ellipse([cx - 20 + (k % 2) * 20, H * 0.3 + k * 25, cx - 12 + (k % 2) * 20, H * 0.3 + k * 25 + 8], fill=(150, 190, 90))
+
+def labels9():
+    brand("flour", 1000, 1300, (236, 228, 210), "МУКА", "пшеничная · высший сорт", (40, 70, 150), (40, 70, 150), extra=_ears, small="2 кг", seed=21)
+    brand("dogfood", 1000, 1400, (190, 36, 28), "КОРМ", "для больших друзей · говядина", (255, 246, 230), (90, 16, 12), "impact.ttf", extra=_paws, small="10 кг", seed=22)
+    brand("pickle", 1600, 520, (244, 236, 205), "Огурчики", "хрустящие · с укропом", (40, 80, 30), (70, 120, 40), "Gabriola.ttf", int(520 * 0.42), extra=_cuke, seed=23)
+    brand("cola", 2000, 520, (180, 20, 26), "БУЛЬК", "напиток газированный · 2 л", (255, 250, 240), (250, 214, 60), "impact.ttf", seed=24)
+    brand("icecream", 2400, 800, (250, 200, 210), "ПЛОМБИР", "клубничный · 1 кг", (150, 30, 60), (150, 30, 60), "impact.ttf", extra=_berries, seed=25)
+    brand("butter", 2000, 600, (250, 226, 120), "Масло", "сливочное · 82,5%", (40, 90, 40), (40, 90, 40), "Gabriola.ttf", 260, seed=26)
+    brand("butter_top", 800, 800, (250, 226, 120), "Масло", "крестьянское", (40, 90, 40), (40, 90, 40), "Gabriola.ttf", 220, seed=27)
+    brand("cookietin", 2400, 600, (30, 60, 140), "ПЕЧЕНЬЕ", "сливочное · к чаю", (240, 244, 250), (200, 170, 60), "georgiab.ttf", extra=_flakes, seed=28)
+    brand("cookietin_top", 1000, 1000, (30, 60, 140), "ПЕЧЕНЬЕ", "к чаю", (240, 244, 250), (200, 170, 60), "georgiab.ttf", 150, extra=_flakes, seed=29, bands=False)
+    brand("teatag", 400, 300, (250, 248, 240), "ЧАЙ", "чёрный байховый", (120, 30, 20), (120, 30, 20), "georgiab.ttf", 90, seed=30)
+    brand("grocery", 1200, 1200, (180, 140, 95), "ПРОДУКТЫ", "у дома · с 8 до 23", (30, 100, 50), (180, 140, 95), "impact.ttf", 200, seed=31, bands=False)
+    brand("boxstamp", 1200, 1200, (176, 130, 84), "ХРУПКОЕ", "этой стороной вверх  ↑ ↑", (30, 26, 24), (176, 130, 84), "impact.ttf", 220, seed=32, bands=False, small="№ 4471 · 18 кг")
+
+# ------------------------------------------------------------------------------------------------ batch 10: paper - calendar, note, newspaper, magazines, the kid's drawing
+def _lines(d, x0, y0, x1, y1, step, seed, col=(70, 70, 75), width=4):
+    R = random.Random(seed); y = y0
+    while y < y1:
+        x = x0
+        while x < x1:
+            w = R.uniform(20, 90)
+            if x + w > x1: break
+            d.line([(x, y), (x + w, y)], fill=col, width=width); x += w + R.uniform(8, 16)
+        y += step
+
+def labels10():
+    W, H = 1000, 1500   # calendar page: a picture, the month grid
+    im = paper(W, H, (248, 246, 240), 4, 41); d = ImageDraw.Draw(im)
+    d.rectangle([60, 60, W - 60, 700], fill=(120, 170, 210)); d.polygon([(60, 700), (360, 380), (560, 560), (760, 300), (940, 700)], fill=(70, 110, 70))
+    d.polygon([(700, 380), (760, 300), (820, 380)], fill=(250, 250, 250)); d.ellipse([780, 120, 880, 220], fill=(250, 230, 140))
+    ctext(d, W / 2, 740, "НОЯБРЬ 2026", F("georgiab.ttf", 80), (150, 30, 30))
+    days = "ПН ВТ СР ЧТ ПТ СБ ВС".split()
+    for i, s in enumerate(days): ctext(d, 130 + i * 125, 860, s, F("arialbd.ttf", 36), (150, 30, 30) if i > 4 else (40, 40, 50))
+    n = 1
+    for r in range(5):
+        for c in range(7):
+            if (r == 0 and c < 6) or n > 30: continue
+            ctext(d, 130 + c * 125, 930 + r * 100, str(n), F("arial.ttf", 48), (150, 30, 30) if c > 4 else (40, 40, 50))
+            if n == 27: d.ellipse([130 + c * 125 - 45, 925 + r * 100, 130 + c * 125 + 45, 995 + r * 100], outline=(200, 30, 30), width=5)
+            n += 1
+    save(im, "calendar")
+    im = paper(800, 1040, (252, 236, 120), 5, 42); d = ImageDraw.Draw(im)   # the note on the fridge
+    for k, s in enumerate(("Купить:", "— молоко", "— хлеб", "— яйца (10)", "— корм Бадрику!", "", "  мама")):
+        d.text((70, 90 + k * 120), s, font=F("segoepr.ttf", 70), fill=(30, 40, 120))
+    save(im, "fridgenote")
+    im = paper(1400, 1800, (232, 228, 214), 6, 43); d = ImageDraw.Draw(im)   # a newspaper spread
+    ctext(d, 700, 40, "ВЕСТИ КВАРТИРЫ", F("georgiab.ttf", 120), (25, 25, 28)); d.line([(60, 200), (1340, 200)], fill=(25, 25, 28), width=6)
+    ctext(d, 700, 230, "Муравьи захватили кухню?", F("georgiab.ttf", 72), (25, 25, 28))
+    d.rectangle([80, 360, 640, 820], fill=(150, 148, 140)); d.ellipse([260, 480, 460, 700], fill=(90, 88, 84))
+    for x0 in (80, 720, 1040): _lines(d, x0, 860 if x0 == 80 else 360, x0 + (560 if x0 == 80 else 260), 1740, 34, x0, (60, 60, 64), 6)
+    _lines(d, 720, 360, 1320, 340, 34, 7)
+    save(im, "newspaper")
+    for k, (bg, t, s) in enumerate((((200, 40, 60), "ДОМ", "уют за выходные"), ((30, 140, 140), "САД", "томаты на балконе"), ((240, 190, 40), "ЗВЁЗДЫ", "все сплетни недели"))):
+        im = paper(900, 1200, bg, 6, 44 + k); d = ImageDraw.Draw(im)
+        ctext(d, 450, 40, t, F("impact.ttf", 220), (255, 255, 255))
+        d.ellipse([200, 380, 700, 980], fill=tuple(min(255, c + 50) for c in bg)); d.ellipse([330, 450, 570, 690], fill=(240, 210, 180))
+        ctext(d, 450, 1040, s, F("georgiai.ttf", 60), (255, 255, 255)); d.text((40, 300), "№ %d" % (11 + k), font=F("arialbd.ttf", 48), fill=(255, 255, 255))
+        save(im, "magazine%d" % k)
+    im = paper(800, 1140, (250, 250, 247), 3, 47); d = ImageDraw.Draw(im)   # the kid's crayon drawing of the dog
+    R = random.Random(48)
+    def crayon(pts, col, w=14):
+        for a, b in zip(pts, pts[1:]):
+            for j in range(3): d.line([(a[0] + R.uniform(-3, 3), a[1] + R.uniform(-3, 3)), (b[0] + R.uniform(-3, 3), b[1] + R.uniform(-3, 3))], fill=col, width=w - 4 * j)
+    crayon([(0, 1000), (800, 980)], (60, 150, 50), 30)
+    crayon([(250, 900), (220, 700), (300, 560), (520, 560), (600, 700), (570, 900), (250, 900)], (150, 100, 60))
+    crayon([(300, 560), (250, 420), (330, 480)], (150, 100, 60)); crayon([(520, 560), (560, 420), (480, 480)], (150, 100, 60))
+    for x in (350, 470): d.ellipse([x - 14, 640, x + 14, 668], fill=(20, 20, 20))
+    crayon([(380, 740), (410, 760), (440, 740)], (200, 40, 40))
+    crayon([(650, 200), (700, 160), (750, 200), (700, 250), (650, 200)], (240, 190, 30)); crayon([(700, 100), (700, 300)], (240, 190, 30), 8); crayon([(600, 200), (800, 200)], (240, 190, 30), 8)
+    for i, ch in enumerate("БАДРИК"): d.text((90 + i * 105, 60 + R.uniform(-15, 15)), ch, font=F("segoepr.ttf", 110), fill=[(220, 40, 40), (40, 90, 200), (40, 150, 60)][i % 3])
+    save(im, "kiddrawing")
+
+# ------------------------------------------------------------------------------------------------ batch 11: the gift wrap, the coin's relief
+def labels11():
+    W = 1200
+    im = Image.new("RGB", (W, W), (30, 70, 160)); d = ImageDraw.Draw(im); R = random.Random(51)
+    for i in range(10):
+        for j in range(10):
+            cx, cy = i * 120 + (60 if j % 2 else 0) + 30, j * 120 + 60
+            pts = [(cx + (34 if k % 2 == 0 else 14) * math.cos(math.pi / 2 + k * math.pi / 5), cy - (34 if k % 2 == 0 else 14) * math.sin(math.pi / 2 + k * math.pi / 5)) for k in range(10)]
+            d.polygon(pts, fill=(250, 210, 70) if (i + j) % 3 else (250, 250, 250))
+    save(im, "gift")
+    S = 1000
+    im = Image.new("L", (S, S), 0); d = ImageDraw.Draw(im)   # height: rim, a ring of dots, a big "5", a sprig, the year
+    d.ellipse([10, 10, S - 10, S - 10], fill=150); d.ellipse([60, 60, S - 60, S - 60], fill=60)
+    for k in range(60):
+        a = 2 * math.pi * k / 60; x, y = S / 2 + 400 * math.cos(a), S / 2 + 400 * math.sin(a); d.ellipse([x - 9, y - 9, x + 9, y + 9], fill=200)
+    ctext(d, S / 2, 170, "5", F("georgiab.ttf", 520), 230)
+    ctext(d, S / 2, 700, "РУБЛЕЙ", F("georgiab.ttf", 90), 210); ctext(d, S / 2, 810, "2026", F("georgia.ttf", 60), 190)
+    im = im.filter(ImageFilter.GaussianBlur(3)); save(im.convert("RGB"), "coin_height")
+
 if __name__ == "__main__":
     spice(); jam(); pasta(); mug(); peas(); lemonade(); trap(); detergent()
     for k in BOOKS: book(k)
-    phone(); remote(); matches(); kidbooks(); remote2(); sugar(); salt(); soda(); milk(); cereal()
+    phone(); remote(); matches(); kidbooks(); remote2(); sugar(); salt(); soda(); milk(); cereal(); labels9(); labels10(); labels11()
