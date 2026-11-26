@@ -252,6 +252,10 @@ if "hero_props" in only:
     # the small props of the flat (hero_props.py): SourceArt/Blender/hero_props -> /Game/Hero/<Name>, the old model stays
     import_hero([n for n in os.environ.get("ANT_HERO_NAMES", "").replace("+", ",").split(",") if n and n != "all"] or None,
                 os.path.join(PROJ, "SourceArt", "Blender", "hero_props"), "hero_props_manifest.json", hero_dir_new)
+if "hero_living" in only:
+    # the living room and the furniture of the flat (hero_living.py): SourceArt/Blender/hero_living -> /Game/Hero/<Name>
+    import_hero([n for n in os.environ.get("ANT_HERO_NAMES", "").replace("+", ",").split(",") if n and n != "all"] or None,
+                os.path.join(PROJ, "SourceArt", "Blender", "hero_living"), "hero_living_manifest.json", hero_dir_new)
 for set_name, src, dst, manifest_name in SETS:
     if only and set_name not in only:
         continue

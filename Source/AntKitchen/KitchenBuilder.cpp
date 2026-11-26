@@ -2281,7 +2281,9 @@ void AKitchenBuilder::ApplyLights()
 	}
 	for (UStaticMeshComponent* S : LampShades)
 	{
-		if (UMaterialInstanceDynamic* M = S ? Cast<UMaterialInstanceDynamic>(S->GetMaterial(0)) : nullptr)
+		// (hero lamps, /Game/Hero: slot 0 is the baked Hero_ set, the shade is its own "LampShade" slot)
+		const int32 ShadeSlot = S ? FMath::Max(0, S->GetMaterialIndex(TEXT("LampShade"))) : 0;
+		if (UMaterialInstanceDynamic* M = S ? Cast<UMaterialInstanceDynamic>(S->GetMaterial(ShadeSlot)) : nullptr)
 		{
 			M->SetVectorParameterValue(TEXT("Color"), FMath::Lerp(FLinearColor(0.2f, 0.2f, 0.2f), FLinearColor(3.f, 2.8f, 2.4f), FMath::Clamp(Lamps * 1.4f, 0.f, 1.f)));
 		}
