@@ -47,5 +47,4 @@ generated output of the project's paid ElevenLabs account.
 
 ## 4. Downloaded material
 
-None. (Allowed sources if ever needed: CC0 only — FreePD.com, public-domain recordings on Wikimedia Commons / Musopen, Kenney
-and the Sonniss GDC bundles after reading their licence text. Record URL + licence here.)
+None. Only our own sources (see CLAUDE.md: Blender, Meshy, Higgsfield; no free or third-party assets).

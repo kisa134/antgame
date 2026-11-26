@@ -1,10 +1,10 @@
-# Карта проекта Ant Kitchen: сводка (2026-11-26, 6d25ad4)
+# Карта проекта Ant Kitchen: сводка (2026-11-26, f88b0b2)
 
 Интерактивная карта: https://claude.ai/artifact/8rs9aDgofMHhTbwH2vu8Y5 (артефакт claude.ai, slug `3fa651ed-b3ea-48d3-8daf-7abc4d247e16`). Правки со страницы лежат в базе артефакта, коллекция `edits`.
 
 Файл создаётся автоматически: `python Tools/projectmap/build_map.py`. Не правь руками. Ручные данные: `project/map/*.yaml`.
 
-Узлов: 1278, связей: 686. По типам: asset-part 430, asset 281, file 263, system 175, build 47, doc 43, area 13, decision 11, bug 9, character 6
+Узлов: 1257, связей: 686. По типам: asset-part 430, asset 281, file 262, system 175, doc 43, build 27, area 13, decision 11, bug 9, character 6
 
 ## Области и системы
 

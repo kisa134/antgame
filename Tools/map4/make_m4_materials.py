@@ -1,4 +1,5 @@
-# Map v4: imports the packed texture sets (SourceArt/Map4/packed) and builds the materials of the new look.
+# Map v4: imports our own texture sets (SourceArt/Blender/textures_own, made in Blender by Tools/blender/make_own_textures.py,
+# KAN-24) and builds the materials of the new look.
 #   /Game/Map4/Textures/T_M4_<Set>_{C,N,R}   C sRGB colour, N DirectX normal, R = AO / roughness / metal
 #   /Game/Map4/Materials/M_M4      triplanar PBR in world space: colour, normal (+ ant-scale detail normal), AO/rough/metal,
 #                                  macro variation against tiling, dust on tops, grime at the foot of walls, glow
@@ -13,7 +14,7 @@ EAL = unreal.EditorAssetLibrary
 MEL = unreal.MaterialEditingLibrary
 AT = unreal.AssetToolsHelpers.get_asset_tools()
 PROJ = unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_dir())
-PACKED = os.path.join(PROJ, "SourceArt", "Map4", "packed")
+PACKED = os.path.join(PROJ, "SourceArt", "Blender", "textures_own")
 DECALS = os.path.join(PROJ, "SourceArt", "Map4", "higgsfield", "decal")
 TEX = "/Game/Map4/Textures"
 MAT = "/Game/Map4/Materials"
