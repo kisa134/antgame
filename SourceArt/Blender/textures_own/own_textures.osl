@@ -1,0 +1,684 @@
+// Ant Kitchen, KAN-24: our own surface sets for the map v4 look (T_M4_<Set>_{C,N,R}), nothing from outside.
+// One procedural shader for every set (Mat = index, see SETS in Tools/blender/make_own_textures.py), seamless over the
+// unit UV square: every noise is periodic (psnoise with whole periods, Worley cells wrapped), every pattern repeats a whole
+// number of times per tile. Outputs, baked as emission by the script:
+//   Col  linear base colour
+//   Dat  r = height (any range: the script normalises it and derives the normal + cavity AO from it with wrap-around),
+//        g = roughness, b = metalness
+// Scale: one tile = TileSize uu of Source/AntKitchen/Map4Look.cpp (1 m = 1900 uu), noted per set below.
+#define PI 3.14159265359
+
+float hs(float x, float y, float s) { return cellnoise(x + s * 37.0 + 0.5, y + s * 113.0 + 0.5); }
+
+float fbm(float u, float v, float fu0, float fv0, int oct, float gain, float seed)
+{
+    float s = 0.0, a = 1.0, t = 0.0, fu = fu0, fv = fv0;
+    for (int i = 0; i < oct; i++)
+    {
+        s += a * psnoise(u * fu + seed * 3.17 + i * 1.31, v * fv + seed * 5.71 + i * 2.13, fu, fv);
+        t += a; a *= gain; fu *= 2.0; fv *= 2.0;
+    }
+    return s / t;
+}
+
+// Worley over n x m wrapped cells: f1, f2 distances (cell units), r = a random value of the nearest cell
+void worley(float u, float v, float n, float m, float seed, output float f1, output float f2, output float r)
+{
+    float px = u * n, py = v * m;
+    float cx = floor(px), cy = floor(py);
+    f1 = 1e9; f2 = 1e9; r = 0.0;
+    for (int j = -1; j <= 1; j++)
+    for (int i = -1; i <= 1; i++)
+    {
+        float gx = cx + i, gy = cy + j;
+        float wx = mod(gx, n), wy = mod(gy, m);
+        float fx = gx + 0.1 + 0.8 * hs(wx, wy, seed);
+        float fy = gy + 0.1 + 0.8 * hs(wx, wy, seed + 7.0);
+        float d = hypot(px - fx, py - fy);
+        if (d < f1) { f2 = f1; f1 = d; r = hs(wx, wy, seed + 13.0); }
+        else if (d < f2) { f2 = d; }
+    }
+}
+
+// a round thread / board profile across t in [0,1): 1 in the middle, 0 at the edge of the given width fraction
+float prof(float t, float w)
+{
+    float d = abs(t - 0.5) / max(0.5 * w, 1e-4);
+    return d < 1.0 ? sqrt(1.0 - d * d) : 0.0;
+}
+
+float lin(float x) { return pow(max(x, 0.0), 2.2); }
+color lc(float r, float g, float b) { return color(lin(r), lin(g), lin(b)); }
+
+// plain / twill weave of n warp x m weft threads per tile. twill 0 = plain, k > 0 = k-shaft twill, herr > 0 flips the twill
+// every herr warp threads (herringbone). Returns the height; top = 1 where the weft is on top
+float weave(float u, float v, float n, float m, float width, int twill, float herr, float seed, output float top)
+{
+    float x = u * n, y = v * m;
+    float ix = floor(x), iy = floor(y);
+    float fx = x - ix, fy = y - iy;
+    float wx = mod(ix, n), wy = mod(iy, m);
+    float over;
+    if (twill == 0) { over = mod(ix + iy, 2.0); }
+    else
+    {
+        float dir = 1.0;
+        if (herr > 0.0 && mod(floor(wx / herr), 2.0) > 0.5) { dir = -1.0; }
+        over = mod(ix * dir + iy, twill) < twill * 0.5 ? 1.0 : 0.0;
+    }
+    float jw = (hs(wx, 0.0, seed) - 0.5) * 0.35, jf = (hs(0.0, wy, seed + 3.0) - 0.5) * 0.35;
+    float pw = prof(fx, width * (1.0 + jw)), pf = prof(fy, width * (1.0 + jf));
+    float hw = pw * (over > 0.5 ? 0.62 + 0.38 * sin(PI * fy) : 0.45);
+    float hf = pf * (over < 0.5 ? 0.62 + 0.38 * sin(PI * fx) : 0.45);
+    // slubs: a thread is a little thicker / thinner along its length
+    hw *= 1.0 + 0.25 * psnoise(wx * 7.3, v * 6.0, 1000.0, 6.0);
+    hf *= 1.0 + 0.25 * psnoise(u * 6.0, wy * 5.1, 6.0, 1000.0);
+    top = hf > hw ? 1.0 : 0.0;
+    return max(hw, hf);
+}
+
+// fibres lying along a thread: fine streaks stretched along u (dir 0) or v (dir 1)
+float fibres(float u, float v, float f, int dir, float seed)
+{
+    if (dir == 0) { return fbm(u, v, f / 8.0, f, 2, 0.5, seed); }
+    return fbm(u, v, f, f / 8.0, 2, 0.5, seed);
+}
+
+// square tiles nx x ny: d = distance to the nearest joint (uv units), id = random per tile
+void tiles(float u, float v, float nx, float ny, output float d, output float id, output float lx, output float ly)
+{
+    float x = u * nx, y = v * ny;
+    float ix = floor(x), iy = floor(y);
+    lx = x - ix; ly = y - iy;
+    d = min(min(lx, 1.0 - lx) / nx, min(ly, 1.0 - ly) / ny);
+    id = hs(mod(ix, nx), mod(iy, ny), 91.0);
+}
+
+// boards along u: rows across v, nb boards per row with a random stagger. lu/lv = coords in the board (lu along, 0..1),
+// d = distance to the board's edge (uv), id = random per board, e = distance to the board's end (uv)
+void boards(float u, float v, float rows, float nb, float seed, output float lu, output float lv, output float d, output float e, output float id)
+{
+    float y = v * rows; float iy = floor(y); lv = y - iy;
+    float wy = mod(iy, rows);
+    float x = u * nb + hs(wy, 0.0, seed) * 7.0; float ix = floor(x); lu = x - ix;
+    id = hs(mod(ix, nb), wy, seed + 1.0);
+    d = min(lv, 1.0 - lv) / rows;
+    e = min(lu, 1.0 - lu) / nb;
+}
+
+// wood: a flat-sawn board seen from above. along/across in board space (metres-ish), seed per board.
+// returns the ring/figure value 0..1 (1 = late wood, dark), pores (0..1) through output
+float woodgrain(float along, float across, float seed, float rings, output float pores)
+{
+    // growth rings cut by the board's face: many fine, slightly wavy lines, each ring its own strength; the long wave
+    // (w1) bends whole groups of rings, the short one (w2) only ripples them
+    float w1 = psnoise(along * 3.0 + seed * 11.0, across * 8.0 + seed, 1000.0, 1000.0);
+    float w2 = psnoise(along * 11.0 + seed * 5.0, across * 30.0, 1000.0, 1000.0);
+    float g = across * rings + w1 * rings * 0.012 + w2 * 0.22;
+    float ring = g - floor(g);
+    float late = smoothstep(0.45, 0.94, ring) * (1.0 - smoothstep(0.94, 1.0, ring));
+    late *= 0.45 + 0.55 * hs(floor(g), 0.0, seed);
+    pores = smoothstep(0.4, 0.9, psnoise(along * 40.0 + seed, across * 900.0, 1000.0, 1000.0));
+    return late;
+}
+
+// wood figure periodic along u (boards running the whole tile): across in board widths, fu whole periods along u
+float woodp(float u, float across, float seed, float rings, float fu, float pa, output float pores)
+{
+    float P = pa > 0.0 ? pa : 1000.0;   // the period of across (whole), 0 = none (inside a board)
+    float w1 = psnoise(u * fu * 2.0 + seed * 11.0, across * 3.0 + seed * 3.0, fu * 2.0, P * 3.0);
+    float w2 = psnoise(u * fu * 8.0 + seed * 5.0, across * 12.0, fu * 8.0, P * 12.0);
+    float g = across * rings + w1 * rings * 0.05 + w2 * 0.22 + seed * 3.7;
+    float ring = g - floor(g);
+    float late = smoothstep(0.45, 0.94, ring) * (1.0 - smoothstep(0.94, 1.0, ring));
+    float ri = floor(g);
+    if (pa > 0.0) { ri = mod(ri, P * rings); }
+    late *= 0.45 + 0.55 * hs(ri, 0.0, seed);
+    pores = smoothstep(0.4, 0.9, psnoise(u * fu * 40.0 + seed, across * 300.0, fu * 40.0, P * 300.0));
+    return late;
+}
+
+// herringbone parquet, planks 1 x L plank widths; the tile is 2L x 2L widths (the lattice (1,1),(L,-L) fits it exactly)
+void herring(float u, float v, float L, output float along, output float across, output float id, output float d, output float vert)
+{
+    float P = 2.0 * L, px = u * P, py = v * P;
+    float s = (px + py) * 0.5, t = (px - py) / (2.0 * L);
+    float s0 = floor(s), t0 = floor(t);
+    along = 0.0; across = 0.0; id = 0.0; d = 0.0; vert = 0.0;
+    float ox = 0.0, oy = 0.0;
+    for (int dt = -2; dt <= 2; dt++)
+    for (int ds = -7; ds <= 2; ds++)
+    {
+        float S = s0 + ds, T = t0 + dt;
+        float qx = px - (S + T * L), qy = py - (S - T * L);
+        if (qx >= 0.0 && qx < L && qy >= 0.0 && qy < 1.0) { along = qx; across = qy; vert = 0.0; ox = S + T * L; oy = S - T * L; }
+        else if (qx >= 0.0 && qx < 1.0 && qy >= 1.0 && qy < 1.0 + L) { along = qy - 1.0; across = qx; vert = 1.0; ox = S + T * L; oy = S - T * L; }
+    }
+    id = hs(mod(ox, P), mod(oy, P), 61.0 + vert * 5.0);
+    d = min(min(across, 1.0 - across), min(along, L - along)) / P;
+}
+
+// stockinette knit: cols x rows stitches per tile, each a V of two plied legs. gap = 1 between the loops
+float knit(float u, float v, float cols, float rows, float seed, output float gap)
+{
+    float x = u * cols, y = v * rows;
+    float ix = floor(x), iy = floor(y);
+    float fx = x - ix, fy = y - iy;
+    float h = 0.0;
+    for (int r = -1; r <= 1; r++)
+    for (int leg = 0; leg <= 1; leg++)
+    {
+        float cx = leg == 0 ? 0.27 : 0.73;
+        float a = leg == 0 ? 0.42 : -0.42;
+        float dx = fx - cx, dy = fy - 0.5 - r;
+        float rx = dx * cos(a) - dy * sin(a), ry = dx * sin(a) + dy * cos(a);
+        float jit = 1.0 + 0.12 * (hs(mod(ix, cols), mod(iy + r, rows), seed + leg) - 0.5);
+        float e = (rx / (0.21 * jit)) * (rx / (0.21 * jit)) + (ry / 0.66) * (ry / 0.66);
+        float hh = e < 1.0 ? sqrt(1.0 - e) : 0.0;
+        hh *= 1.0 + 0.18 * sin(2.0 * PI * (ry * 5.0 + rx * 2.5));    // the ply twist
+        h = max(h, hh);
+    }
+    gap = h < 0.08 ? 1.0 : 0.0;
+    return h;
+}
+
+// pile / loops: n x n tufts per tile, each a soft dome of random height (cut pile carpet, terry loops, boucle curls)
+float pile(float u, float v, float n, float seed, float sharp, output float tuft)
+{
+    float f1, f2, r;
+    worley(u, v, n, n, seed, f1, f2, r);
+    tuft = r;
+    float dome = 1.0 - smoothstep(0.0, sharp, f1);
+    return dome * (0.55 + 0.45 * r);
+}
+
+// thin straight streaks (scratches, fibres): along u+v and u-v as well, all periodic
+float streaks(float u, float v, float f, float thr, float seed)
+{
+    float a = abs(psnoise(u * 2.0 + seed, v * f, 2.0, f));
+    float b = abs(psnoise(u * f + seed * 2.0, v * 2.0, f, 2.0));
+    float c = abs(psnoise((u + v) * 2.0 + seed * 3.0, (u - v) * f * 0.5, 2.0, f * 0.5));
+    float d = abs(psnoise((u - v) * 2.0 + seed * 4.0, (u + v) * f * 0.5, 2.0, f * 0.5));
+    float m = min(min(a, b), min(c, d));
+    return 1.0 - smoothstep(0.0, thr, m);
+}
+
+// scattered strokes: one per wrapped cell of an n x n grid, random base point, angle and length (up to len cells), a
+// half-width wid (cells) tapering to the tip, bent a little. Returns the height (rising toward the tip); rb = random per
+// stroke, t = where along the stroke (0 base .. 1 tip). Grass blades, twigs, bits of leaf.
+float blades(float u, float v, float n, float len, float wid, float bendk, float seed, output float rb, output float tt, output float qq)
+{
+    float px = u * n, py = v * n, cx = floor(px), cy = floor(py);
+    float h = 0.0; rb = 0.0; tt = 0.0; qq = 1.0;
+    for (int j = -2; j <= 2; j++)
+    for (int i = -2; i <= 2; i++)
+    {
+        float gx = cx + i, gy = cy + j;
+        float wx = mod(gx, n), wy = mod(gy, n);
+        float ox = gx + hs(wx, wy, seed), oy = gy + hs(wx, wy, seed + 1.0);
+        float ang = 2.0 * PI * hs(wx, wy, seed + 2.0);
+        float L = len * (0.55 + 0.45 * hs(wx, wy, seed + 3.0));
+        float dx = px - ox, dy = py - oy;
+        float a = dx * cos(ang) + dy * sin(ang);
+        if (a < 0.0 || a > L) continue;
+        float b = -dx * sin(ang) + dy * cos(ang);
+        float t = a / L;
+        float bend = (hs(wx, wy, seed + 4.0) - 0.5) * bendk * t * t * L;
+        float hw = wid * (1.0 - pow(t, 1.6)) + 0.01;
+        float q = abs(b - bend) / hw;
+        if (q >= 1.0) continue;
+        float hh = (0.3 + 0.7 * t) * (0.55 + 0.45 * hs(wx, wy, seed + 5.0)) * (1.0 - 0.35 * q * q) + 0.05 * (1.0 - q);
+        if (hh > h) { h = hh; rb = hs(wx, wy, seed + 6.0); tt = t; qq = q; }
+    }
+    return h;
+}
+
+// (u, v are OSL globals: the shader body works on its own wrapped copies)
+#define u su
+#define v sv
+shader own_textures(
+    point UV = point(0.0, 0.0, 0.0),
+    int Mat = 0,
+    output color Col = color(0.5),
+    output color Dat = color(0.0, 0.5, 0.0))
+{
+    float u = UV[0] - floor(UV[0]), v = UV[1] - floor(UV[1]);
+    color C = color(0.5); float H = 0.0, R = 0.5, M = 0.0;
+    float f1, f2, r, d, id, lx, ly, pr, top, gap, tuft;
+
+    if (Mat == 0)   // Plaster: trowelled wall plaster, 0.37 m per tile (700 uu)
+    {
+        float big = fbm(u, v, 2, 2, 4, 0.5, 1);
+        float tro = fbm(u, v, 5, 3, 3, 0.5, 2);
+        float ridge = 1.0 - abs(fbm(u + 0.08 * big, v, 4, 6, 4, 0.5, 3));
+        float skim = smoothstep(0.86, 0.98, ridge);
+        float sand = fbm(u, v, 256, 256, 2, 0.6, 4);
+        worley(u, v, 60, 60, 5, f1, f2, r);
+        float pit = r < 0.15 ? 1.0 - smoothstep(0.04, 0.14, f1) : 0.0;
+        H = big * 0.5 + tro * 0.25 + skim * 0.16 + sand * 0.05 - pit * 0.25;
+        C = lc(0.72, 0.67, 0.61) * (1.0 + big * 0.10 + tro * 0.05 + sand * 0.05 - pit * 0.2);
+        R = 0.93 - skim * 0.12 + sand * 0.03;
+    }
+    else if (Mat == 1)   // Stucco: knock-down ceiling, 0.47 m (900 uu)
+    {
+        float k = fbm(u, v, 8, 8, 4, 0.55, 11);
+        float plate = smoothstep(0.04, 0.10, k);
+        float edge = smoothstep(0.03, 0.06, k) * (1.0 - smoothstep(0.06, 0.12, k));
+        float grit = fbm(u, v, 128, 128, 3, 0.6, 12);
+        H = plate * 0.5 + k * 0.3 + edge * 0.08 + grit * 0.06;
+        C = lc(0.85, 0.83, 0.82) * (1.0 + grit * 0.04 - (1.0 - plate) * 0.04);
+        R = 0.88 + grit * 0.04;
+    }
+    else if (Mat == 2)   // Wallpaper paper (the colour is the generated print): fine fibre and a soft emboss, 0.6-0.7 m
+    {
+        float fib = streaks(u, v, 256, 0.05, 21) * 0.5 + fbm(u, v, 192, 192, 2, 0.6, 22);
+        float emb = fbm(u, v, 24, 24, 3, 0.5, 23);
+        H = emb * 0.5 + fib * 0.12;
+        C = color(0.8);
+        R = 0.9 + fib * 0.03;
+    }
+    else if (Mat == 3)   // Concrete: fine cast concrete / stone / terracotta body, 0.08-0.16 m
+    {
+        float mot = fbm(u, v, 3, 3, 5, 0.55, 31);
+        worley(u, v, 40, 40, 32, f1, f2, r);
+        float agg = (1.0 - smoothstep(0.25, 0.45, f1)) * r;
+        float g1, g2, q; worley(u, v, 120, 120, 33, g1, g2, q);
+        float pore = q < 0.22 ? 1.0 - smoothstep(0.04, 0.13, g1) : 0.0;
+        float grain = fbm(u, v, 256, 256, 2, 0.6, 34);
+        H = mot * 0.25 + agg * 0.15 + grain * 0.08 - pore * 0.5;
+        C = lc(0.62, 0.60, 0.57) * (1.0 + mot * 0.22 + (agg - 0.2) * 0.15 + grain * 0.06 - pore * 0.35);
+        R = 0.78 + grain * 0.05 + pore * 0.12;
+    }
+    else if (Mat == 4)   // Marble: warm polished stone, clouded, with branching fracture veins, 0.47 m
+    {
+        float wx = fbm(u, v, 2, 2, 5, 0.55, 41), wy = fbm(u, v, 2, 2, 5, 0.55, 44);
+        float n1 = fbm(u + 0.35 * wx, v + 0.35 * wy, 3, 3, 6, 0.55, 45);
+        float n2 = fbm(u + 0.5 * wy, v - 0.3 * wx, 5, 5, 5, 0.5, 46);
+        float wid1 = 0.006 + 0.02 * smoothstep(-0.2, 0.4, fbm(u, v, 4, 4, 2, 0.5, 47));
+        float vein = 1.0 - smoothstep(0.0, wid1, abs(n1));
+        float vein2 = (1.0 - smoothstep(0.0, 0.004, abs(n2))) * smoothstep(0.0, 0.3, fbm(u, v, 3, 3, 3, 0.5, 48));
+        float halo = 1.0 - smoothstep(0.0, wid1 * 6.0, abs(n1));
+        float cloud = fbm(u, v, 4, 4, 5, 0.5, 42);
+        C = mix(lc(0.84, 0.78, 0.67), lc(0.70, 0.62, 0.50), clamp(0.5 + cloud * 1.2, 0.0, 1.0));
+        C = mix(C, lc(0.62, 0.54, 0.43), halo * 0.35);
+        C = mix(C, lc(0.42, 0.36, 0.29), clamp(vein + vein2 * 0.7, 0.0, 1.0) * 0.75);
+        H = -clamp(vein + vein2, 0.0, 1.0) * 0.06 + fbm(u, v, 96, 96, 2, 0.5, 43) * 0.03;
+        R = 0.45 + clamp(vein + vein2, 0.0, 1.0) * 0.12 + cloud * 0.05;
+    }
+    else if (Mat == 5)   // Asphalt: 4-8 mm aggregate in bitumen, 0.37 m
+    {
+        worley(u, v, 56, 56, 51, f1, f2, r);
+        float stone = smoothstep(0.0, 0.14, f2 - f1);
+        float g1, g2, q; worley(u, v, 150, 150, 52, g1, g2, q);
+        float fine = smoothstep(0.0, 0.18, g2 - g1) * q;
+        float wear = fbm(u, v, 3, 3, 4, 0.5, 53);
+        float grit = fbm(u, v, 384, 384, 2, 0.6, 54);
+        H = stone * (0.45 + 0.35 * r) + fine * 0.25 + grit * 0.05;
+        color st = lc(0.40 + r * 0.22, 0.39 + r * 0.21, 0.37 + r * 0.2);
+        C = mix(lc(0.15, 0.15, 0.15), st, stone * 0.85) * (1.0 + wear * 0.25) + lc(0.3, 0.3, 0.3) * fine * 0.25;
+        R = 0.86 - stone * 0.14 + grit * 0.03;
+    }
+    else if (Mat == 6)   // Pavement: 2 x 2 cast concrete pavers with chamfered joints, 0.47 m (900 uu)
+    {
+        tiles(u, v, 2, 2, d, id, lx, ly);
+        float cham = smoothstep(0.004, 0.018, d);
+        float joint = 1.0 - smoothstep(0.003, 0.006, d);
+        worley(u, v, 90, 90, 61, f1, f2, r);
+        float agg = smoothstep(0.0, 0.2, f2 - f1) * r;
+        float crackn = abs(fbm(u, v, 3, 3, 5, 0.5, 62 + floor(id * 4.0)));
+        float crack = id < 0.18 ? (1.0 - smoothstep(0.0, 0.006, crackn)) * smoothstep(0.1, 0.3, fbm(u, v, 4, 4, 2, 0.5, 65)) : 0.0;
+        float stain = fbm(u, v, 4, 4, 4, 0.5, 63);
+        float grit = fbm(u, v, 256, 256, 2, 0.6, 64);
+        H = cham * 0.55 + agg * 0.12 + grit * 0.06 - crack * 0.3 + stain * 0.05;
+        C = lc(0.60, 0.57, 0.52) * (0.92 + id * 0.16) * (1.0 + stain * 0.25 + agg * 0.08 + grit * 0.05);
+        C = mix(C, lc(0.25, 0.24, 0.21), max(joint * 0.8, crack * 0.6));
+        R = 0.84 + grit * 0.04 + joint * 0.1;
+    }
+    else if (Mat == 7)   // Soil: garden earth with crumbs, a few stones, rootlets, twigs and bits of leaf, 0.37 m (700 uu)
+    {
+        float wq = fbm(u, v, 4, 4, 3, 0.5, 70);
+        float clod = fbm(u, v, 6, 6, 5, 0.55, 71);
+        float damp = smoothstep(-0.1, 0.3, fbm(u, v, 3, 3, 4, 0.5, 78));
+        worley(u + wq * 0.02, v, 40, 40, 72, f1, f2, r);
+        float crumb = (1.0 - smoothstep(0.0, 0.6, f1)) * (0.3 + 0.7 * r);
+        float s1, s2, sq; worley(u + wq * 0.04, v - wq * 0.03, 14, 14, 73, s1, s2, sq);
+        float stone = sq < 0.1 ? smoothstep(0.0, 0.25, (0.3 + 0.25 * hs(sq * 50.0, 0, 79)) - s1) : 0.0;
+        float rt, tt;
+        float tq;
+        float twig = blades(u, v, 6, 1.9, 0.018, 0.6, 74, rt, tt, tq);
+        twig *= rt < 0.45 ? 1.0 : 0.0;
+        float rootl = streaks(u, v, 24, 0.02, 75) * smoothstep(0.2, 0.5, fbm(u, v, 5, 5, 2, 0.5, 76));
+        float l1, l2, rl; worley(u + wq * 0.06, v + wq * 0.05, 7, 7, 77, l1, l2, rl);   // decaying flakes of leaf, ragged
+        float leaf = rl < 0.2 ? 1.0 - smoothstep(0.2, 0.24, l1 + 0.08 * fbm(u, v, 48, 48, 2, 0.5, 81)) : 0.0;
+        float grit = fbm(u, v, 384, 384, 2, 0.6, 80);
+        H = clod * 0.35 + crumb * 0.3 + sqrt(stone) * 0.45 + sqrt(twig) * 0.25 + rootl * 0.08 + leaf * 0.12 + grit * 0.06;
+        C = mix(lc(0.40, 0.31, 0.22), lc(0.25, 0.19, 0.14), damp * 0.7) * (1.0 + clod * 0.25 + (crumb - 0.3) * 0.25 + grit * 0.1);
+        color sc = mix(lc(0.50, 0.44, 0.37), lc(0.56, 0.42, 0.30), hs(sq * 50.0, 1, 79)) * (0.75 + 0.35 * smoothstep(0.0, 0.25, stone));
+        C = mix(C, sc, smoothstep(0.0, 0.05, stone));
+        C = mix(C, lc(0.42, 0.32, 0.22) * (0.8 + 0.4 * rt) * (1.0 - 0.45 * tq * tq), smoothstep(0.0, 0.1, twig));
+        float m1, m2, mq; worley(u, v, 180, 180, 82, m1, m2, mq);
+        C *= 1.0 + (mq - 0.5) * 0.35 * (1.0 - smoothstep(0.2, 0.6, m1)) - 0.12 * smoothstep(0.0, 0.25, m2 - m1) * 0.0;   // single grains of earth
+        C = mix(C, lc(0.56, 0.42, 0.25), rootl * 0.5);
+        C = mix(C, mix(lc(0.45, 0.32, 0.17), lc(0.30, 0.20, 0.12), rl * 5.0), leaf * 0.8);
+        R = 0.92 - stone * 0.25 - damp * 0.08 + grit * 0.03;
+    }
+    else if (Mat == 8)   // Grass: a lawn from straight above: four layers of scattered, bent, tapered blades, a few dry ones, earth below, 0.26 m
+    {
+        float h = 0.0, rb = 0.0, tb = 0.0, lay = 0.0;
+        for (int k = 0; k < 4; k++)
+        {
+            float r1, t1, q1;
+            float hb = blades(u, v, 20, 1.9, 0.13, 0.9, 81 + k * 9, r1, t1, q1) * (0.7 + 0.1 * k);
+            if (hb > h) { h = hb; rb = r1; tb = t1; lay = q1; }
+        }
+        float soil = fbm(u, v, 24, 24, 3, 0.5, 89);
+        float dry = smoothstep(0.86, 0.95, rb);
+        color gc = mix(lc(0.26 + 0.16 * rb, 0.46 + 0.16 * rb, 0.13 + 0.06 * rb), lc(0.68, 0.62, 0.38), dry);
+        gc *= (0.55 + 0.45 * tb) * (0.78 + 0.22 * (1.0 - lay * lay)) * (1.0 - 0.18 * smoothstep(0.0, 0.08, 0.08 - lay));   // darker at the base, round, a midrib
+        gc *= 1.0 + 0.12 * fbm(u, v, 4, 4, 3, 0.5, 86) + 0.06 * fbm(u, v, 512, 32, 1, 0.5, 87);                         // lawn patches, veins
+        color ground = lc(0.24, 0.19, 0.13) * (1.0 + soil * 0.3);
+        float cover = smoothstep(0.0, 0.05, h);
+        H = h + soil * 0.05;
+        C = mix(ground, gc, cover);
+        R = mix(0.9, 0.62 + 0.1 * dry, cover);
+    }
+    else if (Mat == 9)   // Bark: long corky ridges split by deep fissures, cross cracks, a little lichen, 0.32 m (600 uu)
+    {
+        float w = fbm(u, v, 2, 1, 4, 0.5, 91);
+        worley(u + w * 0.08, v, 9, 2, 92, f1, f2, r);
+        float ridge = smoothstep(0.0, 0.35, f2 - f1);
+        float fib = fbm(u, v, 64, 4, 3, 0.5, 93);
+        float crack = (1.0 - smoothstep(0.0, 0.04, abs(psnoise(u * 6.0 + w, v * 26.0, 6.0, 26.0)))) * smoothstep(0.3, 0.6, ridge);
+        float lich = smoothstep(0.32, 0.45, fbm(u, v, 6, 6, 5, 0.5, 94)) * ridge;
+        H = pow(ridge, 0.7) * (0.7 + 0.3 * r) + fib * 0.15 - crack * 0.25;
+        C = mix(lc(0.16, 0.12, 0.09), lc(0.50 + 0.08 * r, 0.45 + 0.06 * r, 0.38), smoothstep(0.1, 0.7, ridge)) * (1.0 + fib * 0.25);
+        C *= 1.0 - crack * 0.5;
+        C = mix(C, lc(0.62, 0.64, 0.48), lich * 0.45);
+        R = 0.93 - ridge * 0.04;
+    }
+    else if (Mat == 10 || Mat == 11)   // TileCream: 4 x 4 glazed cream tiles, 31 cm on the floor (2400 uu); FloorTile: grey stoneware
+    {
+        tiles(u, v, 4, 4, d, id, lx, ly);
+        float grout = 1.0 - smoothstep(0.0016, 0.0024, d);
+        float edge = smoothstep(0.0016, 0.006, d);
+        float wav = fbm(u, v, 8, 8, 3, 0.5, 101 + id * 7.0);
+        float sand = fbm(u, v, 512, 512, 2, 0.6, 102);
+        worley(u, v, 300, 300, 103, f1, f2, r);
+        float pin = r < 0.06 ? 1.0 - smoothstep(0.05, 0.14, f1) : 0.0;           // pinholes in the glaze
+        float scr = streaks(u, v, 128, 0.006, 104) * smoothstep(0.1, 0.4, fbm(u, v, 6, 6, 2, 0.5, 105));   // fine scratches
+        float chip = (id > 0.86) ? (1.0 - smoothstep(0.002, 0.009, d)) * smoothstep(0.2, 0.4, fbm(u, v, 12, 12, 2, 0.5, 106)) : 0.0;
+        float mot = fbm(u, v, 16, 16, 4, 0.55, 107);
+        color tc = (Mat == 10) ? lc(0.88, 0.82, 0.71) : lc(0.62, 0.60, 0.58);
+        tc *= 0.93 + 0.14 * id + mot * 0.05;
+        if (Mat == 11) { tc *= 1.0 + 0.25 * (smoothstep(0.55, 0.6, hs(floor(u * 1024.0), floor(v * 1024.0), 108)) - 0.2); }
+        color gr = lc(0.55, 0.52, 0.47) * (1.0 + sand * 0.2);
+        H = edge * (0.6 + wav * 0.08) + scr * -0.03 - pin * 0.08 - chip * 0.25 + grout * sand * 0.05;
+        C = mix(tc, gr, grout);
+        C = mix(C, lc(0.70, 0.66, 0.60), chip * 0.7);
+        R = mix(0.22 + scr * 0.1 + mot * 0.03, 0.92, max(grout, chip));
+    }
+    else if (Mat == 12)   // Oak: oiled butcher-block worktop, 12 strips x 2 pieces, 0.58 m (1100 uu)
+    {
+        float lu, lv, e;
+        boards(u, v, 12, 2, 121, lu, lv, d, e, id);
+        float late = woodgrain(lu * 0.29, lv * 0.048 + id * 3.0, id * 31.0, 220.0, pr);
+        float seam = 1.0 - smoothstep(0.0, 0.0012, min(d, e));
+        color wc = mix(lc(0.56, 0.36, 0.20), lc(0.36, 0.20, 0.10), late * 0.8) * (0.85 + 0.3 * id);
+        H = -late * 0.25 - pr * 0.15 - seam * 0.5 + fbm(u, v, 64, 8, 2, 0.5, 122) * 0.05;
+        C = wc * (1.0 - pr * 0.18) * (1.0 - seam * 0.4);
+        R = 0.32 + late * 0.08 + pr * 0.1;
+    }
+    else if (Mat == 13)   // TableWood: worn table top, 4 boards along the tile, 0.68 m (1300 uu)
+    {
+        float y = v * 4.0, iy = floor(y), lv = y - iy;
+        id = hs(mod(iy, 4.0), 0, 131);
+        float late = woodp(u, lv + id * 5.0, id * 17.0, 22.0, 2.0, 0.0, pr);
+        float gapb = 1.0 - smoothstep(0.0, 0.012, min(lv, 1.0 - lv));
+        float wear = smoothstep(0.1, 0.5, fbm(u, v, 3, 3, 4, 0.5, 132));
+        float scr = streaks(u, v, 48, 0.01, 133);
+        H = -late * 0.3 - pr * 0.12 - gapb * 0.8 - scr * 0.05 + wear * 0.05;
+        C = mix(lc(0.52, 0.34, 0.19), lc(0.33, 0.19, 0.09), late * 0.85) * (0.88 + 0.24 * id) * (1.0 - pr * 0.15) * (1.0 + wear * 0.12);
+        C = mix(C, lc(0.12, 0.08, 0.05), gapb * 0.8);
+        R = 0.7 + late * 0.05 + scr * 0.1 - wear * 0.1;
+    }
+    else if (Mat == 14)   // Walnut: veneer, one sheet across the tile, 0.47 m (900 uu)
+    {
+        float late = woodp(u, v, 141.0, 30.0, 2.0, 1.0, pr);
+        float fig = fbm(u, v, 2, 6, 4, 0.5, 142);
+        H = -late * 0.2 - pr * 0.2 + fig * 0.04;
+        C = mix(lc(0.64, 0.50, 0.40), lc(0.42, 0.30, 0.23), late * 0.8 + fig * 0.3) * (1.0 - pr * 0.2);
+        R = 0.55 + late * 0.05 + pr * 0.1;
+    }
+    else if (Mat == 15)   // PaintWood: painted wood (cabinet fronts, skirting), grain under the paint, brush marks, 0.37-0.47 m
+    {
+        float late = woodp(u, v * 3.0, 151.0, 8.0, 2.0, 3.0, pr);
+        float brush = fbm(u, v, 2, 160, 2, 0.5, 152);
+        float orange = fbm(u, v, 48, 48, 2, 0.5, 153);
+        H = late * 0.12 + brush * 0.15 + orange * 0.05;
+        C = lc(0.62, 0.55, 0.46) * (1.0 + brush * 0.03 + late * 0.02);
+        R = 0.74 + brush * 0.04;
+    }
+    else if (Mat == 16)   // Parquet: lacquered oak herringbone, planks 9 x 45 cm, 0.89 m (1700 uu)
+    {
+        float along, across, vert;
+        herring(u, v, 5.0, along, across, id, d, vert);
+        float late = woodgrain(along * 0.09, across * 0.09 + id * 4.0, id * 23.0, 130.0, pr);
+        float seam = 1.0 - smoothstep(0.0, 0.0011, d);
+        float wear = fbm(u, v, 4, 4, 4, 0.5, 161);
+        float scr = streaks(u, v, 64, 0.01, 162);
+        H = -late * 0.2 - pr * 0.12 - seam * 0.6 - scr * 0.04;
+        C = mix(lc(0.74, 0.58, 0.40), lc(0.55, 0.38, 0.22), late * 0.8) * (0.86 + 0.28 * id) * (1.0 - pr * 0.12) * (1.0 + wear * 0.08);
+        C = mix(C, lc(0.25, 0.17, 0.10), seam * 0.7);
+        R = 0.12 + scr * 0.15 + pr * 0.05 + seam * 0.3;
+    }
+    else if (Mat == 17)   // Picket: white painted fence boards running up the tile, 2 per tile, 0.26 m (500 uu)
+    {
+        float x = u * 2.0, ix = floor(x), lu = x - ix;
+        id = hs(mod(ix, 2.0), 0, 171);
+        float gapb = 1.0 - smoothstep(0.0, 0.03, min(lu, 1.0 - lu));
+        float rnd = smoothstep(0.0, 0.12, min(lu, 1.0 - lu));
+        float late = woodp(v, lu * 2.0 + id * 5.0, id * 13.0, 12.0, 2.0, 0.0, pr);
+        float peel = smoothstep(0.46, 0.5, fbm(u, v, 5, 12, 6, 0.6, 172 + id * 3.0)) * smoothstep(0.0, 0.2, fbm(u, v, 2, 3, 2, 0.5, 173));
+        H = rnd * 0.6 + late * 0.06 - peel * 0.06 - gapb * 0.4;
+        C = lc(0.92, 0.90, 0.86) * (1.0 + late * 0.02);
+        C = mix(C, mix(lc(0.62, 0.52, 0.40), lc(0.40, 0.31, 0.22), late), peel);
+        C = mix(C, lc(0.15, 0.14, 0.13), gapb);
+        R = 0.55 + peel * 0.3;
+    }
+    else if (Mat == 18)   // Siding: weathered lap boards, 4 courses (10 cm), 0.37-0.42 m
+    {
+        float y = v * 4.0, iy = floor(y), lv = y - iy;
+        id = hs(mod(iy, 4.0), 0, 181);
+        float late = woodp(u, lv * 0.6 + id * 5.0, id * 19.0, 16.0, 2.0, 0.0, pr);
+        float lap = lv;   // each board thickens toward its lower edge
+        float shadow = 1.0 - smoothstep(0.0, 0.05, lv);
+        float weather = fbm(u, v, 3, 12, 4, 0.5, 182);
+        H = lap * 0.5 - late * 0.12 - pr * 0.1 + weather * 0.08 - shadow * 0.2;
+        C = mix(lc(0.58, 0.47, 0.38), lc(0.38, 0.29, 0.22), late * 0.7) * (0.9 + 0.2 * id) * (1.0 + weather * 0.2);
+        C *= 1.0 - shadow * 0.45;
+        R = 0.88 + weather * 0.04;
+    }
+    else if (Mat == 19 || Mat == 20)   // Brushed: stainless (0.26 m); Brushed2: fine-brushed chrome / brass
+    {
+        float fv = (Mat == 19) ? 384.0 : 768.0;
+        float b = fbm(u, v, 2, fv, 3, 0.6, 191);
+        float b2 = fbm(u, v, 4, fv * 0.25, 2, 0.5, 192);
+        float scr = streaks(u, v, 32, 0.006, 193) * smoothstep(0.1, 0.3, fbm(u, v, 3, 3, 2, 0.5, 194));
+        float smudge = fbm(u, v, 3, 3, 4, 0.5, 195);
+        H = b * 0.5 + b2 * 0.3 - scr * 0.2;
+        C = (Mat == 19 ? lc(0.60, 0.61, 0.63) : lc(0.86, 0.88, 0.90)) * (1.0 + b * 0.04 + b2 * 0.03);
+        R = (Mat == 19 ? 0.45 : 0.10) + b * 0.08 + smudge * 0.06 + scr * 0.1;
+        M = 1.0;
+    }
+    else if (Mat == 21)   // MetalPlate: cast iron / old tin: mottled, pitted, a little rust, 0.16-0.26 m
+    {
+        float mot = fbm(u, v, 4, 4, 5, 0.55, 211);
+        worley(u, v, 80, 80, 212, f1, f2, r);
+        float pit = r < 0.3 ? 1.0 - smoothstep(0.05, 0.2, f1) : 0.0;
+        float rust = smoothstep(0.2, 0.45, fbm(u, v, 6, 6, 5, 0.55, 213));
+        float grain = fbm(u, v, 256, 256, 2, 0.6, 214);
+        H = mot * 0.3 - pit * 0.4 + grain * 0.1 + rust * 0.1;
+        C = lc(0.36, 0.34, 0.33) * (1.0 + mot * 0.2 + grain * 0.06 - pit * 0.3);
+        C = mix(C, lc(0.45, 0.28, 0.17), rust * 0.6);
+        R = 0.62 + rust * 0.2 + pit * 0.1 + grain * 0.04;
+    }
+    else if (Mat == 22)   // Plastic: moulded plastic with a fine stipple, 0.16-0.32 m
+    {
+        worley(u, v, 220, 220, 221, f1, f2, r);
+        float st = 1.0 - smoothstep(0.0, 0.6, f1);
+        float flow = fbm(u, v, 3, 3, 4, 0.5, 222);
+        float scr = streaks(u, v, 48, 0.008, 223) * smoothstep(0.2, 0.4, fbm(u, v, 4, 4, 2, 0.5, 224));
+        H = st * 0.3 + flow * 0.1 - scr * 0.1;
+        C = lc(0.82, 0.83, 0.85) * (1.0 + flow * 0.01);
+        R = 0.36 + st * 0.04 + scr * 0.15;
+    }
+    else if (Mat == 23)   // Rubber: tyre / bung rubber, fine grain and moulding specks, 0.1-0.13 m
+    {
+        float grain = fbm(u, v, 96, 96, 4, 0.6, 231);
+        worley(u, v, 50, 50, 232, f1, f2, r);
+        float speck = r < 0.12 ? 1.0 - smoothstep(0.05, 0.15, f1) : 0.0;
+        float bloom = smoothstep(0.1, 0.5, fbm(u, v, 4, 4, 4, 0.5, 233));
+        H = grain * 0.4 - speck * 0.3;
+        C = lc(0.18, 0.18, 0.20) * (1.0 + grain * 0.15) + lc(0.2, 0.2, 0.2) * bloom * 0.15;
+        R = 0.6 + grain * 0.05 + bloom * 0.1;
+    }
+    else if (Mat == 24)   // Leather: pebble grain with creases, 0.03-0.16 m
+    {
+        worley(u, v, 44, 44, 241, f1, f2, r);
+        float peb = smoothstep(0.0, 0.25, f2 - f1);
+        float crease = 1.0 - smoothstep(0.0, 0.02, abs(fbm(u, v, 4, 4, 4, 0.5, 242)));
+        float pore = fbm(u, v, 256, 256, 2, 0.6, 243);
+        H = peb * (0.6 + 0.2 * r) - crease * 0.35 + pore * 0.05;
+        C = lc(0.40, 0.22, 0.10) * (0.85 + 0.25 * peb) * (1.0 - crease * 0.25) * (1.0 + pore * 0.05);
+        R = 0.7 - peb * 0.12 + crease * 0.1;
+    }
+    else if (Mat == 25 || Mat == 26)   // Paper (0.16 m) / Cardboard (kraft, 9 mm flutes under the liner, 0.21 m)
+    {
+        float form = fbm(u, v, 8, 8, 5, 0.6, 251);
+        float fib = streaks(u, v, 192, 0.04, 252) + 0.6 * streaks(u, v, 96, 0.03, 253);
+        float fine = fbm(u, v, 384, 384, 2, 0.6, 254);
+        float flute = (Mat == 26) ? 0.5 + 0.5 * sin(2.0 * PI * u * 24.0) : 0.0;
+        H = form * 0.2 + fib * 0.12 + fine * 0.06 + flute * 0.6;
+        C = (Mat == 25) ? lc(0.95, 0.95, 0.94) * (1.0 + form * 0.02 - fib * 0.015) : lc(0.70, 0.55, 0.35) * (1.0 + form * 0.12 + fib * 0.06 + fine * 0.04);
+        if (Mat == 26)
+        {
+            float l1, l2, lq; worley(u, v, 60, 60, 255, l1, l2, lq);
+            C = mix(C, lc(0.50, 0.36, 0.20), (lq < 0.08 ? 1.0 - smoothstep(0.1, 0.3, l1) : 0.0) * 0.6);   // darker fibre clumps
+        }
+        R = 0.64 + fib * 0.04 + fine * 0.03;
+    }
+    else if (Mat == 27)   // Linen: plain weave of slubby flax, 96 x 96 threads (curtains, lamp shades, the festive cloth)
+    {
+        float h = weave(u, v, 96, 96, 0.86, 0, 0, 271, top);
+        float fz = fibres(u, v, 768, (top > 0.5 ? 1 : 0), 272);
+        float slub = fbm(u, v, 3, 48, 3, 0.5, 273);
+        H = h * 0.8 + fz * 0.1 + slub * 0.05;
+        C = lc(0.84, 0.81, 0.74) * (0.8 + 0.2 * h) * (1.0 + slub * 0.08 + fz * 0.05);
+        R = 0.78 + fz * 0.04;
+    }
+    else if (Mat >= 28 && Mat <= 30)   // Gingham red / blue / green: 1.5 cm checks over a plain weave, 0.37 m (700 uu)
+    {
+        float h = weave(u, v, 144, 144, 0.9, 0, 0, 281, top);
+        float fz = fibres(u, v, 1024, (top > 0.5 ? 1 : 0), 282);
+        float bu = mod(floor(u * 24.0), 2.0), bv = mod(floor(v * 24.0), 2.0);
+        // the coloured yarn runs in the bands: a cell is white, half colour (one direction) or full colour (both)
+        float wc = (top > 0.5) ? bv : bu;
+        float k = mix(0.5 * (bu + bv), wc, 0.35);
+        color dye = (Mat == 28) ? lc(0.78, 0.12, 0.13) : (Mat == 29) ? lc(0.16, 0.30, 0.66) : lc(0.22, 0.50, 0.24);
+        C = mix(lc(0.94, 0.93, 0.90), dye, clamp(k * 1.25, 0.0, 1.0)) * (0.82 + 0.18 * h) * (1.0 + fz * 0.05);
+        H = h * 0.8 + fz * 0.1;
+        R = 0.66 + fz * 0.03;
+    }
+    else if (Mat == 31)   // SofaWool: herringbone wool twill, 0.14 m (260 uu)
+    {
+        float h = weave(u, v, 96, 96, 0.95, 4, 12, 311, top);
+        float fz = fibres(u, v, 768, (top > 0.5 ? 1 : 0), 312);
+        float fuzz = fbm(u, v, 128, 128, 3, 0.6, 313);
+        float mel = fbm(u, v, 24, 96, 2, 0.5, 314);
+        H = h * 0.7 + fz * 0.12 + fuzz * 0.12;
+        C = lc(0.66, 0.65, 0.63) * (0.78 + 0.22 * h) * (1.0 + mel * 0.15 + fuzz * 0.05);
+        R = 0.86 + fuzz * 0.03;
+    }
+    else if (Mat == 32)   // Boucle: looped curly yarn, 3 cm (60 uu on the tennis ball)
+    {
+        float p = pile(u, v, 22, 321, 0.75, tuft);
+        float curl = 1.0 - smoothstep(0.0, 0.08, abs(fbm(u, v, 16, 16, 3, 0.5, 322)));
+        float fuzz = fbm(u, v, 192, 192, 3, 0.6, 323);
+        H = p * 0.7 + curl * 0.2 + fuzz * 0.12;
+        C = lc(0.66, 0.62, 0.56) * (0.65 + 0.35 * p) * (1.0 + (tuft - 0.5) * 0.15 + fuzz * 0.06);
+        R = 0.66 + fuzz * 0.04;
+    }
+    else if (Mat == 33)   // Knit: stockinette of wool yarn, 12 x 16 stitches, 5-6 cm (socks, yarn)
+    {
+        float h = knit(u, v, 12, 16, 331, gap);
+        float fuzz = fbm(u, v, 160, 160, 3, 0.6, 332);
+        H = h * 0.8 + fuzz * 0.1;
+        C = lc(0.52, 0.47, 0.41) * (0.55 + 0.45 * h) * (1.0 + fuzz * 0.08);
+        R = 0.62 + fuzz * 0.04;
+    }
+    else if (Mat == 34)   // Terry: towel loops, 0.13 m (250 uu)
+    {
+        float p = pile(u, v, 64, 341, 0.8, tuft);
+        float p2 = pile(u + 0.37, v + 0.21, 64, 342, 0.7, f1);
+        float rib = 0.5 + 0.5 * sin(2.0 * PI * v * 32.0);
+        float fuzz = fbm(u, v, 256, 256, 2, 0.6, 343);
+        H = max(p, p2 * 0.9) * 0.8 + rib * 0.08 + fuzz * 0.08;
+        C = lc(0.15, 0.48, 0.80) * (0.65 + 0.35 * max(p, p2)) * (1.0 + (tuft - 0.5) * 0.1);
+        R = 0.69 + fuzz * 0.03;
+    }
+    else if (Mat == 35 || Mat == 36)   // Jersey: fine knit, 40 x 56 stitches (0.08-0.1 m); Melange: the same in heathered blue
+    {
+        float h = knit(u, v, 40, 56, 351, gap);
+        float fuzz = fbm(u, v, 256, 256, 2, 0.6, 352);
+        if (Mat == 35)
+        {
+            C = lc(0.88, 0.84, 0.81) * (0.9 + 0.1 * h);
+        }
+        else
+        {
+            float heat = fbm(u, v, 20, 160, 3, 0.5, 353);
+            C = mix(lc(0.52, 0.62, 0.82), lc(0.82, 0.86, 0.92), smoothstep(-0.1, 0.25, heat)) * (0.82 + 0.18 * h);
+        }
+        H = h * 0.8 + fuzz * 0.1;
+        R = 0.80 + fuzz * 0.03;
+    }
+    else if (Mat == 37 || Mat == 39)   // Carpet: cut pile (0.05-0.2 m); RugPile: the pile of the living-room rug, 0.58 m (1100 uu)
+    {
+        float n = (Mat == 37) ? 70.0 : 230.0;
+        float p = pile(u, v, n, 371, 0.7, tuft);
+        float p2 = pile(u + 0.13, v + 0.29, n, 372, 0.55, f1);
+        float lay = fbm(u, v, 6, 6, 4, 0.5, 373);           // the pile lies a little differently here and there
+        float fuzz = fbm(u, v, n * 4.0, n * 4.0, 2, 0.6, 374);
+        H = max(p, p2 * 0.85) * 0.9 + lay * 0.15 + fuzz * 0.08;
+        C = lc(0.32, 0.29, 0.24) * (0.45 + 0.55 * max(p, p2)) * (1.0 + lay * 0.15 + (tuft - 0.5) * 0.12);
+        R = 0.82 + fuzz * 0.03;
+    }
+    else if (Mat == 38)   // Jute: coarse hessian, open plain weave of hairy yarn, 28 x 28 threads (rugs, wicker, sisal)
+    {
+        float h = weave(u, v, 28, 28, 0.74, 0, 0, 381, top);
+        float fz = fibres(u, v, 256, (top > 0.5 ? 1 : 0), 382);
+        float hair = streaks(u, v, 64, 0.02, 383);
+        H = h * 0.85 + fz * 0.15 + hair * 0.05;
+        C = lc(0.74, 0.63, 0.46) * (0.5 + 0.5 * h) * (1.0 + fz * 0.1) + lc(0.8, 0.7, 0.5) * hair * 0.1;
+        R = 0.8 + fz * 0.05;
+    }
+    else if (Mat == 40)   // Enamel: glossy paint / enamel, orange peel only (the colour is the tint)
+    {
+        H = fbm(u, v, 16, 16, 4, 0.5, 401) * 0.7 + fbm(u, v, 64, 64, 2, 0.5, 402) * 0.3;
+        C = lc(0.92, 0.92, 0.90);
+        R = 0.23 + fbm(u, v, 8, 8, 3, 0.5, 403) * 0.03;
+    }
+    else if (Mat == 41)   // Detail: the ant-scale micro normal laid over every surface (tiny grain and fine pits)
+    {
+        H = fbm(u, v, 96, 96, 3, 0.6, 411) * 0.6 + fbm(u, v, 32, 32, 3, 0.5, 412) * 0.4;
+        worley(u, v, 140, 140, 413, f1, f2, r);
+        H -= (r < 0.2 ? 1.0 - smoothstep(0.05, 0.2, f1) : 0.0) * 0.2;
+    }
+    else if (Mat == 42)   // Weave: the fine weave the ant sees on any cloth, 8 threads per tile (40 uu)
+    {
+        H = weave(u, v, 8, 8, 0.9, 0, 0, 421, top) + fibres(u, v, 128, (top > 0.5 ? 1 : 0), 422) * 0.15;
+    }
+
+    Col = C;
+    Dat = color(H, clamp(R, 0.02, 1.0), M);
+}

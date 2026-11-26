@@ -283,7 +283,25 @@ void AMap4Runner::StartTour(const FString& Tag, const FString& Only)
 {
 	Cams.Reset();
 	TArray<FString> Want;
-	Only.ParseIntoArray(Want, TEXT(","));
+	if (Only.StartsWith(TEXT("@")))
+	{
+		// cameras from a file under Saved/map4 (KAN-24 texture review): one per line "name,fromX,fromY,fromZ,toX,toY,toZ,fov"
+		TArray<FString> Lines;
+		FFileHelper::LoadFileToStringArray(Lines, *(SavedDir() / Only.Mid(1)));
+		for (const FString& Ln : Lines)
+		{
+			TArray<FString> F;
+			Ln.ParseIntoArray(F, TEXT(","));
+			if (F.Num() < 8 || F[0].StartsWith(TEXT("#"))) { continue; }
+			Cams.Add({ F[0].TrimStartAndEnd(), FVector(FCString::Atof(*F[1]), FCString::Atof(*F[2]), FCString::Atof(*F[3])),
+				FVector(FCString::Atof(*F[4]), FCString::Atof(*F[5]), FCString::Atof(*F[6])), FCString::Atof(*F[7]) });
+		}
+		Want.Add(TEXT("\x01"));   // none of the built-in cameras
+	}
+	else
+	{
+		Only.ParseIntoArray(Want, TEXT(","));
+	}
 	for (const FCam& C : AllCams())
 	{
 		bool bOk = Want.Num() == 0;
