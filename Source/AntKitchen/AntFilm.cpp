@@ -1201,6 +1201,18 @@ void UAntFilm::RunScript(const FString& Cmd)
 			Slots[1].bSet, Slots[2].bSet, Slots[3].bSet, Slots[4].bSet, Slots[5].bSet, Slots[6].bSet, Input && Input->bBlockInput ? 1 : 0,
 			PC->GetPawn() ? *PC->GetPawn()->GetActorLocation().ToCompactString() : TEXT("-"));
 	}
+	else if (Op == TEXT("raid") && A.Num() >= 2)
+	{
+		// raid <cmd> [a] [b]: what a nest button sends (AAntPlayerController::ServerRaid), from this machine - a guest's test of the
+		// colony vote (KAN-31: "raid 17 0" proposes the first chamber, "raid 16 0" the first tunnel; 202 1 / 202 0 votes yes / no).
+		PC->ServerRaid((uint8)FMath::Clamp((int32)Num(1), 0, 255), (int32)Num(2), (int32)Num(3));
+	}
+	else if (Op == TEXT("menu") && A.Num() >= 2)
+	{
+		// menu close | menu <screen>: the Slate front end (the co-op muster opens by itself; a test closes it to see the nest HUD)
+		if (A[1] == TEXT("close")) { PC->CloseMenu(); }
+		else { PC->OpenUiScreen((uint8)Num(1)); }
+	}
 	else if (Op == TEXT("wheel"))
 	{
 		for (int32 i = 0; i < FMath::Abs((int32)Num(1, 1.f)); ++i) { Num(1, 1.f) > 0.f ? OnWheelUp() : OnWheelDown(); }

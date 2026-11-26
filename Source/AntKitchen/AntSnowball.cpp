@@ -1034,6 +1034,16 @@ namespace AntSnowball
 			else if (Sub == TEXT("auto")) { S->AutoPick = Args.IsValidIndex(2) && Args[2] != TEXT("off") ? FMath::Clamp((int32)ANum(2, 1) - 1, 0, 2) : -1; }
 			else if (Sub == TEXT("give")) { if (FAntSnowPlayer* P = S->For(PS)) { const uint8 Id = (uint8)FMath::Clamp((int32)ANum(2), 0, AntPick::Count - 1); P->Taken.Add(Id); S->Apply(*P, Id); } }
 			else if (Sub == TEXT("offer")) { if (FAntSnowPlayer* P = S->For(PS)) { S->MakeOffer(*P); } }
+			else if (Sub == TEXT("die") || Sub == TEXT("where") || Sub == TEXT("tp"))
+			{
+				// snow die [p2] | snow where [p2] | snow tp x y z [p2]: that player's ant dies / says where it is / is put there
+				// (co-op tests of the respawn among the squad, KAN-32)
+				AAntCharacter* Ant = PS ? Cast<AAntCharacter>(PS->GetPawn()) : nullptr;
+				if (Ant && Sub == TEXT("die")) { Ant->HurtBy(100000.f, TEXT("отладка")); }
+				if (Ant && Sub == TEXT("tp")) { Ant->ApplyTeleport(FVector(ANum(2), ANum(3), ANum(4))); }
+				UE_LOG(LogTemp, Display, TEXT("ANTSNOW dev %s %s: ant %s at %s, dead %d, squad %d"), *Sub, PS ? *PS->GetPlayerName() : TEXT("-"), Ant ? *Ant->GetName() : TEXT("-"),
+					Ant ? *Ant->GetActorLocation().ToCompactString() : TEXT("-"), Ant && Ant->bDead ? 1 : 0, S->Find(PS) ? S->Find(PS)->Squad.Num() : 0);
+			}
 			else
 			{
 				UE_LOG(LogTemp, Display, TEXT("ANTSNOW info: active %d mass %d level %d next %d players %d"), S->bActive ? 1 : 0, S->Mass, S->Level, S->NextAt, S->Players.Num());

@@ -26,6 +26,12 @@
 #include "Net/UnrealNetwork.h"
 #include "EngineUtils.h"
 #include "Engine/World.h"
+#include "Engine/Engine.h"
+#include "Engine/Canvas.h"
+#include "CanvasItem.h"
+#include "GameFramework/HUD.h"
+#include "GameFramework/GameStateBase.h"
+#include "GameFramework/PlayerController.h"
 
 namespace TrailLook
 {
@@ -33,6 +39,9 @@ namespace TrailLook
 	const FLinearColor Legs(0.03f, 0.012f, 0.008f);
 	const FLinearColor Dot(0.55f, 1.6f, 0.75f);      // glowing pheromone green
 	const FLinearColor LayDot(1.6f, 1.3f, 0.4f);     // a trail being laid: amber
+	const FLinearColor Flow(2.2f, 1.35f, 0.25f);     // the flow home along a working trail: glowing gold dashes
+	const FLinearColor Ring(1.f, 0.72f, 0.12f);      // the disc under a load on its way home
+	constexpr float FlowStep = 120.f;                // one dash per this much trail
 	constexpr int32 NumData = 13;                    // = SwarmLook::NumData (M_SwarmAnt / M_SwarmAntArt)
 	constexpr int32 MaxFerriesDrawn = 64;
 	constexpr float DotStep = 34.f;
@@ -180,6 +189,13 @@ void AAntTrailNet::BeginPlay()
 	};
 	Dots = MakeDots(TEXT("TrailDots"), TrailLook::Dot);
 	LayDots = MakeDots(TEXT("TrailLayDots"), TrailLook::LayDot);
+	if (bHasMaterial)
+	{
+		// The flow: long gold dashes walked towards the nest by the same GPU material (a conveyor belt you can read).
+		UStaticMesh* DashMesh = Map4Look::Enabled() && Map4Look::Shape(8) ? Map4Look::Shape(8) : AntKit::ShapeMesh(EAntShape::Sphere);
+		Flow = MakeWorkerPart(TEXT("TrailFlow"), FVector(0.f, 0.f, 1.5f), FVector(22.f, 5.5f, Map4Look::Enabled() ? 30.f : 1.2f), 0.f, TrailLook::Flow, DashMesh, nullptr);
+		if (MIDs.Num() > 0) { MIDs.Last()->SetVectorParameterValue(TEXT("Glow"), TrailLook::Flow); }
+	}
 	// Crumbs on their way home, each in a worker's jaws.
 	for (int32 i = 0; i < TrailLook::MaxFerriesDrawn; ++i)
 	{
@@ -198,6 +214,12 @@ void AAntTrailNet::BeginPlay()
 		A->SetCastShadow(false);
 		A->SetVisibility(false);
 		FerryAnts.Add(A);
+		UStaticMeshComponent* Rg = AntKit::AddPart(this, RootComponent, EAntShape::Cylinder, FVector::ZeroVector, FVector(0.1f, 0.1f, 0.01f), TrailLook::Ring);
+		Rg->SetUsingAbsoluteLocation(true);
+		Rg->SetUsingAbsoluteRotation(true);
+		Rg->SetCastShadow(false);
+		Rg->SetVisibility(false);
+		FerryRings.Add(Rg);
 	}
 	Rebuild();
 }
@@ -289,6 +311,80 @@ bool AAntTrailNet::FerryPos(const FAntFerry& F, float Now, FVector& Out) const
 	return PosAt(*L, D, Out);
 }
 
+float AAntTrailNet::NetNow() const
+{
+	const AGameStateBase* GS = GetWorld()->GetGameState();
+	return HasAuthority() || !GS ? GetWorld()->GetTimeSeconds() : (float)GS->GetServerWorldTimeSeconds();
+}
+
+bool AAntTrailNet::NearestTrailPoint(const APlayerState* PS, const FVector& P, float MaxDist, FVector& OutPoint, uint16& OutTrail, float* OutAlong) const
+{
+	float Best = MaxDist * MaxDist;
+	bool bFound = false;
+	for (const FAntTrailLine& L : Lines)
+	{
+		if (L.Owner != PS || L.bLaying || L.Workers <= 0 || L.Points.Num() < 2)
+		{
+			continue;
+		}
+		float Acc = 0.f;
+		for (int32 i = 0; i + 1 < L.Points.Num(); ++i)
+		{
+			const FVector A = L.Points[i];
+			const FVector B = L.Points[i + 1];
+			const FVector C = FMath::ClosestPointOnSegment(P, A, B);
+			const float D2 = (float)FVector::DistSquared2D(C, P);
+			if (D2 < Best)
+			{
+				Best = D2;
+				OutPoint = C;
+				OutTrail = L.Id;
+				if (OutAlong) { *OutAlong = Acc + (float)FVector::Dist(A, C); }
+				bFound = true;
+			}
+			Acc += (float)FVector::Dist(A, B);
+		}
+	}
+	return bFound;
+}
+
+bool AAntTrailNet::HandOff(AKitchenLoot* F, uint16 Trail)
+{
+	if (!HasAuthority() || !F || F->bMain || F->bIsGear || F->bBody || F->bVault || F->bHeld || F->IsCarried() || Claimed.Contains(F))
+	{
+		return false;
+	}
+	FAntTrailLine* L = nullptr;
+	for (FAntTrailLine& X : Lines) { if (X.Id == Trail) { L = &X; } }
+	if (!L || L->bLaying || L->Workers <= 0 || L->Points.Num() < 2)
+	{
+		return false;
+	}
+	if (L->Dist.Num() != L->Points.Num()) { Measure(*L); }
+	const AAntSnowball* S = AAntSnowball::Get(GetWorld());
+	const AAntRaid* Raid = AAntRaid::Get(GetWorld());
+	const int32 Carry = 6 + 4 * (S ? S->LvOf(L->Owner, AntBoost::WorkerCarry) : 0) + (Raid ? Raid->Nest.Tier_(AntUp::Carriers) : 0);
+	float D2;
+	const float S0 = NearestOnLine(*L, F->GetActorLocation(), D2);
+	FAntFerry Fy;
+	Fy.Trail = L->Id;
+	Fy.Start = GetWorld()->GetTimeSeconds();
+	Fy.From = S0;
+	// What one worker cannot lift goes home in a chain of them, slower (a quarter of the pace at the least).
+	Fy.Speed = BaseSpeed * TrailPace() * (1.f + 0.35f * (S ? S->LvOf(L->Owner, AntBoost::WorkerSpeed) : 0)) * FMath::Clamp((float)Carry / FMath::Max(1, F->Weight), 0.25f, 1.f);
+	Fy.Color = F->Color.ToFColor(true);
+	Fy.Size = (uint8)FMath::Clamp(FMath::RoundToInt(4.f + F->Weight * 1.2f), 4, 26);
+	Fy.bFromSquad = true;
+	Fy.Load = F;
+	F->SquadPick(this, RootComponent, F->GetActorLocation());
+	F->SetActorHiddenInGame(true);
+	Ferries.Add(Fy);
+	Claimed.Add(F);
+	ForceNetUpdate();
+	UE_LOG(LogTemp, Display, TEXT("ANTTRAIL hand-off «%s» (weight %d) onto trail %d at %.0f of %.0f from the nest, %.0f uu/s"), *F->LootName, F->Weight, (int32)L->Id, S0, L->Length, Fy.Speed);
+	return true;
+}
+
 // ---------------------------------------------------------------------------------------------
 // Drawing (every machine)
 // ---------------------------------------------------------------------------------------------
@@ -305,6 +401,8 @@ void AAntTrailNet::Rebuild()
 	TArray<FTransform> LayXf;
 	TArray<float> DotData;
 	TArray<float> LayData;
+	TArray<FTransform> FlowXf;
+	TArray<float> FlowData;
 	const AAntSnowball* Snow = AAntSnowball::Get(GetWorld());
 	for (const FAntTrailLine& L : Lines)
 	{
@@ -365,6 +463,17 @@ void AAntTrailNet::Rebuild()
 			Acc -= Here;
 			const FVector Mid = (A + B) * 0.5f;
 			const float Scale = (SegLen[i] + 160.f) / 100.f;
+			if (Flow && bHasMaterial && FlowXf.Num() < 3000)
+			{
+				// the flow home: dashes evenly along the segment, all walking it towards the nest at the workers' pace
+				const int32 Dashes = FMath::Max(1, FMath::RoundToInt(SegLen[i] / TrailLook::FlowStep));
+				for (int32 k = 0; k < Dashes; ++k)
+				{
+					const float D[TrailLook::NumData] = { (float)A.X, (float)A.Y, (float)A.Z, (float)B.X, (float)B.Y, (float)B.Z, (float)N.X, (float)N.Y, (float)N.Z, -Speed0 * 0.8f, (k + 0.5f) / Dashes, 0.f, 0.f };
+					FlowXf.Add(FTransform(FQuat::Identity, Mid, FVector(Scale)));
+					FlowData.Append(D, TrailLook::NumData);
+				}
+			}
 			const int32 Out = (Here + 1) / 2;
 			const int32 Back = Here - Out;
 			for (int32 k = 0; k < Here; ++k)
@@ -418,6 +527,7 @@ void AAntTrailNet::Rebuild()
 	};
 	FillDots(Dots, DotXf, DotData);
 	FillDots(LayDots, LayXf, LayData);
+	if (Flow) { FillDots(Flow, FlowXf, FlowData); }
 }
 
 void AAntTrailNet::DrawFerries()
@@ -434,9 +544,17 @@ void AAntTrailNet::DrawFerries()
 		const bool bShow = Ferries.IsValidIndex(i) && FerryPos(Ferries[i], Now, P);
 		FerryCrumbs[i]->SetVisibility(bShow);
 		FerryAnts[i]->SetVisibility(bShow);
+		if (FerryRings.IsValidIndex(i)) { FerryRings[i]->SetVisibility(bShow); }
 		if (!bShow)
 		{
 			continue;
+		}
+		if (FerryRings.IsValidIndex(i))
+		{
+			// a pulsing gold disc under the load: food on its way home, readable from across the kitchen
+			const float Rr = FMath::Max(Ferries[i].Size * 2.2f, 24.f) * (1.f + 0.15f * FMath::Sin(Now * 6.f + i));
+			FerryRings[i]->SetWorldLocation(P + FVector(0.f, 0.f, 0.8f));
+			FerryRings[i]->SetWorldScale3D(FVector(Rr / 50.f, Rr / 50.f, 0.006f));
 		}
 		const FAntFerry& F = Ferries[i];
 		const FAntTrailLine* L = LineById(F.Trail);
@@ -923,8 +1041,13 @@ void AAntTrailNet::ArriveFerries()
 		{
 			continue;
 		}
-		// Home: delivered like any food (the snowball credits the trail's owner).
+		// Home: delivered like any food (the snowball credits the trail's owner). The trail's counter goes up.
 		APlayerState* TrailOwner = L->Owner;
+		const uint16 TrailId = L->Id;
+		for (FAntTrailLine& X : Lines)
+		{
+			if (X.Id == TrailId) { X.Delivered++; X.DeliveredValue += Load->Value; }
+		}
 		Ferries.RemoveAt(f);
 		Claimed.Remove(Load);
 		Load->SquadDrop();
@@ -938,8 +1061,11 @@ void AAntTrailNet::ArriveFerries()
 			AntSnowball::SetCredit(nullptr);
 		}
 		++Ferried;
-		UE_LOG(LogTemp, Display, TEXT("ANTTRAIL ferried «%s» (%d) home on trail %d"), *Load->LootName, Load->Value, (int32)L->Id);
+		int32 Count = 0;
+		for (const FAntTrailLine& X : Lines) { if (X.Id == TrailId) { Count = X.Delivered; } }
+		UE_LOG(LogTemp, Display, TEXT("ANTTRAIL ferried «%s» (%d) home on trail %d: %d delivered on it"), *Load->LootName, Load->Value, (int32)TrailId, Count);
 		Load->Destroy();
+		ForceNetUpdate();
 	}
 }
 
@@ -1188,6 +1314,94 @@ namespace AntTrail
 		if (AAntTrailNet* T = World ? AAntTrailNet::Get(World) : nullptr)
 		{
 			if (T->Lines.Num() > 0) { T->Cut(Center, Radius, TEXT("удар")); }
+		}
+	}
+
+	void GetTrails(const UWorld* World, TArray<FAntTrailView>& Out, const APlayerState* OnlyOwner)
+	{
+		Out.Reset();
+		const AAntTrailNet* T = World ? AAntTrailNet::Get(World) : nullptr;
+		if (!T)
+		{
+			return;
+		}
+		const float Now = T->NetNow();
+		for (const FAntTrailLine& L : T->Lines)
+		{
+			if (OnlyOwner && L.Owner != OnlyOwner)
+			{
+				continue;
+			}
+			FAntTrailView& V = Out.AddDefaulted_GetRef();
+			V.Id = L.Id;
+			V.Owner = L.Owner;
+			V.Workers = L.Workers;
+			V.bLaying = L.bLaying;
+			V.Delivered = L.Delivered;
+			V.DeliveredValue = L.DeliveredValue;
+			V.Points.Reserve(L.Points.Num());
+			for (int32 i = 0; i < L.Points.Num(); ++i)
+			{
+				V.Points.Add(FVector(L.Points[i]));
+				if (i > 0) { V.Length += (float)FVector::Dist(V.Points[i - 1], V.Points[i]); }
+			}
+			for (const FAntFerry& F : T->Ferries)
+			{
+				FVector P;
+				if (F.Trail == L.Id && T->FerryPos(F, Now, P)) { V.Loads.Add(P); }
+			}
+		}
+	}
+
+	void DrawHud(AHUD* Hud, UCanvas* Cv, APlayerController* PC)
+	{
+		if (!Hud || !Cv || !PC || !GEngine)
+		{
+			return;
+		}
+		TArray<FAntTrailView> Trails;
+		GetTrails(PC->GetWorld(), Trails);
+		if (Trails.Num() == 0)
+		{
+			return;
+		}
+		FVector CamLoc;
+		FRotator CamRot;
+		PC->GetPlayerViewPoint(CamLoc, CamRot);
+		const float K = FMath::Max(0.7f, Cv->ClipY / 1080.f);
+		UFont* Font = GEngine->GetSmallFont();
+		for (const FAntTrailView& V : Trails)
+		{
+			if (V.Points.Num() < 2)
+			{
+				continue;
+			}
+			const bool bMine = V.Owner == PC->PlayerState;
+			// The label stands over the far end (where the workers pick up): what the trail is doing and what it has brought.
+			const FVector At = V.Points.Last() + FVector(0.f, 0.f, 60.f);
+			FVector2D Sp;
+			if (FVector::Dist(At, CamLoc) > 12000.f || !PC->ProjectWorldLocationToScreen(At, Sp))
+			{
+				continue;
+			}
+			const FString Who = bMine ? FString(TEXT("твоя тропа")) : (V.Owner ? FString::Printf(TEXT("тропа %s"), *V.Owner->GetPlayerName()) : FString(TEXT("тропа")));
+			const FString Line1 = V.bLaying ? FString::Printf(TEXT("%s: прокладывается"), *Who)
+				: FString::Printf(TEXT("%s · рабочих %d · несут %d"), *Who, V.Workers, V.Loads.Num());
+			const FString Line2 = V.bLaying ? FString() : FString::Printf(TEXT("доставлено %d (+%d еды)"), V.Delivered, V.DeliveredValue);
+			const FLinearColor C = bMine ? FLinearColor(1.f, 0.82f, 0.3f) : FLinearColor(0.75f, 0.95f, 0.8f);
+			FCanvasTextItem T1(Sp, FText::FromString(Line1), Font, C);
+			T1.Scale = FVector2D(1.05f * K, 1.05f * K);
+			T1.bCentreX = true;
+			T1.EnableShadow(FLinearColor(0.f, 0.f, 0.f, 0.85f));
+			Cv->DrawItem(T1);
+			if (!Line2.IsEmpty())
+			{
+				FCanvasTextItem T2(Sp + FVector2D(0.f, 17.f * K), FText::FromString(Line2), Font, FLinearColor::White);
+				T2.Scale = FVector2D(1.05f * K, 1.05f * K);
+				T2.bCentreX = true;
+				T2.EnableShadow(FLinearColor(0.f, 0.f, 0.f, 0.85f));
+				Cv->DrawItem(T2);
+			}
 		}
 	}
 }

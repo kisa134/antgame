@@ -69,6 +69,9 @@ private:
 	bool IsStickable(const FHitResult& Hit) const;
 	void Detach(const FVector& Push);
 	void SetCrawlBase(UPrimitiveComponent* C, FName Bone);
+	/** Crawling on a floor, it ran into the edge of something low (a mat, a newspaper, a lid): put it up on top, as a step,
+	 *  instead of climbing the edge face (an undercut lip it cannot hold) or sliding along it. True: it stepped up. */
+	bool StepOverLip(const FHitResult& Hit, const FVector& N, const FVector& InDir, const FVector& HitN, float R);
 	float Now() const;
 
 	FVector SurfaceNormal = FVector::UpVector;

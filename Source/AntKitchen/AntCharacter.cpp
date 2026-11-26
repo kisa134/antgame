@@ -48,6 +48,7 @@
 #include "AntTrail.h"
 #include "AntFighter.h"
 #include "AntCosmetics.h"
+#include "AntDifficulty.h"
 
 AAntCharacter::AAntCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<UAntMovementComponent>(ACharacter::CharacterMovementComponentName))
@@ -188,7 +189,8 @@ float AAntCharacter::GetStrength() const
 		return 100000.f;   // admin: carries anything alone
 	}
 	const float S = StrengthOverride >= 0.f ? StrengthOverride : GetClassDef().Strength;
-	return ((Team == 0 && Creature == 0 && AntCard::Has(this, AntCard::Jaws)) ? S * 1.25f : S) * AntSnowball::CarryMul(this) * AntFighter::Mul(this, AntStat::Strength);
+	return ((Team == 0 && Creature == 0 && AntCard::Has(this, AntCard::Jaws)) ? S * 1.25f : S) * AntSnowball::CarryMul(this) * AntFighter::Mul(this, AntStat::Strength)
+		* AntDifficulty::CarryMul(this);   // casual: the food is lighter, hard: heavier (KAN-30)
 }
 
 float AAntCharacter::AcidCost() const
@@ -2161,6 +2163,7 @@ float AAntCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEv
 		return 0.f;   // «ветеран тапка», «счастливчик» (AntFighter.h)
 	}
 	DamageAmount *= AntFighter::Mul(this, AntStat::DamageTaken);   // perks and the «Черепаха» doctrine
+	DamageAmount *= AntDifficulty::DamageMul(this, DamageCauser ? DamageCauser : (EventInstigator ? EventInstigator->GetPawn() : nullptr));   // residents' blows (KAN-30)
 	const float Actual = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 	if (Actual <= 0.f)
 	{

@@ -1,5 +1,6 @@
 ﻿#include "AntRun.h"
 #include "AntTutorial.h"
+#include "AntLab.h"
 #include "AntState.h"
 #include "AntWreck.h"
 #include "AntLife.h"
@@ -56,6 +57,9 @@
 #include "AntInside.h"
 #include "AntSnowball.h"
 #include "AntFighter.h"
+#include "AntDifficulty.h"
+#include "AntColonyVote.h"
+#include "AntMinimap.h"
 
 namespace
 {
@@ -790,6 +794,8 @@ void AAntKitchenGameMode::RunBeginPlay()
 		}
 	};
 	// Things ants can switch on to make noise: the microwave (start button on its front) and the TV (the console on the stand).
+	if (!AntLab::Get())   // (KAN-37 lab: not in the grey box)
+	{
 	SpawnBox(0, FVector(2290.f, 3985.f, 1960.f));
 	FVector Console(12500.f, -8250.f, 1160.f);
 	if (const FKitchenArtInst* I = KitchenArt::Enabled() ? KitchenArt::Find(TEXT("SM_L_GameConsole")) : nullptr)
@@ -797,6 +803,7 @@ void AAntKitchenGameMode::RunBeginPlay()
 		Console = FVector(I->Loc) + FVector(0.f, 0.f, 60.f);
 	}
 	SpawnBox(1, Console);
+	}
 	SpawnHighProps();
 
 	// Dev: -AntDo="12:tp 4500 2900 60;14:pull;20:bots 2;30:win" runs commands at those seconds (see DevCommand).
@@ -825,6 +832,10 @@ void AAntKitchenGameMode::RunBeginPlay()
 
 void AAntKitchenGameMode::SpawnHighProps()
 {
+	if (AntLab::Get())
+	{
+		return;   // KAN-37 lab: the kitchen's high props have no place in the grey box
+	}
 	// Heavy things near an edge, up high: lean on one and it goes over. On the Human's head it stuns him; on a fire ant it is the end.
 	struct FDef { const TCHAR* Name; EAntShape Shape; FVector Loc; FVector Size; FLinearColor Color; float Mass; };
 	const FDef Defs[] =
@@ -854,7 +865,7 @@ void AAntKitchenGameMode::SpawnHighProps()
 
 void AAntKitchenGameMode::SpawnContainerLoot()
 {
-	if (!bHeist || !KitchenArt::Enabled())
+	if (!bHeist || !KitchenArt::Enabled() || AntLab::Get())
 	{
 		return;
 	}
@@ -1050,7 +1061,7 @@ void AAntKitchenGameMode::RunTick()
 		CompleteOrder(AntOrder::Overfill);
 	}
 	CheckTrapped();
-	if (!Run.bEventDone && Run.EventPlanned != 0 && Gone >= Run.EventAt && GS->ShiftStage < 3)
+	if (!Run.bEventDone && Run.EventPlanned != 0 && Gone >= Run.EventAt && GS->ShiftStage < 3 && !AntLab::Get())   // (KAN-37 lab: no kitchen events)
 	{
 		StartEvent(Run.EventPlanned);
 	}
@@ -1562,6 +1573,10 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 	{
 		return;
 	}
+	if (AntLab::DevCommand(this, A))
+	{
+		return;   // KAN-37: lab info | check | open/shut <hatch|all> | tp ... | near | grab | ceiling 0|1 (AntLab.cpp)
+	}
 	if (AntTut::DevCommand(this, A))
 	{
 		return;   // tut info|skip|beat N|assist|enter|auto|end (AntTutorial.cpp)
@@ -1597,6 +1612,10 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 	if (AntCarry::DevCommand(this, A))
 	{
 		return;   // carrying together: carry spawn|crew|go|desync|yank|stop|kill|human|rivals|army|workers|ramp|corner|cam|shot|log|info (AntCarry.cpp)
+	}
+	if (AntDifficulty::DevCommand(this, A) || AntColonyVote::DevCommand(this, A) || AntMinimap::DevCommand(this, A))   // difficulty ..., vote ..., minimap ... (KAN-29..31)
+	{
+		return;
 	}
 	if (AntState::DevCommand(this, A) || AntWreck::DevCommand(this, A) || AntWeapons::DevCommand(this, A) || AntVersus::DevCommand(this, A) || AHumanCharacter::HeavyDevCommand(this, A))
 	{

@@ -10,6 +10,7 @@
 #include "AntSnowball.h"
 #include "AntTrail.h"
 #include "AntRts.h"
+#include "AntSquad.h"
 #include "AntBotController.h"
 #include "AntCarry.h"
 #include "AntCloth.h"
@@ -41,10 +42,21 @@
 #include "Misc/DateTime.h"
 #include "HAL/FileManager.h"
 #include "UObject/UnrealType.h"
+#include "Widgets/SBoxPanel.h"
+#include "Widgets/Layout/SBox.h"
+#include "Widgets/Layout/SBorder.h"
+#include "Widgets/Layout/SScrollBox.h"
+#include "Widgets/Layout/SWrapBox.h"
+#include "Widgets/Input/SButton.h"
+#include "Widgets/Text/STextBlock.h"
+#include "Framework/Application/SlateApplication.h"
+#include "Engine/GameViewportClient.h"
+#include "Styling/CoreStyle.h"
 
 // Branches that are not merged yet light their beats up by themselves once their headers are in the tree.
 #if __has_include("AntReact.h")
 #define ANT_TUT_CHAINS 1
+#include "AntReact.h"
 #else
 #define ANT_TUT_CHAINS 0
 #endif
@@ -98,6 +110,7 @@ namespace
 		LCloth, LClothPay,
 		LWater, LWaterFlood, LWaterGeyser, LWaterPay,
 		LChainBranch, LChainCore, LPoligon, LChainPay,
+		LChainPepper, LChainFlour, LChainPower, LChainSling, LChainPeas, LPerk,
 		LInside, LInsideEar, LInsideNose, LInsidePay,
 		LWake, LWakeLook, LWakePets, LWakePay,
 		LFinale, LFinaleHalf, LFinalePay, LFinaleFail,
@@ -141,7 +154,7 @@ namespace
 		{ TEXT("Видишь? Носят сами. Ты теперь начальство."), TEXT("See? They haul it themselves. You're management now."), 0 },
 
 		{ TEXT("Твой отряд. Зажми [Caps Lock] — появится курсор. Обведи всех рамкой [ЛКМ]."), TEXT("Your squad. Hold [Caps Lock] for a cursor. Box-select them with [LMB]."), 0 },
-		{ TEXT("А теперь [ПКМ] по сыру: тащите сыр!"), TEXT("Now [RMB] on the cheese: haul the cheese!"), 0 },
+		{ TEXT("Смотри на сыр и жми [Q]: отряд потащит! (Или [ПКМ] по сыру, пока зажат Caps Lock.)"), TEXT("Look at the cheese and press [Q]: the squad hauls it! (Or [RMB] on it while holding Caps Lock.)"), 0 },
 		{ TEXT("Сыр в гнезде. Командир из тебя получится."), TEXT("Cheese is home. You'll make a commander."), 0 },
 
 		{ TEXT("Полка висит на шурупах. Держи [E] на шурупе — напарник поможет, одному не открутить."), TEXT("The shelf hangs on screws. Hold [E] on a screw — your partner helps, one ant can't do it."), 0 },
@@ -160,6 +173,12 @@ namespace
 		{ TEXT("Цепная реакция: дёрни одно — упадёт другое. Карниз и кола — твои."), TEXT("Chain reactions: pull one thing, another falls. The curtain rod and the cola are yours."), 0 },
 		{ TEXT("Свободный полигон! Собери свою цепочку. [Enter] — когда наиграешься."), TEXT("Free range! Build your own chain. [Enter] when you're done."), 0 },
 		{ TEXT("Хаос — это тоже тактика."), TEXT("Chaos is a tactic too."), 0 },
+		{ TEXT("Перечница. Держи [E] — отряд поможет. Опрокинем — чихнут все."), TEXT("The pepper shaker. Hold [E] — the squad helps. Tip it and everybody sneezes."), 0 },
+		{ TEXT("Мука! Прогрызи мешок — [E]. Белая завеса: Гигант слепнет, а мы оставляем следы."), TEXT("Flour! Chew the sack open — [E]. A white-out: the Giant goes blind, we leave prints."), 0 },
+		{ TEXT("Щиток в прихожей. Втроём — [E] — рубильник вниз. Темнота — наш союзник."), TEXT("The fuse box in the hall. Three of you — [E] — pull the switch. Darkness is our friend."), 0 },
+		{ TEXT("Рогатка! Тяни резинку — [E]. Кто в корзинке, тот полетит на стол."), TEXT("A slingshot! Pull the band — [E]. Whoever is in the pouch flies onto the table."), 0 },
+		{ TEXT("Горох. Столкни миску — [E]. Всё покатится. Только не себе под лапы."), TEXT("Peas. Push the bowl off — [E]. Everything rolls. Just not under your own feet."), 0 },
+		{ TEXT("Ефрейтор — это первая ступень. Выбери перк касты: сила — не главное, главное — стиль."), TEXT("Lance Corporal is the first rung. Pick a caste perk: power is nothing, style is everything."), 0 },
 
 		{ TEXT("Гигант дремлет и храпит. Лезь на него. Ухо — сверху."), TEXT("The Giant dozes and snores. Climb him. The ear is up top."), 0 },
 		{ TEXT("В ухо! [E]. Он отмахнётся во сне — держись!"), TEXT("Into the ear! [E]. He'll swat in his sleep — hold on!"), 0 },
@@ -176,7 +195,7 @@ namespace
 		{ TEXT("Торт дома! Королева рыдает от счастья!"), TEXT("Cake is home! The Queen weeps with joy!"), 0 },
 		{ TEXT("Не успели. Ещё раз — с последней точки."), TEXT("Too slow. Again — from the last checkpoint."), 0 },
 
-		{ TEXT("Выпуск! Новобранец, теперь ты — Рядовой. Настоящий рейд ждёт."), TEXT("Graduation! Recruit, you are now a Private. The real raid awaits."), 0 },
+		{ TEXT("Выпуск! Новобранец, теперь ты — Ефрейтор. Настоящий рейд ждёт."), TEXT("Graduation! Recruit, you are now a Lance Corporal. The real raid awaits."), 0 },
 		{ TEXT("А хочешь сыграть за Гиганта? Тапок — в твоих руках."), TEXT("Fancy playing the Giant? The slipper is in your hands."), 1 },
 		{ TEXT("Не стой столбом! Смотри на метку."), TEXT("Don't just stand there! Follow the marker."), 0 },
 		{ TEXT("Застрял? [Enter] — сержант поможет."), TEXT("Stuck? [Enter] — the sergeant will help."), 0 },
@@ -187,7 +206,7 @@ namespace
 	float LineSeconds(int32 L)
 	{
 		if (L < 0 || L >= LCount) { return 0.f; }
-		return FMath::Clamp(1.2f + 0.055f * FCString::Strlen(GLines[L].Ru), 2.5f, 7.5f);
+		return FMath::Clamp(1.0f + 0.045f * FCString::Strlen(GLines[L].Ru), 2.0f, 6.0f);
 	}
 }
 
@@ -239,25 +258,27 @@ namespace
 			  S{ TEXT("Рабочие несут крошки"), TEXT("Workers haul crumbs"), TEXT(""), 3, true } }));
 		T.Add(Add(TEXT("rts"), 1, AntTut::Core, TEXT("Командир"), TEXT("Commander"), 110.f, 120,
 			{ S{ TEXT("Выдели отряд"), TEXT("Select the squad"), TEXT("Caps Lock+ЛКМ|Caps Lock+LMB"), 1, false },
-			  S{ TEXT("Прикажи: тащите сыр"), TEXT("Order: haul the cheese"), TEXT("ПКМ|RMB"), 1, false },
+			  S{ TEXT("Прикажи: тащите сыр"), TEXT("Order: haul the cheese"), TEXT("Q|Q"), 1, false },
 			  S{ TEXT("Сыр — в гнезде"), TEXT("Cheese is home"), TEXT(""), 1, true } }));
-		T.Add(Add(TEXT("fasteners"), 2, AntTut::Core, TEXT("Шурупы и банки"), TEXT("Screws and Jars"), 150.f, 120,
+		T.Add(Add(TEXT("fasteners"), 2, AntTut::Core, TEXT("Шурупы и банки"), TEXT("Screws and Jars"), 110.f, 120,
 			{ S{ TEXT("Открути шурупы полки"), TEXT("Undo the shelf screws"), TEXT("E"), 2, true },
 			  S{ TEXT("Пройди по варенью"), TEXT("Walk through the jam"), TEXT(""), 1, false },
 			  S{ TEXT("Пройди по рассолу"), TEXT("Walk through the brine"), TEXT(""), 1, false } }));
-		T.Add(Add(TEXT("cloth"), 2, AntTut::Core, TEXT("Скатерть"), TEXT("The Tablecloth"), 100.f, 120,
+		T.Add(Add(TEXT("cloth"), 2, AntTut::Core, TEXT("Скатерть"), TEXT("The Tablecloth"), 75.f, 120,
 			{ S{ TEXT("Схвати край скатерти"), TEXT("Grab the tablecloth edge"), TEXT("E"), 1, false },
 			  S{ TEXT("Сдёрни скатерть"), TEXT("Pull it off"), TEXT("E"), 1, true } }));
-		T.Add(Add(TEXT("water"), 2, AntTut::Core, TEXT("Потоп"), TEXT("Flood"), 160.f, 140,
+		T.Add(Add(TEXT("water"), 2, AntTut::Core, TEXT("Потоп"), TEXT("Flood"), 110.f, 140,
 			{ S{ TEXT("Открой кран"), TEXT("Open the tap"), TEXT("E"), 1, true },
 			  S{ TEXT("Проплыви"), TEXT("Swim"), TEXT("W|Пробел"), 1, false },
 			  S{ TEXT("Кола + ментос"), TEXT("Cola + mints"), TEXT(""), 1, true } }));
 		if (AntTut::BranchMerged(AntTut::Chains))
 		{
-			T.Add(Add(TEXT("chains"), 2, AntTut::Chains, TEXT("Цепные реакции"), TEXT("Chain Reactions"), 170.f, 150,
+			T.Add(Add(TEXT("chains"), 2, AntTut::Chains, TEXT("Цепные реакции"), TEXT("Chain Reactions"), 200.f, 150,
 				{ S{ TEXT("Перец: чих"), TEXT("Pepper: sneeze"), TEXT("E"), 1, true },
-				  S{ TEXT("Мука: облако"), TEXT("Flour: cloud"), TEXT("E"), 1, true },
-				  S{ TEXT("Пробки: темнота"), TEXT("Fuse: blackout"), TEXT("E"), 1, true } }));
+				  S{ TEXT("Мука: белая завеса"), TEXT("Flour: white-out"), TEXT("E"), 1, true },
+				  S{ TEXT("Щиток: темнота"), TEXT("Fuse box: blackout"), TEXT("E"), 1, true },
+				  S{ TEXT("Рогатка: полёт на стол"), TEXT("Slingshot: fly to the table"), TEXT("E"), 1, true },
+				  S{ TEXT("Горох: всё покатилось"), TEXT("Peas: everything rolls"), TEXT("E"), 1, true } }));
 		}
 		else
 		{
@@ -265,18 +286,18 @@ namespace
 				{ S{ TEXT("Карниз: штора и цветок"), TEXT("Curtain rod: curtain and plant"), TEXT(""), 1, true },
 				  S{ TEXT("Кола: липкий пол"), TEXT("Cola: sticky floor"), TEXT(""), 1, true } }));
 		}
-		T.Add(Add(TEXT("inside"), 3, AntTut::Core, TEXT("Внутрь Гиганта"), TEXT("Inside the Giant"), 140.f, 150,
+		T.Add(Add(TEXT("inside"), 3, AntTut::Core, TEXT("Внутрь Гиганта"), TEXT("Inside the Giant"), 90.f, 150,
 			{ S{ TEXT("Залезь на Гиганта"), TEXT("Climb the Giant"), TEXT("W"), 1, false },
 			  S{ TEXT("Залезь в ухо"), TEXT("Into the ear"), TEXT("E"), 1, false },
 			  S{ TEXT("Вылети с чихом"), TEXT("Ride the sneeze"), TEXT("E"), 1, false } }));
-		T.Add(Add(TEXT("wake"), 3, AntTut::Core, TEXT("Гигант проснулся"), TEXT("The Giant Wakes"), 120.f, 150,
+		T.Add(Add(TEXT("wake"), 3, AntTut::Core, TEXT("Гигант проснулся"), TEXT("The Giant Wakes"), 90.f, 150,
 			{ S{ TEXT("Укройся под столом"), TEXT("Hide under the table"), TEXT(""), 1, false },
 			  S{ TEXT("Продержись"), TEXT("Hold out"), TEXT(""), 1, true },
 			  S{ TEXT("Обойди Бадрика"), TEXT("Get past Badrik"), TEXT(""), 1, false } }));
 		T.Add(Add(TEXT("finale"), 3, AntTut::Core, TEXT("Последний свет"), TEXT("Last Light"), 170.f, 250,
 			{ S{ TEXT("Возьмитесь за торт"), TEXT("Grab the cake"), TEXT("E"), 1, false },
 			  S{ TEXT("Торт — в гнездо"), TEXT("Cake — home"), TEXT(""), 1, true } }));
-		T.Add(Add(TEXT("debrief"), 4, AntTut::Core, TEXT("Выпуск"), TEXT("Graduation"), 40.f, 0,
+		T.Add(Add(TEXT("debrief"), 4, AntTut::Core, TEXT("Выпуск"), TEXT("Graduation"), 60.f, 0,
 			{ S{ TEXT("Получи звание"), TEXT("Get your rank"), TEXT("Enter"), 1, true } }));
 		return T;
 	}
@@ -314,11 +335,12 @@ namespace AntTut
 		if (GWanted == 255)
 		{
 			GWanted = Off;
-			int32 B = 0;
-			if (FParse::Param(FCommandLine::Get(), TEXT("AntTutorial")) || FParse::Value(FCommandLine::Get(), TEXT("AntTutorial="), B))
+			int32 B = -1;
+			const bool bValue = FParse::Value(FCommandLine::Get(), TEXT("AntTutorial="), B);   // (-AntTutorial=N first: the bare flag matches "-AntTutorial=N" too)
+			if (bValue || FParse::Param(FCommandLine::Get(), TEXT("AntTutorial")))
 			{
 				GWanted = Training;
-				GWantedBeat = FMath::Clamp(B, 0, NumBeats() - 1);
+				GWantedBeat = FMath::Clamp(bValue ? B : 0, 0, NumBeats() - 1);
 			}
 			else if (FParse::Param(FCommandLine::Get(), TEXT("AntSandbox")))
 			{
@@ -355,6 +377,9 @@ namespace AntTut
 
 	FString RankName(int32 Rank)
 	{
+#if ANT_TUT_FIGHTER
+		if (Rank >= 1) { return AntRank::Name(Rank); }   // the colony's ladder: 1 is the Lance Corporal the training hands out
+#endif
 		return Rank <= 0 ? FString(Tx(TEXT("Новобранец"), TEXT("Recruit"))) : FString(Tx(TEXT("Рядовой"), TEXT("Private")));
 	}
 
@@ -450,7 +475,8 @@ namespace AntTut
 	{
 		const UWorld* W = Ctx ? Ctx->GetWorld() : nullptr;
 		AAntTutorial* T = W ? AAntTutorial::Get(W) : nullptr;
-		return T && T->Mode == Training && T->BeatNo != BSnow;   // (only the snowball's own beat feeds the meter: later picks would cover the lessons)
+		// Only the snowball's own beat, while it is played, feeds the meter: a pick popping up over the other lessons covers them.
+		return T && T->Mode == Training && !(T->BeatNo == BSnow && T->Phase == AAntTutorial::Play);
 	}
 }
 
@@ -505,13 +531,13 @@ namespace
 			{ LFast, LFastFall, -1 },
 			{ LCloth, -1 },
 			{ LWater, LWaterFlood, LWaterGeyser },
-			{ -1, -1, -1 },
+			{ LChainPepper, LChainFlour, LChainPower, LChainSling, LChainPeas },
 			{ LInside, LInsideEar, LInsideNose },
 			{ LWake, LWakeLook, LWakePets },
 			{ LFinale, -1 },
 			{ -1 },
 		};
-		if (Beat == BChains && Step == 0) { return AntTut::BranchMerged(AntTut::Chains) ? LChainBranch : LChainCore; }
+		if (Beat == BChains && Step == 0 && !AntTut::BranchMerged(AntTut::Chains)) { return LChainCore; }
 		return (Beat >= 0 && Beat < BCount && Step >= 0 && Step < 6) ? L[Beat][Step] : -1;
 	}
 	int32 PayLine(int32 Beat)
@@ -657,10 +683,14 @@ AAntCharacter* AAntTutorial::AntOf(const FAntTutPlayer& P) const
 	return C ? Cast<AAntCharacter>(C->GetPawn()) : nullptr;
 }
 
-void AAntTutorial::Say(int32 Line)
+void AAntTutorial::Say(int32 Line, int32 Step, bool bCut)
 {
 	if (Line < 0 || Line >= LCount) { return; }
-	LineQueue.Add(Line);
+	FQLine Q;
+	Q.Line = (int16)Line; Q.Beat = BeatNo; Q.Step = (int8)Step;
+	LineQueue.Add(Q);
+	while (LineQueue.Num() > 4) { LineQueue.RemoveAt(0); }   // a fast player never hears a long backlog
+	if (bCut) { LineEnds = FMath::Min(LineEnds, ServerNow()); }
 }
 
 AKitchenLoot* AAntTutorial::SpawnFood(const FString& Name, const FVector& At, const FString& Rename)
@@ -681,7 +711,7 @@ AKitchenLoot* AAntTutorial::SpawnFood(const FString& Name, const FVector& At, co
 	return nullptr;
 }
 
-void AAntTutorial::TeleportAll(const FVector& At, float Yaw)
+void AAntTutorial::TeleportAll(const FVector& At, float Yaw, bool bWall)
 {
 	int32 k = 0;
 	for (FAntTutPlayer& P : Players)
@@ -689,7 +719,7 @@ void AAntTutorial::TeleportAll(const FVector& At, float Yaw)
 		if (AAntCharacter* A = AntOf(P))
 		{
 			A->LetGo();
-			A->ApplyTeleport(At + FVector(70.f * (k % 3), 70.f * (k / 3), 0.f));
+			A->ApplyTeleport(At + (bWall ? FVector(0.f, 90.f * k, 0.f) : FVector(70.f * (k % 3), 70.f * (k / 3), 0.f)));
 			if (APlayerController* PC = Cast<APlayerController>(A->GetController())) { PC->ClientSetRotation(FRotator(-12.f, Yaw, 0.f)); }
 			++k;
 		}
@@ -710,10 +740,10 @@ FVector AAntTutorial::Checkpoint() const
 	{
 	case BInside: case BWake: return PSofaFloor;
 	case BFinale: return PFinaleStart;
-	case BFast: return PStart + FVector(0.f, 1500.f, 0.f);
-	case BCloth: return FVector(-1800.f, -2600.f, 30.f);
-	case BWater: return FVector(-3800.f, 2300.f, 30.f);
-	case BChains: return FVector(-2500.f, -2000.f, 30.f);
+	case BFast: return PScrew + FVector(30.f, -150.f, 0.f);
+	case BCloth: return ClothEdge + FVector(0.f, -450.f, 30.f);
+	case BWater: return AKitchenFaucet::ColdValve() + FVector(0.f, -120.f, 30.f);
+	case BChains: return Marks.Num() > 0 ? FVector(Marks[0].At) + FVector(0.f, 0.f, 20.f) : FVector(-2500.f, -2000.f, 30.f);   // the station the team is at
 	default: return PStart;
 	}
 }
@@ -769,21 +799,26 @@ void AAntTutorial::ServerTick(float Dt)
 		return;
 	}
 
-	// Lines: one after another; the host's [Enter] cuts the current one short.
+	// Lines: one after another; the host's [Enter] cuts the current one short. A line that has gone stale (another beat, or the
+	// step it is about is already done) is dropped, so a fast player never hears the sergeant lag behind him.
 	if (Now >= LineEnds)
 	{
-		if (LineQueue.Num() > 0)
+		bool bGot = false;
+		while (!bGot && LineQueue.Num() > 0)
 		{
-			LineNo = (int16)LineQueue[0];
+			const FQLine Q = LineQueue[0];
 			LineQueue.RemoveAt(0);
+			bool bStale = Q.Beat != BeatNo;
+			if (!bStale && Q.Step >= 0 && Phase == Play && Players.Num() > 0 && Players[0].Count.IsValidIndex(Q.Step) && AntTut::Beat(BeatNo).Steps.IsValidIndex(Q.Step)
+				&& Players[0].Count[Q.Step] >= AntTut::Beat(BeatNo).Steps[Q.Step].Need) { bStale = true; }
+			if (bStale) { UE_LOG(LogTemp, Display, TEXT("ANTTUT line %d dropped (stale)"), (int32)Q.Line); continue; }
+			LineNo = Q.Line;
 			LineStart = Now;
 			LineEnds = Now + LineSeconds(LineNo);
+			bGot = true;
 			UE_LOG(LogTemp, Display, TEXT("ANTTUT line %d: %s"), (int32)LineNo, GLines[LineNo].Ru);
 		}
-		else if (LineNo >= 0 && Now > LineEnds + 1.5f)
-		{
-			LineNo = -1;
-		}
+		if (!bGot && LineNo >= 0 && Now > LineEnds + 1.5f) { LineNo = -1; }
 	}
 
 	BeatClock += Dt;
@@ -810,7 +845,17 @@ void AAntTutorial::ServerTick(float Dt)
 		if (Now >= PoligonEnds) { Phase = Payoff; PhaseStart = Now; PayoffAt = Now; }
 		break;
 	case Payoff:
-		if (Now - PayoffAt > 4.f && LineQueue.Num() == 0) { Next(); }
+		if (Now - PayoffAt > 3.2f && LineQueue.Num() == 0) { Next(); }
+		break;
+	case Debrief:
+#if ANT_TUT_FIGHTER
+		if (PerkAt > 0.f && Now >= PerkAt)
+		{
+			PerkAt = -1.f;
+			for (FAntTutPlayer& P : Players) { AntFighter::OpenPerkPick(P.PS, -1); }
+			UE_LOG(LogTemp, Display, TEXT("ANTTUT the caste perk pick is open (rank 1)"));
+		}
+#endif
 		break;
 	default:
 		break;
@@ -857,7 +902,10 @@ void AAntTutorial::GoToBeat(int32 N)
 	bStaged = false;
 	Phase = Fade;
 	PhaseStart = ServerNow();
-	FadeAt = PhaseStart + (bChapter && N > 0 ? 0.9f : 0.05f);
+	FadeAt = PhaseStart + (bChapter && N > 0 ? 0.9f : N > 0 ? 0.5f : 0.05f);   // (a short black blink hides the staging teleport)
+	LineQueue.Reset();
+	LineEnds = PhaseStart;
+	LineNo = -1;
 	for (FAntTutPlayer& P : Players)
 	{
 		P.Count.Init(0, AntTut::Beat(N).Steps.Num());
@@ -886,6 +934,8 @@ void AAntTutorial::Stage(int32 N)
 	BeatAssists = 0;
 	bSkipped = false;
 	NextHintAt = AntTut::Beat(N).Par * 0.6f;
+	LastProgressAt = ServerNow();
+	BeatStartAt = ServerNow();
 	Marks.Reset();
 	Target = nullptr;
 	UWorld* W = GetWorld();
@@ -941,14 +991,26 @@ void AAntTutorial::Stage(int32 N)
 		break;
 	}
 	case BRts:
+		// The order is given by looking at the cheese: an ant still in the nest (home from the trail) is put out on the kitchen
+		// floor facing it, or it never sees what it is told to aim at.
+		for (FAntTutPlayer& P : Players)
+		{
+			AAntCharacter* A = AntOf(P);
+			if (!A || !A->IsInNest()) { continue; }
+			A->LetGo();
+			A->ApplyTeleport(PStart);
+			if (APlayerController* PC = Cast<APlayerController>(A->GetController())) { PC->ClientSetRotation(FRotator(-8.f, (PCheese - PStart).Rotation().Yaw, 0.f)); }
+		}
 		for (FAntTutPlayer& P : Players) { AntRts::Spawn(P.PS, 4, 0); }
 		Target = SpawnFood(NCheese, PCheese);
 		Mark(PCheese, TEXT("Сыр"), TEXT("Cheese"), 3);
 		break;
 	case BFast:
 	{
-		// A partner at the screws (one of the squad), the shelf's pickle side.
+		// A partner at the screws (one of the squad), the shelf's pickle side. The players are put on the wall by the screws
+		// (no long climb: the climb was the first beat's lesson).
 		Mark(PScrew, TEXT("Шурупы"), TEXT("Screws"));
+		TeleportAll(PScrew + FVector(30.f, -150.f, 0.f), 0.f, true);
 		int32 k = 0;
 		for (TActorIterator<AAntCharacter> It(W); It && k < 2; ++It)
 		{
@@ -961,26 +1023,31 @@ void AAntTutorial::Stage(int32 N)
 		ClothEdge = PClothEdge;
 		if (AAntCloth* C = Tablecloth(W)) { const FBox Bx = C->GetComponentsBoundingBox(true); if (Bx.IsValid) { ClothEdge = FVector(Bx.GetCenter().X, Bx.Min.Y + 25.f, 20.f); } }
 		Mark(ClothEdge, TEXT("Край скатерти"), TEXT("Tablecloth edge"));
+		TeleportAll(ClothEdge + FVector(0.f, -450.f, 30.f), 90.f);
 		UE_LOG(LogTemp, Display, TEXT("ANTTUT the tablecloth edge at %s"), *ClothEdge.ToCompactString());
 		break;
 	case BWater:
 	{
 		Mark(AKitchenFaucet::ColdValve(), TEXT("Кран (вдвоём)"), TEXT("Tap (two ants)"));
+		TeleportAll(AKitchenFaucet::ColdValve() + FVector(0.f, -120.f, 30.f), 90.f);
 		break;
 	}
 	case BChains:
-		if (AntTut::BranchMerged(AntTut::Chains))
+#if ANT_TUT_CHAINS
 		{
-			FVector P;
-			if (ReactProp(W, TEXT("Pepper"), P)) { Mark(P, TEXT("Перец"), TEXT("Pepper")); }
-			if (ReactProp(W, TEXT("Flour"), P)) { Mark(P, TEXT("Мука"), TEXT("Flour")); }
-			if (ReactProp(W, TEXT("PowerStrip"), P) || ReactProp(W, TEXT("Breaker"), P)) { Mark(P, TEXT("Пробки"), TEXT("Fuse")); }
+			// Five stations, each one a prop of the chains branch the team goes to (what "rx tp <prop>" does) and sets off together;
+			// the squad is the helping hands the props want (2-3 ants).
+			if (AAntReactNet* Net = AAntReactNet::Get(W)) { Net->ChainStart.Reset(); Net->SetPower(true, TEXT("training"), FVector::ZeroVector); }
+			EnsureSquad(3);
+			Fired = 0;
+			GoStation(0);
 		}
-		else
+#else
 		{
 			Mark(PRod, TEXT("Карниз"), TEXT("Curtain rod"));
 			Mark(PCola, TEXT("Кола"), TEXT("Cola"));
 		}
+#endif
 		break;
 	case BInside:
 	{
@@ -1015,13 +1082,22 @@ void AAntTutorial::Stage(int32 N)
 	case BDebrief:
 		SetGod(true);
 		Phase = Debrief;
-		Say(LDebrief); Say(LVersus); Say(LGift);
+		DebriefPage = 0;
+		Say(LDebrief);
 		TotalSeconds = FMath::RoundToInt(ServerNow() - StartedAt);
+#if ANT_TUT_FIGHTER
+		// The rank (Lance Corporal: the first perk tier opens at rank 1) and the medal «Пережил Розовую Плиту» go to every player's profile.
+		for (FAntTutPlayer& P : Players)
+		{
+			AntFighter::AwardRank(P.PS, 1);
+			AntFighter::AwardMedalKey(P.PS, TEXT("slipper"));
+		}
+#endif
 		break;
 	default:
 		break;
 	}
-	if (const int32 L = StepLine(N, 0); L >= 0) { Say(L); }
+	if (N != BChains && N != BDebrief) { if (const int32 L = StepLine(N, 0); L >= 0) { Say(L, 0); } }
 	for (FAntTutPlayer& P : Players) { P.LastStepSaid = 0; }
 }
 
@@ -1049,6 +1125,17 @@ void AAntTutorial::Cleanup(int32 N)
 	UWorld* W = GetWorld();
 	switch (N)
 	{
+	case BCarry:
+		// Co-op: a partner still carrying a crumb when the beat closes kept it into «Раз-два, взяли!» and could not grab the
+		// chocolate (packaged co-op run 26.11). The crumbs of the beat go.
+		for (FAntTutPlayer& P : Players)
+		{
+			AAntCharacter* A = AntOf(P);
+			AKitchenLoot* L = nullptr;
+			if (A) { L = A->Carrying; }
+			if (L && L->LootName == NCrumb) { A->LetGo(); L->Destroy(); UE_LOG(LogTemp, Display, TEXT("ANTTUT %s still carried a crumb: dropped"), P.PS ? *P.PS->GetPlayerName() : TEXT("?")); }
+		}
+		break;
 	case BCombat:
 		for (const TWeakObjectPtr<AActor>& A : Spawned) { if (AAntCharacter* C = Cast<AAntCharacter>(A.Get())) { C->Destroy(); } }
 		for (TActorIterator<AAntCharacter> It(W); It; ++It) { if (It->Creature == 1 && !It->IsPlayerControlled()) { It->Destroy(); } }   // the fly
@@ -1056,6 +1143,13 @@ void AAntTutorial::Cleanup(int32 N)
 	case BWater:
 		Command(TEXT("fluid tap off"));
 		Command(TEXT("fluid dry"));
+		break;
+	case BSnow:
+		// No card pick may pop up over the lessons after the snowball's own: drop what is on offer, count the levels as picked.
+		if (AAntSnowball* Snow = AAntSnowball::Get(W))
+		{
+			for (FAntTutPlayer& P : Players) { if (FAntSnowPlayer* SP = Snow->For(P.PS)) { SP->Offer.Reset(); SP->PicksDone = (uint8)FMath::Clamp(Snow->Level, 0, 255); } }
+		}
 		break;
 	case BChains:
 		if (AntTut::BranchMerged(AntTut::Chains)) { Command(TEXT("power on")); }
@@ -1085,6 +1179,7 @@ void AAntTutorial::PlayerStep(FAntTutPlayer& P, int32 Step, int32 Value, bool bS
 	const int32 V = FMath::Clamp(bSet ? Value : Was + Value, 0, Need);
 	if (V == Was) { return; }
 	P.Count[Step] = (uint8)V;
+	LastProgressAt = ServerNow();
 	if (V >= Need)
 	{
 		UE_LOG(LogTemp, Display, TEXT("ANTTUT step done: beat %d «%s» step %d «%s» by %s at %.1f s"), (int32)BeatNo, B.Id, Step, B.Steps[Step].Ru, P.PS ? *P.PS->GetPlayerName() : TEXT("?"), BeatClock);
@@ -1243,6 +1338,17 @@ void AAntTutorial::Check(float Dt)
 				if (SP->Selected.Num() >= 2) { PlayerStep(P, 0, 1); }
 				for (const FAntRtsTask& T : SP->Tasks) { if (T.Order == AntTask::Haul && T.Target == Target.Get()) { PlayerStep(P, 0, 1); PlayerStep(P, 1, 1); } }
 			}
+			// The order step ([Q]) went unnoticed at the 24.11 playtest: with no order 8 s into it, the sergeant says it again
+			// (then every 14 s); the HUD dims round the squad panel at the same time (QOrderCard).
+			if (P.Count.IsValidIndex(1) && P.Count[0] >= 1 && P.Count[1] < 1)
+			{
+				P.Aux += Dt;
+				if (P.Aux > 8.f)
+				{
+					P.Aux = -6.f;
+					if (&P == &Players[0] && LineQueue.Num() == 0) { Say(LRtsOrder, 1, true); UE_LOG(LogTemp, Display, TEXT("ANTTUT the squad order is said again (no [Q] yet)")); }
+				}
+			}
 			break;
 		case BFast:
 			if (A->Pulling && Cast<AKitchenFastener>(A->Pulling))
@@ -1267,6 +1373,22 @@ void AAntTutorial::Check(float Dt)
 		case BWater:
 			P.WaterFor = (Fluid && (Fluid->DepthAt(Pos) > 6.f || A->HasStatus(AntStatus::Stream) || A->HasStatus(AntStatus::Drowning))) ? P.WaterFor + Dt : P.WaterFor;
 			if (P.WaterFor > 2.5f) { PlayerStep(P, 1, 1); }
+			break;
+		case BChains:
+#if ANT_TUT_CHAINS
+			// [E] held on a prop: the squad leans in with you (two or three ants are what the props want) after a moment.
+			if (AAntReactProp* Prop = A->Pulling ? Cast<AAntReactProp>(A->Pulling) : nullptr)
+			{
+				P.Aux += Dt;
+				if (P.Aux > 2.2f && !Prop->bDone)
+				{
+					P.Aux = 0.f;
+					UE_LOG(LogTemp, Display, TEXT("ANTTUT the squad leans in on %s"), AntProp::Name(Prop->Kind));
+					Prop->ForceDone(A);
+				}
+			}
+			else { P.Aux = 0.f; }
+#endif
 			break;
 		case BInside:
 		{
@@ -1431,6 +1553,20 @@ void AAntTutorial::Check(float Dt)
 	}
 	case BChains:
 	{
+#if ANT_TUT_CHAINS
+		{
+			const int32 S = Station;
+			if (S < 5 && StationDone(S) && !(Fired & (1 << S)))
+			{
+				Fired |= 1 << S;
+				PayoffAt = Now;
+				TeamStep(S);
+				if (S == 2) { Command(TEXT("power on")); }   // the light comes back for the rest of the stations
+			}
+			if (S < 4 && (Fired & (1 << S)) && Now - PayoffAt > 2.5f) { GoStation(S + 1); }
+			break;
+		}
+#endif
 		// Reach a marker: its reaction fires (the step is done a moment later, when it has played).
 		static const TCHAR* BranchCmds[] = { TEXT("chain C7"), TEXT("chain C8"), TEXT("power short") };
 		static const TCHAR* CoreCmds[] = { TEXT("chain C3"), TEXT("chain C4") };
@@ -1514,12 +1650,79 @@ void AAntTutorial::Check(float Dt)
 		Complete();
 		return;
 	}
-	// Hints, then help on offer.
-	if (BeatClock > NextHintAt && !bOffer)
+	// Hints, then help on offer (at the par time, or after 40 s with no progress at all: a stuck player is not made to wait).
+	const float Idle = ServerNow() - LastProgressAt;
+	if (!bOffer && BeatClock > 12.f && (BeatClock > NextHintAt || Idle > 40.f))
 	{
-		if (BeatClock < B.Par) { Say(LHint); NextHintAt = B.Par; }
-		else { bOffer = true; Say(LOffer); }
+		if (BeatClock < B.Par && Idle <= 40.f) { if (LineQueue.Num() == 0) { Say(LHint, -1, true); NextHintAt = B.Par; } }
+		else { bOffer = true; Say(LOffer, -1, true); }
 	}
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Chains: the five stations
+// ---------------------------------------------------------------------------------------------------------------------
+namespace
+{
+#if ANT_TUT_CHAINS
+	const uint8 GStationKind[5] = { AntProp::Pepper, AntProp::Flour, AntProp::Breaker, AntProp::Slingshot, AntProp::PeaBowl };
+	const TCHAR* GStationChain[5] = { TEXT("C7"), TEXT("C8"), TEXT("power"), TEXT("C10"), TEXT("C11") };
+#endif
+}
+
+bool AAntTutorial::StationDone(int32 S) const
+{
+#if ANT_TUT_CHAINS
+	const AAntReactNet* Net = AAntReactNet::Get(GetWorld());
+	if (!Net || S < 0 || S > 4) { return false; }
+	if (S == 2 && !Net->bPower) { return true; }
+	const float* T0 = Net->ChainStart.Find(GStationChain[S]);
+	return T0 && GetWorld()->GetTimeSeconds() - *T0 > (S == 2 ? 0.5f : 2.5f);   // (let the reaction play a moment before the stamp)
+#else
+	return true;
+#endif
+}
+
+void AAntTutorial::GoStation(int32 S)
+{
+#if ANT_TUT_CHAINS
+	UWorld* W = GetWorld();
+	S = FMath::Clamp(S, 0, 4);
+	Station = (uint8)S;
+	StationAt = ServerNow();
+	Marks.Reset();
+	AAntReactProp* Prop = AAntReactProp::Find(W, GStationKind[S]);
+	if (!Prop) { UE_LOG(LogTemp, Warning, TEXT("ANTTUT station %d: no %s prop in this flat"), S, AntProp::Name(GStationKind[S])); TeamStep(S); Fired |= 1 << S; return; }
+	const FVector Use = Prop->UsePoint();
+	FAntTutMark M;
+	M.At = Use; M.Kind = 0;
+	M.Label = AntTut::Tx(AntProp::Ru(GStationKind[S]), AntProp::Name(GStationKind[S]));
+	Marks.Add(M);
+	// The players at the prop (as "rx tp"), the squad around: the slingshot's squad in its pouch (it flies when the band is let go).
+	TeleportAll(Use + FVector(0.f, 0.f, 20.f), 0.f);
+	const FVector Around = GStationKind[S] == AntProp::Slingshot ? Prop->GetActorTransform().TransformPosition(FVector(-230.f, 0.f, 60.f)) : Use;
+	int32 k = 0;
+	for (TActorIterator<AAntCharacter> It(W); It; ++It)
+	{
+		if (!It->bDead && AntSnowball::SquadOwnerOf(*It))
+		{
+			It->LetGo();
+			It->ApplyTeleport(Around + FVector(70.f * (1 + k % 3), 70.f * (k / 3), 25.f));
+			++k;
+		}
+	}
+	UE_LOG(LogTemp, Display, TEXT("ANTTUT station %d: %s at %s (squad %d)"), S, AntProp::Name(GStationKind[S]), *Use.ToCompactString(), k);
+	LastProgressAt = ServerNow();
+	if (const int32 L = StepLine(BChains, S); L >= 0) { Say(L, S, true); }
+#endif
+}
+
+void AAntTutorial::EnsureSquad(int32 N)
+{
+	UWorld* W = GetWorld();
+	int32 Have = 0;
+	for (TActorIterator<AAntCharacter> It(W); It; ++It) { if (!It->bDead && AntSnowball::SquadOwnerOf(*It)) { ++Have; } }
+	if (Have < N && Players.Num() > 0) { AntRts::Spawn(Players[0].PS, N - Have, 0); }
 }
 
 
@@ -1543,7 +1746,14 @@ void AAntTutorial::Complete()
 	bOffer = false;
 	TimerEnds = 0.f;
 	LineQueue.Reset();
-	LineEnds = FMath::Min(LineEnds, ServerNow() + 0.2f);
+	LineEnds = FMath::Min(LineEnds, ServerNow() + 0.1f);
+	if (BeatNo == BSnow)
+	{
+		if (AAntSnowball* Snow = AAntSnowball::Get(GetWorld()))
+		{
+			for (FAntTutPlayer& P : Players) { if (FAntSnowPlayer* SP = Snow->For(P.PS)) { SP->Offer.Reset(); SP->PicksDone = (uint8)FMath::Clamp(Snow->Level, 0, 255); } }
+		}
+	}
 	if (const int32 L = PayLine(BeatNo); L >= 0 && !bSkipped) { Say(L); }
 	if (BeatNo == BFinale) { Say(LQueen); }
 	UE_LOG(LogTemp, Display, TEXT("ANTTUT beat done: %d «%s» in %.1f s (par %.0f), retries %d, assists %d, skipped %d, xp %d"), (int32)BeatNo, B.Id, BeatClock, B.Par, BeatRetries, BeatAssists, bSkipped ? 1 : 0, TeamXp);
@@ -1555,6 +1765,16 @@ void AAntTutorial::Complete()
 		PoligonEnds = ServerNow() + (bAuto ? 8.f : 50.f);
 		Say(LPoligon);
 		Marks.Reset();
+#if ANT_TUT_CHAINS
+		// The other props of the chains: toaster, chocolate, ice, sponge, books, balloon, mints, the microwave (rx tp <name>).
+		for (const uint8 K : { (uint8)AntProp::ToasterSpring, (uint8)AntProp::Chocolate, (uint8)AntProp::IceTray, (uint8)AntProp::Sponge, (uint8)AntProp::BookRow, (uint8)AntProp::Balloon, (uint8)AntProp::Mentos, (uint8)AntProp::MicroButton })
+		{
+			if (const AAntReactProp* Pr = AAntReactProp::Find(GetWorld(), K))
+			{
+				FAntTutMark M; M.At = Pr->UsePoint(); M.Kind = 3; M.Label = AntTut::Tx(AntProp::Ru(K), AntProp::Name(K)); Marks.Add(M);
+			}
+		}
+#else
 		for (const TCHAR* Id : { TEXT("cereal"), TEXT("toaster"), TEXT("plant_k"), TEXT("upper_doors") })
 		{
 			if (AKitchenFixture* F = AKitchenFixture::Find(GetWorld(), Id))
@@ -1563,6 +1783,7 @@ void AAntTutorial::Complete()
 				FAntTutMark M; M.At = F->GetActorLocation(); M.Kind = 3; M.Label = AntTut::Tx(TEXT("Можно уронить"), TEXT("Can fall")); Marks.Add(M);
 			}
 		}
+#endif
 	}
 }
 
@@ -1600,7 +1821,17 @@ void AAntTutorial::Assist()
 		if (!(Fired & 1)) { Command(TEXT("fluid tap on 5")); }
 		else if (Fired & 2) { TeleportAll(PGeyser, 0.f); }
 		break;
-	case BChains: for (int32 s = 0; s < Marks.Num(); ++s) { if (!(Fired & (1 << s))) { TeleportAll(Marks[s].At + FVector(0.f, -250.f, 30.f), 90.f); break; } } break;
+	case BChains:
+#if ANT_TUT_CHAINS
+		// The sergeant's squad does the pulling: the station's prop is set off at once.
+		if (Station < 5 && !StationDone(Station))
+		{
+			if (AAntReactProp* Pr = AAntReactProp::Find(W, GStationKind[Station])) { if (!Pr->bDone) { Pr->ForceDone(Players.Num() > 0 ? AntOf(Players[0]) : nullptr); } }
+		}
+#else
+		for (int32 s = 0; s < Marks.Num(); ++s) { if (!(Fired & (1 << s))) { TeleportAll(Marks[s].At + FVector(0.f, -250.f, 30.f), 90.f); break; } }
+#endif
+		break;
 	case BInside:
 		for (FAntTutPlayer& P : Players)
 		{
@@ -1636,11 +1867,32 @@ void AAntTutorial::Assist()
 	}
 }
 
+void AAntTutorial::DebriefAdvance()
+{
+	if (Phase != Debrief) { return; }
+	if (DebriefPage >= 3) { Finish(); return; }
+	++DebriefPage;
+	LineQueue.Reset();
+	LineEnds = ServerNow();
+	BeatClock = 0.f;
+	PhaseStart = ServerNow();
+	UE_LOG(LogTemp, Display, TEXT("ANTTUT debrief page %d"), (int32)DebriefPage);
+	if (DebriefPage == 1) { Say(LQueen); Say(LGift); }
+	if (DebriefPage == 2)
+	{
+		Say(LPerk);
+#if ANT_TUT_FIGHTER
+		PerkAt = ServerNow() + 1.0f;   // the profile opens at the caste perks (one tier is open at rank 1)
+#endif
+	}
+	if (DebriefPage == 3) { Say(LVersus); }
+}
+
 void AAntTutorial::Enter(APlayerController* PC)
 {
 	const bool bHost = PC && PC->IsLocalController();
 	if (!bHost) { return; }
-	if (Phase == Debrief) { Finish(); return; }
+	if (Phase == Debrief) { DebriefAdvance(); return; }
 	if (Phase == Poligon) { PoligonEnds = ServerNow(); return; }
 	if (bOffer) { Assist(); return; }
 	LineEnds = ServerNow();   // the current line is cut short
@@ -1661,10 +1913,7 @@ void AAntTutorial::Finish()
 	}
 	for (FAntTutPlayer& P : Players)
 	{
-#if ANT_TUT_FIGHTER
-		AntFighter::AwardRank(P.PS, 0);
-		AntFighter::AwardMedalKey(P.PS, TEXT("slipper"));
-#endif
+		(void)P;
 	}
 #if ANT_TUT_METABUS
 	{
@@ -1738,15 +1987,25 @@ void AAntTutorial::SandboxTool(APlayerController* PC, int32 Tool)
 
 void AAntTutorial::AutoPlay(float Dt)
 {
-	if (Players.Num() == 0 || !GM) { return; }
-	AAntCharacter* Me = AntOf(Players[0]);
+	for (int32 i = 0; i < Players.Num() && i < 4; ++i) { AutoPlayFor(i, Dt); }
+}
+
+void AAntTutorial::AutoPlayFor(int32 Idx, float Dt)
+{
+	if (!Players.IsValidIndex(Idx) || !GM) { return; }
+	const bool bLead = Idx == 0;
+	// Co-op: the other players' ants are driven the same way through beats 4-7 (carry, team carry, snowball, trail, squad); in the
+	// other beats their own steps are ticked a few seconds in (simulated, logged).
+	const bool bTeamBeat = BeatNo == BCarry || BeatNo == BTeam || BeatNo == BSnow || BeatNo == BTrail || BeatNo == BRts;
+	if (!bLead && !bTeamBeat) { return; }
+	AAntCharacter* Me = AntOf(Players[Idx]);
 	APlayerController* PC = Me ? Cast<APlayerController>(Me->GetController()) : nullptr;
 	if (!Me || Me->bDead) { return; }
 	UWorld* W = GetWorld();
 	const float Now = ServerNow();
 	const AntTut::FBeat& B = AntTut::Beat(BeatNo);
-	FAntTutPlayer& P = Players[0];
-	AutoClock += Dt;
+	FAntTutPlayer& P = Players[Idx];
+	if (bLead) { AutoClock += Dt; }
 	auto Log = [this](const FString& S) { UE_LOG(LogTemp, Display, TEXT("ANTTUT auto beat %d t=%.1f: %s"), (int32)BeatNo, BeatClock, *S); };
 	auto Go = [Me](const FVector& T) { Me->DevGoTo = T; Me->bDevGo = true; };
 	auto Stop = [Me]() { Me->bDevGo = false; };
@@ -1766,17 +2025,21 @@ void AAntTutorial::AutoPlay(float Dt)
 		if (GM) { GM->StageCommand(TEXT("shot")); }
 	};
 	// Pictures: the prompt of each beat a few seconds in, the payoff.
-	if (Phase == Play && !(ShotMask & 1) && BeatClock > 3.5f) { ShotMask |= 1; Shot(TEXT("prompt")); }
-	if (Phase == Payoff && !(ShotMask & 2) && Now - PayoffAt > 1.2f) { ShotMask |= 2; Shot(TEXT("payoff")); }
-	if (Phase == Debrief && !(ShotMask & 4) && BeatClock > 4.f) { ShotMask |= 4; Shot(TEXT("debrief")); }
-	if (Phase == Debrief && BeatClock > 8.f) { Log(TEXT("enter: graduation")); Finish(); return; }
-	if (Phase == Intro && BeatNo == BPrologue && AutoClock > 2.f) { AutoClock = 0.f; LineEnds = Now; Log(TEXT("enter: next line")); }
+	if (bLead && Phase == Play && !(ShotMask & 1) && BeatClock > 3.5f) { ShotMask |= 1; Shot(TEXT("prompt")); }
+	if (bLead && Phase == Payoff && !(ShotMask & 2) && Now - PayoffAt > 1.2f) { ShotMask |= 2; Shot(TEXT("payoff")); }
+	if (bLead && Phase == Debrief)
+	{
+		const int32 Bit = 4 << DebriefPage;
+		if (!(ShotMask & Bit) && BeatClock > 2.5f) { ShotMask |= Bit; Shot(*FString::Printf(TEXT("debrief%d"), (int32)DebriefPage)); }
+		if (BeatClock > 5.f) { Log(FString::Printf(TEXT("enter: debrief page %d"), (int32)DebriefPage)); DebriefAdvance(); return; }
+	}
+	if (bLead && Phase == Intro && BeatNo == BPrologue && AutoClock > 2.f) { AutoClock = 0.f; LineEnds = Now; Log(TEXT("enter: next line")); }
 	if (Phase == Poligon && Now > PoligonEnds - 1.f) { return; }
 	if (Phase != Play) { return; }
 
 	// Co-op runs: the other players' own steps are ticked a few seconds in (their input is on their machines; the test checks
 	// that the beat waits for everyone, replicates the checklists and closes for all). Logged as simulated.
-	for (int32 i = 1; i < Players.Num(); ++i)
+	for (int32 i = 1; i < Players.Num() && bLead && !bTeamBeat; ++i)
 	{
 		if (BeatClock < 6.f + 3.f * i) { continue; }
 		bool bAny = false;
@@ -1787,18 +2050,18 @@ void AAntTutorial::AutoPlay(float Dt)
 		if (bAny) { Log(FString::Printf(TEXT("co-op: player %d's own steps ticked (simulated, %s)"), i, Players[i].PS ? *Players[i].PS->GetPlayerName() : TEXT("?"))); }
 	}
 	// The sergeant's help after a while (logged: it is not "played").
-	if (BeatClock > FMath::Max(40.f, B.Par * 0.8f) + 30.f * BeatAssists) { Log(TEXT("HELP (sergeant's assist)")); Assist(); return; }
+	if (bLead && BeatClock > FMath::Max(40.f, B.Par * 0.8f) + 30.f * BeatAssists) { Log(TEXT("HELP (sergeant's assist)")); Assist(); return; }
 
-	if (Now >= AutoLogAt)
+	if (bLead && Now >= AutoLogAt)
 	{
 		AutoLogAt = Now + 3.f;
 		const UAntMovementComponent* M = Me->GetAntMovement();
 		Log(FString::Printf(TEXT("at %s n %s climbing %d carrying %s"), *Me->GetActorLocation().ToCompactString(), *(M ? M->GetSurfaceNormal() : FVector::UpVector).ToCompactString(), Me->IsClimbing() ? 1 : 0, Me->Carrying ? *Me->Carrying->LootName : TEXT("-")));
 	}
-	static float Every = 0.f;
-	Every += Dt;
-	const bool bTick = Every > 0.6f;
-	if (bTick) { Every = 0.f; }
+	static float Every[4] = { 0.f, 0.f, 0.f, 0.f };
+	Every[Idx] += Dt;
+	const bool bTick = Every[Idx] > 0.6f;
+	if (bTick) { Every[Idx] = 0.f; }
 	switch (BeatNo)
 	{
 	case BMove:
@@ -1843,7 +2106,7 @@ void AAntTutorial::AutoPlay(float Dt)
 			break;
 		}
 		if (!Me->Carrying) { if (AKitchenLoot* L = Nearest(Name)) { if (FVector::Dist(L->GetActorLocation(), Me->GetActorLocation()) < 70.f || (bTick && BeatClock > 25.f)) { Stop(); if (FVector::Dist(L->GetActorLocation(), Me->GetActorLocation()) > 70.f) { Me->ApplyTeleport(L->GetActorLocation() + FVector(-40.f, 0.f, 20.f)); } if (bTick) { Log(FString::Printf(TEXT("grab %s: %s"), Name, Me->GrabLoot(L) ? TEXT("ok") : TEXT("refused"))); } } else { Go(L->GetActorLocation()); } } }
-		else { GoHome(); }
+		else { GoHome(); if (BeatNo == BFinale && BeatClock > 30.f) { P.Aux += Dt; if (P.Aux > 4.f) { P.Aux = 0.f; AKitchenLoot* Ck = Me->Carrying; const FVector Pn = Me->GetActorLocation(); const FVector Dir = (FVector(Me->DevGoTo) - Pn).GetSafeNormal2D(); const FVector To = Pn + Dir * 700.f + FVector(0.f, 0.f, 30.f); Me->LetGo(); if (Ck) { Ck->SetActorLocation(To + FVector(0.f, 0.f, 20.f), false, nullptr, ETeleportType::TeleportPhysics); } Me->ApplyTeleport(To); if (Ck) { Me->GrabLoot(Ck); } Log(TEXT("the walker is stuck with the cake: the squad drags it a few metres towards the nest")); } } }
 		break;
 	}
 	case BTrail:
@@ -1859,16 +2122,33 @@ void AAntTutorial::AutoPlay(float Dt)
 		}
 		break;
 	case BRts:
+		if (!Done(1)) { Stop(); }   // (the walk home of the beats before is still on: the ant stays where the beat put it, facing the cheese)
 		if (!Done(1) && bTick)
 		{
 			AAntSnowball* Snow = AAntSnowball::Get(W);
 			FAntSnowPlayer* SP = Snow ? Snow->For(P.PS) : nullptr;
 			if (SP && Target.IsValid())
 			{
-				SP->Selected.Reset();
-				for (AAntCharacter* A : SP->Squad) { if (A) { SP->Selected.Add(A); } }
-				AntRts::Assign(*SP, SP->Squad, AntTask::Haul, Target.Get(), Target->GetActorLocation());
-				Log(FString::Printf(TEXT("box-select %d, right-click: haul the cheese"), SP->Squad.Num()));
+				if (!Done(0))
+				{
+					SP->Selected.Reset();
+					for (AAntCharacter* A : SP->Squad) { if (A) { SP->Selected.Add(A); } }
+					Log(FString::Printf(TEXT("box-select %d"), SP->Squad.Num()));
+				}
+				else if (bLead && BeatClock < 18.f)
+				{
+					// The [Q] step waits like a player who missed it (KAN-33): the order card, then the dim round the squad panel and
+					// the sergeant again; pictures of both. Then the real [Q] path (AntSquad::Order -> AntRts: the load near the aim).
+					if (!(ShotMask & 64) && BeatClock > 9.5f) { ShotMask |= 64; Shot(TEXT("qcard")); }
+					if (!(ShotMask & 128) && BeatClock > 15.5f) { ShotMask |= 128; Shot(TEXT("qdim")); }
+					if (BeatClock > 13.f) { Face(Target->GetActorLocation()); }
+				}
+				else
+				{
+					Face(Target->GetActorLocation());
+					AntSquad::Order(Me, AntSquad::Haul, Target->GetActorLocation());
+					Log(FString::Printf(TEXT("[Q] at the cheese (the squad-key path): tasks %d"), SP->Tasks.Num()));
+				}
 			}
 		}
 		break;
@@ -1902,12 +2182,16 @@ void AAntTutorial::AutoPlay(float Dt)
 		else if (!Done(2)) { Go(PGeyser); }
 		break;
 	case BChains:
+#if ANT_TUT_CHAINS
+		if (bTick && !Me->Pulling && !StationDone(Station)) { AAntReactProp* SP = AAntReactProp::Find(W, GStationKind[FMath::Clamp((int32)Station, 0, 4)]); if (SP && FVector::Dist(Me->GetActorLocation(), SP->UsePoint()) > 300.f) { Me->ApplyTeleport(SP->UsePoint() + FVector(0.f, 0.f, 20.f)); Log(TEXT("back to the prop (slipped off)")); } Face(SP ? SP->UsePoint() : (Marks.IsValidIndex(0) ? FVector(Marks[0].At) : Me->GetActorLocation() + FVector(100.f, 0.f, 0.f))); Me->DevInteract(); Log(FString::Printf(TEXT("hold [E] on the station %d prop"), (int32)Station)); }
+#else
 		for (int32 s = 0; s < Marks.Num(); ++s)
 		{
 			if (Fired & (1 << s)) { continue; }
 			if (bTick && FVector::Dist2D(Me->GetActorLocation(), Marks[s].At) > 600.f) { Me->ApplyTeleport(Marks[s].At + FVector(0.f, -300.f, 40.f)); Log(FString::Printf(TEXT("to %s"), *Marks[s].Label)); }
 			break;
 		}
+#endif
 		break;
 	case BInside:
 		if (!Done(1) && bTick && AutoStep < 4) { AutoStep = 4; Command(TEXT("inside put human ear")); Log(TEXT("into the ear")); }
@@ -1941,6 +2225,20 @@ namespace AntTut
 		else if (Sub == TEXT("auto")) { T->bAuto = !A.IsValidIndex(2) || A[2] != TEXT("0"); }
 		else if (Sub == TEXT("end")) { T->GoToBeat(NumBeats() - 1); }
 		else if (Sub == TEXT("tool") && A.IsValidIndex(2)) { T->SandboxTool(GM->GetWorld()->GetFirstPlayerController(), FCString::Atoi(*A[2])); }   // the sandbox's F2..F7 without a keyboard
+		else if (Sub == TEXT("sbx")) { T->SandboxAction(A); }
+		else if (Sub == TEXT("kill")) { T->Command(TEXT("die")); }   // the checkpoint test: the host's ant dies, the director puts it back
+		else if (Sub == TEXT("holdenter"))
+		{
+			// The real path of the key: press, a pause, release (OnEnter times it: held 1.2 s = skip the beat).
+			APlayerController* PC0 = GM->GetWorld()->GetFirstPlayerController();
+			const float Secs = A.IsValidIndex(2) ? FCString::Atof(*A[2]) : 1.4f;
+			OnEnter(PC0, true);
+			TWeakObjectPtr<APlayerController> WPC = PC0;
+			FTimerHandle H;
+			GM->GetWorldTimerManager().SetTimer(H, FTimerDelegate::CreateLambda([WPC]() { if (WPC.IsValid()) { OnEnter(WPC.Get(), false); } }), FMath::Max(0.05f, Secs), false);
+			UE_LOG(LogTemp, Display, TEXT("ANTTUT [Enter] held %.1f s"), Secs);
+		}
+		else if (Sub == TEXT("panel")) { ToggleSandboxPanel(GM->GetWorld()->GetFirstPlayerController()); }
 		else
 		{
 			UE_LOG(LogTemp, Display, TEXT("ANTTUT info: mode %d beat %d «%s» phase %d players %d xp %d retries %d assists %d marks %d line %d"), (int32)T->Mode, (int32)T->BeatNo, Beat(T->BeatNo).Id,
@@ -2058,14 +2356,149 @@ namespace
 		}
 		return W;
 	}
+	float KeyCapsW(UCanvas* Cv, const TCHAR* Keys, float Pt)
+	{
+		if (!Keys || !*Keys) { return 0.f; }
+		FString K(Keys), Ru, En;
+		if (K.Split(TEXT("|"), &Ru, &En)) { K = AntUi::Lang() == 1 ? En : Ru; }
+		TArray<FString> Parts;
+		K.ParseIntoArray(Parts, TEXT("+"));
+		float W = 0.f;
+		for (const FString& Pp : Parts) { W += TextSize(Cv, Pp, EFont::Bold, Pt * GK).X + 20.f * GK; }
+		return W;
+	}
 	FString Speaker(uint8 Voice)
 	{
 		return Voice == 1 ? AntTut::Tx(TEXT("Гнездовое радио Щели"), TEXT("Nest Radio")) : Voice == 2 ? AntTut::Tx(TEXT("Королева"), TEXT("The Queen")) : AntTut::Tx(TEXT("Сержант Жвалов"), TEXT("Sergeant Zhvalov"));
 	}
 	const TCHAR* Portrait(uint8 Voice) { return Voice == 2 ? TEXT("Portraits/T_UI_PorQueen") : Voice == 1 ? TEXT("Icons/T_UI_Icon_Radio") : TEXT("Portraits/T_UI_PorZhvalov"); }
 
-	struct FLocalSeen { int16 Line = -1; float LineAt = 0.f; uint8 Phase = 255; uint8 Beat = 255; float PayAt = -100.f; float ChapterAt = -100.f; bool bSaved = false; float DoneAt = -1.f; bool bLeft = false; };
+	struct FLocalSeen { int16 Line = -1; float LineAt = 0.f; uint8 Phase = 255; uint8 Beat = 255; float PayAt = -100.f; float ChapterAt = -100.f; bool bSaved = false; float DoneAt = -1.f; bool bLeft = false; int32 StepId = -1; int32 LastSum = -1; float StepAt = 0.f; float ProgAt = 0.f; float QMissAt = -100.f; float QPressAt = -100.f; };
 	TMap<TWeakObjectPtr<APlayerController>, FLocalSeen> GSeen;
+
+	/**
+	 * The squad order step (beat «Командир», [Q]): playtest 24.11 — the key went by unnoticed. For the whole step: the key on
+	 * screen; the squad panel it changes (left, under the mass meter, AntRts::DrawHud) framed and labelled; the aim told (is the
+	 * crosshair on the cheese, a line to it if not); a Q that missed named; after 6 s with no order the screen dims round the
+	 * panel and the card grows (the sergeant says the order again on the server: Check, BRts).
+	 */
+	void QOrderCard(AHUD* Hud, UCanvas* Cv, const AAntTutorial* T, APlayerController* PC, FLocalSeen& Seen, float Now)
+	{
+		const float K = GK, SW = Cv->ClipX, SH = Cv->ClipY;
+		const float Pu = 0.5f + 0.5f * FMath::Sin(Now * 6.f);
+		const float Waited = Now - FMath::Max(Seen.StepAt, Seen.QPressAt);
+		const UAntRtsInput* In = UAntRtsInput::Of(PC);
+		const bool bCursor = In && In->bRtsMode;
+		// the aim: where the crosshair order lands (AAntPlayerController::SquadHaul -> AntRts: loot within 260 of the point)
+		const bool bMark = T->Marks.Num() > 0;
+		const FVector CheeseAt = bMark ? FVector(T->Marks[0].At) : FVector::ZeroVector;
+		bool bOnCheese = false;
+		if (const AAntPlayerController* APC = Cast<AAntPlayerController>(PC)) { bOnCheese = bMark && FVector::Dist(APC->CrosshairPoint(), CheeseAt) < 240.f; }
+		if (PC->WasInputKeyJustPressed(EKeys::Q))
+		{
+			Seen.QPressAt = Now;
+			if (!bOnCheese && !bCursor) { Seen.QMissAt = Now; }
+		}
+		// the squad panel (AntRts::DrawHud: «ОТРЯД n · за мной m», the jobs, «Приказ: ...» at x 24, y 200 of 1080)
+		const float PX = 12.f * K, PY = 190.f * K, PW = 400.f * K, PH = 84.f * K;
+		// the dim after 6 s without the order: four rects round the panel, so the panel stays lit
+		const float Dim = FMath::Clamp((Waited - 6.f) / 0.6f, 0.f, 1.f) * 0.5f;
+		if (Dim > 0.f)
+		{
+			const FLinearColor D(0.f, 0.f, 0.f, Dim);
+			AntUiCanvas::Rect(Cv, 0.f, 0.f, SW, PY, D);
+			AntUiCanvas::Rect(Cv, 0.f, PY + PH, SW, SH - PY - PH, D);
+			AntUiCanvas::Rect(Cv, 0.f, PY, PX, PH, D);
+			AntUiCanvas::Rect(Cv, PX + PW, PY, SW - PX - PW, PH, D);
+		}
+		Frame(Cv, PX, PY, PW, PH, (2.f + 3.f * Pu) * K, WithA(C::Amber, 0.5f + 0.5f * Pu));
+		{
+			float W0 = 0.f;
+			KeyCap(Cv, TEXT("Q"), PX + PW + 14.f * K, PY + 8.f * K, 18.f, W0);
+			Text(Cv, AntTut::Tx(TEXT("← твой отряд: здесь появится приказ «тащить»"), TEXT("← your squad: the «haul» order shows up here")), PX + PW + 22.f * K + W0, PY + 10.f * K, EFont::Bold, 18.f * K, C::Honey);
+		}
+		// the cheese: a pointer on top of the dim, and a line from the crosshair while the aim is off it
+		if (bMark)
+		{
+			FVector CamLoc; FRotator CamRot;
+			PC->GetPlayerViewPoint(CamLoc, CamRot);
+			if (FVector::DotProduct(CamRot.Vector(), CheeseAt - CamLoc) > 0.f)
+			{
+				const FVector Sp = Hud->Project(CheeseAt, false);
+				const FVector2D P(FMath::Clamp((float)Sp.X, 40.f * K, SW - 40.f * K), FMath::Clamp((float)Sp.Y, 40.f * K, SH - 40.f * K));
+				const FLinearColor Col = bOnCheese ? C::Leaf : C::Honey;
+				Frame(Cv, P.X - 22.f * K, P.Y - 22.f * K, 44.f * K, 44.f * K, (2.f + 2.f * Pu) * K, Col);
+				if (!bOnCheese && !bCursor) { Cv->K2_DrawLine(FVector2D(SW * 0.5f, SH * 0.5f), P, 2.f * K, WithA(Col, 0.5f + 0.4f * Pu)); }
+			}
+		}
+		// the card: the key, what it does, the aim state
+		const float Grow = Dim > 0.f ? 1.25f : 1.f;
+		const float BW = 640.f * K * Grow, BH = 168.f * K * Grow, BX = SW * 0.5f - BW * 0.5f, BY = SH * 0.58f - (Grow - 1.f) * 60.f * K;
+		Glass(Cv, BX, BY, BW, BH, 0.9f);
+		Frame(Cv, BX, BY, BW, BH, (2.f + 3.f * Pu) * K, WithA(bOnCheese ? C::Leaf : C::Amber, 0.5f + 0.5f * Pu));
+		{
+			// a big square keycap of its own (KeyCap's text overruns the cap at this size)
+			const float Cap = 62.f * K * Grow;
+			const float CX0 = SW * 0.5f - Cap * 0.5f, CY0 = BY + 12.f * K;
+			AntUiCanvas::Rect(Cv, CX0, CY0, Cap, Cap, WithA(C::Paper, 0.97f));
+			AntUiCanvas::Rect(Cv, CX0, CY0 + Cap - 5.f * K, Cap, 5.f * K, WithA(C::Cocoa, 0.7f));
+			Frame(Cv, CX0 - 3.f * K, CY0 - 3.f * K, Cap + 6.f * K, Cap + 6.f * K, (1.5f + 2.f * Pu) * K, WithA(C::Amber, 0.6f + 0.4f * Pu));
+			Text(Cv, TEXT("Q"), SW * 0.5f, CY0 + Cap * 0.14f, EFont::Bold, Cap * 0.6f, C::Graphite, 1);
+		}
+		Text(Cv, AntTut::Tx(TEXT("ПРИКАЗ ОТРЯДУ: ТАЩИ СЫР"), TEXT("SQUAD ORDER: HAUL THE CHEESE")), SW * 0.5f, BY + BH - 82.f * K * Grow, EFont::Bold, 26.f * K * Grow, C::Honey, 1);
+		FString Aim;
+		FLinearColor AimC = C::Sugar;
+		if (Now - Seen.QMissAt < 2.5f) { Aim = AntTut::Tx(TEXT("Мимо! [Q] отдаёт приказ туда, куда смотрит прицел: наведи центр экрана на сыр"), TEXT("Missed! [Q] orders the squad where the crosshair points: put the screen centre on the cheese")); AimC = C::Jam; }
+		else if (bCursor) { Aim = AntTut::Tx(TEXT("Курсор: наведи его на сыр и жми [Q] (или [ПКМ] по сыру)"), TEXT("Cursor mode: point it at the cheese and press [Q] (or [RMB] on it)")); }
+		else if (bOnCheese) { Aim = AntTut::Tx(TEXT("Прицел на сыре — жми [Q]!"), TEXT("Crosshair on the cheese — press [Q]!")); AimC = C::Leaf; }
+		else { Aim = AntTut::Tx(TEXT("Наведи прицел (центр экрана) на сыр, потом [Q]"), TEXT("Put the crosshair (screen centre) on the cheese, then [Q]")); }
+		TextFit(Cv, Aim, BX + 20.f * K, BY + BH - 44.f * K * Grow, BW - 40.f * K, EFont::Bold, 20.f * K * Grow, AimC);
+	}
+
+	/** The graduation's pages 1..3 (page 0 is the rank and the medal): the Queen's gift, the caste perk, what opens now. */
+	void DebriefPageDraw(UCanvas* Cv, const AAntTutorial* T, float K, float SW, float SH)
+	{
+		const float CX = SW * 0.5f;
+		const int32 Pg = T->DebriefPage;
+		Glass(Cv, CX - 540.f * K, 190.f * K, 1080.f * K, 450.f * K, 0.88f);
+		if (Pg == 1)
+		{
+			if (UTexture2D* Por = AntUi::Tex(TEXT("Portraits/T_UI_PorQueen"))) { Cover(Cv, Por, CX - 510.f * K, 214.f * K, 300.f * K, 300.f * K, FLinearColor::White); }
+			Text(Cv, AntTut::Tx(TEXT("ПОДАРОК КОРОЛЕВЫ"), TEXT("THE QUEEN'S GIFT")), CX - 180.f * K, 214.f * K, EFont::Display, 44.f * K, C::Amber);
+			Wrap(Cv, AntTut::Tx(TEXT("«Мои дети… Вы вернулись с тортом. Загляните в кладовые.»"), TEXT("«My children… you came back with cake. Look in the stores.»")), CX - 180.f * K, 274.f * K, 680.f * K, EFont::Body, 26.f * K, C::Sugar, 2, 1.2f);
+			Icon(Cv, TEXT("Jelly"), CX - 180.f * K, 360.f * K, 56.f * K);
+			Text(Cv, AntTut::Tx(TEXT("+150 сахара · +80 белка · +40 жира · +120 крошек"), TEXT("+150 sugar · +80 protein · +40 fat · +120 crumbs")), CX - 110.f * K, 366.f * K, EFont::Bold, 22.f * K, C::Honey);
+			Text(Cv, AntTut::Tx(TEXT("+2 молочка · +1 личинка · +4 рабочих"), TEXT("+2 jelly · +1 larva · +4 workers")), CX - 110.f * K, 400.f * K, EFont::Bold, 22.f * K, C::Honey);
+			Wrap(Cv, AntTut::Tx(TEXT("Подарок ждёт в кладовых настоящей колонии: он придёт, когда ты откроешь экран колонии — первой откроется карточка «Кладовые»."),
+				TEXT("The gift waits in the stores of your real colony: it arrives when you open the colony screen — the «Stores» card opens first.")), CX - 180.f * K, 470.f * K, 680.f * K, EFont::Body, 19.f * K, WithA(C::Sugar, 0.8f), 3, 1.2f);
+			Stamp(Cv, AntTut::Tx(TEXT("В КЛАДОВЫХ"), TEXT("IN THE STORES")), CX + 380.f * K, 560.f * K, -8.f, C::Jam, 30.f * K);
+		}
+		else if (Pg == 2)
+		{
+			Icon(Cv, TEXT("Soldier"), CX - 500.f * K, 220.f * K, 120.f * K);
+			Text(Cv, AntTut::Tx(TEXT("ЗВАНИЕ → ПЕРК КАСТЫ"), TEXT("RANK → CASTE PERK")), CX - 340.f * K, 220.f * K, EFont::Display, 44.f * K, C::Amber);
+			Text(Cv, FString::Printf(TEXT("%s  →  %s"), *AntTut::RankName(0), *AntTut::RankName(1)), CX - 340.f * K, 282.f * K, EFont::Bold, 30.f * K, C::Honey);
+			Wrap(Cv, AntTut::BranchMerged(AntTut::Fighter)
+				? AntTut::Tx(TEXT("Ступени перков открываются на званиях Ефрейтор, Сержант и Старшина. На каждой — выбор одного из двух: боковой шаг, а не сила. Профиль открыт на вкладке «Перки» — выбери первый (Esc — закрыть, потом [Enter])."),
+					TEXT("Perk tiers open at Lance Corporal, Sergeant and Master Sergeant. Each is a choice of one of two: a sidegrade, not raw power. The profile is open at Perks — pick the first (Esc to close, then [Enter])."))
+				: AntTut::Tx(TEXT("Скоро: перки каст, медали и ветераны отряда."), TEXT("Soon: caste perks, medals and squad veterans.")),
+				CX - 340.f * K, 340.f * K, 820.f * K, EFont::Body, 22.f * K, C::Sugar, 5, 1.25f);
+		}
+		else
+		{
+			float Y = 216.f * K;
+			auto Row = [&](const TCHAR* IconName, const FString& Title, const FString& Sub, bool bOn)
+			{
+				Icon(Cv, IconName, CX - 500.f * K, Y, 64.f * K, bOn ? FLinearColor::White : FLinearColor(1.f, 1.f, 1.f, 0.4f));
+				Text(Cv, Title, CX - 410.f * K, Y + 2.f * K, EFont::Bold, 26.f * K, bOn ? C::Sugar : C::Muted);
+				Wrap(Cv, Sub, CX - 410.f * K, Y + 36.f * K, 900.f * K, EFont::Body, 19.f * K, WithA(C::Sugar, 0.75f), 2, 1.2f);
+				Y += 134.f * K;
+			};
+			Row(TEXT("Cake"), AntTut::Tx(TEXT("Открыт «Настоящий рейд»"), TEXT("«The Real Raid» unlocked")), AntTut::Tx(TEXT("Угроза 1 «Будний день»: сначала колония и подарок Королевы, потом — на кухню за настоящим тортом."), TEXT("Threat 1 «Weekday»: the colony and the Queen's gift first, then the real cake.")), true);
+			Row(TEXT("Human"), AntTut::Tx(TEXT("А хочешь сыграть за Гиганта?"), TEXT("Fancy playing the Giant?")), AntTut::Tx(TEXT("Версус: человек против колонии. Тапок — в твоих руках. Кнопка в главном меню."), TEXT("Versus: the human against the colony. The slipper is in your hands. A button in the main menu.")), true);
+			Row(TEXT("Wrench"), AntTut::Tx(TEXT("Песочница"), TEXT("Sandbox")), AntTut::IsDemo() ? FString(AntTut::Tx(TEXT("в полной версии"), TEXT("in the full game"))) : FString(AntTut::Tx(TEXT("Вся квартира без таймера: реквизит цепных реакций, Гигант, время суток, ТВ, пылесос, погода — панель на [F2]."), TEXT("The whole flat with no clock: chain props, the Giant, time of day, TV, vacuum, weather — the panel on [F2]."))), !AntTut::IsDemo());
+		}
+	}
 }
 
 namespace AntTut
@@ -2083,8 +2516,8 @@ namespace AntTut
 		{
 			Glass(Cv, SW - 520.f * K, 24.f * K, 496.f * K, 120.f * K, 0.72f);
 			Text(Cv, Tx(TEXT("ПЕСОЧНИЦА"), TEXT("SANDBOX")), SW - 500.f * K, 34.f * K, EFont::Display, 30.f * K, C::Amber);
-			Wrap(Cv, Tx(TEXT("F2 еда у прицела · F3 Гигант стоп/ход · F4 время суток · F5 цепная реакция · F6 потоп/сушь · F7 сброс · F10 админ"),
-				TEXT("F2 food · F3 Giant stop/go · F4 time of day · F5 chain reaction · F6 flood/dry · F7 reset · F10 admin")), SW - 500.f * K, 76.f * K, 460.f * K, EFont::Body, 17.f * K, C::Sugar, 3);
+			Wrap(Cv, Tx(TEXT("F2 — панель: реквизит цепных реакций, Гигант, время суток, ТВ, пылесос, погода, кран, сброс · быстро: F3 Гигант · F4 время · F5 цепочка · F6 потоп · F7 сброс"),
+				TEXT("F2 — panel: chain props, the Giant, time of day, TV, vacuum, weather, tap, reset · quick: F3 Giant · F4 time · F5 chain · F6 flood · F7 reset")), SW - 500.f * K, 76.f * K, 460.f * K, EFont::Body, 17.f * K, C::Sugar, 3);
 			return;
 		}
 		const AntTut::FBeat& B = AntTut::Beat(T->BeatNo);
@@ -2130,7 +2563,7 @@ namespace AntTut
 			{
 				if (UAntSession* S = PC->GetGameInstance() ? PC->GetGameInstance()->GetSubsystem<UAntSession>() : nullptr)
 				{
-					if (IsDemo() && PC->GetWorld()->GetNetMode() == NM_Standalone) { S->PlaySolo(); }   // the demo goes straight into its first real raid
+					if (PC->GetWorld()->GetNetMode() == NM_Standalone) { S->PlaySolo(); }   // straight into the real colony: the Queen's gift, the stores card (a co-op client goes back to the menu)
 					else { S->ReturnToMenu(); }
 				}
 			}
@@ -2219,6 +2652,36 @@ namespace AntTut
 			}
 		}
 
+		// ---- the big key glyph: the key a step needs, large and pulsing, at the moment it is needed (and again after 8 s without progress)
+		if (!bFull && T->Phase == AAntTutorial::Play)
+		{
+			const FAntTutPlayer* Me2 = T->Find(PC->PlayerState);
+			int32 Cur = -1, Sum = 0;
+			for (int32 s = 0; s < B.Steps.Num(); ++s)
+			{
+				const int32 Hv = Me2 && Me2->Count.IsValidIndex(s) ? Me2->Count[s] : 0;
+				Sum += Hv;
+				if (Cur < 0 && Hv < B.Steps[s].Need) { Cur = s; }
+			}
+			const int32 SId = (int32)T->BeatNo * 16 + FMath::Max(Cur, 0);
+			if (SId != Seen.StepId) { Seen.StepId = SId; Seen.StepAt = Now; Seen.ProgAt = Now; Seen.LastSum = Sum; }
+			if (Sum != Seen.LastSum) { Seen.LastSum = Sum; Seen.ProgAt = Now; }
+			const bool bQStep = T->BeatNo == BRts && Cur == 1;   // the squad order: its own card below (KAN-33)
+			const bool bShowKey = !bQStep && Cur >= 0 && B.Steps[Cur].Keys && *B.Steps[Cur].Keys && (Now - Seen.StepAt < 9.f || Now - Seen.ProgAt > 8.f);
+			if (bQStep) { QOrderCard(Hud, Cv, T, PC, Seen, Now); }
+			if (bShowKey)
+			{
+				const float Pu = 0.5f + 0.5f * FMath::Sin(Now * 6.f);
+				const float Pt = 40.f;
+				const float KW = KeyCapsW(Cv, B.Steps[Cur].Keys, Pt);
+				const FString What = Tx(B.Steps[Cur].Ru, B.Steps[Cur].En);
+				const float BW = FMath::Max(KW, 420.f * K) + 90.f * K, BH = 150.f * K, BX = SW * 0.5f - BW * 0.5f, BY = SH * 0.58f;
+				Glass(Cv, BX, BY, BW, BH, 0.85f);
+				Frame(Cv, BX, BY, BW, BH, (2.f + 3.f * Pu) * K, WithA(C::Amber, 0.45f + 0.55f * Pu));
+				KeyCaps(Cv, B.Steps[Cur].Keys, SW * 0.5f - KW * 0.5f, BY + 16.f * K, Pt);
+				Text(Cv, What, SW * 0.5f, BY + BH - 46.f * K, EFont::Bold, 26.f * K, C::Honey, 1);
+			}
+		}
 		// ---- timers: the finale's last light, holding out under the table, the free range
 		{
 			float Ends = T->TimerEnds;
@@ -2257,8 +2720,11 @@ namespace AntTut
 			if (UTexture2D* Bg = AntUi::Tex(TEXT("Backgrounds/T_UI_NewsWin"))) { Cover(Cv, Bg, 0.f, 0.f, SW, SH, FLinearColor(0.6f, 0.55f, 0.5f, 0.5f * A)); }
 			Text(Cv, Tx(TEXT("ВЫПУСК УЧЕБКИ"), TEXT("TRAINING GRADUATION")), SW * 0.5f, 70.f * K, EFont::Display, 58.f * K, WithA(C::Amber, A), 1, 0.6f);
 			Text(Cv, Tx(TEXT("Гнездовое радио Щели · спецвыпуск"), TEXT("Nest Radio · special issue")), SW * 0.5f, 140.f * K, EFont::Bold, 20.f * K, WithA(C::Sugar, A), 1);
-			// the rank and the medal
 			const float CX = SW * 0.5f;
+			if (T->DebriefPage > 0) { DebriefPageDraw(Cv, T, K, SW, SH); }
+			else
+			{
+			// the rank and the medal
 			Paper(Cv, CX - 560.f * K, 200.f * K, 520.f * K, 420.f * K, true);
 			Text(Cv, Tx(TEXT("ЗВАНИЕ"), TEXT("RANK")), CX - 530.f * K, 226.f * K, EFont::Bold, 18.f * K, C::Graphite);
 			Text(Cv, RankName(0), CX - 530.f * K, 256.f * K, EFont::Display, 26.f * K, WithA(C::Graphite, 0.45f));
@@ -2282,15 +2748,19 @@ namespace AntTut
 			Row(TEXT("Cake"), Tx(TEXT("Открыт «Настоящий рейд»"), TEXT("«The Real Raid» unlocked")), Tx(TEXT("Угроза 1 «Будний день». Торт ждёт."), TEXT("Threat 1 «Weekday». The cake awaits.")), true);
 			Row(TEXT("Jelly"), Tx(TEXT("Подарок Королевы"), TEXT("The Queen's gift")), BranchMerged(Colony) ? FString(Tx(TEXT("Кладовые колонии пополнены: загляни на экран колонии"), TEXT("The colony stores are filled: open the colony screen")))
 				: FString(Tx(TEXT("+150 еды и 2 молочка к первому рейду — на первую камеру"), TEXT("+150 food, 2 jelly for your colony: enough for the first chamber"))), true);
-			Row(TEXT("Soldier"), Tx(TEXT("Перк касты"), TEXT("Caste perk")), BranchMerged(Fighter) ? FString(Tx(TEXT("Выбор перков открывается со звания Ефрейтор"), TEXT("Perk picks open at Lance Corporal")))
+			Row(TEXT("Soldier"), Tx(TEXT("Перк касты"), TEXT("Caste perk")), BranchMerged(Fighter) ? FString(Tx(TEXT("Первая ступень перков открыта: выбери её на третьем экране"), TEXT("The first perk tier is open: pick it on the third screen")))
 				: FString(Tx(TEXT("Скоро: перки каст, медали и ветераны отряда"), TEXT("Soon: caste perks, medals, squad veterans"))), BranchMerged(Fighter));
 			Row(TEXT("Human"), Tx(TEXT("Хочешь сыграть за Гиганта?"), TEXT("Want to play the Giant?")), Tx(TEXT("Режим «Человек против муравьёв»: кооп, меню «Кооператив»"), TEXT("«Human vs Ants»: co-op menu")), true);
 			Row(TEXT("Wrench"), Tx(TEXT("Песочница"), TEXT("Sandbox")), IsDemo() ? FString(Tx(TEXT("в полной версии"), TEXT("in the full game"))) : FString(Tx(TEXT("Вся квартира и инструменты — в главном меню"), TEXT("The whole flat and tools — in the main menu"))), !IsDemo());
+			}   // (page 0)
+			// the pages: 0 rank and medal, 1 the Queen's gift, 2 the caste perk, 3 what opens
+			Text(Cv, FString::Printf(TEXT("%d / 4"), (int32)T->DebriefPage + 1), CX + 540.f * K, SH - 78.f * K, EFont::Mono, 18.f * K, WithA(C::Sugar, 0.7f), 2);
 			if (T->Phase == AAntTutorial::Debrief)
 			{
 				float W0 = 0.f;
 				KeyCap(Cv, TEXT("Enter"), CX - 150.f * K, SH - 80.f * K, 18.f, W0);
-				Text(Cv, IsDemo() ? Tx(TEXT("в первый рейд"), TEXT("to the first raid")) : Tx(TEXT("в штаб"), TEXT("to headquarters")), CX - 138.f * K + W0, SH - 78.f * K, EFont::Bold, 22.f * K, C::Honey);
+				const bool bLast = T->DebriefPage >= 3;
+				Text(Cv, bLast ? (IsDemo() ? Tx(TEXT("в первый рейд"), TEXT("to the first raid")) : Tx(TEXT("в колонию"), TEXT("to the colony"))) : Tx(TEXT("дальше"), TEXT("next")), CX - 138.f * K + W0, SH - 78.f * K, EFont::Bold, 22.f * K, C::Honey);
 			}
 		}
 
@@ -2332,9 +2802,10 @@ namespace AntTut
 		// ---- the chapter fade
 		if (T->Phase == AAntTutorial::Fade)
 		{
-			AntUiCanvas::Rect(Cv, 0.f, 0.f, SW, SH, FLinearColor(0.f, 0.f, 0.f, FMath::Clamp((Now - T->PhaseStart) / 0.4f, 0.f, 1.f)));
-			Text(Cv, ChapterName(B.Chapter).ToUpper(), SW * 0.5f, SH * 0.45f, EFont::Display, 46.f * K, C::Amber, 1, 0.7f);
-			Text(Cv, BeatTitle(T->BeatNo), SW * 0.5f, SH * 0.45f + 60.f * K, EFont::Bold, 26.f * K, C::Sugar, 1);
+			AntUiCanvas::Rect(Cv, 0.f, 0.f, SW, SH, FLinearColor(0.f, 0.f, 0.f, FMath::Clamp((Now - T->PhaseStart) / 0.2f, 0.f, 1.f)));
+			const bool bNewChapter = Seen.Beat == 255 || AntTut::Beat(Seen.Beat).Chapter != B.Chapter;
+			if (bNewChapter) { Text(Cv, ChapterName(B.Chapter).ToUpper(), SW * 0.5f, SH * 0.45f, EFont::Display, 46.f * K, C::Amber, 1, 0.7f); }
+			Text(Cv, BeatTitle(T->BeatNo), SW * 0.5f, SH * 0.45f + (bNewChapter ? 60.f : 0.f) * K, EFont::Bold, 26.f * K, C::Sugar, 1);
 		}
 	}
 }
@@ -2356,10 +2827,17 @@ namespace AntTut
 			FAntColonyGift G;
 			G.Food[AntFoodKind::Sugar] = 150; G.Food[AntFoodKind::Protein] = 80; G.Food[AntFoodKind::Fat] = 40; G.Food[AntFoodKind::Crumbs] = 120;
 			G.Jelly = 2; G.Larvae = 1; G.Workers = 4;
-			G.Chronicle = TEXT("Подарок Королевы новобранцам");
-			G.Announce = TEXT("Королева прислала подарок: загляните в кладовые");
+			G.Chronicle = TEXT("Подарок Королевы выпускникам учебки");
+			G.Announce = TEXT("Королева: «Мои дети… вы вернулись с тортом. Загляните в кладовые»");
 			const bool bOk = AntColony::GiveGift(WR.Get(), G);
 			UE_LOG(LogTemp, Display, TEXT("ANTTUT the Queen's gift to the colony (AntColony): %d"), bOk ? 1 : 0);
+			// The Queen's reaction: her voice, and the colony screen opens at the stores where the gift lies.
+			if (bOk && WR->GetNetMode() != NM_DedicatedServer)
+			{
+				AntTut::Bark(WR.Get(), 60, 9, 2);
+				AntColonyView::Open(AntColony::Stores);
+				UE_LOG(LogTemp, Display, TEXT("ANTTUT the colony screen opened at the Stores card"));
+			}
 		}), 3.f, false);
 #else
 		Raid->Nest.Food += 150;
@@ -2420,5 +2898,155 @@ namespace AntTut
 		const FString Tag = FString::Printf(TEXT("%s  ·  %s %d / %d"), Tx(TEXT("ДЕМО"), TEXT("DEMO")), Tx(TEXT("рейд"), TEXT("raid")), FMath::Min(P.DemoRaids + (Raid->Phase == AntRaidPhase::Raid ? 1 : 0), DemoRaids), DemoRaids);
 		Glass(Cv, 20.f * K, Cv->ClipY - 54.f * K, 260.f * K, 34.f * K, 0.6f);
 		Text(Cv, Tag, 32.f * K, Cv->ClipY - 49.f * K, EFont::Bold, 18.f * K, C::Honey);
+	}
+}
+
+// =====================================================================================================================
+// The sandbox («Песочница»): unlocked after the training. The lite admin panel on [F2] (the full one stays on [F10]): the chains'
+// props at the crosshair, the Giant, the time of day, the TV, the vacuum, the weather, the tap, the reset. The buttons send plain
+// text commands (the same as -AntDo and the admin line); the few toggles keep their state in "tut sbx <name>".
+// =====================================================================================================================
+void AAntTutorial::SandboxAction(const TArray<FString>& A)
+{
+	const FString N = A.IsValidIndex(2) ? A[2].ToLower() : FString();
+	APlayerController* PC = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr;
+	static int32 TvCh = 0, Wx = 0;
+	static bool bTap = false, bVac = false;
+	if (N == TEXT("giant")) { SandboxTool(PC, 3); }
+	else if (N == TEXT("tod")) { SandboxTool(PC, 4); }
+	else if (N == TEXT("food")) { SandboxTool(PC, 2); }
+	else if (N == TEXT("wet")) { SandboxTool(PC, 6); }
+	else if (N == TEXT("reset")) { SandboxTool(PC, 7); }
+	else if (N == TEXT("tvch")) { TvCh = (TvCh + 1) % 9; Command(TEXT("tv on")); Command(FString::Printf(TEXT("tv ch %d"), TvCh)); }
+	else if (N == TEXT("weather")) { Wx = (Wx + 1) % 3; Command(FString::Printf(TEXT("life weather %d"), Wx)); }
+	else if (N == TEXT("vac")) { bVac = !bVac; Command(bVac ? TEXT("life vacuum") : TEXT("life vacuum stop")); }
+	else if (N == TEXT("tap")) { bTap = !bTap; Command(bTap ? TEXT("fluid tap on 5") : TEXT("fluid tap off")); }
+	UE_LOG(LogTemp, Display, TEXT("ANTTUT sandbox action %s"), *N);
+}
+
+namespace
+{
+	TWeakPtr<SWidget> GSbPanel;
+
+	TSharedRef<SWidget> MakeSandboxPanel(AAntPlayerController* PC)
+	{
+		TWeakObjectPtr<AAntPlayerController> WP = PC;
+		const FLinearColor Gold(1.f, 0.78f, 0.25f), Blue(0.6f, 0.8f, 1.f), Red(1.f, 0.55f, 0.45f);
+		TSharedRef<SVerticalBox> Col = SNew(SVerticalBox);
+		TSharedPtr<SWrapBox> Row;
+		auto Section = [&Col, &Row, Gold](const FString& Title)
+		{
+			Col->AddSlot().AutoHeight().Padding(0.f, 8.f, 0.f, 2.f)
+			[
+				SNew(STextBlock).Text(FText::FromString(Title)).Font(AntUi::Font(AntUi::EFont::Bold, 16)).ColorAndOpacity(Gold)
+			];
+			Col->AddSlot().AutoHeight()
+			[
+				SAssignNew(Row, SWrapBox).UseAllottedSize(true)
+			];
+		};
+		auto Btn = [&Row, WP](const FString& Label, const FString& Cmd, const FLinearColor& Color = FLinearColor(0.85f, 0.85f, 0.85f))
+		{
+			Row->AddSlot().Padding(3.f)
+			[
+				SNew(SButton)
+				.ButtonStyle(&AntUi::ButtonStyle())
+				.ContentPadding(FMargin(9.f, 5.f))
+				.ButtonColorAndOpacity(Color)
+				.OnClicked_Lambda([WP, Cmd]()
+				{
+					if (AAntPlayerController* P = WP.Get())
+					{
+						const FVector At = P->CrosshairPoint() + FVector(0.f, 0.f, 30.f);
+						FString S = Cmd;
+						S = S.Replace(TEXT("{X}"), *FString::Printf(TEXT("%.0f"), At.X)).Replace(TEXT("{Y}"), *FString::Printf(TEXT("%.0f"), At.Y)).Replace(TEXT("{Z}"), *FString::Printf(TEXT("%.0f"), At.Z));
+						P->Admin(S);
+					}
+					return FReply::Handled();
+				})
+				[
+					SNew(STextBlock).Text(FText::FromString(Label)).Font(AntUi::Font(AntUi::EFont::Bold, 14)).ColorAndOpacity(FLinearColor::Black)
+				]
+			];
+		};
+		Section(AntTut::Tx(TEXT("Реквизит цепных реакций (в точку прицела)"), TEXT("Chain props (at the crosshair)")));
+		Btn(AntTut::Tx(TEXT("Облако перца"), TEXT("Pepper cloud")), TEXT("rx cloud pepper {X} {Y} {Z} 900"));
+		Btn(AntTut::Tx(TEXT("Облако муки"), TEXT("Flour cloud")), TEXT("rx cloud flour {X} {Y} {Z} 900"));
+		Btn(AntTut::Tx(TEXT("Лёд"), TEXT("Ice")), TEXT("rx ice {X} {Y} {Z} 8"));
+		Btn(AntTut::Tx(TEXT("Горох"), TEXT("Peas")), TEXT("rx peas {X} {Y} {Z} 20"));
+		Btn(AntTut::Tx(TEXT("Шоколад"), TEXT("Chocolate")), TEXT("rx choc {X} {Y} {Z}"));
+		Btn(AntTut::Tx(TEXT("Чихнёт Гигант"), TEXT("Giant sneezes")), TEXT("rx sneeze dad"), Red);
+		Btn(AntTut::Tx(TEXT("Ослепить Гиганта"), TEXT("Blind the Giant")), TEXT("rx blind"), Red);
+		Btn(AntTut::Tx(TEXT("Свет: выкл"), TEXT("Power off")), TEXT("power off"), Red);
+		Btn(AntTut::Tx(TEXT("Свет: вкл"), TEXT("Power on")), TEXT("power on"));
+		Btn(AntTut::Tx(TEXT("Замыкание"), TEXT("Short circuit")), TEXT("power short"), Red);
+		Section(AntTut::Tx(TEXT("Цепочки целиком"), TEXT("Whole chains")));
+		for (int32 c = 7; c <= 22; ++c) { Btn(FString::Printf(TEXT("C%d"), c), FString::Printf(TEXT("chain C%d"), c)); }
+		Section(AntTut::Tx(TEXT("К реквизиту"), TEXT("Go to a prop")));
+		for (const TCHAR* K : { TEXT("pepper"), TEXT("flour"), TEXT("ice"), TEXT("peas"), TEXT("slingshot"), TEXT("choc"), TEXT("toaster"), TEXT("books"), TEXT("micro"), TEXT("mentos"), TEXT("sponge"), TEXT("balloon"), TEXT("strip"), TEXT("breaker") })
+		{
+			Btn(K, FString::Printf(TEXT("rx tp %s"), K), Blue);
+		}
+		Section(AntTut::Tx(TEXT("Квартира"), TEXT("The flat")));
+		Btn(AntTut::Tx(TEXT("Гигант: стоп / ход"), TEXT("Giant: stop / go")), TEXT("tut sbx giant"));
+		Btn(AntTut::Tx(TEXT("Время суток"), TEXT("Time of day")), TEXT("tut sbx tod"));
+		Btn(AntTut::Tx(TEXT("ТВ: вкл"), TEXT("TV on")), TEXT("tv on"));
+		Btn(AntTut::Tx(TEXT("ТВ: выкл"), TEXT("TV off")), TEXT("tv off"));
+		Btn(AntTut::Tx(TEXT("ТВ: канал"), TEXT("TV: channel")), TEXT("tut sbx tvch"));
+		Btn(AntTut::Tx(TEXT("Пылесос: вкл / выкл"), TEXT("Vacuum: on / off")), TEXT("tut sbx vac"));
+		Btn(AntTut::Tx(TEXT("Погода за окном"), TEXT("Weather outside")), TEXT("tut sbx weather"));
+		Btn(AntTut::Tx(TEXT("Кран: вкл / выкл"), TEXT("Tap: on / off")), TEXT("tut sbx tap"));
+		Btn(AntTut::Tx(TEXT("Потоп / сушь"), TEXT("Flood / dry")), TEXT("tut sbx wet"));
+		Btn(AntTut::Tx(TEXT("Еда у прицела"), TEXT("Food ahead")), TEXT("tut sbx food"));
+		Btn(AntTut::Tx(TEXT("СБРОС уровня"), TEXT("RESET the level")), TEXT("tut sbx reset"), Red);
+
+		return SNew(SBox).HAlign(HAlign_Right).VAlign(VAlign_Top).Padding(FMargin(0.f, 160.f, 24.f, 0.f))
+		[
+			SNew(SBox).WidthOverride(560.f).MaxDesiredHeight(780.f)
+			[
+				SNew(SBorder).BorderBackgroundColor(FLinearColor(0.f, 0.f, 0.f, 0.82f)).Padding(12.f)
+				[
+					SNew(SVerticalBox)
+					+ SVerticalBox::Slot().AutoHeight()
+					[
+						SNew(STextBlock).Text(FText::FromString(AntTut::Tx(TEXT("ПЕСОЧНИЦА · панель  ([F2] — закрыть)"), TEXT("SANDBOX · panel  ([F2] closes)")))).Font(AntUi::Font(AntUi::EFont::Display, 24)).ColorAndOpacity(Gold)
+					]
+					+ SVerticalBox::Slot().FillHeight(1.f)
+					[
+						SNew(SScrollBox) + SScrollBox::Slot()[ Col ]
+					]
+				]
+			]
+		];
+	}
+}
+
+namespace AntTut
+{
+	void ToggleSandboxPanel(APlayerController* PCIn)
+	{
+		AAntPlayerController* PC = Cast<AAntPlayerController>(PCIn);
+		if (!PC || !PC->IsLocalController() || !GEngine || !GEngine->GameViewport || !SandboxActive(PC)) { return; }
+		if (GSbPanel.IsValid())
+		{
+			GEngine->GameViewport->RemoveViewportWidgetContent(GSbPanel.Pin().ToSharedRef());
+			GSbPanel.Reset();
+			FInputModeGameOnly Mode;
+			PC->SetInputMode(Mode);
+			PC->bShowMouseCursor = false;
+			UE_LOG(LogTemp, Display, TEXT("ANTTUT sandbox panel closed"));
+			return;
+		}
+		if (PC->GetWorld()->GetNetMode() == NM_Client) { return; }   // the host's tools
+		TSharedRef<SWidget> W = MakeSandboxPanel(PC);
+		GSbPanel = W;
+		GEngine->GameViewport->AddViewportWidgetContent(W, 85);
+		FInputModeGameAndUI Mode;
+		Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		Mode.SetHideCursorDuringCapture(true);
+		PC->SetInputMode(Mode);
+		PC->bShowMouseCursor = true;
+		GEngine->GameViewport->SetMouseCaptureMode(EMouseCaptureMode::CaptureDuringRightMouseDown);
+		UE_LOG(LogTemp, Display, TEXT("ANTTUT sandbox panel open"));
 	}
 }

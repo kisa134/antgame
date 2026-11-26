@@ -6,6 +6,7 @@
 #include "AntTypes.h"
 #include "AntFx.h"
 #include "AntMess.h"
+#include "AntLab.h"
 #include "Net/UnrealNetwork.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
@@ -15,6 +16,16 @@ void AAntGameState::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// KAN-37: the host's lab variant (or none) is this world's on every machine, before the flat is built.
+	if (HasAuthority())
+	{
+		const FAntLabVariant* Lab = AntLab::Get();
+		LabVariant = Lab && Lab->Id.Len() > 0 ? (uint8)Lab->Id[0] : 0;
+	}
+	else
+	{
+		AntLab::Activate((TCHAR)LabVariant);
+	}
 	// Every machine (server and each client) builds its own identical copy of the kitchen.
 	FActorSpawnParameters Params;
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
@@ -26,6 +37,7 @@ void AAntGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(AAntGameState, TeamScore);
 	DOREPLIFETIME(AAntGameState, LevelSeedKey);
+	DOREPLIFETIME(AAntGameState, LabVariant);
 	DOREPLIFETIME(AAntGameState, RivalScore);
 	DOREPLIFETIME(AAntGameState, HumanRage);
 	DOREPLIFETIME(AAntGameState, RivalWorkers);
@@ -213,6 +225,11 @@ void AAntGameState::MulticastMessage_Implementation(const FString& Text, FLinear
 	{
 		Feed.RemoveAt(0);
 	}
+}
+
+void AAntGameState::OnRep_LabVariant()
+{
+	AntLab::Activate((TCHAR)LabVariant);   // (BeginPlay applies it again: the flat is built after this)
 }
 
 void AAntGameState::OnRep_LevelSeed()

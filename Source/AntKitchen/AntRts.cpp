@@ -60,6 +60,11 @@ namespace
 	}
 }
 
+namespace AntRts
+{
+	static void Compact(FAntSnowPlayer& P);   // (below: members gone, tasks done)
+}
+
 // =============================================================================================
 // The squad ant's brain
 // =============================================================================================
@@ -242,8 +247,23 @@ void AAntSquadBot::ThinkRts(AAntCharacter* Ant, float Dt)
 		if (BossD < 1500.f || Ant->Carrying || Boss->IsInNest() || Boss->bDead) { LeashDeadline = 0.f; LeashFarDeadline = 0.f; }
 		else
 		{
-			if (LeashDeadline <= 0.f || FVector::Dist(Here, LeashAnchor) > 250.f) { LeashAnchor = Here; LeashDeadline = Now + 5.f; }
+			if (LeashDeadline <= 0.f || FVector::Dist(Here, LeashAnchor) > 250.f) { LeashAnchor = Here; LeashDeadline = Now + 5.f; LeashDetours = 0; }
 			if (LeashFarDeadline <= 0.f || BossD < LeashBest - 400.f) { LeashBest = BossD; LeashFarDeadline = Now + 25.f; }
+			// Three seconds on one spot (busy, but going nowhere: round an edge, along a lip): walk off sideways, the same side
+			// each time, before the leash has to fetch it (twice per spot; KAN-27).
+			if (Now > LeashDeadline - 2.f && LeashDetours < 2)
+			{
+				++LeashDetours;
+				const FVector ToBoss = (Boss->GetActorLocation() - Here).GetSafeNormal2D();
+				if (LeashDetours == 2) { UnstickSign = -UnstickSign; }
+				UnstickDir = (FVector::CrossProduct(FVector::UpVector, ToBoss) * UnstickSign - ToBoss * 0.3f).GetSafeNormal();
+				UnstickTime = 2.5f;
+				UnstickStreak = FMath::Max(UnstickStreak, 2);
+				LastUnstickAt = Here;
+				Ant->Jump();
+				LeashDeadline = Now + 5.f;
+				UE_LOG(LogTemp, Display, TEXT("ANTRTS detour: squad ant %s goes nowhere at %s, %.0f from its owner: off to the side (%d)"), *Ant->GetName(), *Here.ToCompactString(), BossD, LeashDetours);
+			}
 			if (Now > LeashDeadline || Now > LeashFarDeadline)
 			{
 				UE_LOG(LogTemp, Display, TEXT("ANTRTS leash: squad ant %s stuck %.0f uu from its owner at %s (%s), regroups behind him"), *Ant->GetName(), BossD, *Here.ToCompactString(),
@@ -286,23 +306,76 @@ bool AAntSquadBot::HaulThink(AAntCharacter* Ant, AKitchenLoot* L, uint8 TaskIdx)
 		}
 		// Every squad carrier walks the same way home (the route graph, on the floor), each keeping under its own grip: the
 		// load goes where they all push it. (One leader with the others trailing it tore the grips apart.)
+		AAntTrailNet* Net = AAntTrailNet::Get(GetWorld());
+		// The trail it is heading for was cut or recalled: home (or another trail) instead.
+		if (WayTrail != 0 && (!Net || !Net->LineById(WayTrail)))
+		{
+			Way.Reset();
+		}
 		if (WayFor.Get() != L || Way.Num() == 0)
 		{
 			Way.Reset();
 			WayAt = 0;
 			WayFor = L;
+			WayTrail = 0;
 			const FVector Home = AKitchenBuilder::HomeFor(0, LP);
-			if (!AntRoutes::PathPoints(LP, Home, true, Way, nullptr, AntRoutes::FloorOnly))
+			// KAN-32: the nearest of the owner's working trails, if it is nearer than home: the trail's workers take the load from
+			// there (not the cake: that one the squad brings home itself).
+			FVector TrailAt;
+			uint16 TrailId = 0;
+			if (Net && !L->bMain && Net->NearestTrailPoint(OwnerPS.Get(), LP, (float)FVector::Dist2D(LP, Home) * 0.9f, TrailAt, TrailId) && FMath::Abs(TrailAt.Z - LP.Z) < 200.f)
 			{
-				Way.Reset();
+				WayTrail = TrailId;
+				WayTrailAt = TrailAt;
+				// a near trail: straight to it; a far one along the route graph (which ends at the trail point)
+				if (FVector::Dist2D(LP, TrailAt) <= 2500.f || !AntRoutes::PathPoints(LP, TrailAt, true, Way, nullptr, AntRoutes::FloorOnly))
+				{
+					Way.Reset();
+					Way.Add(TrailAt);
+				}
 			}
-			Way.Add(Home);
+			else
+			{
+				if (!AntRoutes::PathPoints(LP, Home, true, Way, nullptr, AntRoutes::FloorOnly))
+				{
+					Way.Reset();
+				}
+				Way.Add(Home);
+			}
 			StuckFor = 0.f;
 			LastHaulPos = LP;
 			if (Cs.Num() > 0 && Cs[0] == Ant)
 			{
-				UE_LOG(LogTemp, Display, TEXT("ANTRTS haul «%s» (weight %d): %d waypoints home, carriers %d, ratio %.2f"), *L->LootName, L->Weight, Way.Num(), Cs.Num(), AntHaul::Ratio(L));
+				UE_LOG(LogTemp, Display, TEXT("ANTRTS haul «%s» (weight %d): %d waypoints to %s, carriers %d, ratio %.2f"), *L->LootName, L->Weight, Way.Num(),
+					WayTrail ? *FString::Printf(TEXT("trail %d at %s"), (int32)WayTrail, *WayTrailAt.ToCompactString()) : TEXT("home"), Cs.Num(), AntHaul::Ratio(L));
 			}
+		}
+		// At the trail: the squad lets go and the trail's workers take it home (the load leaves the squad's task).
+		if (WayTrail != 0 && Net && FVector::Dist2D(LP, WayTrailAt) < 150.f)
+		{
+			const uint16 Tr = WayTrail;
+			for (AAntCharacter* C : Cs) { if (C) { AntHaul::RemoveCarrier(L, C); } }
+			const bool bTaken = Net->HandOff(L, Tr);
+			Way.Reset();
+			WayTrail = 0;
+			bHauling = false;
+			if (bTaken)
+			{
+				// the job is done: the group comes back to its owner (no walking beside the load all the way home)
+				if (FAntSnowPlayer* P = EntryOf(GetWorld(), OwnerPS.Get()))
+				{
+					if (P->Tasks.IsValidIndex(TaskIdx)) { P->Tasks[TaskIdx].State = 4; }
+					AntRts::Compact(*P);
+				}
+				UE_LOG(LogTemp, Display, TEXT("ANTRTS haul «%s» handed to trail %d at %s"), *L->LootName, (int32)Tr, *LP.ToCompactString());
+				if (AAntPlayerController* PC = OwnerPS.IsValid() ? Cast<AAntPlayerController>(OwnerPS->GetOwner()) : nullptr)
+				{
+					PC->ClientToast(FString::Printf(TEXT("Отряд донёс «%s» до тропы: дальше несут рабочие"), *L->LootName));
+				}
+				bHasGoal = false;
+				Wake();   // (the task list changed: think again next frame, as a follower)
+			}
+			return true;
 		}
 		while (WayAt < Way.Num() - 1 && FVector::Dist2D(Way[WayAt], LP) < 200.f) { ++WayAt; }
 		HaulGoal = Way[FMath::Clamp(WayAt, 0, Way.Num() - 1)];
@@ -695,6 +768,77 @@ namespace AntRts
 		Ant->GetWorldTimerManager().SetTimer(H, FTimerDelegate::CreateWeakLambda(Ant, [Weak]() { if (Weak.IsValid()) { Weak->Destroy(); } }), 8.f, false);
 		return true;
 	}
+
+	/** Where each player last died (server). */
+	static TMap<TWeakObjectPtr<const APlayerState>, FVector> GDiedAt;
+
+	void NoteOwnerDied(const AAntCharacter* Ant)
+	{
+		if (Ant && Ant->GetPlayerState())
+		{
+			GDiedAt.Add(Ant->GetPlayerState(), Ant->GetActorLocation());
+		}
+	}
+
+	bool RespawnInSquad(AController* C)
+	{
+		UWorld* W = C ? C->GetWorld() : nullptr;
+		APlayerState* PS = C ? C->PlayerState.Get() : nullptr;
+		AAntSnowball* S = AAntSnowball::Get(W);
+		FAntSnowPlayer* P = (S && S->bActive && PS) ? S->Find(PS) : nullptr;
+		AAntKitchenGameMode* GM = W ? W->GetAuthGameMode<AAntKitchenGameMode>() : nullptr;
+		if (!P || !GM || P->Squad.Num() == 0)
+		{
+			return false;
+		}
+		const FVector* Died = GDiedAt.Find(PS);
+		if (!Died)
+		{
+			return false;
+		}
+		// The squad ant nearest to where he fell (standing on its own feet: not one held by a hand or a web).
+		int32 Best = INDEX_NONE;
+		float BestD = FMath::Square(RespawnReach);
+		for (int32 i = 0; i < P->Squad.Num(); ++i)
+		{
+			const AAntCharacter* A = P->Squad[i];
+			if (!IsValid(A) || A->bDead || A->IsAttached() || A->IsInNest() || !Cast<AAntSquadBot>(A->GetController()))
+			{
+				continue;
+			}
+			const float D = (float)FVector::DistSquared(A->GetActorLocation(), *Died);
+			if (D < BestD) { BestD = D; Best = i; }
+		}
+		if (Best == INDEX_NONE)
+		{
+			UE_LOG(LogTemp, Display, TEXT("ANTRTS respawn: %s has no squad ant within %.0f of where he died: the nest"), *PS->GetPlayerName(), RespawnReach);
+			return false;
+		}
+		AAntCharacter* A = P->Squad[Best];
+		const FTransform At(FRotator(0.f, A->GetActorRotation().Yaw, 0.f), A->GetActorLocation() + A->GetVisualUp() * 4.f);
+		const FString Name = A->GetName();
+		// That ant is the one he comes back as: it leaves the squad (not a loss) and its body is his.
+		P->Squad.RemoveAt(Best);
+		if (P->SquadTask.IsValidIndex(Best)) { P->SquadTask.RemoveAt(Best); }
+		Compact(*P);
+		A->DropEverything();
+		if (AController* Bot = A->GetController())
+		{
+			Bot->UnPossess();
+			Bot->Destroy();
+		}
+		A->Destroy();
+		GM->RestartPlayerAtTransform(C, At);
+		GDiedAt.Remove(PS);
+		S->ForceNetUpdate();
+		UE_LOG(LogTemp, Display, TEXT("ANTRTS respawn: %s comes back as squad ant %s at %s (%.0f from where he died), squad now %d"),
+			*PS->GetPlayerName(), *Name, *At.GetLocation().ToCompactString(), FMath::Sqrt(BestD), P->Squad.Num());
+		if (AAntPlayerController* PC = Cast<AAntPlayerController>(C))
+		{
+			PC->ClientToast(TEXT("Ты вернулся муравьём из своего отряда — прямо там, где он был"));
+		}
+		return true;
+	}
 }
 
 void AAntPlayerController::ServerSwarm_Implementation(uint8 Cmd, int32 A, const TArray<AAntCharacter*>& Ants, FVector_NetQuantize Point, AActor* Target)
@@ -763,6 +907,15 @@ void UAntRtsInput::TickComponent(float DeltaTime, ELevelTick TickType, FActorCom
 	if (!C)
 	{
 		return;
+	}
+	if (C->GetPawn() != LastPawn.Get())
+	{
+		// (a test's evidence on this machine, a client too: which body I play now and where it is; KAN-32 respawn in the squad)
+		LastPawn = C->GetPawn();
+		if (LastPawn.IsValid())
+		{
+			UE_LOG(LogTemp, Display, TEXT("ANTRTS local (%s): I play %s at %s"), GetWorld()->GetNetMode() == NM_Client ? TEXT("client") : TEXT("host"), *LastPawn->GetName(), *LastPawn->GetActorLocation().ToCompactString());
+		}
 	}
 	if (!Always && C->InputComponent)
 	{
@@ -1157,6 +1310,7 @@ namespace AntRts
 		{
 			return;
 		}
+		AntTrail::DrawHud(Hud, Cv, PC);   // a label over every trail: workers, loads on the way, delivered (KAN-32)
 		const FAntSnowPlayer* P = S->Find(PC->PlayerState);
 		UAntRtsInput* In = UAntRtsInput::Of(PC);
 		const float K = FMath::Max(0.7f, Cv->ClipY / 1080.f);

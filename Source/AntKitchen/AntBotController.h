@@ -63,6 +63,10 @@ protected:   // (the rival clan's ants, AAntClanBot, build on this)
 	FVector LastCheckPos = FVector::ZeroVector;
 	float UnstickTime = 0.f;
 	FVector UnstickDir = FVector::ZeroVector;
+	/** Stuck again at the same spot: the same way round, for longer (a coin toss each time walked it back and forth). */
+	FVector LastUnstickAt = FVector::ZeroVector;
+	float UnstickSign = 1.f;
+	int32 UnstickStreak = 0;
 	float HeavyTimer = 0.f;     // carrying something that won't move
 	bool bCarryWithPlayer = false;   // holds the same load as a player of its colony: follows him (see Think)
 	TWeakObjectPtr<AAntCharacter> CarryLeader;
