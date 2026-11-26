@@ -286,6 +286,18 @@ def lay(o, y0, zc, local=None):
     T = Matrix(((1, 0, 0, 0), (0, 0, 1, y0 * K), (0, -1, 0, zc * K), (0, 0, 0, 1)))
     o.matrix_world = T @ (local if local is not None else o.matrix_world); return o
 
+def lid_metal(name, col=(0.80, 0.80, 0.78), rough=0.24):
+    """a tin lid: even sheen, pressed concentric rings (the lid lies in the XZ plane once laid: rings round the can's axis, Y)"""
+    m, p = H.mat(name); p.inputs["Base Color"].default_value = (*col, 1); p.inputs["Metallic"].default_value = 1.0; p.inputs["Roughness"].default_value = rough
+    tc, sp = _sep(m)
+    zz = _math(m, "SUBTRACT", sp.outputs["Z"], 123 * K, -1300, -300)
+    cxy = N(m, "ShaderNodeCombineXYZ", -1150, -300); L(m, sp.outputs["X"], cxy.inputs["X"]); L(m, zz, cxy.inputs["Y"])
+    ln = N(m, "ShaderNodeVectorMath", -1000, -300); ln.operation = "LENGTH"; L(m, cxy.outputs["Vector"], ln.inputs[0])
+    k = _math(m, "MULTIPLY", ln.outputs["Value"], 520.0, -850, -300); s = _math(m, "SINE", k, None, -700, -300)
+    bp = N(m, "ShaderNodeBump", -300, -300); bp.inputs["Strength"].default_value = 0.0; bp.inputs["Distance"].default_value = 0.0005   # (rings off: the lid is bent away from the axis)
+    L(m, s, bp.inputs["Height"]); L(m, bp.outputs["Normal"], p.inputs["Normal"])
+    return H.tag(m, 1.0, 0.0)
+
 def tin_metal(name, zc_uu, col=(0.80, 0.80, 0.78), gold=(0.74, 0.52, 0.20), rough=0.22):
     """tinplate, gold lacquer inside (the faces whose normal points to the can's axis, the can lying along Y at zc)"""
     m = H.metal(name, col, rough); p = m.node_tree.nodes["Principled BSDF"]
@@ -336,7 +348,7 @@ def knurl(m, ridges=60, strength=0.5):
 
 def mats2(M):
     M["tin"] = tin_metal("Tinplate", 123)
-    M["tinLid"] = H.metal("TinLid", (0.80, 0.80, 0.78), 0.22)
+    M["tinLid"] = lid_metal("TinLid")
     M["peasLabel"] = label_cyl("LabelPeas", "peas.png", 179, 40, 360, 0.5, (0.16, 0.43, 0.2), 0.6, (-200, 123))
     M["bottleGlass"] = glass_mat("BottleGlass", (0.42, 0.68, 0.44), 0.03)
     M["lemonLabel"] = label_cyl("LabelLemonade", "lemonade.png", 150, 640, 960, 0.5, (0.97, 0.95, 0.9), 0.6, (-550, 122))
@@ -363,7 +375,7 @@ def tincan(M):
     body = lay(lathe("Can", outer + inner, M["tin"], 56), -200, 123)
     lid = lathe("Lid", [(0, -1.6), (112, -1.6), (116, -1.2), (116.5, -0.4), (116, 0), (0, 0)], M["tinLid"], 56)
     p = Vector(u(0, -116, 0))
-    lay(lid, -200, 123, Matrix.Translation(p) @ Matrix.Rotation(math.radians(-30), 4, "X") @ Matrix.Translation(-p))
+    lay(lid, -200, 123, Matrix.Translation(p) @ Matrix.Rotation(math.radians(-75), 4, "X") @ Matrix.Translation(-p))
     lab = lay(wrap_label("Label", 122.9, 40, 360, 179, M["peasLabel"], 0.4, 72), -200, 123)
     return [(body, 0), (lab, 0), (lid, 1)]
 
@@ -502,7 +514,7 @@ def mats4(M):
     M["phoneFrame"] = H.metal("PhoneFrame", (0.55, 0.56, 0.60), 0.3)
     M["phoneBack"] = H.plastic("PhoneBack", (0.10, 0.12, 0.16), 0.15, peel=0.01, scuff=0.08)
     M["remote"] = top_print("RemotePrint", "remote_print.png", -300, 300, -100, 100, (0.04, 0.04, 0.045), 0.45, 0.0, 0.0, 0.1)
-    M["rubber"] = H.rubber("ButtonRubber", (0.22, 0.22, 0.24), 0.6)
+    M["rubber"] = H.rubber("ButtonRubber", (0.42, 0.43, 0.46), 0.55)
     M["redBtn"] = H.rubber("PowerRed", (0.55, 0.04, 0.03), 0.5)
     M["matchTop"] = top_print("MatchboxTop", "matchbox_top.png", -208, 208, -250, 250, (0.62, 0.48, 0.30), 0.7, 0.0, 0.0, 0.6)
     M["striker"] = H.rubber("Striker", (0.24, 0.13, 0.08), 0.95); _bump(M["striker"], M["striker"].node_tree.nodes["Principled BSDF"], 800.0, 0.6, 0.0004)
@@ -545,7 +557,7 @@ def remote_ctl(M):
     parts = [(rrect("Body", -300, 300, -98, 98, 0, 34, 70, M["remote"], 8, 10), 0),
              (rbox("Cover", -270, -40, -78, 78, -0.2, 2.5, M["remote"], 1.0, 0, 1), 1)]
     for (x, y) in [(x, y) for y in (-55, 0, 55) for x in (-200, -140, -80)] + [(-20, 0)]:
-        parts.append((lathe("Btn", [(0, 42), (15, 41.5), (18, 38), (18, 30), (0, 30)], M["rubber"], 20, 0, (x, y, 0)), 0))
+        parts.append((lathe("Btn", [(0, 45), (14, 44.5), (17.5, 41), (18, 30), (0, 30)], M["rubber"], 20, 0, (x, y, 0)), 0))
     parts.append((lathe("Ok", [(0, 42), (20, 41), (24, 37), (24, 30), (0, 30)], M["rubber"], 24, 0, (110, 0, 0)), 0))
     parts.append((lathe("Ring", [(30, 39), (52, 39), (56, 35), (56, 30), (30, 30)], M["rubber"], 32, 0, (110, 0, 0)), 0))
     for y in (60, -60):
@@ -571,7 +583,7 @@ def matchtray(M):
             y0, y1 = (-470, -40) if flip else (-450, -20)
             parts.append((rbox("Stick", x - 5.5, x + 5.5, y0, y1, z - 5.5, z + 5.5, M["stick"], 1.2, 0, 1), 0))
             hy = y0 - 6 if flip else y1 + 6
-            hd = H.cyl("Head", 9 * K, 22 * K, u(x, hy, z), (math.pi / 2, 0, 0), 10); H.smooth(hd, 1, 2 * K, 1); hd.data.materials.append(M["head"])
+            hd = H.cyl("Head", 9 * K, 22 * K, u(x, hy, z), (math.pi / 2, 0, 0), 8); H.smooth(hd, 0, 2.5 * K, 1); hd.data.materials.append(M["head"])
             parts.append((hd, 0))
     return parts
 
@@ -665,7 +677,74 @@ def cut_groups(lod0, name, cut, keep, cuts, attach0=()):
         else: bpy.data.objects.remove(g)
     return out
 
+def _vol(o):
+    if o is None or not len(o.data.polygons): return 0.0
+    mn, mx = H.bounds([o]); d = mx - mn; return d.x * d.y * d.z + 1e-12
+
+def shatter(lod0, name, shell, along=(), keep=(), n=16, seed=1, jag=0.0006, neck=None, chips=10, chip_mat_glass=True):
+    """real shattering: 'shell' (the glass / the china, a predicate on (part, glass)) is split again and again by random planes through
+    its biggest piece (sharp, small jag) into n+1 shards; the 'along' groups (the label on it) take the very same cuts, so its scraps stay
+    on their shards; 'neck' = (co_uu, normal): first cut off and kept whole (a bottle's neck); 'keep' groups stay whole (a cap);
+    plus one piece of small chips round about"""
+    R = random.Random(seed)
+    g = keep_faces(lod0, shell, name + "_sh")
+    cuts = []
+    pcs = [g]; locked = set()
+    if neck:
+        a, b = H.split(g, H.cutter(u(*neck[0]), neck[1], 0.6, jag, seed + 1, sub=5), g.name, name + "_neck")
+        pcs = [a, b]; locked.add(1); cuts.append((neck[0], neck[1], jag, seed + 1, 0))
+    for k in range(n):
+        idx = max((i for i in range(len(pcs)) if i not in locked), key=lambda i: _vol(pcs[i]))
+        src = pcs[idx]; mn, mx = H.bounds([src]); cc = (mn + mx) * 0.5; dd = (mx - mn) * 0.3
+        co = Vector((cc.x + R.uniform(-dd.x, dd.x), cc.y + R.uniform(-dd.y, dd.y), cc.z + R.uniform(-dd.z, dd.z))) / K
+        no = Vector((R.uniform(-1, 1), R.uniform(-1, 1), R.uniform(-1, 1))); no = no.normalized() if no.length > 0.1 else Vector((1, 0, 0))
+        sd = seed * 100 + k
+        a, b = H.split(src, H.cutter(u(*co), no, 0.6, jag, sd, sub=5), src.name, "%s_sh%d" % (name, len(pcs)))
+        pcs[idx] = a; pcs.append(b); cuts.append((tuple(co), tuple(no), jag, sd, idx))
+    sets = [pcs]
+    for gi, pred in enumerate(along):   # the label: the same cuts, piece by piece
+        lg = keep_faces(lod0, pred, "%s_al%d" % (name, gi))
+        if not len(lg.data.polygons): bpy.data.objects.remove(lg); continue
+        lp = [lg]
+        for (co, no, j, sd, idx) in cuts:
+            src = lp[idx]
+            if src is None or not len(src.data.polygons): lp.append(None); continue
+            a, b = H.split(src, H.cutter(u(*co), no, 0.6, j, sd, sub=5), src.name, "%s_al%d_%d" % (name, gi, len(lp)))
+            lp[idx] = a; lp.append(b)
+        sets.append(lp)
+    out = []
+    for i in range(len(pcs)):
+        objs = [s[i] for s in sets if i < len(s) and s[i] is not None and len(s[i].data.polygons)]
+        if objs: out.append(H.join(objs, "%s_Brk%d" % (name, len(out))))
+    for pred in keep:
+        kg = keep_faces(lod0, pred, "%s_Brk%d" % (name, len(out)))
+        if len(kg.data.polygons): out.append(kg)
+        else: bpy.data.objects.remove(kg)
+    if chips:   # small chips of the shell round about (one piece, many islands)
+        mn, mx = H.bounds([lod0]); bm = bmesh.new()
+        for k in range(chips):
+            r = R.uniform(0.15, 0.45) * min(0.012, 0.08 * (mx - mn).length)
+            cc = Vector((R.uniform(mn.x, mx.x), R.uniform(mn.y, mx.y), R.uniform(0.002, 0.004)))
+            ico = bmesh.ops.create_icosphere(bm, subdivisions=1, radius=r)
+            sc = Matrix.Diagonal((R.uniform(0.6, 1.4), R.uniform(0.6, 1.4), 0.18, 1))
+            bmesh.ops.transform(bm, matrix=Matrix.Translation(cc) @ Matrix.Rotation(R.uniform(0, 6.3), 4, "Z") @ sc, verts=ico["verts"])
+        me = bpy.data.meshes.new(name + "_chips"); bm.to_mesh(me); bm.free()
+        ch = H.link(bpy.data.objects.new("%s_Brk%d" % (name, len(out)), me))
+        for m in lod0.data.materials: ch.data.materials.append(m)
+        gl = ch.data.attributes.new("glass", "INT", "FACE")
+        gi_ = 1 if chip_mat_glass else 0
+        for i, p in enumerate(ch.data.polygons): gl.data[i].value = gi_; p.material_index = 1 if (chip_mat_glass and len(ch.data.materials) > 1) else 0
+        uv = ch.data.uv_layers.new(name="UV0")
+        for l in ch.data.loops: uv.data[l.index].uv = (0.02, 0.02)
+        ch["cuts"] = []
+        out.append(ch)
+    print("HERO shatter %s: %d pieces (%d cuts)" % (name, len(out), len(cuts)))
+    return out
+
 def breaks_plate(o, n):
+    return shatter(o, n, lambda p, g: True, n=7, seed=11, jag=0.0008, chips=6, chip_mat_glass=False)
+
+def breaks_plate_old(o, n):
     return shards(o, n, [((10, 0, 0), (1.0, 0.25, 0.0), 0.0012, 31, 0), ((0, -20, 0), (0.15, 1.0, 0.0), 0.0012, 37, 0),
                          ((-10, 30, 0), (-0.2, 1.0, 0.0), 0.0012, 41, 1)])
 
@@ -678,25 +757,24 @@ def glass_cuts(h_uu, scale=1.0):
 
 def breaks_spice(o, n):
     # the glass and its label shatter together; the cap stays whole; the paprika (part 2) is not a piece: it spills (AntWreck)
-    return cut_groups(o, n, [lambda p, g: g == 1, lambda p, g: g == 0 and p == 0], [lambda p, g: p == 1], glass_cuts(140))
+    return shatter(o, n, lambda p, g: g == 1, [lambda p, g: g == 0 and p == 0], [lambda p, g: p == 1], n=13, seed=3, jag=0.0004, chips=8)
 
 def breaks_mug(o, n):
-    return cut_groups(o, n, [lambda p, g: p == 0], [lambda p, g: p == 1],
-                      [((8, 0, 150), (1.0, 0.4, 0.15), 0.0016, 53, 0), ((-30, 10, 120), (0.3, -1.0, 0.25), 0.0016, 59, 0)])
+    return shatter(o, n, lambda p, g: p == 0, [], [lambda p, g: p == 1], n=6, seed=13, jag=0.0008, chips=5, chip_mat_glass=False)
 
 def breaks_pasta(o, n):
     # torn across (paper: a ragged, fibrous line); the glued flap goes with the top
     return cut_groups(o, n, [lambda p, g: p == 0], [], [((0, 0, 470), (0.12, 0.0, 1.0), 0.010, 59, 0)])
 
 def breaks_jam(o, n):
-    return cut_groups(o, n, [lambda p, g: g == 1, lambda p, g: g == 0 and p == 0], [lambda p, g: p == 1], glass_cuts(240, 3.0))
+    return shatter(o, n, lambda p, g: g == 1, [lambda p, g: g == 0 and p == 0], [lambda p, g: p == 1], n=16, seed=5, jag=0.0006, chips=10)
 
 def ring_y(r_uu, y_uu, zc_uu, n=12):
     return [(r_uu * K * math.cos(2 * math.pi * k / n), y_uu * K, (zc_uu + r_uu * math.sin(2 * math.pi * k / n)) * K) for k in range(n)]
 
 def hulls_tin(n):
     return [H.hull("UCX_%s_00" % n, ring_y(123, -200, 123, 16) + ring_y(123, 202, 123, 16)),
-            H.hull("UCX_%s_01" % n, boxp(-116, 116, -320, -198, 0, 240))]
+            H.hull("UCX_%s_01" % n, boxp(-116, 116, -430, -198, 170, 250))]
 
 def hulls_bottle(n):
     return [H.hull("UCX_%s_00" % n, ring_y(122, 25, 122, 16) + ring_y(122, 550, 122, 16)),
@@ -710,7 +788,7 @@ def hulls_cleaner(n):
 def breaks_bottle(o, n):
     cuts = [((0, -120, 122), (0.15, 1.0, 0.2), 0.0016, 71, 0), ((8, 260, 122), (0.25, 1.0, -0.35), 0.0018, 73, 0),
             ((0, 120, 150), (0.1, 0.25, 1.0), 0.0016, 79, 2), ((10, -340, 122), (0.3, 1.0, 0.1), 0.0012, 83, 1)]
-    return cut_groups(o, n, [lambda p, g: g == 1, lambda p, g: g == 0], [], cuts)
+    return shatter(o, n, lambda p, g: g == 1, [lambda p, g: g == 0], [], n=18, seed=7, jag=0.0008, neck=((0, -380, 122), (0.0, 1.0, 0.05)), chips=12)
 
 SPECS = {
     "SM_K_Plate": dict(build=plate, hulls=hulls_plate, lods=(0.45, 0.18), breaks=breaks_plate, cls="ceramic"),
@@ -818,41 +896,114 @@ def break_slots(o, name):
     print("HERO break %s: %d fracture faces, %d glass of %d" % (o.name, sum(flags), sum(1 for c, g in zip(flags, gf) if g and not c), len(flags)))
 
 # ------------------------------------------------------------------------------------------------ review (overall, the ant's view, wet, charred, broken)
+def fit_camera(objs, pos_fn, look, lens, fill=0.85, aspect=16 / 9):
+    """the camera distance at which the objects' box fills 'fill' of the frame (the larger of width / height): pos_fn(dist) -> location"""
+    mn, mx = H.bounds(objs)
+    corners = [Vector((x, y, z)) for x in (mn.x, mx.x) for y in (mn.y, mx.y) for z in (mn.z, mx.z)]
+    th = 18.0 / lens; tv = th / aspect; look = Vector(look)
+    def worst(dist):
+        cam = Vector(pos_fn(dist)); fwd = (look - cam).normalized()
+        right = fwd.cross(Vector((0, 0, 1))); right = right.normalized() if right.length > 1e-6 else Vector((1, 0, 0)); up = right.cross(fwd)
+        w = 0.0
+        for p in corners:
+            v = p - cam; z = v.dot(fwd)
+            if z <= 1e-4: return 99.0
+            w = max(w, abs(v.dot(right)) / z / th, abs(v.dot(up)) / z / tv)
+        return w
+    lo, hi = 0.0005, 40.0
+    for _ in range(60):
+        mid = (lo + hi) / 2
+        if worst(mid) > fill: lo = mid
+        else: hi = mid
+    return Vector(pos_fn(hi)), look
+
+def wet_extras(o):
+    """the wet review frame: drops on the upper surfaces, a runnel down the front to the floor, a small puddle at the base"""
+    R = random.Random(3)
+    wm = bpy.data.materials.get("Water") or H.water()
+    mn, mx = H.bounds([o]); s = max((mx - mn).length, 0.03); c = (mn + mx) * 0.5
+    rr = min(0.0035, max(0.0007, 0.012 * s))
+    polys = [p for p in o.data.polygons if p.normal.z > -0.2 and p.area > 0]
+    bm = bmesh.new()
+    if polys:
+        ws = [p.area for p in polys]
+        for p in R.choices(polys, weights=ws, k=70):
+            r = rr * R.uniform(0.4, 1.0); nrm = (o.matrix_world.to_3x3() @ p.normal).normalized()
+            cen = o.matrix_world @ p.center + nrm * r * 0.25
+            sph = bmesh.ops.create_uvsphere(bm, u_segments=10, v_segments=6, radius=r)
+            q = Vector((0, 0, 1)).rotation_difference(nrm).to_matrix().to_4x4()
+            bmesh.ops.transform(bm, matrix=Matrix.Translation(cen) @ q @ Matrix.Diagonal((1, 1, 0.45, 1)), verts=sph["verts"])
+    me = bpy.data.meshes.new("Drops"); bm.to_mesh(me); bm.free()
+    drops = H.link(bpy.data.objects.new("Drops", me)); drops.data.materials.append(wm)
+    for p in drops.data.polygons: p.use_smooth = True
+    # the puddle: an irregular flat pool at the front of the base
+    bm = bmesh.new(); pc = Vector((c.x + 0.1 * (mx.x - mn.x), mn.y - 0.05 * s, 0.0003)); ring_ = []
+    for k in range(48):
+        a = 2 * math.pi * k / 48; rad = (0.32 + 0.06 * math.sin(3 * a + 1) + 0.04 * math.sin(7 * a)) * s
+        ring_.append(bm.verts.new((pc.x + rad * math.cos(a) * 1.3, pc.y + rad * math.sin(a) * 0.6, 0.0003)))
+    bm.faces.new(ring_); bmesh.ops.solidify(bm, geom=bm.faces[:], thickness=0.0006)
+    me = bpy.data.meshes.new("Puddle"); bm.to_mesh(me); bm.free()
+    pud = H.link(bpy.data.objects.new("Puddle", me)); pud.data.materials.append(wm)
+    # the runnel: from the front, half way up, down to the puddle
+    top = Vector((c.x, mn.y - rr * 0.3, mn.z + 0.55 * (mx.z - mn.z)))
+    pts = [top, Vector((c.x + 0.02 * s, mn.y - rr * 0.3, mn.z + 0.3 * (mx.z - mn.z))), Vector((c.x + 0.03 * s, mn.y - rr * 0.6, 0.002)), Vector((pc.x, pc.y, 0.0006))]
+    run = H.tubes("Runnel", [pts], rr * 0.5, res_u=8, bevel_res=2); run.data.materials.append(wm); run.scale = (1, 1, 1)
+    return [drops, pud, run]
+
 def review(name, o, pieces, prev, glassm):
+    """the owner's reference framing (hero_mop_bucket.jpg / _ant.jpg): the piece fills the frame at 3/4; a close frame from the ant's
+    height (15 uu over the floor); the states clean | wet | charred | broken side by side"""
     for x in list(H.S().objects):
         if x.type in ("LIGHT", "CAMERA") or (x.type == "MESH" and x not in [o] + pieces and not x.name.startswith(name)):
             bpy.data.objects.remove(x)
     for x in pieces: x.hide_render = True
-    mn, mx = H.bounds([o]); c = (mn + mx) * 0.5; s = max((mx - mn).length, 0.05)
-    H.stage(wall_y=mx.y + 0.03)
+    mn, mx = H.bounds([o]); c = (mn + mx) * 0.5
+    H.stage(wall_y=mx.y + 0.03 + 0.15 * (mx.x - mn.x))
     def dress(x, base):
         if "slotnames" not in x: x["slotnames"] = [sl.material.name if sl.material else "" for sl in x.material_slots]
         for n, sl in zip(x["slotnames"], x.material_slots):
             sl.material = glassm if n == "Hero_Glass" else (bpy.data.materials["BreakPrev"] if n.startswith("Break") else base)
     if not bpy.data.materials.get("BreakPrev"):
-        bm = H.plastic("BreakPrev", (0.86, 0.84, 0.80), 0.8)
+        H.plastic("BreakPrev", (0.86, 0.84, 0.80), 0.8)
     dress(o, prev)
-    shots = []
-    def shot(tag, loc, look, lens, fstop=5.6):
-        H.camera(loc, look, lens, fstop); p = os.path.join(REV, "_%s_%s.jpg" % (name, tag)); H.render(p, 1280, 720, 128); shots.append(p)
-    shot("wide", (c.x + 1.1 * s, mn.y - 1.9 * s, c.z + 0.7 * s), (c.x, c.y, c.z), 45)
-    shot("ant", (c.x - 0.18 * s, mn.y - 0.55 * s, 0.006), (c.x, c.y, mn.z + 0.45 * (mx.z - mn.z)), 18, 11)
+    d34 = Vector((math.sin(math.radians(35)), -math.cos(math.radians(35)), 0.55)).normalized()
+    def three_quarter(objs, lens=50, fill=0.86):
+        bm_, bx_ = H.bounds(objs); cc = (bm_ + bx_) * 0.5
+        return fit_camera(objs, lambda dd: cc + d34 * dd, cc, lens, fill)
+    def ant(objs, lens=24, fill=0.92):
+        bm_, bx_ = H.bounds(objs); cc = (bm_ + bx_) * 0.5
+        zc = 15 * K; look = Vector((cc.x, cc.y, max(zc, bm_.z + 0.45 * (bx_.z - bm_.z))))
+        dh = Vector((-0.25, -1.0, 0.0)).normalized()
+        return fit_camera(objs, lambda dd: (look.x + dh.x * dd, look.y + dh.y * dd, zc), look, lens, fill)
+    def shot(tag, cam, lens, fstop, w, h):
+        loc, look = cam; H.camera(loc, look, lens, fstop)
+        p = os.path.join(REV, "_%s_%s.jpg" % (name, tag)); H.render(p, w, h, 128); return p
+    main = [shot("wide", three_quarter([o]), 50, 11, 1600, 900), shot("ant", ant([o]), 24, 5.6, 1600, 900)]
+    states = [shot("clean", three_quarter([o]), 50, 11, 960, 540)]
     for k, (w, ch) in enumerate(((1.0, 0.0), (0.0, 0.45))):
-        dress(o, H.state_material(prev, w, ch))
-        shot("state%d" % k, (c.x + 1.1 * s, mn.y - 1.9 * s, c.z + 0.7 * s), (c.x, c.y, c.z), 45)
+        sm = H.state_material(prev, w, ch)
+        extras = []
+        if w > 0:
+            for nd in sm.node_tree.nodes:   # the paper and cloth soak darker than the default review layer
+                if nd.type == "MATH" and nd.operation == "MULTIPLY" and abs(nd.inputs[1].default_value - 0.6 * w) < 1e-6: nd.inputs[1].default_value = 0.95
+            extras = wet_extras(o)
+        dress(o, sm)
+        states.append(shot("state%d" % k, three_quarter([o] + extras[1:2]), 50, 11, 960, 540))
+        for x in extras: bpy.data.objects.remove(x)
     dress(o, prev)
     if pieces:
         o.hide_render = True
-        R = random.Random(7)
+        R = random.Random(7); s = max((mx - mn).length, 0.02)
         for k, x in enumerate(pieces):
             x.hide_render = False; dress(x, prev)
             pm, px = H.bounds([x]); pc = (pm + px) * 0.5
             out = Vector((pc.x - c.x, pc.y - c.y, 0)); out = out.normalized() if out.length > 0.002 else Vector((0.0, -1.0, 0.0))
-            x.matrix_world = Matrix.Translation(out * 0.3 * s * (1 + k * 0.25) - Vector((0, 0, pm.z))) @ Matrix.Translation(pc) @ Matrix.Rotation(R.uniform(-0.4, 0.4), 4, "Z") @ Matrix.Translation(-pc)
-        shot("broken", (c.x + 1.1 * s, mn.y - 1.9 * s, c.z + 0.7 * s), (c.x, c.y, c.z * 0.5), 45)
-    H.sheet(shots[:2], os.path.join(REV, name + "_blender.jpg"), 2)
-    st = shots[2:] + ([shots[1]] if len(shots) == 4 else [])
-    H.sheet(st[:4] if len(st) >= 4 else st + [shots[0]] * (4 - len(st)), os.path.join(REV, name + "_states.jpg"), 2)
+            x.matrix_world = Matrix.Translation(out * 0.13 * s * (1 + k * 0.2) - Vector((0, 0, pm.z))) @ Matrix.Translation(pc) @ Matrix.Rotation(R.uniform(-0.4, 0.4), 4, "Z") @ Matrix.Translation(-pc)
+        states.append(shot("broken", three_quarter(pieces), 50, 11, 960, 540))
+    else:
+        states.append(shot("whole", three_quarter([o]), 50, 11, 960, 540))
+    H.sheet(main, os.path.join(REV, name + "_blender.jpg"), 2)
+    H.sheet(states, os.path.join(REV, name + "_states.jpg"), 4)
 
 def main():
     t0 = time.time()

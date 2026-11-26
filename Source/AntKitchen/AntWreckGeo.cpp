@@ -145,7 +145,7 @@ namespace
 		}
 		TArray<TSharedPtr<const FGeo>>& Out = GPre.Add(Key);
 		const FString Dir = FPackageName::GetLongPackagePath(Mesh->GetOutermost()->GetName());
-		for (int32 i = 0; i < 16; ++i)
+		for (int32 i = 0; i < 32; ++i)
 		{
 			const FString N = FString::Printf(TEXT("%s_Brk%d"), *Mesh->GetName(), i);
 			UStaticMesh* P = LoadObject<UStaticMesh>(nullptr, *FString::Printf(TEXT("%s/%s.%s"), *Dir, *N, *N), nullptr, LOAD_NoWarn | LOAD_Quiet);
