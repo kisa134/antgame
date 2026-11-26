@@ -20,6 +20,8 @@
 #include "EngineUtils.h"
 #include "Engine/World.h"
 #include "AntRts.h"
+#include "AntSnowball.h"
+#include "GameFramework/PlayerState.h"
 
 namespace
 {
@@ -60,6 +62,32 @@ AAntArmy* Find(const AAntCharacter* Commander)
 {
 	AAntArmy* A = AAntArmy::FindFor(Commander);
 	return (A && A->bSquad) ? A : nullptr;
+}
+
+void GetSquadPositions(const APlayerState* Owner, TArray<FVector>& Out)
+{
+	Out.Reset();
+	const UWorld* W = Owner ? Owner->GetWorld() : nullptr;
+	if (!W)
+	{
+		return;
+	}
+	// The snowball raid's squad ants (real ants, AntRts): each one (the list replicates with the snowball).
+	if (const AAntSnowball* S = AAntSnowball::Get(W))
+	{
+		if (const FAntSnowPlayer* P = S->Find(Owner))
+		{
+			for (const AAntCharacter* A : P->Squad)
+			{
+				if (IsValid(A) && !A->bDead) { Out.Add(A->GetActorLocation()); }
+			}
+		}
+	}
+	// The raid squad of drawn workers (AAntArmy, bSquad): where the squad is.
+	for (TActorIterator<AAntArmy> It(W); It; ++It)
+	{
+		if (It->bSquad && It->OwnerPS == Owner && It->Count > 0) { Out.Add(It->GetActorLocation()); }
+	}
 }
 
 int32 SpawnAll(AAntRaid* Raid)

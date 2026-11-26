@@ -31,6 +31,7 @@
 #include "Misc/Parse.h"
 #include "EngineUtils.h"
 #include "Engine/World.h"
+#include "Engine/OverlapResult.h"
 #include "TimerManager.h"
 #include "NpcRoutine.h"
 #include "AntSnowball.h"
@@ -1156,6 +1157,7 @@ void AAntRaid::OnPlayerDied(AAntCharacter* Ant, const FString& How)
 	LineOf(Ant).Deaths++;
 	AntColony::AddFallen(Nest, Ant->GetDisplayName(), RaidNo, How);
 	AntSquad::OnCommanderDied(Ant);   // half of his squad scatter, the rest wait by the body
+	AntRts::NoteOwnerDied(Ant);       // he comes back as one of his squad ants near here, if one is alive (AntRts::RespawnInSquad)
 	const FString Place = PlaceName(Ant->GetActorLocation());
 	Note(FString::Printf(TEXT("%s — %s %s%s"), *Clock(), *Ant->GetDisplayName(), *How, Place.IsEmpty() ? TEXT("") : *FString::Printf(TEXT(" (%s)"), *Place)));
 }
@@ -1748,6 +1750,26 @@ bool AAntRaid::DevCommand(const TArray<FString>& A)
 			UE_LOG(LogTemp, Display, TEXT("ANTSQUAD dev bridge to %s: %s, squad now %d"), *FVector(Num(2), Num(3), Num(4)).ToCompactString(), Ch ? TEXT("built") : TEXT("refused"), Sq->Count);
 		}
 		else if (Sub == TEXT("kill") && Sq) { Sq->Lose((int32)Num(2, 1.f)); }
+		else if (Sub == TEXT("probe") && A.Num() >= 6)
+		{
+			// squad probe x0 y0 x1 y1 [ztop]: every solid thing in that floor box (to see what a squad ant gets caught on)
+			const FVector Lo(FMath::Min(Num(2), Num(4)), FMath::Min(Num(3), Num(5)), -50.f);
+			const FVector Hi(FMath::Max(Num(2), Num(4)), FMath::Max(Num(3), Num(5)), Num(6, 400.f));
+			TArray<FOverlapResult> Ov;
+			FCollisionObjectQueryParams Obj(FCollisionObjectQueryParams::AllObjects);
+			GetWorld()->OverlapMultiByObjectType(Ov, (Lo + Hi) * 0.5f, FQuat::Identity, Obj, FCollisionShape::MakeBox((Hi - Lo) * 0.5f));
+			for (const FOverlapResult& O : Ov)
+			{
+				const UPrimitiveComponent* C = O.GetComponent();
+				if (!C || Cast<APawn>(O.GetActor())) { continue; }
+				const UStaticMeshComponent* SM = Cast<UStaticMeshComponent>(C);
+				const FBox B = C->Bounds.GetBox();
+				UE_LOG(LogTemp, Display, TEXT("ANTSQUAD probe: %s / %s mesh %s profile %s type %d enabled %d mobility %d pawn-block %d box (%.0f,%.0f,%.0f)-(%.0f,%.0f,%.0f)"), *GetNameSafe(O.GetActor()), *C->GetName(),
+					SM && SM->GetStaticMesh() ? *SM->GetStaticMesh()->GetName() : TEXT("-"), *C->GetCollisionProfileName().ToString(), (int32)C->GetCollisionObjectType(), (int32)C->GetCollisionEnabled(),
+					(int32)C->Mobility, C->GetCollisionResponseToChannel(ECC_Pawn) == ECR_Block ? 1 : 0, B.Min.X, B.Min.Y, B.Min.Z, B.Max.X, B.Max.Y, B.Max.Z);
+			}
+			UE_LOG(LogTemp, Display, TEXT("ANTSQUAD probe: %d hits in %s-%s"), Ov.Num(), *Lo.ToCompactString(), *Hi.ToCompactString());
+		}
 		else if (Sub == TEXT("info"))
 		{
 			for (TActorIterator<AAntArmy> It(GetWorld()); It; ++It)

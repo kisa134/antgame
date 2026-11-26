@@ -287,6 +287,81 @@ void UAntMovementComponent::PhysCustom(float DeltaTime, int32 Iterations)
 // Crawling
 // ---------------------------------------------------------------------------------------------
 
+bool UAntMovementComponent::StepOverLip(const FHitResult& Hit, const FVector& N, const FVector& InDir, const FVector& HitN, float R)
+{
+	// dev (-AntStuckLog): why a step over a low edge was refused (a few lines a second at most)
+	static const bool bLog = FParse::Param(FCommandLine::Get(), TEXT("AntStuckLog"));
+	auto No = [this, &Hit](const TCHAR* Why, float V)
+	{
+		static double LastAt = 0.0;
+		static int32 InSecond = 0;
+		const double T = FPlatformTime::Seconds();
+		if (T - LastAt > 1.0) { LastAt = T; InSecond = 0; }
+		if (bLog && ++InSecond <= 4 && CharacterOwner)
+		{
+			const UPrimitiveComponent* C = Hit.GetComponent();
+			const UStaticMeshComponent* SM = Cast<UStaticMeshComponent>(C);
+			UE_LOG(LogTemp, Display, TEXT("ANTSTEP no %s (%.2f): %s at %s on %s type %d"), Why, V, *CharacterOwner->GetName(), *CharacterOwner->GetActorLocation().ToCompactString(),
+				SM && SM->GetStaticMesh() ? *SM->GetStaticMesh()->GetName() : *GetNameSafe(C), C ? (int32)C->GetCollisionObjectType() : -1);
+		}
+		return false;
+	};
+	// Into the thing, along the floor; it must be pushing into it at all.
+	const FVector Into = FVector::VectorPlaneProject(-HitN, N).GetSafeNormal();
+	if (Into.IsNearlyZero() || FVector::DotProduct(InDir, Into) < 0.05f)
+	{
+		return false;
+	}
+	if (!IsStickable(Hit))
+	{
+		return No(TEXT("surface"), 0.f);
+	}
+	const FVector Loc = UpdatedComponent->GetComponentLocation();
+	const FVector Feet = Loc - N * R;
+	const float MaxLip = R * 5.f;   // the pet mat's lip is 15 high, the ant's ball 4: a step of up to five radii
+	// The top of what it ran into, a little way in past its edge: flat, low, and nothing over it.
+	const FVector Probe = Loc + Into * (R * 2.5f);
+	FHitResult Top;
+	if (!TraceSurface(Probe + N * (MaxLip + R * 2.f), Probe - N * R, Top))
+	{
+		return No(TEXT("top"), 0.f);
+	}
+	if (Top.bStartPenetrating || !IsStickable(Top) || FVector::DotProduct(Top.ImpactNormal, N) < 0.8f)
+	{
+		return No(TEXT("flat"), (float)FVector::DotProduct(Top.ImpactNormal, N));
+	}
+	const float H = (float)FVector::DotProduct(Top.ImpactPoint - Feet, N);
+	if (H < R * 0.3f || H > MaxLip)
+	{
+		return No(TEXT("height"), H);
+	}
+	// A step back off the lip (an undercut lip hangs over the ant: straight up it would hit it), up, then over, all swept: if
+	// any is blocked it stays where it was.
+	const FQuat Rot = UpdatedComponent->GetComponentQuat();
+	FHitResult Hb;
+	SafeMoveUpdatedComponent(-Into * (R * 1.5f), Rot, true, Hb);
+	FHitResult Hu;
+	SafeMoveUpdatedComponent(N * (H + 0.6f), Rot, true, Hu);
+	if (Hu.IsValidBlockingHit() && Hu.Time < 0.95f)
+	{
+		UpdatedComponent->SetWorldLocation(Loc, false, nullptr, ETeleportType::None);
+		return No(TEXT("room above"), Hu.Time);
+	}
+	FHitResult Ho;
+	const FVector Over = Top.ImpactPoint + N * (R + 0.6f) - UpdatedComponent->GetComponentLocation();
+	SafeMoveUpdatedComponent(FVector::VectorPlaneProject(Over, N), Rot, true, Ho);
+	if (Ho.IsValidBlockingHit() && Ho.Time < 0.3f)
+	{
+		UpdatedComponent->SetWorldLocation(Loc, false, nullptr, ETeleportType::None);
+		return No(TEXT("room over"), Ho.Time);
+	}
+	if (bLog && CharacterOwner)
+	{
+		UE_LOG(LogTemp, Display, TEXT("ANTSTEP up %.1f onto %s: %s at %s"), H, *GetNameSafe(Top.GetComponent()), *CharacterOwner->GetName(), *Loc.ToCompactString());
+	}
+	return true;
+}
+
 void UAntMovementComponent::PhysCrawl(float DeltaTime)
 {
 	if (DeltaTime < MIN_TICK_TIME || !CharacterOwner || !UpdatedComponent)
@@ -334,14 +409,27 @@ void UAntMovementComponent::PhysCrawl(float DeltaTime)
 				HN = Hit.ImpactNormal.GetSafeNormal();
 			}
 			const bool bNewPlane = FVector::DotProduct(HN, N) < 0.7f;
-			if (bNewPlane && !bNoClimb && IsStickable(Hit) && FVector::DotProduct(InDir, -HN) > 0.25f)
+			if (bNewPlane && N.Z > 0.6f && !bNoClimb && StepOverLip(Hit, N, InDir, HN, R))
+			{
+				// walked up onto a low edge (a mat, a newspaper, a lid): no climbing its lip face, at any slant (KAN-27)
+			}
+			else if (bNewPlane && !bNoClimb && IsStickable(Hit) && FVector::DotProduct(InDir, -HN) > 0.25f)
 			{
 				Velocity = FQuat::FindBetweenNormals(N, HN).RotateVector(V);
 				N = HN;
 			}
 			else
 			{
-				SlideAlongSurface(Delta, 1.f - Hit.Time, HN, Hit, true);
+				// An undercut face (the rounded lip of a mat, the belly of a bowl: it leans over the surface we walk on) slid
+				// along as it is pushes the ant into its own floor, and it stood wedged in the crease for good (KAN-27: squads
+				// stuck at the pet mat and the bowls). Slide along it as if it stood square to our surface.
+				FVector SlideN = HN;
+				if (FVector::DotProduct(HN, N) < -0.05f)
+				{
+					const FVector Square = FVector::VectorPlaneProject(HN, N).GetSafeNormal();
+					if (!Square.IsNearlyZero()) { SlideN = Square; }
+				}
+				SlideAlongSurface(Delta, 1.f - Hit.Time, SlideN, Hit, true);
 			}
 		}
 	}

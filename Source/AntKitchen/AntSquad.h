@@ -7,6 +7,7 @@ class AAntArmy;
 class AAntRaid;
 class AController;
 class AKitchenInteractable;
+class APlayerState;
 class UWorld;
 
 /**
@@ -23,6 +24,9 @@ namespace AntSquad
 
 	/** The squad this ant commands, or null. Works on every machine. */
 	ANTKITCHEN_API AAntArmy* Find(const AAntCharacter* Commander);
+	/** Where this player's squad is right now, for the HUD and the minimap (every machine): each living squad ant of the
+	 *  snowball raid (AntRts), plus the centre of his raid squad of drawn workers (AAntArmy) if he has one. */
+	ANTKITCHEN_API void GetSquadPositions(const APlayerState* Owner, TArray<FVector>& Out);
 	/** Server: the old commander keys (F, R, Z, X, C) in a raid. True: handled here. */
 	ANTKITCHEN_API bool HandleCommand(AAntCharacter* Ant, uint8 Cmd, const FVector& Point);
 	/** Server: an order to the ant's squad. Aim: the point under the crosshair. */
