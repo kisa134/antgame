@@ -1,39 +1,359 @@
 {
  "pieces": [
   {
-   "name": "SM_K_Matchbox_Tray",
-   "file": "SM_K_Matchbox_Tray.fbx",
+   "name": "SM_L_Book_H",
+   "file": "SM_L_Book_H.fbx",
    "set": "hero_props",
    "textures": {
-    "C": "SM_K_Matchbox_Tray/tex/T_SM_K_Matchbox_Tray_C.png",
-    "N": "SM_K_Matchbox_Tray/tex/T_SM_K_Matchbox_Tray_N.png",
-    "R": "SM_K_Matchbox_Tray/tex/T_SM_K_Matchbox_Tray_R.png"
+    "C": "SM_L_Book_H/tex/T_SM_L_Book_H_C.png",
+    "N": "SM_L_Book_H/tex/T_SM_L_Book_H_N.png",
+    "R": "SM_L_Book_H/tex/T_SM_L_Book_H_R.png"
    },
    "collision_lod": 0,
    "movers": [],
-   "breaks": [],
-   "break_class": "cardboard",
+   "breaks": [
+    {
+     "name": "SM_L_Book_H_Brk0",
+     "file": "SM_L_Book_H_Brk0.fbx",
+     "triangles": 1832,
+     "bbox_min_m": [
+      -0.0558,
+      -0.1524,
+      0.1086
+     ],
+     "bbox_max_m": [
+      0.0558,
+      0.1524,
+      0.29
+     ],
+     "materials": [
+      "Hero_SM_L_Book_H",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_L_Book_H_Brk1",
+     "file": "SM_L_Book_H_Brk1.fbx",
+     "triangles": 1832,
+     "bbox_min_m": [
+      -0.0558,
+      -0.1524,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.0558,
+      0.1524,
+      0.2191
+     ],
+     "materials": [
+      "Hero_SM_L_Book_H",
+      "Break"
+     ]
+    }
+   ],
+   "break_class": "paper",
    "note": "KAN-22 small props: hero rebuild of the old piece (same frame and box)",
-   "triangles": 3756,
+   "triangles": 448,
    "bbox_min_m": [
-    -0.0947,
-    -0.2568,
+    -0.0558,
+    -0.1524,
     0.0
    ],
    "bbox_max_m": [
-    0.0947,
-    0.0,
-    0.0568
+    0.0558,
+    0.1524,
+    0.29
    ],
    "materials": [
-    "Hero_SM_K_Matchbox_Tray"
+    "Hero_SM_L_Book_H"
    ],
    "lod_triangles": [
-    3756,
-    1878,
-    938
+    448,
+    224,
+    112
    ],
-   "ucx": 5
+   "ucx": 1
+  },
+  {
+   "name": "SM_K_Mug",
+   "file": "SM_K_Mug.fbx",
+   "set": "hero_props",
+   "textures": {
+    "C": "SM_K_Mug/tex/T_SM_K_Mug_C.png",
+    "N": "SM_K_Mug/tex/T_SM_K_Mug_N.png",
+    "R": "SM_K_Mug/tex/T_SM_K_Mug_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_K_Mug_Brk0",
+     "file": "SM_K_Mug_Brk0.fbx",
+     "triangles": 1610,
+     "bbox_min_m": [
+      -0.091,
+      -0.0923,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.0496,
+      0.0915,
+      0.1286
+     ],
+     "materials": [
+      "Hero_SM_K_Mug",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_Mug_Brk1",
+     "file": "SM_K_Mug_Brk1.fbx",
+     "triangles": 624,
+     "bbox_min_m": [
+      -0.0932,
+      -0.0806,
+      0.0
+     ],
+     "bbox_max_m": [
+      -0.0461,
+      0.0445,
+      0.1582
+     ],
+     "materials": [
+      "Hero_SM_K_Mug",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_Mug_Brk2",
+     "file": "SM_K_Mug_Brk2.fbx",
+     "triangles": 950,
+     "bbox_min_m": [
+      0.0152,
+      -0.0708,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.0945,
+      0.0905,
+      0.1582
+     ],
+     "materials": [
+      "Hero_SM_K_Mug",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_Mug_Brk3",
+     "file": "SM_K_Mug_Brk3.fbx",
+     "triangles": 1132,
+     "bbox_min_m": [
+      -0.0945,
+      -0.0344,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.0748,
+      0.0945,
+      0.1582
+     ],
+     "materials": [
+      "Hero_SM_K_Mug",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_Mug_Brk4",
+     "file": "SM_K_Mug_Brk4.fbx",
+     "triangles": 556,
+     "bbox_min_m": [
+      -0.0217,
+      -0.0945,
+      0.0088
+     ],
+     "bbox_max_m": [
+      0.0917,
+      0.013,
+      0.1582
+     ],
+     "materials": [
+      "Hero_SM_K_Mug",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_Mug_Brk5",
+     "file": "SM_K_Mug_Brk5.fbx",
+     "triangles": 1146,
+     "bbox_min_m": [
+      -0.0462,
+      -0.0936,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.0907,
+      0.059,
+      0.1076
+     ],
+     "materials": [
+      "Hero_SM_K_Mug",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_Mug_Brk6",
+     "file": "SM_K_Mug_Brk6.fbx",
+     "triangles": 216,
+     "bbox_min_m": [
+      -0.0618,
+      -0.094,
+      0.0958
+     ],
+     "bbox_max_m": [
+      0.0237,
+      -0.0663,
+      0.1582
+     ],
+     "materials": [
+      "Hero_SM_K_Mug",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_Mug_Brk7",
+     "file": "SM_K_Mug_Brk7.fbx",
+     "triangles": 1396,
+     "bbox_min_m": [
+      0.0865,
+      -0.0073,
+      0.0287
+     ],
+     "bbox_max_m": [
+      0.1591,
+      0.0073,
+      0.1364
+     ],
+     "materials": [
+      "Hero_SM_K_Mug",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_Mug_Brk8",
+     "file": "SM_K_Mug_Brk8.fbx",
+     "triangles": 100,
+     "bbox_min_m": [
+      -0.0785,
+      -0.0725,
+      0.0016
+     ],
+     "bbox_max_m": [
+      0.1126,
+      0.0964,
+      0.0045
+     ],
+     "materials": [
+      "Hero_SM_K_Mug",
+      "Break"
+     ]
+    }
+   ],
+   "break_class": "ceramic",
+   "note": "KAN-22 small props: hero rebuild of the old piece (same frame and box)",
+   "triangles": 4084,
+   "bbox_min_m": [
+    -0.0945,
+    -0.0945,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.1591,
+    0.0945,
+    0.1582
+   ],
+   "materials": [
+    "Hero_SM_K_Mug"
+   ],
+   "lod_triangles": [
+    4084,
+    1836,
+    734
+   ],
+   "ucx": 2
+  },
+  {
+   "name": "SM_L_Remote",
+   "file": "SM_L_Remote.fbx",
+   "set": "hero_props",
+   "textures": {
+    "C": "SM_L_Remote/tex/T_SM_L_Remote_C.png",
+    "N": "SM_L_Remote/tex/T_SM_L_Remote_N.png",
+    "R": "SM_L_Remote/tex/T_SM_L_Remote_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_L_Remote_Brk0",
+     "file": "SM_L_Remote_Brk0.fbx",
+     "triangles": 3920,
+     "bbox_min_m": [
+      -0.1579,
+      -0.0516,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.1587,
+      0.0516,
+      0.0234
+     ],
+     "materials": [
+      "Hero_SM_L_Remote",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_L_Remote_Brk1",
+     "file": "SM_L_Remote_Brk1.fbx",
+     "triangles": 500,
+     "bbox_min_m": [
+      -0.1421,
+      -0.0379,
+      -0.0007
+     ],
+     "bbox_max_m": [
+      0.1316,
+      0.0379,
+      0.0234
+     ],
+     "materials": [
+      "Hero_SM_L_Remote",
+      "Break"
+     ]
+    }
+   ],
+   "break_class": "plastic",
+   "note": "KAN-22 small props: hero rebuild of the old piece (same frame and box)",
+   "triangles": 4420,
+   "bbox_min_m": [
+    -0.1579,
+    -0.0516,
+    -0.0007
+   ],
+   "bbox_max_m": [
+    0.1587,
+    0.0516,
+    0.0234
+   ],
+   "materials": [
+    "Hero_SM_L_Remote"
+   ],
+   "lod_triangles": [
+    4420,
+    2210,
+    1104
+   ],
+   "ucx": 1
   },
   {
    "name": "SM_K_Plate",
@@ -598,213 +918,6 @@
     4196,
     1888,
     754
-   ],
-   "ucx": 2
-  },
-  {
-   "name": "SM_K_Mug",
-   "file": "SM_K_Mug.fbx",
-   "set": "hero_props",
-   "textures": {
-    "C": "SM_K_Mug/tex/T_SM_K_Mug_C.png",
-    "N": "SM_K_Mug/tex/T_SM_K_Mug_N.png",
-    "R": "SM_K_Mug/tex/T_SM_K_Mug_R.png"
-   },
-   "collision_lod": 0,
-   "movers": [],
-   "breaks": [
-    {
-     "name": "SM_K_Mug_Brk0",
-     "file": "SM_K_Mug_Brk0.fbx",
-     "triangles": 1610,
-     "bbox_min_m": [
-      -0.091,
-      -0.0923,
-      0.0
-     ],
-     "bbox_max_m": [
-      0.0496,
-      0.0915,
-      0.1286
-     ],
-     "materials": [
-      "Hero_SM_K_Mug",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_Mug_Brk1",
-     "file": "SM_K_Mug_Brk1.fbx",
-     "triangles": 624,
-     "bbox_min_m": [
-      -0.0932,
-      -0.0806,
-      0.0
-     ],
-     "bbox_max_m": [
-      -0.0461,
-      0.0445,
-      0.1582
-     ],
-     "materials": [
-      "Hero_SM_K_Mug",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_Mug_Brk2",
-     "file": "SM_K_Mug_Brk2.fbx",
-     "triangles": 950,
-     "bbox_min_m": [
-      0.0152,
-      -0.0708,
-      0.0
-     ],
-     "bbox_max_m": [
-      0.0945,
-      0.0905,
-      0.1582
-     ],
-     "materials": [
-      "Hero_SM_K_Mug",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_Mug_Brk3",
-     "file": "SM_K_Mug_Brk3.fbx",
-     "triangles": 1132,
-     "bbox_min_m": [
-      -0.0945,
-      -0.0344,
-      0.0
-     ],
-     "bbox_max_m": [
-      0.0748,
-      0.0945,
-      0.1582
-     ],
-     "materials": [
-      "Hero_SM_K_Mug",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_Mug_Brk4",
-     "file": "SM_K_Mug_Brk4.fbx",
-     "triangles": 556,
-     "bbox_min_m": [
-      -0.0217,
-      -0.0945,
-      0.0088
-     ],
-     "bbox_max_m": [
-      0.0917,
-      0.013,
-      0.1582
-     ],
-     "materials": [
-      "Hero_SM_K_Mug",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_Mug_Brk5",
-     "file": "SM_K_Mug_Brk5.fbx",
-     "triangles": 1146,
-     "bbox_min_m": [
-      -0.0462,
-      -0.0936,
-      0.0
-     ],
-     "bbox_max_m": [
-      0.0907,
-      0.059,
-      0.1076
-     ],
-     "materials": [
-      "Hero_SM_K_Mug",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_Mug_Brk6",
-     "file": "SM_K_Mug_Brk6.fbx",
-     "triangles": 216,
-     "bbox_min_m": [
-      -0.0618,
-      -0.094,
-      0.0958
-     ],
-     "bbox_max_m": [
-      0.0237,
-      -0.0663,
-      0.1582
-     ],
-     "materials": [
-      "Hero_SM_K_Mug",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_Mug_Brk7",
-     "file": "SM_K_Mug_Brk7.fbx",
-     "triangles": 1396,
-     "bbox_min_m": [
-      0.0865,
-      -0.0073,
-      0.0287
-     ],
-     "bbox_max_m": [
-      0.1591,
-      0.0073,
-      0.1364
-     ],
-     "materials": [
-      "Hero_SM_K_Mug",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_Mug_Brk8",
-     "file": "SM_K_Mug_Brk8.fbx",
-     "triangles": 100,
-     "bbox_min_m": [
-      -0.0785,
-      -0.0725,
-      0.0016
-     ],
-     "bbox_max_m": [
-      0.1126,
-      0.0964,
-      0.0045
-     ],
-     "materials": [
-      "Hero_SM_K_Mug",
-      "Break"
-     ]
-    }
-   ],
-   "break_class": "ceramic",
-   "note": "KAN-22 small props: hero rebuild of the old piece (same frame and box)",
-   "triangles": 4084,
-   "bbox_min_m": [
-    -0.0945,
-    -0.0945,
-    0.0
-   ],
-   "bbox_max_m": [
-    0.1591,
-    0.0945,
-    0.1582
-   ],
-   "materials": [
-    "Hero_SM_K_Mug"
-   ],
-   "lod_triangles": [
-    4084,
-    1836,
-    734
    ],
    "ucx": 2
   },
@@ -2198,80 +2311,6 @@
    "ucx": 1
   },
   {
-   "name": "SM_L_Remote",
-   "file": "SM_L_Remote.fbx",
-   "set": "hero_props",
-   "textures": {
-    "C": "SM_L_Remote/tex/T_SM_L_Remote_C.png",
-    "N": "SM_L_Remote/tex/T_SM_L_Remote_N.png",
-    "R": "SM_L_Remote/tex/T_SM_L_Remote_R.png"
-   },
-   "collision_lod": 0,
-   "movers": [],
-   "breaks": [
-    {
-     "name": "SM_L_Remote_Brk0",
-     "file": "SM_L_Remote_Brk0.fbx",
-     "triangles": 1300,
-     "bbox_min_m": [
-      -0.1579,
-      -0.0516,
-      0.0
-     ],
-     "bbox_max_m": [
-      0.1579,
-      0.0516,
-      0.0237
-     ],
-     "materials": [
-      "Hero_SM_L_Remote",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_L_Remote_Brk1",
-     "file": "SM_L_Remote_Brk1.fbx",
-     "triangles": 44,
-     "bbox_min_m": [
-      -0.1421,
-      -0.0411,
-      -0.0001
-     ],
-     "bbox_max_m": [
-      0.1342,
-      0.0411,
-      0.0237
-     ],
-     "materials": [
-      "Hero_SM_L_Remote",
-      "Break"
-     ]
-    }
-   ],
-   "break_class": "plastic",
-   "note": "KAN-22 small props: hero rebuild of the old piece (same frame and box)",
-   "triangles": 1344,
-   "bbox_min_m": [
-    -0.1579,
-    -0.0516,
-    -0.0001
-   ],
-   "bbox_max_m": [
-    0.1579,
-    0.0516,
-    0.0237
-   ],
-   "materials": [
-    "Hero_SM_L_Remote"
-   ],
-   "lod_triangles": [
-    1344,
-    672,
-    336
-   ],
-   "ucx": 1
-  },
-  {
    "name": "SM_K_Matchbox",
    "file": "SM_K_Matchbox.fbx",
    "set": "hero_props",
@@ -2305,6 +2344,41 @@
     44
    ],
    "ucx": 4
+  },
+  {
+   "name": "SM_K_Matchbox_Tray",
+   "file": "SM_K_Matchbox_Tray.fbx",
+   "set": "hero_props",
+   "textures": {
+    "C": "SM_K_Matchbox_Tray/tex/T_SM_K_Matchbox_Tray_C.png",
+    "N": "SM_K_Matchbox_Tray/tex/T_SM_K_Matchbox_Tray_N.png",
+    "R": "SM_K_Matchbox_Tray/tex/T_SM_K_Matchbox_Tray_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [],
+   "break_class": "cardboard",
+   "note": "KAN-22 small props: hero rebuild of the old piece (same frame and box)",
+   "triangles": 3756,
+   "bbox_min_m": [
+    -0.0947,
+    -0.2568,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.0947,
+    0.0,
+    0.0568
+   ],
+   "materials": [
+    "Hero_SM_K_Matchbox_Tray"
+   ],
+   "lod_triangles": [
+    3756,
+    1878,
+    938
+   ],
+   "ucx": 5
   },
   {
    "name": "SM_V31_BoardBooks",
@@ -2890,80 +2964,6 @@
    ],
    "materials": [
     "Hero_SM_L_Book_G"
-   ],
-   "lod_triangles": [
-    448,
-    224,
-    112
-   ],
-   "ucx": 1
-  },
-  {
-   "name": "SM_L_Book_H",
-   "file": "SM_L_Book_H.fbx",
-   "set": "hero_props",
-   "textures": {
-    "C": "SM_L_Book_H/tex/T_SM_L_Book_H_C.png",
-    "N": "SM_L_Book_H/tex/T_SM_L_Book_H_N.png",
-    "R": "SM_L_Book_H/tex/T_SM_L_Book_H_R.png"
-   },
-   "collision_lod": 0,
-   "movers": [],
-   "breaks": [
-    {
-     "name": "SM_L_Book_H_Brk0",
-     "file": "SM_L_Book_H_Brk0.fbx",
-     "triangles": 1832,
-     "bbox_min_m": [
-      -0.0558,
-      -0.1524,
-      0.1086
-     ],
-     "bbox_max_m": [
-      0.0558,
-      0.1524,
-      0.29
-     ],
-     "materials": [
-      "Hero_SM_L_Book_H",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_L_Book_H_Brk1",
-     "file": "SM_L_Book_H_Brk1.fbx",
-     "triangles": 1832,
-     "bbox_min_m": [
-      -0.0558,
-      -0.1524,
-      0.0
-     ],
-     "bbox_max_m": [
-      0.0558,
-      0.1524,
-      0.2191
-     ],
-     "materials": [
-      "Hero_SM_L_Book_H",
-      "Break"
-     ]
-    }
-   ],
-   "break_class": "paper",
-   "note": "KAN-22 small props: hero rebuild of the old piece (same frame and box)",
-   "triangles": 448,
-   "bbox_min_m": [
-    -0.0558,
-    -0.1524,
-    0.0
-   ],
-   "bbox_max_m": [
-    0.0558,
-    0.1524,
-    0.29
-   ],
-   "materials": [
-    "Hero_SM_L_Book_H"
    ],
    "lod_triangles": [
     448,

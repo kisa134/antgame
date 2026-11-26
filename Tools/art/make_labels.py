@@ -128,12 +128,8 @@ def mug():
     W, H = 2048, 512
     im = Image.new("RGBA", (W, H), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
     # u 0.5 = the side facing -Y, the handle at u 0.75 (+X): the hearts on the side away from the handle, u 0.25
-    ctext(d, W * 0.5, 120, "ПАПА", F("georgiab.ttf", 210), (250, 248, 240, 255), 14)
-    ctext(d, W * 0.5, 360, "лучший по утрам", F("georgiai.ttf", 64), (250, 248, 240, 255))
-    for k in range(5):   # a row of little hearts on the other side
-        cx = W * 0.25 + (k - 2) * 110; cy = 260
-        d.ellipse([cx - 30, cy - 30, cx, cy], fill=(250, 248, 240, 255)); d.ellipse([cx, cy - 30, cx + 30, cy], fill=(250, 248, 240, 255))
-        d.polygon([(cx - 29, cy - 10), (cx + 29, cy - 10), (cx, cy + 34)], fill=(250, 248, 240, 255))
+    ctext(d, W * 0.57, 120, "ПАПА", F("georgiab.ttf", 200), (250, 248, 240, 255), 10)
+    ctext(d, W * 0.57, 360, "лучший по утрам", F("georgiai.ttf", 64), (250, 248, 240, 255))
     save(im, "mug_print")
 
 # ------------------------------------------------------------------------------------------------ tin of peas (full wrap)
@@ -319,7 +315,61 @@ def kidbooks():
         sp = Image.new("RGB", (W, 240), ink); ds = ImageDraw.Draw(sp); ctext(ds, W * 0.5, 70, title, F("comicbd.ttf", 80), bg)
         save(sp, "kidbook_spine_%d" % i)
 
+# ------------------------------------------------------------------------------------------------ the TV remote, v2: symbols on the keys
+# (uu, x along the remote, the IR end at +x; y across). The text's "up" is +x (as held, pointing at the TV).
+REMOTE_KEYS = ([("num", -80 - 60 * c, 50 - 50 * r, str(1 + c + 3 * r)) for r in range(3) for c in range(3)] + [("num", -255, 0, "0")] +
+               [("power", 250, 55, ""), ("mute", 250, -55, ""), ("ok", 140, 0, "OK")] +
+               [("col", -20, y, c) for y, c in ((-66, "r"), (-22, "g"), (22, "y"), (66, "b"))])
+def remote2():
+    W, H = 1200, 400
+    def P(x, y): return ((x + 300) * 2, (100 - y) * 2)
+    for layer in ("keys", "body"):
+        im = Image.new("RGBA", (W, H), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
+        def sym(x, y, s, size=30, col=(240, 240, 240, 255), font="arialbd.ttf"):
+            t = Image.new("RGBA", (120, 120), (0, 0, 0, 0)); dt = ImageDraw.Draw(t); f = F(font, size)
+            dt.text((60 - dt.textlength(s, font=f) / 2, 60 - size * 0.62), s, font=f, fill=col)
+            r = t.rotate(-90); cx, cy = P(x, y); im.paste(r, (int(cx - 60), int(cy - 60)), r)
+        if layer == "keys":
+            for kind, x, y, s in REMOTE_KEYS:
+                if kind == "num": sym(x, y, s, 34)
+                elif kind == "ok": sym(x, y, s, 26)
+                elif kind == "power":   # the power sign
+                    cx, cy = P(x, y); d.arc([cx - 14, cy - 14, cx + 14, cy + 14], -60, 240, fill=(250, 250, 250, 255), width=4); d.line([(cx, cy), (cx + 18, cy)], fill=(250, 250, 250, 255), width=4)
+                elif kind == "mute":   # a speaker and a cross
+                    cx, cy = P(x, y); d.polygon([(cx - 4, cy - 12), (cx + 2, cy - 12), (cx + 12, cy - 20), (cx + 12, cy + 20), (cx + 2, cy + 12), (cx - 4, cy + 12)], fill=(235, 235, 235, 255))
+                    d.line([(cx - 18, cy - 10), (cx - 6, cy + 10)], fill=(235, 235, 235, 255), width=3); d.line([(cx - 18, cy + 10), (cx - 6, cy - 10)], fill=(235, 235, 235, 255), width=3)
+            for (x, y, s) in ((55, 60, "+"), (25, 60, "−"), (55, -60, "▲"), (25, -60, "▼")): sym(x, y, s, 30, font="seguisym.ttf" if s in "▲▼" else "arialbd.ttf")
+            for a, (dx, dy) in enumerate(((44, 0), (-44, 0), (0, 44), (0, -44))):   # the d-pad arrows on the ring
+                cx, cy = P(140 + dx, dy); ang = math.atan2(-dy, dx); pts = [(cx + 10 * math.cos(ang + k * 2.4), cy + 10 * math.sin(ang + k * 2.4)) for k in range(3)]
+                d.polygon(pts, fill=(235, 235, 235, 255))
+        else:
+            for (x, y, s) in ((40, 92, "VOL"), (40, -92, "CH"), (250, 85, ""), (-20, 90, "")): sym(x, y, s, 18, (190, 190, 190, 255), "arial.ttf")
+            sym(-150, -88, "ЭКРАН · 3", 20, (170, 170, 170, 255), "arialbd.ttf")
+        save(im, "remote_%s" % layer)
+
+# ------------------------------------------------------------------------------------------------ batch 5: the sugar jar (a hand-written kraft label), the salt shaker's letter
+def sugar():
+    W, H = 1500, 700
+    im = paper(W, H, (196, 160, 112), 10, 9); d = ImageDraw.Draw(im)
+    d.rounded_rectangle([26, 26, W - 26, H - 26], 30, outline=(92, 60, 34), width=5)
+    for x in range(60, W - 60, 28): d.line([(x, 52), (x + 12, 52)], fill=(92, 60, 34), width=3)
+    ctext(d, W * 0.5, 110, "Сахар", F("Gabriola.ttf", 300), (64, 40, 24))
+    ctext(d, W * 0.5, 470, "песок · не трогать до праздника", F("segoepr.ttf", 52), (40, 50, 110))
+    d.text((80, H - 120), "1 кг", font=F("georgiab.ttf", 56), fill=(64, 40, 24))
+    for cx, cy in ((W * 0.12, 220), (W * 0.88, 220)):   # sugar cubes, drawn in ink
+        d.polygon([(cx - 50, cy), (cx, cy - 28), (cx + 50, cy), (cx, cy + 28)], outline=(64, 40, 24), width=4)
+        d.line([(cx - 50, cy), (cx - 50, cy + 60), (cx, cy + 88), (cx, cy + 28)], fill=(64, 40, 24), width=4)
+        d.line([(cx, cy + 88), (cx + 50, cy + 60), (cx + 50, cy)], fill=(64, 40, 24), width=4)
+    save(im, "sugar")
+
+def salt():
+    W, H = 1200, 600
+    im = Image.new("RGBA", (W, H), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
+    ctext(d, W * 0.5, 40, "С", F("georgiab.ttf", 420), (20, 45, 130, 255))
+    for k in range(3): d.line([(W * 0.2, 520 + k * 22), (W * 0.8, 520 + k * 22)], fill=(20, 45, 130, 255), width=6)
+    save(im, "salt")
+
 if __name__ == "__main__":
     spice(); jam(); pasta(); mug(); peas(); lemonade(); trap(); detergent()
     for k in BOOKS: book(k)
-    phone(); remote(); matches(); kidbooks()
+    phone(); remote(); matches(); kidbooks(); remote2(); sugar(); salt()
