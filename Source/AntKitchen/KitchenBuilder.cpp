@@ -808,8 +808,10 @@ UStaticMeshComponent* AKitchenBuilder::Ball(const FVector& Center, const FVector
 		const TCHAR* LookName = nullptr;
 		if (bFlat) { MeshName = TEXT("SM_M4_Pheromone"); C->ComponentTags.AddUnique(TEXT("M4Fx")); }
 		else if (Lum > 0.5f && H.R > 30.f && H.R < 60.f && H.G > 0.55f) { MeshName = TEXT("SM_M4_Droplet"); LookName = TEXT("Spark"); C->ComponentTags.AddUnique(TEXT("M4Fx")); }   // a flame
-		else if (Lum < 0.03f && Radii.GetMax() >= 150.f) { MeshName = TEXT("SM_M4_TrashBag"); LookName = TEXT("TrashBag"); }
+		// earth before the bin bags: dark dirt (60,40,25) is darker than the bags' 0.03 cut, and the nest's dark heaps stood round
+		// the hole as glossy black bin bags (KAN-39)
 		else if (bEarth) { MeshName = TEXT("SM_M4_Crumb"); LookName = TEXT("Soil"); }
+		else if (Lum < 0.03f && Radii.GetMax() >= 150.f) { MeshName = TEXT("SM_M4_TrashBag"); LookName = TEXT("TrashBag"); }
 		else if (H.G < 0.18f && Lum > 0.15f && Lum < 0.6f) { MeshName = TEXT("SM_M4_DustBunny"); LookName = TEXT("Dust"); }
 		else { MeshName = TEXT("SM_M4_Crumb"); }
 		if (UStaticMesh* M = Map4Look::Prop(MeshName))

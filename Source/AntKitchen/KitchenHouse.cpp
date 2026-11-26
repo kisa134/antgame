@@ -5,6 +5,7 @@
 #include "AntCharacter.h"
 #include "AntTypes.h"
 #include "KitchenArt.h"
+#include "Map4Look.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/PointLightComponent.h"
 #include "Components/InstancedStaticMeshComponent.h"
@@ -335,7 +336,18 @@ void AKitchenBuilder::BuildWestStreet()
 		const float R = 620.f + 50.f * FMath::Sin(i * 2.1f);
 		AddMound(0, Ball(FVector(Nest.X + FMath::Cos(A) * R, Nest.Y + FMath::Sin(A) * R, -60.f), FVector(300.f, 260.f, 170.f + 30.f * FMath::Cos(i * 1.7f)), i % 3 == 0 ? DarkDirt : Dirt));
 	}
-	Cyl(FVector(Nest.X, Nest.Y, 0.f), 320.f, 3.f, Black, false);                                  // the entrance hole
+	UStaticMeshComponent* Hole = Cyl(FVector(Nest.X, Nest.Y, 0.f), 320.f, 3.f, Black, false);      // the entrance hole
+	if (Hole && Map4Look::Enabled())
+	{
+		// KAN-39: map v4 turns every flat builder disc into a spill (SM_M4_LiquidDisc) painted in its colour, and this one's
+		// near-black paint with the spill's gloss was a black mirror right where the ants (and a joining guest) appear: the
+		// floor round an ant standing at the nest went black and reflective. The hole is dark, matte, trodden earth.
+		if (const Map4Look::FLook* Earth = Map4Look::Named(TEXT("Soil")))
+		{
+			Hole->SetMaterial(0, Map4Look::Get(*Earth, FLinearColor(0.32f, 0.3f, 0.28f)));
+		}
+		Hole->SetCastShadow(false);
+	}
 	Cyl(FVector(Nest.X, Nest.Y, 0.f), NestRadius(0), 2.f, DarkDirt, false);                       // trampled ring
 	for (int32 i = 0; i < 12; ++i)                                                                   // dirt clods and grains
 	{
