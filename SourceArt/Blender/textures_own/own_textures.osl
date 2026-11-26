@@ -122,13 +122,14 @@ float woodgrain(float along, float across, float seed, float rings, output float
     return late;
 }
 
-// wood figure periodic along u (boards running the whole tile): across in board widths, fu whole periods along u
-float woodp(float u, float across, float seed, float rings, float fu, float pa, output float pores)
+// wood figure periodic along u (boards running the whole tile): across in board widths, fu whole periods along u,
+// wa = how far the long wave bends the rings (fraction of the ring count)
+float woodp(float u, float across, float seed, float rings, float fu, float pa, float wa, output float pores)
 {
     float P = pa > 0.0 ? pa : 1000.0;   // the period of across (whole), 0 = none (inside a board)
     float w1 = psnoise(u * fu * 2.0 + seed * 11.0, across * 3.0 + seed * 3.0, fu * 2.0, P * 3.0);
     float w2 = psnoise(u * fu * 8.0 + seed * 5.0, across * 12.0, fu * 8.0, P * 12.0);
-    float g = across * rings + w1 * rings * 0.05 + w2 * 0.22 + seed * 3.7;
+    float g = across * rings + w1 * rings * wa + w2 * 0.22 + seed * 3.7;
     float ring = g - floor(g);
     float late = smoothstep(0.45, 0.94, ring) * (1.0 - smoothstep(0.94, 1.0, ring));
     float ri = floor(g);
@@ -372,8 +373,8 @@ shader own_textures(
             if (hb > h) { h = hb; rb = r1; tb = t1; lay = q1; }
         }
         float soil = fbm(u, v, 24, 24, 3, 0.5, 89);
-        float dry = smoothstep(0.86, 0.95, rb);
-        color gc = mix(lc(0.26 + 0.16 * rb, 0.46 + 0.16 * rb, 0.13 + 0.06 * rb), lc(0.68, 0.62, 0.38), dry);
+        float dry = smoothstep(0.80, 0.92, rb);
+        color gc = mix(lc(0.30 + 0.12 * rb, 0.42 + 0.12 * rb, 0.17 + 0.05 * rb), lc(0.62, 0.57, 0.38), dry);
         gc *= (0.55 + 0.45 * tb) * (0.78 + 0.22 * (1.0 - lay * lay)) * (1.0 - 0.18 * smoothstep(0.0, 0.08, 0.08 - lay));   // darker at the base, round, a midrib
         gc *= 1.0 + 0.12 * fbm(u, v, 4, 4, 3, 0.5, 86) + 0.06 * fbm(u, v, 512, 32, 1, 0.5, 87);                         // lawn patches, veins
         color ground = lc(0.24, 0.19, 0.13) * (1.0 + soil * 0.3);
@@ -409,13 +410,14 @@ shader own_textures(
         float chip = (id > 0.86) ? (1.0 - smoothstep(0.002, 0.009, d)) * smoothstep(0.2, 0.4, fbm(u, v, 12, 12, 2, 0.5, 106)) : 0.0;
         float mot = fbm(u, v, 16, 16, 4, 0.55, 107);
         color tc = (Mat == 10) ? lc(0.88, 0.82, 0.71) : lc(0.62, 0.60, 0.58);
-        tc *= 0.93 + 0.14 * id + mot * 0.05;
+        tc *= 0.93 + 0.14 * id + mot * 0.10 + (hs(floor(u * 2048.0), floor(v * 2048.0), 109) - 0.5) * 0.05;
+        tc *= 1.0 - 0.12 * (1.0 - smoothstep(0.0024, 0.009, d)) - 0.06 * smoothstep(0.1, 0.5, fbm(u, v, 3, 3, 4, 0.5, 110));
         if (Mat == 11) { tc *= 1.0 + 0.25 * (smoothstep(0.55, 0.6, hs(floor(u * 1024.0), floor(v * 1024.0), 108)) - 0.2); }
         color gr = lc(0.55, 0.52, 0.47) * (1.0 + sand * 0.2);
         H = edge * (0.6 + wav * 0.08) + scr * -0.03 - pin * 0.08 - chip * 0.25 + grout * sand * 0.05;
         C = mix(tc, gr, grout);
         C = mix(C, lc(0.70, 0.66, 0.60), chip * 0.7);
-        R = mix(0.22 + scr * 0.1 + mot * 0.03, 0.92, max(grout, chip));
+        R = mix(0.22 + scr * 0.1 + mot * 0.03 + 0.18 * smoothstep(0.0, 0.5, fbm(u, v, 4, 4, 4, 0.5, 111)), 0.92, max(grout, chip));
     }
     else if (Mat == 12)   // Oak: oiled butcher-block worktop, 12 strips x 2 pieces, 0.58 m (1100 uu)
     {
@@ -432,7 +434,7 @@ shader own_textures(
     {
         float y = v * 4.0, iy = floor(y), lv = y - iy;
         id = hs(mod(iy, 4.0), 0, 131);
-        float late = woodp(u, lv + id * 5.0, id * 17.0, 22.0, 2.0, 0.0, pr);
+        float late = woodp(u, lv + id * 5.0, id * 17.0, 22.0, 2.0, 0.0, 0.05, pr);
         float gapb = 1.0 - smoothstep(0.0, 0.012, min(lv, 1.0 - lv));
         float wear = smoothstep(0.1, 0.5, fbm(u, v, 3, 3, 4, 0.5, 132));
         float scr = streaks(u, v, 48, 0.01, 133);
@@ -443,15 +445,16 @@ shader own_textures(
     }
     else if (Mat == 14)   // Walnut: veneer, one sheet across the tile, 0.47 m (900 uu)
     {
-        float late = woodp(u, v, 141.0, 30.0, 2.0, 1.0, pr);
+        float late = woodp(u, v, 141.0, 64.0, 2.0, 1.0, 0.012, pr);
         float fig = fbm(u, v, 2, 6, 4, 0.5, 142);
-        H = -late * 0.2 - pr * 0.2 + fig * 0.04;
-        C = mix(lc(0.64, 0.50, 0.40), lc(0.42, 0.30, 0.23), late * 0.8 + fig * 0.3) * (1.0 - pr * 0.2);
+        float streak = fbm(u, v, 1, 24, 3, 0.5, 143);
+        H = -late * 0.08 - pr * 0.2 + fig * 0.03;
+        C = mix(lc(0.62, 0.49, 0.39), lc(0.47, 0.35, 0.27), clamp(late * 0.45 + fig * 0.25 + streak * 0.35 + 0.15, 0.0, 1.0)) * (1.0 - pr * 0.18);
         R = 0.55 + late * 0.05 + pr * 0.1;
     }
     else if (Mat == 15)   // PaintWood: painted wood (cabinet fronts, skirting), grain under the paint, brush marks, 0.37-0.47 m
     {
-        float late = woodp(u, v * 3.0, 151.0, 8.0, 2.0, 3.0, pr);
+        float late = woodp(u, v * 3.0, 151.0, 8.0, 2.0, 3.0, 0.05, pr);
         float brush = fbm(u, v, 2, 160, 2, 0.5, 152);
         float orange = fbm(u, v, 48, 48, 2, 0.5, 153);
         H = late * 0.12 + brush * 0.15 + orange * 0.05;
@@ -477,7 +480,7 @@ shader own_textures(
         id = hs(mod(ix, 2.0), 0, 171);
         float gapb = 1.0 - smoothstep(0.0, 0.03, min(lu, 1.0 - lu));
         float rnd = smoothstep(0.0, 0.12, min(lu, 1.0 - lu));
-        float late = woodp(v, lu * 2.0 + id * 5.0, id * 13.0, 12.0, 2.0, 0.0, pr);
+        float late = woodp(v, lu * 2.0 + id * 5.0, id * 13.0, 12.0, 2.0, 0.0, 0.05, pr);
         float peel = smoothstep(0.46, 0.5, fbm(u, v, 5, 12, 6, 0.6, 172 + id * 3.0)) * smoothstep(0.0, 0.2, fbm(u, v, 2, 3, 2, 0.5, 173));
         H = rnd * 0.6 + late * 0.06 - peel * 0.06 - gapb * 0.4;
         C = lc(0.92, 0.90, 0.86) * (1.0 + late * 0.02);
@@ -489,7 +492,7 @@ shader own_textures(
     {
         float y = v * 4.0, iy = floor(y), lv = y - iy;
         id = hs(mod(iy, 4.0), 0, 181);
-        float late = woodp(u, lv * 0.6 + id * 5.0, id * 19.0, 16.0, 2.0, 0.0, pr);
+        float late = woodp(u, lv * 0.6 + id * 5.0, id * 19.0, 16.0, 2.0, 0.0, 0.05, pr);
         float lap = lv;   // each board thickens toward its lower edge
         float shadow = 1.0 - smoothstep(0.0, 0.05, lv);
         float weather = fbm(u, v, 3, 12, 4, 0.5, 182);

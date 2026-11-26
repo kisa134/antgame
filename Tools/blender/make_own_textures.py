@@ -20,11 +20,12 @@ OSL = os.path.join(OWN, "own_textures.osl")
 GEN = os.path.join(ROOT, "SourceArt", "Map4", "higgsfield", "tex")
 
 # name: (Mat index in own_textures.osl, size, colour match mode)
-#   gain = per channel to CAL, lum = brightness only, lum+ = 15 % brighter than CAL (the white of a check), print = the generated print
+#   gain = per channel to CAL, lum = brightness only, lum:k = brightness k x CAL (lum+ = 1.15: the white of a check),
+#   print = the generated print
 SETS = {
     "Plaster": (0, 2048, "gain"), "Stucco": (1, 1024, "gain"), "WallpaperK": (2, 2048, "print"), "WallpaperL": (2, 2048, "print"),
     "Concrete": (3, 1024, "gain"), "Marble": (4, 1024, "gain"), "Asphalt": (5, 1024, "gain"), "Pavement": (6, 2048, "gain"),
-    "Soil": (7, 2048, "gain"), "Grass": (8, 2048, "lum"), "Bark": (9, 1024, "gain"), "TileCream": (10, 2048, "gain"),
+    "Soil": (7, 2048, "gain"), "Grass": (8, 2048, "lum:0.8"), "Bark": (9, 1024, "gain"), "TileCream": (10, 2048, "gain"),
     "FloorTile": (11, 2048, "gain"), "Oak": (12, 2048, "gain"), "TableWood": (13, 2048, "gain"), "Walnut": (14, 1024, "gain"),
     "PaintWood": (15, 2048, "gain"), "Parquet": (16, 2048, "gain"), "Picket": (17, 1024, "gain"), "Siding": (18, 1024, "gain"),
     "Brushed": (19, 1024, "gain"), "Brushed2": (20, 1024, "gain"), "MetalPlate": (21, 1024, "gain"), "Plastic": (22, 1024, "gain"),
@@ -192,10 +193,10 @@ def match_colour(s, target, mode):
     if target is None or mode in ("flat", "keep"):
         return np.clip(s, 0.0, 1.0)
     m = s.reshape(-1, 3).mean(0)
-    if mode in ("lum", "lum+"):
+    if mode.startswith("lum"):
         w = np.array([0.2126, 0.7152, 0.0722])
-        if mode == "lum+":
-            target = tuple(1.15 * x for x in target)
+        k = 1.15 if mode == "lum+" else float(mode[4:]) if mode.startswith("lum:") else 1.0
+        target = tuple(k * x for x in target)
         g = float(np.dot(target, w)) / max(float(np.dot(m, w)), 1e-4)
         for _ in range(4):                                     # re-fit after the clip at 1
             o = np.clip(s * g, 0.0, 1.0)
