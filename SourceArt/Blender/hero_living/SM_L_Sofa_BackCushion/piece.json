@@ -1,0 +1,94 @@
+{
+ "name": "SM_L_Sofa_BackCushion",
+ "file": "SM_L_Sofa_BackCushion.fbx",
+ "set": "hero_living",
+ "break_class": "cloth",
+ "textures": {
+  "C": "SM_L_Sofa_BackCushion/tex/T_SM_L_Sofa_BackCushion_C.png",
+  "N": "SM_L_Sofa_BackCushion/tex/T_SM_L_Sofa_BackCushion_N.png",
+  "R": "SM_L_Sofa_BackCushion/tex/T_SM_L_Sofa_BackCushion_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_L_Sofa_BackCushion_Brk0",
+   "file": "SM_L_Sofa_BackCushion_Brk0.fbx",
+   "triangles": 7878,
+   "bbox_min_m": [
+    -0.2093,
+    -0.0663,
+    -0.0173
+   ],
+   "bbox_max_m": [
+    0.5341,
+    0.0663,
+    0.6773
+   ],
+   "materials": [
+    "Hero_SM_L_Sofa_BackCushion",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_Sofa_BackCushion_Brk1",
+   "file": "SM_L_Sofa_BackCushion_Brk1.fbx",
+   "triangles": 1760,
+   "bbox_min_m": [
+    -0.5116,
+    -0.061,
+    0.0052
+   ],
+   "bbox_max_m": [
+    0.5116,
+    0.0418,
+    0.6548
+   ],
+   "materials": [
+    "Hero_SM_L_Sofa_BackCushion",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_Sofa_BackCushion_Brk2",
+   "file": "SM_L_Sofa_BackCushion_Brk2.fbx",
+   "triangles": 6626,
+   "bbox_min_m": [
+    -0.5341,
+    -0.0654,
+    -0.0173
+   ],
+   "bbox_max_m": [
+    -0.0,
+    0.0654,
+    0.6736
+   ],
+   "materials": [
+    "Hero_SM_L_Sofa_BackCushion",
+    "Break"
+   ]
+  }
+ ],
+ "note": "back cushion: tufted, three covered buttons, piped",
+ "kept_slots": [],
+ "triangles": 14500,
+ "bbox_min_m": [
+  -0.5341,
+  -0.0663,
+  -0.0173
+ ],
+ "bbox_max_m": [
+  0.5341,
+  0.0663,
+  0.6773
+ ],
+ "materials": [
+  "Hero_SM_L_Sofa_BackCushion"
+ ],
+ "lod_triangles": [
+  14500,
+  5074,
+  1740
+ ],
+ "ucx": 1
+}

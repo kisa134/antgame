@@ -1,0 +1,56 @@
+{
+ "name": "SM_V3_RodBracket",
+ "file": "SM_V3_RodBracket.fbx",
+ "set": "hero_living",
+ "break_class": "metal",
+ "textures": {
+  "C": "SM_V3_RodBracket/tex/T_SM_V3_RodBracket_C.png",
+  "N": "SM_V3_RodBracket/tex/T_SM_V3_RodBracket_N.png",
+  "R": "SM_V3_RodBracket/tex/T_SM_V3_RodBracket_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_V3_RodBracket_Brk0",
+   "file": "SM_V3_RodBracket_Brk0.fbx",
+   "triangles": 780,
+   "bbox_min_m": [
+    -0.0211,
+    -0.1655,
+    -0.0474
+   ],
+   "bbox_max_m": [
+    0.0211,
+    0.0,
+    0.0474
+   ],
+   "materials": [
+    "Hero_SM_V3_RodBracket",
+    "Break"
+   ]
+  }
+ ],
+ "note": "brass pole bracket: plate, arm, cradle, screws",
+ "kept_slots": [],
+ "triangles": 780,
+ "bbox_min_m": [
+  -0.0211,
+  -0.1655,
+  -0.0474
+ ],
+ "bbox_max_m": [
+  0.0211,
+  0.0,
+  0.0474
+ ],
+ "materials": [
+  "Hero_SM_V3_RodBracket"
+ ],
+ "lod_triangles": [
+  780,
+  272,
+  92
+ ],
+ "ucx": 2
+}

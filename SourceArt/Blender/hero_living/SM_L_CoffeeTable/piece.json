@@ -1,0 +1,151 @@
+{
+ "name": "SM_L_CoffeeTable",
+ "file": "SM_L_CoffeeTable.fbx",
+ "set": "hero_living",
+ "break_class": "wood",
+ "textures": {
+  "C": "SM_L_CoffeeTable/tex/T_SM_L_CoffeeTable_C.png",
+  "N": "SM_L_CoffeeTable/tex/T_SM_L_CoffeeTable_N.png",
+  "R": "SM_L_CoffeeTable/tex/T_SM_L_CoffeeTable_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_L_CoffeeTable_Brk0",
+   "file": "SM_L_CoffeeTable_Brk0.fbx",
+   "triangles": 966,
+   "bbox_min_m": [
+    -0.6579,
+    0.0129,
+    0.4737
+   ],
+   "bbox_max_m": [
+    0.6579,
+    0.4211,
+    0.5162
+   ],
+   "materials": [
+    "Hero_SM_L_CoffeeTable",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_CoffeeTable_Brk1",
+   "file": "SM_L_CoffeeTable_Brk1.fbx",
+   "triangles": 812,
+   "bbox_min_m": [
+    -0.6383,
+    -0.4014,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.6019,
+    0.3651,
+    0.4737
+   ],
+   "materials": [
+    "Hero_SM_L_CoffeeTable",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_CoffeeTable_Brk2",
+   "file": "SM_L_CoffeeTable_Brk2.fbx",
+   "triangles": 300,
+   "bbox_min_m": [
+    -0.6383,
+    0.3354,
+    0.0
+   ],
+   "bbox_max_m": [
+    -0.5723,
+    0.4014,
+    0.4737
+   ],
+   "materials": [
+    "Hero_SM_L_CoffeeTable",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_CoffeeTable_Brk3",
+   "file": "SM_L_CoffeeTable_Brk3.fbx",
+   "triangles": 300,
+   "bbox_min_m": [
+    0.5723,
+    -0.4014,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.6383,
+    -0.3354,
+    0.4737
+   ],
+   "materials": [
+    "Hero_SM_L_CoffeeTable",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_CoffeeTable_Brk4",
+   "file": "SM_L_CoffeeTable_Brk4.fbx",
+   "triangles": 488,
+   "bbox_min_m": [
+    -0.6316,
+    -0.3947,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.6383,
+    0.4014,
+    0.4737
+   ],
+   "materials": [
+    "Hero_SM_L_CoffeeTable",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_CoffeeTable_Brk5",
+   "file": "SM_L_CoffeeTable_Brk5.fbx",
+   "triangles": 726,
+   "bbox_min_m": [
+    -0.6579,
+    -0.4211,
+    0.4737
+   ],
+   "bbox_max_m": [
+    0.6579,
+    0.0779,
+    0.5162
+   ],
+   "materials": [
+    "Hero_SM_L_CoffeeTable",
+    "Break"
+   ]
+  }
+ ],
+ "note": "coffee table: solid oak top and shelf, turned walnut legs, aprons with corner blocks, coffee rings",
+ "kept_slots": [],
+ "triangles": 2920,
+ "bbox_min_m": [
+  -0.6579,
+  -0.4211,
+  0.0
+ ],
+ "bbox_max_m": [
+  0.6579,
+  0.4211,
+  0.5162
+ ],
+ "materials": [
+  "Hero_SM_L_CoffeeTable"
+ ],
+ "lod_triangles": [
+  2920,
+  1022,
+  349
+ ],
+ "ucx": 6
+}

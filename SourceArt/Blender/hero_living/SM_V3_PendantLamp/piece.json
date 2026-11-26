@@ -1,0 +1,59 @@
+{
+ "name": "SM_V3_PendantLamp",
+ "file": "SM_V3_PendantLamp.fbx",
+ "set": "hero_living",
+ "break_class": "metal",
+ "textures": {
+  "C": "SM_V3_PendantLamp/tex/T_SM_V3_PendantLamp_C.png",
+  "N": "SM_V3_PendantLamp/tex/T_SM_V3_PendantLamp_N.png",
+  "R": "SM_V3_PendantLamp/tex/T_SM_V3_PendantLamp_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_V3_PendantLamp_Brk0",
+   "file": "SM_V3_PendantLamp_Brk0.fbx",
+   "triangles": 1716,
+   "bbox_min_m": [
+    -0.2495,
+    -0.2495,
+    -0.002
+   ],
+   "bbox_max_m": [
+    0.2495,
+    0.2495,
+    1.0
+   ],
+   "materials": [
+    "Hero_SM_V3_PendantLamp",
+    "Break"
+   ]
+  }
+ ],
+ "note": "enamel cone pendant: brass socket, cloth cord, ceiling cup",
+ "kept_slots": [
+  "Bulb"
+ ],
+ "triangles": 1716,
+ "bbox_min_m": [
+  -0.2495,
+  -0.2495,
+  -0.002
+ ],
+ "bbox_max_m": [
+  0.2495,
+  0.2495,
+  1.0
+ ],
+ "materials": [
+  "Hero_SM_V3_PendantLamp",
+  "Bulb"
+ ],
+ "lod_triangles": [
+  1716,
+  600,
+  205
+ ],
+ "ucx": 2
+}

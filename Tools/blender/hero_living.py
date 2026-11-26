@@ -355,22 +355,9 @@ def groups(gl, snaps=()):
 
 _bake_orig = H._bake
 def _bake_aa(o, kind, im, samples, **kw):
-    """colour, roughness and the masks with 16 samples a texel: the fine procedural detail is averaged, not aliased (moire)"""
-    undo = []
-    if kind == "DIFFUSE":
-        # (a metal has no diffuse: its colour pass would come out black. Bake the base colour with metallic off;
-        #  the metal mask goes in R.b and M_Hero makes it metal again)
-        for s in o.material_slots:
-            p = s.material.node_tree.nodes.get("Principled BSDF") if s.material else None
-            if not p: continue
-            lk = [(l.from_socket, l.to_socket) for l in s.material.node_tree.links if l.to_socket == p.inputs["Metallic"]]
-            for l in [l for l in s.material.node_tree.links if l.to_socket == p.inputs["Metallic"]]: s.material.node_tree.links.remove(l)
-            undo.append((s.material, p, p.inputs["Metallic"].default_value, lk)); p.inputs["Metallic"].default_value = 0.0
-    r = _bake_orig(o, kind, im, max(samples, 16), **kw)
-    for m, p, v, lk in undo:
-        p.inputs["Metallic"].default_value = v
-        for a, b in lk: m.node_tree.links.new(a, b)
-    return r
+    """on top of hero_lib.bake_set (metals' colour and 16-sample colour since 42f2c49): roughness and the masks with
+    16 samples a texel too (the fine procedural roughness of the weaves and grains otherwise aliases)"""
+    return _bake_orig(o, kind, im, max(samples, 16) if kind in ("ROUGHNESS", "EMIT") else samples, **kw)
 H._bake = _bake_aa
 
 # ================================================================================================ one piece, start to end
@@ -386,6 +373,11 @@ def produce(name, parts, hulls, breaks=None, lods=(0.35, 0.12), tex=2048, collis
         ca = o.data.color_attributes.get("Col") or o.data.color_attributes.new("Col", "BYTE_COLOR", "POINT")
         for i in range(len(o.data.vertices)): ca.data[i].color = (0, 0, 0, 1)
     lod0 = H.join([o for o, _ in objs], name)
+    if H.tris(lod0) > LIMIT:      # (the per-part budget could not get there: collapse the whole, the bar is 15k)
+        d = lod0.modifiers.new("dec", "DECIMATE"); d.ratio = LIMIT / H.tris(lod0) * 0.98; d.use_collapse_triangulate = True
+        for x in H.S().objects: x.select_set(False)
+        lod0.select_set(True); bpy.context.view_layer.objects.active = lod0; bpy.ops.object.modifier_apply(modifier="dec")
+        print("HERO %s collapsed to %d tris" % (name, H.tris(lod0)))
     H.unwrap(lod0, uv_angle)
     tdir = os.path.join(out, "tex")
     if NOBAKE and os.path.exists(os.path.join(tdir, "T_%s_C.png" % name)):
@@ -508,7 +500,8 @@ def review(name, lod0, pieces, paths, cams, extra=None, scene=None, old_extra=No
 
 def auto_cams(mn, mx, ant_side=-1):
     c = (mn + mx) * 0.5; s = max((mx - mn).length, 0.25)
-    wide = ((c.x + 0.55 * s, mn.y - 1.05 * s, c.z + 0.35 * s + 0.1), (c.x, c.y, c.z), 40)
+    e = mx - mn; s2 = max(e.x, e.y, e.z * 1.9, 0.25)     # (tall things: the frame has to take the height)
+    wide = ((c.x + 0.45 * s2, mn.y - 1.25 * s2, c.z + 0.22 * s2 + 0.05), (c.x, c.y, c.z), 35)
     zb = max(0.0, mn.z)
     ant = ((c.x - 0.22 * s, mn.y - 0.55 * s - 0.05, zb + 0.014), (c.x + 0.02 * s, c.y, zb + 0.35 * (mx.z - zb)), 22)
     return {"wide": wide, "ant": ant}

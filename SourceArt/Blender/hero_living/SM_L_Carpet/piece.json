@@ -1,0 +1,94 @@
+{
+ "name": "SM_L_Carpet",
+ "file": "SM_L_Carpet.fbx",
+ "set": "hero_living",
+ "break_class": "cloth",
+ "textures": {
+  "C": "SM_L_Carpet/tex/T_SM_L_Carpet_C.png",
+  "N": "SM_L_Carpet/tex/T_SM_L_Carpet_N.png",
+  "R": "SM_L_Carpet/tex/T_SM_L_Carpet_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_L_Carpet_Brk0",
+   "file": "SM_L_Carpet_Brk0.fbx",
+   "triangles": 1666,
+   "bbox_min_m": [
+    -0.1106,
+    -1.4474,
+    0.0
+   ],
+   "bbox_max_m": [
+    1.8141,
+    1.4474,
+    0.0093
+   ],
+   "materials": [
+    "Hero_SM_L_Carpet",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_Carpet_Brk1",
+   "file": "SM_L_Carpet_Brk1.fbx",
+   "triangles": 9176,
+   "bbox_min_m": [
+    -1.8504,
+    -1.4474,
+    0.0
+   ],
+   "bbox_max_m": [
+    1.8504,
+    1.4474,
+    0.0065
+   ],
+   "materials": [
+    "Hero_SM_L_Carpet",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_Carpet_Brk2",
+   "file": "SM_L_Carpet_Brk2.fbx",
+   "triangles": 2026,
+   "bbox_min_m": [
+    -1.8141,
+    -1.4474,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.7693,
+    1.4474,
+    0.0092
+   ],
+   "materials": [
+    "Hero_SM_L_Carpet",
+    "Break"
+   ]
+  }
+ ],
+ "note": "persian-style wool rug: border lattice, medallion, traffic path, ripple, fringe on the ends",
+ "kept_slots": [],
+ "triangles": 12244,
+ "bbox_min_m": [
+  -1.8504,
+  -1.4474,
+  0.0
+ ],
+ "bbox_max_m": [
+  1.8504,
+  1.4474,
+  0.0093
+ ],
+ "materials": [
+  "Hero_SM_L_Carpet"
+ ],
+ "lod_triangles": [
+  12244,
+  4284,
+  1468
+ ],
+ "ucx": 1
+}

@@ -1,0 +1,113 @@
+{
+ "name": "SM_K_HighChair",
+ "file": "SM_K_HighChair.fbx",
+ "set": "hero_living",
+ "break_class": "wood",
+ "textures": {
+  "C": "SM_K_HighChair/tex/T_SM_K_HighChair_C.png",
+  "N": "SM_K_HighChair/tex/T_SM_K_HighChair_N.png",
+  "R": "SM_K_HighChair/tex/T_SM_K_HighChair_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_K_HighChair_Brk0",
+   "file": "SM_K_HighChair_Brk0.fbx",
+   "triangles": 3668,
+   "bbox_min_m": [
+    -0.1895,
+    -0.1899,
+    0.7579
+   ],
+   "bbox_max_m": [
+    0.1895,
+    0.1895,
+    0.9158
+   ],
+   "materials": [
+    "Hero_SM_K_HighChair",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_K_HighChair_Brk1",
+   "file": "SM_K_HighChair_Brk1.fbx",
+   "triangles": 780,
+   "bbox_min_m": [
+    -0.2458,
+    -0.2474,
+    -0.0018
+   ],
+   "bbox_max_m": [
+    0.2458,
+    0.2463,
+    0.7652
+   ],
+   "materials": [
+    "Hero_SM_K_HighChair",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_K_HighChair_Brk2",
+   "file": "SM_K_HighChair_Brk2.fbx",
+   "triangles": 5080,
+   "bbox_min_m": [
+    -0.1895,
+    0.1421,
+    0.7895
+   ],
+   "bbox_max_m": [
+    0.1895,
+    0.2053,
+    1.4211
+   ],
+   "materials": [
+    "Hero_SM_K_HighChair",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_K_HighChair_Brk3",
+   "file": "SM_K_HighChair_Brk3.fbx",
+   "triangles": 4972,
+   "bbox_min_m": [
+    -0.2316,
+    -0.3684,
+    0.9
+   ],
+   "bbox_max_m": [
+    0.2316,
+    -0.1789,
+    0.9421
+   ],
+   "materials": [
+    "Hero_SM_K_HighChair",
+    "Break"
+   ]
+  }
+ ],
+ "note": "high chair: beech, splayed legs, teal pads, footrest, white tray, strap",
+ "kept_slots": [],
+ "triangles": 14500,
+ "bbox_min_m": [
+  -0.2458,
+  -0.3684,
+  -0.0018
+ ],
+ "bbox_max_m": [
+  0.2458,
+  0.2463,
+  1.4211
+ ],
+ "materials": [
+  "Hero_SM_K_HighChair"
+ ],
+ "lod_triangles": [
+  14500,
+  5074,
+  1740
+ ],
+ "ucx": 7
+}

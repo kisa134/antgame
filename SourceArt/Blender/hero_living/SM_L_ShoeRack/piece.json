@@ -1,0 +1,151 @@
+{
+ "name": "SM_L_ShoeRack",
+ "file": "SM_L_ShoeRack.fbx",
+ "set": "hero_living",
+ "break_class": "wood",
+ "textures": {
+  "C": "SM_L_ShoeRack/tex/T_SM_L_ShoeRack_C.png",
+  "N": "SM_L_ShoeRack/tex/T_SM_L_ShoeRack_N.png",
+  "R": "SM_L_ShoeRack/tex/T_SM_L_ShoeRack_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_L_ShoeRack_Brk0",
+   "file": "SM_L_ShoeRack_Brk0.fbx",
+   "triangles": 848,
+   "bbox_min_m": [
+    -0.4487,
+    -0.1579,
+    0.0
+   ],
+   "bbox_max_m": [
+    -0.4316,
+    0.1579,
+    0.5789
+   ],
+   "materials": [
+    "Hero_SM_L_ShoeRack",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_ShoeRack_Brk1",
+   "file": "SM_L_ShoeRack_Brk1.fbx",
+   "triangles": 848,
+   "bbox_min_m": [
+    0.4316,
+    -0.1579,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.4487,
+    0.1579,
+    0.5789
+   ],
+   "materials": [
+    "Hero_SM_L_ShoeRack",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_ShoeRack_Brk2",
+   "file": "SM_L_ShoeRack_Brk2.fbx",
+   "triangles": 296,
+   "bbox_min_m": [
+    -0.4474,
+    -0.1579,
+    0.0316
+   ],
+   "bbox_max_m": [
+    0.4474,
+    0.1579,
+    0.5789
+   ],
+   "materials": [
+    "Hero_SM_L_ShoeRack",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_ShoeRack_Brk3",
+   "file": "SM_L_ShoeRack_Brk3.fbx",
+   "triangles": 940,
+   "bbox_min_m": [
+    -0.4316,
+    -0.1526,
+    0.0505
+   ],
+   "bbox_max_m": [
+    0.4316,
+    0.1526,
+    0.0632
+   ],
+   "materials": [
+    "Hero_SM_L_ShoeRack",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_ShoeRack_Brk4",
+   "file": "SM_L_ShoeRack_Brk4.fbx",
+   "triangles": 940,
+   "bbox_min_m": [
+    -0.4316,
+    -0.1526,
+    0.2084
+   ],
+   "bbox_max_m": [
+    0.4316,
+    0.1526,
+    0.2211
+   ],
+   "materials": [
+    "Hero_SM_L_ShoeRack",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_ShoeRack_Brk5",
+   "file": "SM_L_ShoeRack_Brk5.fbx",
+   "triangles": 940,
+   "bbox_min_m": [
+    -0.4316,
+    -0.1526,
+    0.3979
+   ],
+   "bbox_max_m": [
+    0.4316,
+    0.1526,
+    0.4105
+   ],
+   "materials": [
+    "Hero_SM_L_ShoeRack",
+    "Break"
+   ]
+  }
+ ],
+ "note": "beech shoe rack: slatted shelves doweled through the sides, top board, walnut back rail",
+ "kept_slots": [],
+ "triangles": 4812,
+ "bbox_min_m": [
+  -0.4487,
+  -0.1579,
+  0.0
+ ],
+ "bbox_max_m": [
+  0.4487,
+  0.1579,
+  0.5789
+ ],
+ "materials": [
+  "Hero_SM_L_ShoeRack"
+ ],
+ "lod_triangles": [
+  4812,
+  1684,
+  576
+ ],
+ "ucx": 18
+}

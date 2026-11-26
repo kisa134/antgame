@@ -1,0 +1,246 @@
+{
+ "name": "SM_L_Bookshelf",
+ "file": "SM_L_Bookshelf.fbx",
+ "set": "hero_living",
+ "break_class": "wood",
+ "textures": {
+  "C": "SM_L_Bookshelf/tex/T_SM_L_Bookshelf_C.png",
+  "N": "SM_L_Bookshelf/tex/T_SM_L_Bookshelf_N.png",
+  "R": "SM_L_Bookshelf/tex/T_SM_L_Bookshelf_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_L_Bookshelf_Brk0",
+   "file": "SM_L_Bookshelf_Brk0.fbx",
+   "triangles": 2428,
+   "bbox_min_m": [
+    -1.3684,
+    -0.2632,
+    0.0
+   ],
+   "bbox_max_m": [
+    -1.3153,
+    0.2632,
+    2.4211
+   ],
+   "materials": [
+    "Hero_SM_L_Bookshelf",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_Bookshelf_Brk1",
+   "file": "SM_L_Bookshelf_Brk1.fbx",
+   "triangles": 2428,
+   "bbox_min_m": [
+    1.3153,
+    -0.2632,
+    0.0
+   ],
+   "bbox_max_m": [
+    1.3684,
+    0.2632,
+    2.4211
+   ],
+   "materials": [
+    "Hero_SM_L_Bookshelf",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_Bookshelf_Brk2",
+   "file": "SM_L_Bookshelf_Brk2.fbx",
+   "triangles": 88,
+   "bbox_min_m": [
+    -1.3644,
+    0.2432,
+    0.0
+   ],
+   "bbox_max_m": [
+    1.3644,
+    0.2632,
+    2.4211
+   ],
+   "materials": [
+    "Hero_SM_L_Bookshelf",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_Bookshelf_Brk3",
+   "file": "SM_L_Bookshelf_Brk3.fbx",
+   "triangles": 188,
+   "bbox_min_m": [
+    -0.0211,
+    -0.2592,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.0211,
+    0.2432,
+    2.4211
+   ],
+   "materials": [
+    "Hero_SM_L_Bookshelf",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_Bookshelf_Brk4",
+   "file": "SM_L_Bookshelf_Brk4.fbx",
+   "triangles": 188,
+   "bbox_min_m": [
+    -1.3178,
+    -0.2612,
+    0.0
+   ],
+   "bbox_max_m": [
+    1.3178,
+    0.2452,
+    0.0316
+   ],
+   "materials": [
+    "Hero_SM_L_Bookshelf",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_Bookshelf_Brk5",
+   "file": "SM_L_Bookshelf_Brk5.fbx",
+   "triangles": 520,
+   "bbox_min_m": [
+    -1.3178,
+    -0.2642,
+    0.4667
+   ],
+   "bbox_max_m": [
+    1.3178,
+    0.2452,
+    0.5053
+   ],
+   "materials": [
+    "Hero_SM_L_Bookshelf",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_Bookshelf_Brk6",
+   "file": "SM_L_Bookshelf_Brk6.fbx",
+   "triangles": 520,
+   "bbox_min_m": [
+    -1.3178,
+    -0.2642,
+    0.9404
+   ],
+   "bbox_max_m": [
+    1.3178,
+    0.2452,
+    0.9789
+   ],
+   "materials": [
+    "Hero_SM_L_Bookshelf",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_Bookshelf_Brk7",
+   "file": "SM_L_Bookshelf_Brk7.fbx",
+   "triangles": 520,
+   "bbox_min_m": [
+    -1.3178,
+    -0.2642,
+    1.4141
+   ],
+   "bbox_max_m": [
+    1.3178,
+    0.2452,
+    1.4526
+   ],
+   "materials": [
+    "Hero_SM_L_Bookshelf",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_Bookshelf_Brk8",
+   "file": "SM_L_Bookshelf_Brk8.fbx",
+   "triangles": 520,
+   "bbox_min_m": [
+    -1.3178,
+    -0.2642,
+    1.8877
+   ],
+   "bbox_max_m": [
+    1.3178,
+    0.2452,
+    1.9263
+   ],
+   "materials": [
+    "Hero_SM_L_Bookshelf",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_Bookshelf_Brk9",
+   "file": "SM_L_Bookshelf_Brk9.fbx",
+   "triangles": 220,
+   "bbox_min_m": [
+    0.4864,
+    -0.2632,
+    2.4211
+   ],
+   "bbox_max_m": [
+    1.3684,
+    0.2632,
+    2.4526
+   ],
+   "materials": [
+    "Hero_SM_L_Bookshelf",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_Bookshelf_Brk10",
+   "file": "SM_L_Bookshelf_Brk10.fbx",
+   "triangles": 220,
+   "bbox_min_m": [
+    -1.3684,
+    -0.2632,
+    2.4211
+   ],
+   "bbox_max_m": [
+    0.5115,
+    0.2632,
+    2.4526
+   ],
+   "materials": [
+    "Hero_SM_L_Bookshelf",
+    "Break"
+   ]
+  }
+ ],
+ "note": "bookshelf: walnut sides with pin-hole rows, oak shelves with walnut lipping on brass pins, HDF back, anti-tip strap",
+ "kept_slots": [],
+ "triangles": 7700,
+ "bbox_min_m": [
+  -1.3684,
+  -0.2642,
+  0.0
+ ],
+ "bbox_max_m": [
+  1.3684,
+  0.2632,
+  2.4526
+ ],
+ "materials": [
+  "Hero_SM_L_Bookshelf"
+ ],
+ "lod_triangles": [
+  7700,
+  2694,
+  924
+ ],
+ "ucx": 10
+}

@@ -1,0 +1,75 @@
+{
+ "name": "SM_K_Skirting",
+ "file": "SM_K_Skirting.fbx",
+ "set": "hero_living",
+ "break_class": "wood",
+ "textures": {
+  "C": "SM_K_Skirting/tex/T_SM_K_Skirting_C.png",
+  "N": "SM_K_Skirting/tex/T_SM_K_Skirting_N.png",
+  "R": "SM_K_Skirting/tex/T_SM_K_Skirting_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_K_Skirting_Brk0",
+   "file": "SM_K_Skirting_Brk0.fbx",
+   "triangles": 272,
+   "bbox_min_m": [
+    0.0042,
+    -0.0079,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.2632,
+    0.0094,
+    0.1158
+   ],
+   "materials": [
+    "Hero_SM_K_Skirting",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_K_Skirting_Brk1",
+   "file": "SM_K_Skirting_Brk1.fbx",
+   "triangles": 272,
+   "bbox_min_m": [
+    -0.2632,
+    -0.0079,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.0165,
+    0.0094,
+    0.1158
+   ],
+   "materials": [
+    "Hero_SM_K_Skirting",
+    "Break"
+   ]
+  }
+ ],
+ "note": "skirting board, ogee top, painted (0.53 m module, stretched along X by the level)",
+ "kept_slots": [],
+ "triangles": 240,
+ "bbox_min_m": [
+  -0.2632,
+  -0.0079,
+  0.0
+ ],
+ "bbox_max_m": [
+  0.2632,
+  0.0094,
+  0.1158
+ ],
+ "materials": [
+  "Hero_SM_K_Skirting"
+ ],
+ "lod_triangles": [
+  240,
+  84,
+  28
+ ],
+ "ucx": 1
+}

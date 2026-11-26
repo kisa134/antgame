@@ -1,0 +1,113 @@
+{
+ "name": "SM_L_Sofa",
+ "file": "SM_L_Sofa.fbx",
+ "set": "hero_living",
+ "break_class": "cloth",
+ "textures": {
+  "C": "SM_L_Sofa/tex/T_SM_L_Sofa_C.png",
+  "N": "SM_L_Sofa/tex/T_SM_L_Sofa_N.png",
+  "R": "SM_L_Sofa/tex/T_SM_L_Sofa_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_L_Sofa_Brk0",
+   "file": "SM_L_Sofa_Brk0.fbx",
+   "triangles": 4528,
+   "bbox_min_m": [
+    -1.7373,
+    -0.4519,
+    0.002
+   ],
+   "bbox_max_m": [
+    1.7373,
+    0.4474,
+    0.3689
+   ],
+   "materials": [
+    "Hero_SM_L_Sofa",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_Sofa_Brk1",
+   "file": "SM_L_Sofa_Brk1.fbx",
+   "triangles": 2756,
+   "bbox_min_m": [
+    -1.9576,
+    -0.4534,
+    0.1368
+   ],
+   "bbox_max_m": [
+    -1.7266,
+    0.4474,
+    0.7147
+   ],
+   "materials": [
+    "Hero_SM_L_Sofa",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_Sofa_Brk2",
+   "file": "SM_L_Sofa_Brk2.fbx",
+   "triangles": 2756,
+   "bbox_min_m": [
+    1.7266,
+    -0.4534,
+    0.1368
+   ],
+   "bbox_max_m": [
+    1.9576,
+    0.4474,
+    0.7147
+   ],
+   "materials": [
+    "Hero_SM_L_Sofa",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_L_Sofa_Brk3",
+   "file": "SM_L_Sofa_Brk3.fbx",
+   "triangles": 4460,
+   "bbox_min_m": [
+    -1.7368,
+    0.2932,
+    0.3384
+   ],
+   "bbox_max_m": [
+    1.7368,
+    0.4474,
+    1.1053
+   ],
+   "materials": [
+    "Hero_SM_L_Sofa",
+    "Break"
+   ]
+  }
+ ],
+ "note": "3-seat sofa: rolled piped arms, sprung platform, show-wood rails, turned walnut legs in brass cups, stapled dust cover",
+ "kept_slots": [],
+ "triangles": 14500,
+ "bbox_min_m": [
+  -1.9576,
+  -0.4534,
+  0.002
+ ],
+ "bbox_max_m": [
+  1.9576,
+  0.4474,
+  1.1053
+ ],
+ "materials": [
+  "Hero_SM_L_Sofa"
+ ],
+ "lod_triangles": [
+  14500,
+  5074,
+  1739
+ ],
+ "ucx": 8
+}
