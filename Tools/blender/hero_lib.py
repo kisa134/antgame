@@ -327,7 +327,19 @@ def bake_set(o, name, out_dir, size=TEX, samples=48, hi=None, ext=0.004, grime=0
         wd = bpy.data.worlds.new("BakeWorld"); S().world = wd; wd.use_nodes = True
         wd.node_tree.nodes["Background"].inputs["Color"].default_value = (1, 1, 1, 1)
     S().world.light_settings.distance = ao_dist                    # occlusion within 6 cm: the creases, the inside of the bucket
-    col = _img(name + "_col", size); _bake(o, "DIFFUSE", col, 1, pass_filter={"COLOR"})
+    # colour: a metal has no diffuse and baked BLACK (brass, zinc, chrome) - metallic off for this pass (the metal mask is R.b);
+    # 16 samples per texel, not 1 (one sample of a fine procedural pattern is moire)
+    mu = []
+    for s in o.material_slots:
+        p = s.material.node_tree.nodes.get("Principled BSDF") if s.material else None
+        if not p: continue
+        lk = [(l.from_socket, l.to_socket) for l in s.material.node_tree.links if l.to_socket == p.inputs["Metallic"]]
+        for l in [l for l in s.material.node_tree.links if l.to_socket == p.inputs["Metallic"]]: s.material.node_tree.links.remove(l)
+        mu.append((s.material, p, p.inputs["Metallic"].default_value, lk)); p.inputs["Metallic"].default_value = 0.0
+    col = _img(name + "_col", size); _bake(o, "DIFFUSE", col, 16, pass_filter={"COLOR"})
+    for m_, p, v, lk in mu:
+        p.inputs["Metallic"].default_value = v
+        for a, b in lk: m_.node_tree.links.new(a, b)
     nrm = _img(name + "_nrm", size, data=True); _bake(o, "NORMAL", nrm, 4, normal_space="TANGENT")
     rgh = _img(name + "_rgh", size, data=True); _bake(o, "ROUGHNESS", rgh, 1)
     ao = _img(name + "_ao", size, data=True); _bake(o, "AO", ao, samples)
