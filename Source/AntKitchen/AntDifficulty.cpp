@@ -1,4 +1,4 @@
-#include "AntDifficulty.h"
+﻿#include "AntDifficulty.h"
 #include "AntRaid.h"
 #include "AntGameState.h"
 #include "AntPlayerController.h"
@@ -18,13 +18,15 @@
 
 namespace AntDiff
 {
-	// The table of docs/DIFFICULTY.md. Normal is the game as it was: every multiplier 1.
-	//                     name                short           en          text                                                                                      notice dmg  npc larv time  quiet clan  hp    resp  window loot  ask   snow  respawn xp
+	// KAN-30. Normal is the game as it was: every multiplier 1.
+	//   notice: how far the Human, the family and the pets notice ants (vision); dmg: what residents do to colony ants;
+	//   npc: boldness of the pets and the family (aggression); time: raid length; carry: food is 1/carry as heavy.
+	//                     name                short           en          text                                                                                      notice dmg  npc larv time  quiet clan  hp    resp  window loot  ask   carry respawn xp
 	static const FDef Defs[Count] =
 	{
-		{ TEXT("Казуальный"), TEXT("КАЗУАЛ"), TEXT("Casual"), TEXT("Прогулка по кухне: жильцы рассеяннее и бьют слабее, +2 личинки на рейд, больше времени и добычи, красных меньше"), 0.75f, 0.6f, -1, 2, 1.25f, 1.5f, 0.7f, 0.8f, 1.4f, 1.3f, 1.15f, 0.8f, 0.8f, 0.6f, 1.f },
-		{ TEXT("Обычный"),    TEXT("ОБЫЧНЫЙ"), TEXT("Normal"), TEXT("Игра как задумана"),                                                                                                 1.f,   1.f,   0, 0, 1.f,   1.f,  1.f,  1.f,  1.f,  1.f,  1.f,   1.f,  1.f,  1.f,  1.f },
-		{ TEXT("Хард"),       TEXT("ХАРД"),   TEXT("Hard"),   TEXT("Для ветеранов: жильцы замечают дальше и бьют больнее, личинок на одну меньше, времени меньше, красных больше. +50% опыта и медаль за торт"), 1.25f, 1.4f, 1, -1, 0.85f, 0.6f, 1.4f, 1.25f, 0.7f, 0.75f, 0.9f, 1.2f, 1.25f, 1.6f, 1.5f },
+		{ TEXT("Казуальный"), TEXT("КАЗУАЛ"), TEXT("Casual"), TEXT("Прогулка по кухне: жильцы рассеяннее и бьют слабее, еда легче, +2 личинки на рейд, больше времени, красных меньше"), 0.75f, 0.6f, -1, 2, 1.25f, 1.5f, 0.7f, 0.8f, 1.4f, 1.3f, 1.15f, 0.8f, 1.25f, 0.6f, 1.f },
+		{ TEXT("Обычный"),    TEXT("ОБЫЧНЫЙ"), TEXT("Normal"), TEXT("Игра как задумана"),                                                                                                 1.f,   1.f,   0, 0, 1.f,   1.f,  1.f,  1.f,  1.f,  1.f,  1.f,   1.f,  1.f,   1.f,  1.f },
+		{ TEXT("Хард"),       TEXT("ХАРД"),   TEXT("Hard"),   TEXT("Для ветеранов: жильцы замечают дальше, злее и бьют больнее, еда тяжелее, личинок на одну меньше, времени меньше, красных больше. +50% опыта"), 1.25f, 1.4f, 1, -1, 0.85f, 0.6f, 1.4f, 1.25f, 0.7f, 0.75f, 0.9f, 1.2f, 0.85f, 1.6f, 1.5f },
 	};
 	const FDef& Def(uint8 Level) { return Defs[FMath::Min<int32>(Level, Count - 1)]; }
 }
@@ -117,8 +119,8 @@ namespace AntDifficulty
 			GConfig->Flush(false, GGameUserSettingsIni);
 		}
 		const AntDiff::FDef& D = AntDiff::Def(NewLevel);
-		UE_LOG(LogTemp, Display, TEXT("ANTDIFF set: %d %s (notice %.2f dmg %.2f larvae %+d time %.2f clan %.2f loot %.2f snow %.2f respawn %.2f xp %.2f)"),
-			(int32)NewLevel, D.NameEn, D.Notice, D.Damage, D.LarvaeAdd, D.Time, D.Clan, D.Loot, D.Snow, D.Respawn, D.Xp);
+		UE_LOG(LogTemp, Display, TEXT("ANTDIFF set: %d %s (notice %.2f dmg %.2f npc %+d larvae %+d time %.2f clan %.2f loot %.2f carry %.2f respawn %.2f xp %.2f)"),
+			(int32)NewLevel, D.NameEn, D.Notice, D.Damage, D.NpcAdd, D.LarvaeAdd, D.Time, D.Clan, D.Loot, D.Carry, D.Respawn, D.Xp);
 		if (bAnnounce)
 		{
 			if (AAntGameState* GS = I->GetWorld()->GetGameState<AAntGameState>())
@@ -192,7 +194,12 @@ namespace AntDifficulty
 
 	float NoticeMul(const UObject* Ctx) { return Cur(Ctx).Notice; }
 	float RespawnMul(const UObject* Ctx) { return Cur(Ctx).Respawn; }
-	float SnowMul(const UObject* Ctx) { return Cur(Ctx).Snow; }
+	float SquadCarryMul(const UObject* Ctx) { return Cur(Ctx).Carry; }
+
+	float CarryMul(const AAntCharacter* Ant)
+	{
+		return (Ant && Ant->Team == 0 && Ant->Creature == 0) ? Cur(Ant).Carry : 1.f;
+	}
 
 	float DamageMul(const AAntCharacter* Victim, const AActor* Causer)
 	{
@@ -200,9 +207,14 @@ namespace AntDifficulty
 		{
 			return 1.f;
 		}
-		if (Causer->IsA<AHumanCharacter>() || Causer->IsA<ACritter>() || Causer->IsA<AHouseholdNpc>())
+		// The blow itself (a slipper, a paw) or whatever it belongs to: its owner, its instigator.
+		const AActor* Who[3] = { Causer, Causer->GetOwner(), Causer->GetInstigator() };
+		for (const AActor* A : Who)
 		{
-			return Cur(Victim).Damage;
+			if (A && (A->IsA<AHumanCharacter>() || A->IsA<ACritter>() || A->IsA<AHouseholdNpc>()))
+			{
+				return Cur(Victim).Damage;
+			}
 		}
 		return 1.f;
 	}
@@ -236,6 +248,23 @@ namespace AntDifficulty
 	FLinearColor Color(uint8 L)
 	{
 		return L == AntDiff::Casual ? AntUi::C::Leaf : L == AntDiff::Hard ? AntUi::C::Jam : AntUi::C::Amber;
+	}
+
+	TArray<FString> Lines(uint8 L)
+	{
+		TArray<FString> Out;
+		const AntDiff::FDef& D = AntDiff::Def(L);
+		if (L == AntDiff::Normal)
+		{
+			Out.Add(TEXT("всё как задумано"));
+			return Out;
+		}
+		auto Pct = [](float M) { return FMath::RoundToInt((M - 1.f) * 100.f); };
+		Out.Add(FString::Printf(TEXT("жильцы замечают %s (%+d%%)"), D.Notice < 1.f ? TEXT("ближе") : TEXT("дальше"), Pct(D.Notice)));
+		Out.Add(FString::Printf(TEXT("урон от жильцов %+d%%, питомцы %s"), Pct(D.Damage), D.NpcAdd < 0 ? TEXT("спокойнее") : TEXT("злее")));
+		Out.Add(FString::Printf(TEXT("еда %s (%+d%% сила носки), время рейда %+d%%"), D.Carry > 1.f ? TEXT("легче") : TEXT("тяжелее"), Pct(D.Carry), Pct(D.Time)));
+		Out.Add(FString::Printf(TEXT("личинки %+d, красных %+d%%, опыт %+d%%"), D.LarvaeAdd, Pct(D.Clan), Pct(D.Xp)));
+		return Out;
 	}
 
 	float DrawBadge(UCanvas* Cv, const UObject* Ctx, float X, float Y, float Fs, int32 Align)

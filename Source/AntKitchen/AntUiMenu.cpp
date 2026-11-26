@@ -11,6 +11,8 @@
 #include "LevelV3.h"
 #include "AntVersus.h"
 #include "AntTutorial.h"
+#include "AntDifficulty.h"
+#include "AntColonyVote.h"
 #include "GenericPlatform/GenericPlatformProcess.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
@@ -1118,11 +1120,37 @@ void SAntUiMenu::PaintLobby(FUiDraw& D) const
 	const bool bGiant = Me && Me->bIsHuman;
 	Button(DC, TEXT("l.giant"), bGiant ? L(TEXT("lobby.giant.off")) : L(TEXT("lobby.giant.on")), RX + 20.f, 804.f, 460.f, 58.f, [WPC]() { if (WPC.IsValid()) { WPC->ServerToggleHuman(); } }, false, true, TEXT("Slipper"));
 
+	// ---- the difficulty (KAN-30) and who decides for the colony (KAN-31): the host's switches, replicated, shown to everybody
+	{
+		const uint8 Diff = World ? AntDifficulty::Level(World) : (uint8)AntDiff::Normal;
+		DC.Glass(70.f, 750.f, 620.f, 160.f, 0.9f);
+		DC.Text(L(TEXT("lobby.diff")), 94.f, 764.f, EFont::Display, 22.f, C::Honey);
+		if (!bHost) { DC.Text(L(TEXT("lobby.diff.host")), 666.f, 768.f, EFont::Hand, 18.f, C::Muted, 2); }
+		for (int32 i = 0; i < AntDiff::Count; ++i)
+		{
+			Button(DC, FString::Printf(TEXT("l.diff%d"), i), L(*FString::Printf(TEXT("lobby.diff.%d"), i)), 90.f + 196.f * i, 800.f, 186.f, 52.f, [WPC, i]()
+			{
+				if (WPC.IsValid()) { WPC->ServerRaid(AntRaidCmdX::Difficulty, i, 0); }
+			}, Diff == i, bHost && Raid != nullptr);
+		}
+		const TArray<FString> Lines = AntDifficulty::Lines(Diff);
+		DC.Wrap(FString::Join(Lines, TEXT(" · ")), 94.f, 862.f, 580.f, EFont::Body, 15.f, AntDifficulty::Color(Diff), 2, 1.1f);
+	}
+	if (World && World->GetNetMode() != NM_Standalone)
+	{
+		const bool bVote = AntColonyVote::Mode(World) == AntVoteMode::Vote;
+		DC.Glass(710.f, 750.f, 600.f, 160.f, 0.9f);
+		DC.Text(L(TEXT("lobby.vote")), 734.f, 764.f, EFont::Display, 22.f, C::Honey);
+		Button(DC, TEXT("l.vote0"), L(TEXT("lobby.vote.host")), 730.f, 800.f, 276.f, 52.f, [WPC]() { if (WPC.IsValid()) { WPC->ServerRaid(AntRaidCmdX::VoteMode, 0, 0); } }, !bVote, bHost && Raid != nullptr);
+		Button(DC, TEXT("l.vote1"), L(TEXT("lobby.vote.squad")), 1016.f, 800.f, 276.f, 52.f, [WPC]() { if (WPC.IsValid()) { WPC->ServerRaid(AntRaidCmdX::VoteMode, 1, 0); } }, bVote, bHost && Raid != nullptr);
+		DC.Wrap(L(bVote ? TEXT("lobby.vote.text.1") : TEXT("lobby.vote.text.0")), 734.f, 862.f, 560.f, EFont::Body, 15.f, C::Sugar, 2, 1.1f);
+	}
+
 	// ---- start
 	const float Left = Raid && Raid->StartEnds > 0.f && GS ? Raid->StartEnds - GS->GetServerWorldTimeSeconds() : -1.f;
 	if (Left > 0.f)
 	{
-		DC.Text(Lf(TEXT("lobby.countdown"), { FMath::CeilToInt(Left) }), 660.f, 780.f, EFont::Display, 44.f, C::Amber, 1, 0.6f);
+		DC.Text(Lf(TEXT("lobby.countdown"), { FMath::CeilToInt(Left) }), 660.f, 690.f, EFont::Display, 44.f, C::Amber, 1, 0.6f);   // (above the two panels)
 	}
 	if (bHost)
 	{

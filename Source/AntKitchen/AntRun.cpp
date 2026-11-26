@@ -56,6 +56,9 @@
 #include "AntInside.h"
 #include "AntSnowball.h"
 #include "AntFighter.h"
+#include "AntDifficulty.h"
+#include "AntColonyVote.h"
+#include "AntMinimap.h"
 
 namespace
 {
@@ -1597,6 +1600,10 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 	if (AntCarry::DevCommand(this, A))
 	{
 		return;   // carrying together: carry spawn|crew|go|desync|yank|stop|kill|human|rivals|army|workers|ramp|corner|cam|shot|log|info (AntCarry.cpp)
+	}
+	if (AntDifficulty::DevCommand(this, A) || AntColonyVote::DevCommand(this, A) || AntMinimap::DevCommand(this, A))   // difficulty ..., vote ..., minimap ... (KAN-29..31)
+	{
+		return;
 	}
 	if (AntState::DevCommand(this, A) || AntWreck::DevCommand(this, A) || AntWeapons::DevCommand(this, A) || AntVersus::DevCommand(this, A) || AHumanCharacter::HeavyDevCommand(this, A))
 	{

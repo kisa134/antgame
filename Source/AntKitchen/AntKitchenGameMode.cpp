@@ -35,6 +35,7 @@
 #include "AntRts.h"
 #include "AntFighter.h"
 #include "AntTutorial.h"
+#include "AntDifficulty.h"
 
 namespace GMColors
 {
@@ -1292,7 +1293,8 @@ void AAntKitchenGameMode::OnAntKilled(AAntCharacter* Ant, AController* Killer, A
 	TWeakObjectPtr<AController> WeakC = Ant->GetController();
 	FTimerHandle Handle;
 	// (a raid: the rival clan's dead come back as reinforcements, later the lower the threat)
-	const float Delay = (bRaid && Raid && Ant->Team == 1 && Ant->Creature == 0 && !Cast<APlayerController>(Ant->GetController())) ? Raid->ClanRespawn() : RespawnDelay;
+	const float Delay = (bRaid && Raid && Ant->Team == 1 && Ant->Creature == 0 && !Cast<APlayerController>(Ant->GetController())) ? Raid->ClanRespawn()
+		: RespawnDelay * ((bRaid && Ant->Team == 0) ? AntDifficulty::RespawnMul(this) : 1.f);   // (KAN-30: casual sooner, hard later)
 	GetWorldTimerManager().SetTimer(Handle, FTimerDelegate::CreateWeakLambda(this, [this, WeakC]()
 	{
 		RespawnAnt(WeakC.Get());

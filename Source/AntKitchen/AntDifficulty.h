@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Info.h"
@@ -13,7 +13,7 @@ class APlayerState;
 class UCanvas;
 
 /**
- * Difficulty presets (docs/DIFFICULTY.md): Казуальный / Обычный / Хард. A separate axis from the threat tiers 1-4 (AntTier): the
+ * Difficulty presets (KAN-30; the table is Defs in AntDifficulty.cpp): Казуальный / Обычный / Хард. A separate axis from the threat tiers 1-4 (AntTier): the
  * tier says what the flat is like, the difficulty says how forgiving the rules are. The host picks it in the lobby or in the nest
  * (solo: the same buttons), it is replicated by one small always-relevant actor and saved on the host's machine
  * (GameUserSettings.ini [AntDifficulty] Level). Everything reads it through the functions below: one-line hooks in the old code.
@@ -40,7 +40,7 @@ namespace AntDiff
 		float Window;            // seconds to take the cake back from their hill
 		float Loot;              // value of everything brought home
 		float Ask;               // what the Queen expects
-		float Snow;              // snowball: mass needed for every pick
+		float Carry;             // carrying strength of the colony's ants and squads: food weighs 1 / Carry of its weight
 		float Respawn;           // a player's respawn delay
 		float Xp;                // XP of the raid
 	};
@@ -80,7 +80,9 @@ namespace AntDifficulty
 	/** Multiplier of damage Causer does to Victim (1 unless a resident or a pet hits a colony ant). */
 	ANTKITCHEN_API float DamageMul(const AAntCharacter* Victim, const AActor* Causer);
 	ANTKITCHEN_API float RespawnMul(const UObject* Ctx);
-	ANTKITCHEN_API float SnowMul(const UObject* Ctx);
+	/** Carrying strength multiplier of a colony ant (1 for anybody else): "the food is lighter / heavier". */
+	ANTKITCHEN_API float CarryMul(const AAntCharacter* Ant);
+	ANTKITCHEN_API float SquadCarryMul(const UObject* Ctx);
 	/** Larvae the team starts a raid with, from what the nest has. */
 	ANTKITCHEN_API int32 LarvaeOut(const UObject* Ctx, int32 NestLarvae);
 	/** Larvae that go back into the nest: lent ones are not kept, withheld ones come back. */
@@ -92,6 +94,8 @@ namespace AntDifficulty
 
 	// ---- the screen
 	ANTKITCHEN_API FLinearColor Color(uint8 Level);
+	/** What the level changes, in short lines for the lobby ("жильцы замечают на 25% ближе"...). Empty for Normal. */
+	ANTKITCHEN_API TArray<FString> Lines(uint8 Level);
 	/** A small stamp-like badge ("ХАРД"). Align 0 left, 1 centre, 2 right. Returns its width. */
 	ANTKITCHEN_API float DrawBadge(UCanvas* Cv, const UObject* Ctx, float X, float Y, float Fs, int32 Align = 0);
 	/** Dev (-AntDo): difficulty [0|1|2|info]. */

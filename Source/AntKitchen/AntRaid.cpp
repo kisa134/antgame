@@ -37,6 +37,8 @@
 #include "AntColony.h"
 #include "AntFighter.h"
 #include "AntTutorial.h"
+#include "AntDifficulty.h"
+#include "AntColonyVote.h"
 
 namespace
 {
@@ -76,6 +78,11 @@ bool AAntRaid::HillOpen()
 float AAntRaid::ClanRespawn() const
 {
 	return InRaid() ? TierDef().ClanRespawn : 5.f;
+}
+
+const AntTier::FDef& AAntRaid::TierDef() const
+{
+	return AntDifficulty::Scaled(this, Tier);   // (Normal: the tier's own row)
 }
 
 AAntRaid::AAntRaid()
@@ -204,6 +211,8 @@ void AAntRaid::ServerInit(AAntKitchenGameMode* InGM)
 {
 	GM = InGM;
 	GHillOpen = false;
+	AntDifficulty::Info(this);   // the two small replicated carriers exist from the start (the lobby reads them on every machine)
+	AntColonyVote::Info(this);
 	static bool bResetDone = false;   // once per process: the menu reloads the map
 	if (!bResetDone && FParse::Param(FCommandLine::Get(), TEXT("AntNestReset")))
 	{
@@ -473,7 +482,7 @@ void AAntRaid::OnWorldReset()
 	const AntTier::FDef& T = TierDef();
 	const int32 Players = FMath::Max(1, GM->GetNumPlayers());
 	S->Shift = RaidNo;
-	S->Larvae = Nest.Larvae;
+	S->Larvae = AntDifficulty::LarvaeOut(this, Nest.Larvae);   // casual lends two, hard keeps one at home
 	S->ShiftStage = 0;
 	S->bQuotaMet = false;
 	// the cake, and side loot for every mouth (+40 % a player up to four, +25 % each from five to eight)
@@ -1300,7 +1309,7 @@ void AAntRaid::BuildResult(uint8 How)
 		for (int32 k = 0; k < AntFoodKind::Count; ++k) { AntColony::AddFood(Nest, (uint8)k, R.Kinds[k]); }
 	}
 	Nest.Jelly += R.Jelly;
-	Nest.Larvae = FMath::Clamp(S->Larvae, 0, AntNest::MaxLarvae);
+	Nest.Larvae = FMath::Clamp(AntDifficulty::LarvaeHome(this, S->Larvae, Nest.Larvae), 0, AntNest::MaxLarvae);   // (the lent ones are not kept)
 	R.LarvaeLeft = Nest.Larvae;
 	Nest.Raids = RaidNo;
 	Nest.Wipes += bWiped ? 1 : 0;
@@ -1371,6 +1380,11 @@ void AAntRaid::PlayerCommand(AAntPlayerController* PC, uint8 Cmd, int32 A, int32
 {
 	AAntGameState* S = GS();
 	if (!PC || !S || !GM)
+	{
+		return;
+	}
+	// The difficulty (host, in the nest) and the colony vote (KAN-31: with votes on, a build is a proposal the squad decides).
+	if (AntDifficulty::Command(this, PC, Cmd, A) || AntColonyVote::Command(this, PC, Cmd, A, B))
 	{
 		return;
 	}

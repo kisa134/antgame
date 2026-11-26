@@ -7,6 +7,7 @@ class AAntArmy;
 class AAntRaid;
 class AController;
 class AKitchenInteractable;
+class APlayerState;
 class UWorld;
 
 /**
@@ -39,4 +40,7 @@ namespace AntSquad
 	ANTKITCHEN_API void OnDoorSlammed(AKitchenInteractable* Door);
 	/** Server: the squad comes to its commander at once (the alarm scent). */
 	ANTKITCHEN_API bool Recall(AAntCharacter* Ant);
+	/** Every machine: where the ants of this player's squad stand now (the snowball raid's squad ants; a sample of up to 48 of an
+	 *  old raid squad's drawn workers), for the minimap. Empty: no squad. */
+	ANTKITCHEN_API void GetSquadPositions(const APlayerState* Owner, TArray<FVector>& Out);
 }

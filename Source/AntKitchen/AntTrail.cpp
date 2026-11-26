@@ -1191,3 +1191,30 @@ namespace AntTrail
 		}
 	}
 }
+
+// ---------------------------------------------------------------------------------------------
+// The minimap's view of the trails (KAN-29): the replicated lines, on every machine
+// ---------------------------------------------------------------------------------------------
+
+void AntTrail::GetTrails(const UWorld* World, TArray<FAntTrailView>& Out, const APlayerState* OnlyOwner)
+{
+	Out.Reset();
+	const AAntTrailNet* Net = World ? AAntTrailNet::Get(World, false) : nullptr;
+	if (!Net)
+	{
+		return;
+	}
+	for (const FAntTrailLine& L : Net->Lines)
+	{
+		if (L.Points.Num() < 2 || (OnlyOwner && L.Owner != OnlyOwner))
+		{
+			continue;
+		}
+		FAntTrailView& V = Out.AddDefaulted_GetRef();
+		V.Points.Reserve(L.Points.Num());
+		for (const FVector_NetQuantize& P : L.Points) { V.Points.Add(FVector(P)); }
+		V.Owner = L.Owner;
+		V.Workers = L.Workers;
+		V.bLaying = L.bLaying;
+	}
+}

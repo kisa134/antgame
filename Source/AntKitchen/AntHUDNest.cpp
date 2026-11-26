@@ -16,6 +16,7 @@
 #include "InputCoreTypes.h"
 #include "AntFighter.h"
 #include "AntFighterUi.h"
+#include "AntColonyVote.h"
 
 // The nest between raids: one screen, drawn on the Canvas, worked with the mouse (and [Enter]).
 // Left: what the last raid brought, the Queen and her orders, the brood. Middle: the six branches. Right: the next raid -
@@ -144,6 +145,7 @@ void AAntHUD::DrawNest(AAntRaid* Raid, AAntGameState* GS)
 	const AAntPlayerState* MyPS = PC ? PC->GetPlayerState<AAntPlayerState>() : nullptr;
 	const FAntNestState& N = Raid->Nest;
 	const bool bHost = GetWorld()->GetNetMode() != NM_Client;
+	const bool bBuild = AntColonyVote::CanBuild(this);   // builds: the host, or anybody with the colony vote on (a proposal, KAN-31)
 	const float Now = GetWorld()->GetTimeSeconds();
 
 	// A 1920x1080 sheet, fitted into the screen. Text is never smaller than 0.72 of its design size.
@@ -322,12 +324,12 @@ void AAntHUD::DrawNest(AAntRaid* Raid, AAntGameState* GS)
 	// ------------------------------------------------------------------ left: the brood
 	Panel(30.f, 722.f, 590.f, 178.f, TEXT("ВЫВОДОК"));
 	{
-		const bool bL = bHost && N.Food >= AntNest::LarvaCost && N.Larvae < AntNest::MaxLarvae;
-		const bool bW = bHost && N.Food >= AntNest::WorkerPackCost && N.Workers < AntNest::MaxWorkers;
+		const bool bL = bBuild && N.Food >= AntNest::LarvaCost && N.Larvae < AntNest::MaxLarvae;
+		const bool bW = bBuild && N.Food >= AntNest::WorkerPackCost && N.Workers < AntNest::MaxWorkers;
 		if (NestBtn(FString::Printf(TEXT("Вырастить личинку — %d еды"), AntNest::LarvaCost), PX(46.f), PY(766.f), 274.f * U, 50.f * U, bL,
-			bHost ? TEXT("Личинка — ещё одна жизнь на всех в рейде. Смерть с нулём личинок — навсегда до конца рейда") : HostOnly, false, 1.1f)) { Send(AntRaidCmd::Larva, 0, 0); }
+			bBuild ? TEXT("Личинка — ещё одна жизнь на всех в рейде. Смерть с нулём личинок — навсегда до конца рейда") : HostOnly, false, 1.1f)) { Send(AntRaidCmd::Larva, 0, 0); }
 		if (NestBtn(FString::Printf(TEXT("+%d рабочих — %d еды"), AntNest::WorkerPack, AntNest::WorkerPackCost), PX(332.f), PY(766.f), 274.f * U, 50.f * U, bW,
-			bHost ? TEXT("Рабочие для отрядов. Отряд несёт, держит двери, строит мосты и дерётся — и гибнет, если не вернулся его командир") : HostOnly, false, 1.1f)) { Send(AntRaidCmd::Workers, 0, 0); }
+			bBuild ? TEXT("Рабочие для отрядов. Отряд несёт, держит двери, строит мосты и дерётся — и гибнет, если не вернулся его командир") : HostOnly, false, 1.1f)) { Send(AntRaidCmd::Workers, 0, 0); }
 		WrapTxt(TEXT("Личинки — жизни на рейд. Рабочие — ваши отряды. И то и другое растёт из еды, а довольная Королева добавляет после каждого рейда."),
 			PX(46.f), PY(828.f), 558.f * U, NDim, Small, 1.02f * Fs, 3);
 	}
@@ -365,8 +367,8 @@ void AAntHUD::DrawNest(AAntRaid* Raid, AAntGameState* GS)
 			int32 CFood = 0, CJelly = 0, CMood = 0;
 			AntColony::Cost(N, AntColony::ChamberOfBranch((uint8)b), CFood, CJelly, CMood);   // v14: tier I grows with the open chambers
 			const FString Cost = CJelly > 0 ? FString::Printf(TEXT("%d еды + %d мол."), CFood, CJelly) : FString::Printf(TEXT("%d еды"), CFood);
-			if (NestBtn(Cost, PX(1114.f), PY(RY + 40.f), 162.f * U, 46.f * U, bCan && bHost,
-				!bHost ? FString(HostOnly) : bCan ? FString::Printf(TEXT("Построить «%s»: %s"), D.Name, D.Text) : FString::Printf(TEXT("«%s»: %s"), D.Name, *Why), false, 1.1f))
+			if (NestBtn(Cost, PX(1114.f), PY(RY + 40.f), 162.f * U, 46.f * U, bCan && bBuild,
+				!bBuild ? FString(HostOnly) : bCan ? FString::Printf(TEXT("Построить «%s»: %s"), D.Name, D.Text) : FString::Printf(TEXT("«%s»: %s"), D.Name, *Why), false, 1.1f))
 			{
 				Send(AntRaidCmd::Buy, b, 0);
 			}

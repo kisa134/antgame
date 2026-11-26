@@ -135,10 +135,21 @@ private:
 	float TimeSync = 0.f;
 };
 
+/** What the minimap needs of one pheromone trail (KAN-29). */
+struct FAntTrailView
+{
+	TArray<FVector> Points;            // nest first, its far end last
+	const APlayerState* Owner = nullptr;
+	int32 Workers = 0;
+	bool bLaying = false;              // still being laid by its owner
+};
+
 namespace AntTrail
 {
 	/** Hooks of the existing code (server). */
 	ANTKITCHEN_API bool OnToggleKey(AAntCharacter* Ant);
 	ANTKITCHEN_API bool OnRecallKey(AAntCharacter* Ant);
 	ANTKITCHEN_API void OnBlow(UWorld* World, const FVector& Center, float Radius);
+	/** Every machine: the trails there are now (only this player's, if OnlyOwner is set). */
+	ANTKITCHEN_API void GetTrails(const UWorld* World, TArray<FAntTrailView>& Out, const APlayerState* OnlyOwner = nullptr);
 }

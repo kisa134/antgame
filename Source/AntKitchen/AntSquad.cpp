@@ -20,6 +20,8 @@
 #include "EngineUtils.h"
 #include "Engine/World.h"
 #include "AntRts.h"
+#include "AntSnowball.h"
+#include "AntDifficulty.h"
 
 namespace
 {
@@ -114,7 +116,7 @@ int32 SpawnAll(AAntRaid* Raid)
 		A->SquadOwner = PC;
 		A->OwnerPS = PS;
 		A->Mode = EArmyMode::Follow;
-		A->WorkerStr = AntNest::WorkerStrength(N);
+		A->WorkerStr = AntNest::WorkerStrength(N) * AntDifficulty::SquadCarryMul(Raid);   // (KAN-30: the food is lighter / heavier for the squad too)
 		A->BiteMul = N.Tier_(AntUp::Soldiers) >= 1 ? 2.f : 1.f;
 		A->bArmor = N.Tier_(AntUp::Soldiers) >= 3;
 		A->bHaulHome = N.Tier_(AntUp::Carriers) >= 1;
@@ -805,4 +807,46 @@ bool AAntArmy::SquadTick(float Dt, FVector& OutGoal)
 		break;
 	}
 	return true;
+}
+
+// ---------------------------------------------------------------------------------------------
+// The minimap's view of a squad (KAN-29): where its workers stand, on every machine
+// ---------------------------------------------------------------------------------------------
+
+void AntSquad::GetSquadPositions(const APlayerState* Owner, TArray<FVector>& Out)
+{
+	Out.Reset();
+	UWorld* W = Owner ? Owner->GetWorld() : nullptr;
+	if (!W)
+	{
+		return;
+	}
+	// The snowball raid (the default): the squad is real ants driven by bots (AntRts), listed per player in the replicated AAntSnowball.
+	if (const AAntSnowball* Snow = AAntSnowball::Get(W))
+	{
+		if (const FAntSnowPlayer* P = Snow->Find(Owner))
+		{
+			for (const AAntCharacter* Ant : P->Squad)
+			{
+				if (IsValid(Ant) && !Ant->bDead && Out.Num() < 48) { Out.Add(Ant->GetActorLocation()); }
+			}
+		}
+	}
+	// The workers' squad of the old raid (an AAntArmy, drawn as instances).
+	for (TActorIterator<AAntArmy> It(W); It; ++It)
+	{
+		const AAntArmy* A = *It;
+		if (!A->bSquad || A->Count <= 0 || (A->OwnerPS != Owner && !(IsValid(A->Commander) && A->Commander->GetPlayerState() == Owner)))
+		{
+			continue;
+		}
+		// The same spots the instanced workers are drawn at (AAntArmy::SlotPos: the column along its trail, or the swarm around
+		// its centre); a sample is enough for a dot each.
+		const int32 N = FMath::Min(A->Count, 48);
+		for (int32 i = 0; i < N; ++i)
+		{
+			Out.Add(A->SlotPos(FMath::Min(A->Count - 1, i * A->Count / N), A->Count));
+		}
+		break;
+	}
 }
