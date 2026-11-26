@@ -1,6 +1,7 @@
 ﻿#include "AntRun.h"
 #include "AntTutorial.h"
 #include "AntState.h"
+#include "AntMatter.h"
 #include "AntWreck.h"
 #include "AntLife.h"
 #include "AntFluidWorld.h"
@@ -1598,7 +1599,7 @@ void AAntKitchenGameMode::DevCommand(const FString& Cmd)
 	{
 		return;   // carrying together: carry spawn|crew|go|desync|yank|stop|kill|human|rivals|army|workers|ramp|corner|cam|shot|log|info (AntCarry.cpp)
 	}
-	if (AntState::DevCommand(this, A) || AntWreck::DevCommand(this, A) || AntWeapons::DevCommand(this, A) || AntVersus::DevCommand(this, A) || AHumanCharacter::HeavyDevCommand(this, A))
+	if (AntState::DevCommand(this, A) || AntMatter::DevCommand(this, A) || AntWreck::DevCommand(this, A) || AntWeapons::DevCommand(this, A) || AntVersus::DevCommand(this, A) || AHumanCharacter::HeavyDevCommand(this, A))
 	{
 		return;   // wreck ..., weapon ..., rage N, versus ... (AntWreck.cpp, AntWeapon.cpp, AntVersus.cpp)
 	}

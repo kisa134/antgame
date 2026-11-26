@@ -1,6 +1,7 @@
 ﻿// Materials and chain reactions 2.0 (docs/MATERIALS.md, docs/FEATURES.md section 37): the reactions of the flat and the
 // reactive objects of the chains C7..C20. Server-authoritative; every machine draws from the replicated numbers.
 #include "AntReact.h"
+#include "AntMatter.h"
 #include "AntCharacter.h"
 #include "AntKitchenGameMode.h"
 #include "AntRun.h"
@@ -338,7 +339,7 @@ int32 AAntReactNet::AddCloud(uint8 Kind, const FVector& Center, float Radius, fl
 	C.Born = NetNow();
 	C.Source = Source;
 	C.PourFor = PourFor;
-	UE_LOG(LogTemp, Display, TEXT("ANTREACT cloud %s r %.0f for %.0f s at %s"), Kind == AntCloudKind::Pepper ? TEXT("pepper") : Kind == AntCloudKind::Flour ? TEXT("flour") : TEXT("steam"), Radius, Life, *Center.ToCompactString());
+	UE_LOG(LogTemp, Display, TEXT("ANTREACT cloud %s r %.0f for %.0f s at %s"), Kind == AntCloudKind::Pepper ? TEXT("pepper") : Kind == AntCloudKind::Flour ? TEXT("flour") : Kind == AntCloudKind::Smoke ? TEXT("smoke") : TEXT("steam"), Radius, Life, *Center.ToCompactString());
 	return C.Id;
 }
 
@@ -416,6 +417,7 @@ void AAntReactNet::Short(const FVector& Where, const TCHAR* Why, AAntCharacter* 
 	}
 	UE_LOG(LogTemp, Display, TEXT("ANTREACT SHORT at %s (%s): %d ants zapped"), *Where.ToCompactString(), Why, N);
 	ChainLog(TEXT("power"), FString::Printf(TEXT("short circuit (%s), %d ants zapped"), Why, N));
+	AntMatter::OnShort(W, Where, Why);   // the metal and the wet things it touches go live; their sparks light what burns
 	if (bPower) { SetPower(false, Why, Where); }
 }
 
@@ -609,6 +611,30 @@ namespace
 	}
 }
 
+float AAntReactNet::CloudThickness(uint8 Kind, const FVector& P, uint8* OutId, FVector* OutCenter, float* OutRadius) const
+{
+	const float Now = NetNow();
+	float Best = 0.f;
+	for (const FAntReactCloud& C : Clouds)
+	{
+		if (C.Kind != Kind) { continue; }
+		const float K = CloudAt(C, P, Now);
+		if (K > Best)
+		{
+			Best = K;
+			if (OutId) { *OutId = C.Id; }
+			if (OutCenter) { *OutCenter = CloudC(C, Now); }
+			if (OutRadius) { *OutRadius = CloudR(C, Now); }
+		}
+	}
+	return Best;
+}
+
+void AAntReactNet::EndCloud(uint8 Id)
+{
+	Clouds.RemoveAll([Id](const FAntReactCloud& C) { return C.Id == Id; });
+}
+
 void AAntReactNet::Sneeze(AActor* Who, const TCHAR* Why)
 {
 	UWorld* W = GetWorld();
@@ -682,7 +708,7 @@ void AAntReactNet::TickClouds(float Dt)
 		{
 			const FVector Q = FMath::ClosestPointOnSegment(CloudC(C, Now), Ft, Hd);
 			const float K = FMath::Max(CloudAt(C, Hd, Now), CloudAt(C, Q, Now) * 0.8f);
-			if (C.Kind == AntCloudKind::Pepper && K > Pepper) { Pepper = K; PepperId = C.Id; }
+			if ((C.Kind == AntCloudKind::Pepper || C.Kind == AntCloudKind::Smoke) && K > Pepper) { Pepper = K; PepperId = C.Id; }   // acrid smoke stings the nose like pepper
 			else if (C.Kind == AntCloudKind::Flour) { Flour = FMath::Max(Flour, K); }
 		}
 		if (bDbg && Cast<AHumanCharacter>(A) && !A->IsA<AHouseFolk>()) { UE_LOG(LogTemp, Display, TEXT("ANTREACT clouds: the Dad at %s, pepper %.2f flour %.2f"), *A->GetActorLocation().ToCompactString(), Pepper, Flour); }
@@ -1132,7 +1158,7 @@ void AAntReactNet::LocalTick(float Dt)
 			if (Age < 0.f || Age > C.Life) { continue; }
 			const float R = CloudR(C, Now);
 			const FVector Ctr = CloudC(C, Now);
-			const FLinearColor Col = C.Kind == AntCloudKind::Pepper ? PepperCol : C.Kind == AntCloudKind::Flour ? FlourCol : FLinearColor(0.9f, 0.9f, 0.9f);
+			const FLinearColor Col = C.Kind == AntCloudKind::Pepper ? PepperCol : C.Kind == AntCloudKind::Flour ? FlourCol : C.Kind == AntCloudKind::Smoke ? FLinearColor(0.16f, 0.15f, 0.14f) : FLinearColor(0.9f, 0.9f, 0.9f);
 			const float Fade = 1.f - FMath::Clamp((Age - C.Life * 0.6f) / (C.Life * 0.4f), 0.f, 1.f);
 			const bool bFlourC = C.Kind == AntCloudKind::Flour;
 			const int32 N = FMath::Max(1, FMath::RoundToInt(Step * (bFlourC ? 42.f : 70.f) * Fade));
@@ -2592,6 +2618,7 @@ void ResetAll(UWorld* W)
 	int32 N = 0;
 	for (TActorIterator<AAntReactProp> It(W); It; ++It) { ++N; }
 	UE_LOG(LogTemp, Display, TEXT("ANTREACT reset: power on, %d reactive objects in place"), N);
+	AntMatter::ResetAll(W);   // nothing wet, hot, burning, frozen or charred any more; the ice and the burnt-away things back
 }
 
 void OnToasterPop(AKitchenToaster* Toaster)
