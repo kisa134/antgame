@@ -262,7 +262,9 @@ UStaticMesh* Mesh(const TCHAR* Name)
 	if (Map4Look::Enabled())
 	{
 		// map v4: a generated replacement fitted to the same frame and footprint (SM_M4R_<name>), or a map v4 prop by name
-		M = Map4Look::Prop(*(TEXT("SM_M4R_") + N.Mid(3)));
+		// Owner's rule (26.11): the generated mop and broom read as foreign next to our own set. They keep their own Blender models.
+		const bool bKeepOwn = N == TEXT("SM_K_Mop") || N == TEXT("SM_V31_Broom");
+		if (!bKeepOwn) { M = Map4Look::Prop(*(TEXT("SM_M4R_") + N.Mid(3))); }
 		if (!M && N.StartsWith(TEXT("SM_M4_"))) { M = Map4Look::Prop(*N); }
 	}
 	if (!M) { M = LoadObject<UStaticMesh>(nullptr, *FString::Printf(TEXT("/Game/%s/%s/%s.%s"), Dir, *N, *N, *N), nullptr, LOAD_NoWarn | LOAD_Quiet); }

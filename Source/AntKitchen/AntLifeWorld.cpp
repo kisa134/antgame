@@ -1,4 +1,5 @@
 ﻿#include "AntLife.h"
+#include "Sound/SoundAttenuation.h"
 #include "AntKitchenGameMode.h"
 #include "AntCharacter.h"
 #include "AntAudio.h"
@@ -204,6 +205,21 @@ UInstancedStaticMeshComponent* AAntLifeWorld::Ism(const TCHAR* Prop, const TCHAR
 	if (bSolid) { UAntMovementComponent::MakeClimbable(I); }
 	Isms.Add(I);
 	return I;
+}
+
+// One-shots of the living flat are heard near their source only. Without an attenuation PlaySoundAtLocation plays them at full
+// volume across the whole flat (playtest: the phone's "buuu-buuu" and the pigeon followed the player everywhere).
+static USoundAttenuation* LifeAtt(float Radius)
+{
+	static TMap<int32, USoundAttenuation*> Cache;
+	if (USoundAttenuation** F = Cache.Find((int32)Radius)) { return *F; }
+	USoundAttenuation* A = NewObject<USoundAttenuation>(GetTransientPackage());
+	A->Attenuation.bAttenuate = true;
+	A->Attenuation.bSpatialize = true;
+	A->Attenuation.FalloffDistance = Radius;
+	A->Attenuation.AttenuationShapeExtents = FVector(Radius * 0.08f, 0.f, 0.f);
+	A->AddToRoot();
+	return Cache.Add((int32)Radius, A);
 }
 
 USoundBase* AAntLifeWorld::Sfx(const TCHAR* Name) const
@@ -590,6 +606,7 @@ void AAntLifeWorld::BuildRoomLife()
 	if (UStaticMeshComponent* Ph = FindArt(TEXT("SM_V3_Phone"), FVector(11300.f, 200.f, 950.f), 2500.f))
 	{
 		Phone = Ph;
+		Ph->SetMobility(EComponentMobility::Movable);   // (QA: it buzzes on the table; a static level piece refused to move and logged a warning every frame)
 		PhoneHome = Ph->GetComponentTransform();
 		if (UStaticMeshComponent* Scr = Mesh(TEXT("SM_Life_Quad"), FTransform::Identity, nullptr, false, Ph))
 		{
@@ -1223,13 +1240,13 @@ void AAntLifeWorld::TickOutside(float Dt, float Now, float)
 			if (PigeonPhase < 0.f)
 			{
 				UE_LOG(LogTemp, Display, TEXT("ANTLIFE pigeon arrives on %s at server time %.1f"), W->GetNetMode() == NM_Client ? TEXT("client") : TEXT("server"), Now);
-				if (USoundBase* S = Sfx(TEXT("A_Life_Flap"))) { UGameplayStatics::PlaySoundAtLocation(this, S, P, 0.8f); }
+				if (USoundBase* S = Sfx(TEXT("A_Life_Flap"))) { UGameplayStatics::PlaySoundAtLocation(this, S, P, FRotator::ZeroRotator, 0.6f, 1.f, 0.f, LifeAtt(4500.f)); }
 				bPigeonWarned = false;
 			}
 			if (Fly <= 0.f && !bPigeonWarned)
 			{
 				bPigeonWarned = true;
-				if (USoundBase* S = Sfx(TEXT("A_Life_Pigeon"))) { UGameplayStatics::PlaySoundAtLocation(this, S, P, 1.f); }
+				if (USoundBase* S = Sfx(TEXT("A_Life_Pigeon"))) { UGameplayStatics::PlaySoundAtLocation(this, S, P, FRotator::ZeroRotator, 0.5f, 1.f, 0.f, LifeAtt(6000.f)); }
 				if (APlayerController* PC = W->GetFirstPlayerController())
 				{
 					AAntCharacter* Me = Cast<AAntCharacter>(PC->GetPawn());
@@ -1355,7 +1372,7 @@ void AAntLifeWorld::TickRoom(float Dt, float Now)
 		{
 			DripClock = 2.4f;
 			AntFx::Droplets(this, FaucetTip, 1, 4.f);
-			if (USoundBase* S = Sfx(TEXT("A_Life_Drip"))) { UGameplayStatics::PlaySoundAtLocation(this, S, FaucetTip - FVector(0.f, 0.f, 500.f), 0.35f, FMath::FRandRange(0.9f, 1.1f)); }
+			if (USoundBase* S = Sfx(TEXT("A_Life_Drip"))) { UGameplayStatics::PlaySoundAtLocation(this, S, FaucetTip - FVector(0.f, 0.f, 500.f), FRotator::ZeroRotator, 0.35f, FMath::FRandRange(0.9f, 1.1f), 0.f, LifeAtt(3500.f)); }
 		}
 	}
 	// the clock: the flat's time (a game minute per second of the raid), the second hand ticks
@@ -1387,7 +1404,7 @@ void AAntLifeWorld::TickRoom(float Dt, float Now)
 		if (UStaticMeshComponent* R = Z.WingR.Get()) { R->SetRelativeRotation(FRotator(0.f, 0.f, -Flap)); }
 		if (Z.bMoth && FMath::Frac(A * 0.21f) < Dt * Z.Speed * 0.21f)
 		{
-			if (USoundBase* S = Sfx(TEXT("A_Life_MothTap"))) { UGameplayStatics::PlaySoundAtLocation(this, S, P, 0.5f); }
+			if (USoundBase* S = Sfx(TEXT("A_Life_MothTap"))) { UGameplayStatics::PlaySoundAtLocation(this, S, P, FRotator::ZeroRotator, 0.5f, 1.f, 0.f, LifeAtt(2500.f)); }
 		}
 	}
 	if (FlyLoop && !FlyLoop->IsPlaying()) { FlyLoop->Play(); }
@@ -1418,16 +1435,16 @@ void AAntLifeWorld::TickRoom(float Dt, float Now)
 			}
 		}
 	}
-	// the phone on the sofa: a buzz every ~35 s (seeded clock), it creeps, the screen lights up
+	// the phone on the sofa: a buzz every ~95 s (seeded clock), it creeps, the screen lights up
 	if (UStaticMeshComponent* Ph = Phone.Get())
 	{
-		const float Cyc = FMath::Fmod(Now + 11.f, 35.f);
+		const float Cyc = FMath::Fmod(Now + 11.f, 95.f);
 		if (Cyc < 1.5f)
 		{
 			if (PhoneBuzzAt < 0.f || Now - PhoneBuzzAt > 5.f)
 			{
 				PhoneBuzzAt = Now;
-				if (USoundBase* S = Sfx(TEXT("A_Life_PhoneBuzz"))) { UGameplayStatics::PlaySoundAtLocation(this, S, Ph->GetComponentLocation(), 0.9f); }
+				if (USoundBase* S = Sfx(TEXT("A_Life_PhoneBuzz"))) { UGameplayStatics::PlaySoundAtLocation(this, S, Ph->GetComponentLocation(), FRotator::ZeroRotator, 0.45f, 1.f, 0.f, LifeAtt(3500.f)); }
 			}
 			FVector Off = Ph->GetComponentLocation() - PhoneHome.GetLocation();
 			Off += FVector(FMath::FRandRange(-0.6f, 1.f), FMath::FRandRange(-0.6f, 1.f), 0.f) * Dt * 30.f;

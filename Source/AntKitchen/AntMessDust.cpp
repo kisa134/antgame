@@ -27,8 +27,8 @@
 namespace
 {
 	TAutoConsoleVariable<int32> CVarDustLit(TEXT("ant.MessDustLit"), 0, TEXT("Dust motes: 0 (default) unlit, lit by the shader itself from the sun through the windows and the nearest spot lamp; 1 lit translucency (renderer lighting: too dim to read, kept for comparison)."));
-	TAutoConsoleVariable<float> CVarDustScale(TEXT("ant.MessDustScale"), 1.f, TEXT("Dust motes: brightness multiplier."));
-	TAutoConsoleVariable<float> CVarDustPix(TEXT("ant.MessDustPix"), 2.2f, TEXT("Dust motes: never drawn smaller than this many pixels (a smaller one grows and fades to match)."));
+	TAutoConsoleVariable<float> CVarDustScale(TEXT("ant.MessDustScale"), 0.38f, TEXT("Dust motes: brightness multiplier."));
+	TAutoConsoleVariable<float> CVarDustPix(TEXT("ant.MessDustPix"), 1.25f, TEXT("Dust motes: never drawn smaller than this many pixels (a smaller one grows and fades to match)."));
 	TAutoConsoleVariable<int32> CVarDustDebug(TEXT("ant.MessDustDebug"), 0, TEXT("Dust: log the light terms once a second."));
 
 	struct FLayerDef

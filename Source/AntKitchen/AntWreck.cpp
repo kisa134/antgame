@@ -80,9 +80,9 @@ namespace
 		if (Has(N, { TEXT("glasses"), TEXT("jar"), TEXT("bottle"), TEXT("vase"), TEXT("spicejar") })) { return Glass; }
 		if (Has(N, { TEXT("plate"), TEXT("mug"), TEXT("k_bowl"), TEXT("plantpot"), TEXT("pottedplant"), TEXT("cup"), TEXT("sugarbowl"), TEXT("snackbowl"), TEXT("shaker"), TEXT("fruitbowl"), TEXT("picture") })) { return China; }
 		if (Has(N, { TEXT("_pot"), TEXT("ladle"), TEXT("whisk"), TEXT("fork"), TEXT("knife"), TEXT("tincan"), TEXT("kettle"), TEXT("bucket"), TEXT("k_bin"), TEXT("cookietin"), TEXT("petbowl"),
-			TEXT("utensilrail"), TEXT("sodacan"), TEXT("coin"), TEXT("dogbowl"), TEXT("wateringcan"), TEXT("colacap") })) { return Metal; }
+			TEXT("utensilrail"), TEXT("sodacan"), TEXT("coin"), TEXT("dogbowl"), TEXT("wateringcan"), TEXT("colacap"), TEXT("wirerack") })) { return Metal; }
 		if (Has(N, { TEXT("sofa"), TEXT("armchair"), TEXT("pillow"), TEXT("cushion"), TEXT("towel"), TEXT("sock"), TEXT("slipper"), TEXT("dogbed"), TEXT("throw"), TEXT("backpack"),
-			TEXT("yarnball"), TEXT("shoe"), TEXT("scarf"), TEXT("dogrope"), TEXT("trashbag"), TEXT("bin_trash") }))
+			TEXT("yarnball"), TEXT("shoe"), TEXT("scarf"), TEXT("dogrope"), TEXT("trashbag"), TEXT("bin_trash"), TEXT("ragpile") }))
 		{
 			if (Has(N, { TEXT("sofa"), TEXT("armchair") }) && !N.Contains(TEXT("cushion"))) { WakeMul = 2.5f; }
 			return Cloth;
@@ -90,7 +90,7 @@ namespace
 		if (Has(N, { TEXT("book"), TEXT("magazine"), TEXT("newspaper"), TEXT("cardboard"), TEXT("delivery"), TEXT("cereal"), TEXT("pastabox"), TEXT("milkcarton"), TEXT("papertowel"),
 			TEXT("floursack"), TEXT("grocerybag"), TEXT("giftbox"), TEXT("dogfoodbag"), TEXT("teabag"), TEXT("matchbox") })) { return Paper; }
 		if (Has(N, { TEXT("remote"), TEXT("controller"), TEXT("charger"), TEXT("powerstrip"), TEXT("toy"), TEXT("detergent"), TEXT("icecream"), TEXT("butter"), TEXT("eggtray"),
-			TEXT("icetray"), TEXT("dishrack"), TEXT("sponge"), TEXT("phone"), TEXT("dustpan"), TEXT("tennisball"), TEXT("dogball"), TEXT("veggiecrate"), TEXT("crisper") })) { return Plastic; }
+			TEXT("icetray"), TEXT("dishrack"), TEXT("sponge"), TEXT("phone"), TEXT("dustpan"), TEXT("tennisball"), TEXT("dogball"), TEXT("veggiecrate"), TEXT("crisper"), TEXT("v3_pail"), TEXT("sprayer"), TEXT("dishsoap") })) { return Plastic; }
 		if (Has(N, { TEXT("apple"), TEXT("_bun"), TEXT("toast"), TEXT("sandwich"), TEXT("cheese"), TEXT("bone"), TEXT("kibble") })) { return Food; }
 		if (Has(N, { TEXT("bookshelf"), TEXT("tvstand"), TEXT("shoerack"), TEXT("wallshelf"), TEXT("spiceshelf") })) { return Board; }
 		return Wood;

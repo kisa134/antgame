@@ -17,3 +17,6 @@
 *.wav filter=lfs diff=lfs merge=lfs -text
 *.mp3 filter=lfs diff=lfs merge=lfs -text
 *.ogg filter=lfs diff=lfs merge=lfs -text
+
+# Shell scripts must keep LF line endings (they run on macOS)
+*.sh text eol=lf

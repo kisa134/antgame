@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ant Kitchen Карта проекта</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Russo+One&family=PT+Sans+Narrow:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* Идея: штаб на кухне. Тёмный тёплый стол, картонные карточки со скотчем, статусы цветными метками. */
+:root{
+  --bg:#181310; --panel:#221a15; --panel2:#2b211a; --line:#4a3a2c; --ink:#f2e6d0; --mute:#a89880;
+  --card:#c9a56b; --card-ink:#2a1c10; --accent:#e8a33a; --good:#7fc15a; --warn:#e8a33a; --bad:#e0594a;
+  --display:'Russo One','Arial Black',sans-serif; --body:'PT Sans Narrow','Arial Narrow',Arial,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.35 var(--body);display:flex;flex-direction:column;overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+header{display:flex;align-items:center;gap:14px;padding:8px 16px;background:var(--panel);border-bottom:2px solid var(--line);flex-wrap:wrap}
+.logo{font:20px var(--display);letter-spacing:.5px;color:var(--card);white-space:nowrap}
+.logo small{font:14px var(--body);color:var(--mute);margin-left:8px;letter-spacing:0}
+nav{display:flex;gap:4px}
+nav button{background:transparent;border:1px solid transparent;border-bottom:3px solid transparent;padding:6px 12px;color:var(--mute);font:15px var(--display);letter-spacing:.3px}
+nav button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--accent);background:var(--panel2)}
+nav button:hover{color:var(--ink)}
+.spacer{flex:1}
+.btn{background:var(--panel2);border:1px solid var(--line);padding:5px 10px;border-radius:3px}
+.btn:hover{border-color:var(--card)}
+.btn.primary{background:var(--accent);color:#2a1a08;border-color:var(--accent);font-weight:700}
+#searchBtn{min-width:200px;text-align:left;color:var(--mute)}
+#searchBtn kbd{float:right;background:var(--bg);padding:0 6px;border-radius:3px;border:1px solid var(--line);font:13px var(--body)}
+main{flex:1;min-height:0;position:relative;display:flex}
+.view{display:none;flex:1;min-width:0;min-height:0}
+.view.on{display:flex}
+/* map */
+#mapView{position:relative;flex-direction:column}
+#cv{flex:1;width:100%;display:block;cursor:grab;touch-action:none;background:radial-gradient(ellipse at 50% 40%,#241b15,#14100d)}
+#cv.drag{cursor:grabbing}
+.toolbar{position:absolute;left:12px;top:12px;display:flex;flex-direction:column;gap:8px;max-width:calc(100% - 24px);z-index:3;pointer-events:none}
+.toolbar>*{pointer-events:auto}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.seg{display:flex}
+.seg button{background:var(--panel);border:1px solid var(--line);padding:4px 10px;margin-left:-1px}
+.seg button.on{background:var(--card);color:var(--card-ink);border-color:var(--card)}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:2px 10px 2px 6px;font-size:14px}
+.chip i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.chip.off{opacity:.45}
+.legend{position:absolute;left:12px;bottom:12px;background:rgba(24,19,16,.88);border:1px solid var(--line);padding:8px 10px;font-size:13px;display:flex;gap:10px;flex-wrap:wrap;max-width:520px;z-index:3}
+.legend span{display:inline-flex;align-items:center;gap:4px;color:var(--mute)}
+.legend i{width:11px;height:11px;border-radius:50%;border:3px solid;display:inline-block}
+#tip{position:absolute;pointer-events:none;background:var(--card);color:var(--card-ink);padding:3px 8px;font-size:14px;border-radius:2px;display:none;z-index:5;max-width:320px}
+/* detail */
+#detail{position:absolute;right:0;top:0;bottom:0;width:410px;max-width:100%;background:var(--panel);border-left:2px solid var(--line);overflow:auto;z-index:4;padding:14px 16px 40px;display:none}
+#detail.on{display:block}
+#detail h2{font:20px/1.15 var(--display);margin:6px 0 4px;text-wrap:balance}
+#detail h3{font:14px var(--display);color:var(--card);margin:16px 0 6px;letter-spacing:.4px;text-transform:uppercase}
+.tag{display:inline-block;font-size:13px;padding:1px 8px;border-radius:2px;background:var(--panel2);border:1px solid var(--line);color:var(--mute);margin-right:4px}
+.st{display:inline-block;font:12px var(--display);padding:2px 8px;border-radius:2px;color:#1b130c;letter-spacing:.3px}
+.mono{font-family:Consolas,'Courier New',monospace;font-size:13px;color:var(--mute);word-break:break-all}
+.pill{display:flex;align-items:center;gap:6px;margin:3px 0}
+.lnk{color:var(--accent);text-decoration:none;cursor:pointer;background:none;border:0;padding:0;text-align:left}
+.lnk:hover{text-decoration:underline}
+.prompt{background:#120d0a;border:1px solid var(--line);border-left:3px solid var(--accent);padding:8px 10px;font:13px/1.4 Consolas,monospace;white-space:pre-wrap;word-break:break-word;margin:4px 0}
+.x{float:right;background:none;border:0;font-size:22px;color:var(--mute);line-height:1}
+.fld{display:grid;grid-template-columns:90px 1fr;gap:6px;align-items:center;margin:4px 0}
+select,input[type=text],textarea{background:var(--bg);border:1px solid var(--line);padding:4px 8px;border-radius:3px;width:100%}
+textarea{min-height:70px;resize:vertical}
+.tasks label{display:flex;gap:6px;align-items:flex-start;margin:3px 0}
+.tasks .done span{text-decoration:line-through;color:var(--mute)}
+.saved{font-size:13px;color:var(--good);margin-left:6px}
+.sub{color:var(--mute);font-size:14px}
+.commit{font-size:14px;margin:2px 0}
+/* tree */
+#treeView{flex-direction:column;overflow:auto;padding:12px 16px 60px}
+.trow{display:flex;align-items:center;gap:8px;padding:2px 6px;border-bottom:1px solid rgba(74,58,44,.4);min-height:28px}
+.trow:hover{background:var(--panel2)}
+.trow .tg{width:18px;text-align:center;color:var(--mute);cursor:pointer;user-select:none}
+.trow .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+.trow .cnt{color:var(--mute);font-size:13px}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+/* assets */
+#assetView{flex-direction:column}
+.filters{display:flex;gap:8px;flex-wrap:wrap;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line);align-items:center}
+.filters select,.filters input{width:auto;min-width:130px}
+.board{flex:1;overflow:auto;padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:18px;align-content:start}
+.acard{position:relative;background:var(--card);color:var(--card-ink);padding:10px 10px 10px;border-radius:2px;box-shadow:0 3px 0 #0006,0 8px 14px #0005;cursor:pointer}
+.acard::before{content:"";position:absolute;top:-9px;left:50%;width:70px;height:18px;margin-left:-35px;background:rgba(232,220,160,.72);transform:rotate(-2deg)}
+.acard .th{height:84px;margin:6px 0 8px;display:flex;align-items:center;justify-content:center;font:26px var(--display);color:#fff9;border:2px dashed #2a1c1066;border-radius:2px;text-shadow:0 1px 0 #0004}
+.acard .id{font:12px Consolas,monospace;word-break:break-all;color:#4a3320}
+.acard .ti{font:16px/1.15 var(--display);margin:2px 0 6px}
+.acard .meta{font-size:13px;color:#4a3320;margin-top:6px}
+.acard .row{justify-content:space-between}
+.acard .cp{background:#2a1c10;color:var(--card);border:0;padding:3px 8px;border-radius:2px;font-size:13px}
+.acard .cp:hover{background:#000}
+.count{color:var(--mute);margin-left:auto}
+/* dashboard */
+#dashView{flex-direction:column;overflow:auto;padding:16px 20px 60px;gap:22px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:20px}
+.box{background:var(--panel);border:1px solid var(--line);padding:14px 16px}
+.box h2{font:16px var(--display);margin:0 0 10px;color:var(--card);letter-spacing:.4px}
+.bar{display:flex;height:16px;background:var(--bg);border:1px solid var(--line);overflow:hidden}
+.bar b{display:block;height:100%}
+.arow{display:grid;grid-template-columns:150px 1fr 70px;gap:10px;align-items:center;margin:7px 0;cursor:pointer}
+.arow:hover .nmx{color:var(--accent)}
+.frow{display:grid;grid-template-columns:100px 1fr 90px;gap:10px;align-items:center;margin:6px 0}
+.frow .bar b{height:100%}
+.big{font:34px var(--display);color:var(--ink)}
+.kpis{display:flex;gap:26px;flex-wrap:wrap}
+.kpis small{display:block;color:var(--mute);font-size:14px}
+ul.plain{list-style:none;margin:0;padding:0}
+ul.plain li{padding:4px 0;border-bottom:1px solid rgba(74,58,44,.5);font-size:15px}
+/* palette */
+#pal{position:fixed;inset:0;background:#000a;display:none;align-items:flex-start;justify-content:center;padding-top:10vh;z-index:20}
+#pal.on{display:flex}
+#pal .in{width:min(640px,94vw);background:var(--panel);border:2px solid var(--card);box-shadow:0 20px 50px #000}
+#pal input{width:100%;font-size:18px;padding:12px 14px;border:0;border-bottom:1px solid var(--line);border-radius:0}
+#pal ul{list-style:none;margin:0;padding:0;max-height:52vh;overflow:auto}
+#pal li{padding:7px 14px;display:flex;gap:10px;align-items:center;cursor:pointer}
+#pal li.sel{background:var(--panel2);box-shadow:inset 3px 0 var(--accent)}
+#pal li .t{font-size:12px;color:var(--mute);min-width:70px}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--card);color:var(--card-ink);padding:8px 16px;border-radius:2px;display:none;z-index:30;font-weight:700}
+#modal{position:fixed;inset:0;background:#000b;display:none;align-items:center;justify-content:center;z-index:25}
+#modal.on{display:flex}
+#modal .in{background:var(--panel);border:2px solid var(--card);padding:16px;width:min(720px,94vw)}
+#modal textarea{height:300px;font:13px Consolas,monospace}
+#loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:22px var(--display);color:var(--card);z-index:10;background:var(--bg)}
+@media (max-width:760px){#detail{width:100%}#searchBtn{min-width:0;flex:1}.arow{grid-template-columns:100px 1fr 56px}}
+@media (prefers-reduced-motion:no-preference){.acard{transition:transform .12s}.acard:hover{transform:translateY(-3px) rotate(-.4deg)}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">ANT KITCHEN<small>карта проекта</small></div>
+  <nav role="tablist" aria-label="Режимы">
+    <button role="tab" data-v="map" aria-selected="true">Карта</button>
+    <button role="tab" data-v="tree" aria-selected="false">Дерево</button>
+    <button role="tab" data-v="assets" aria-selected="false">Ассеты</button>
+    <button role="tab" data-v="dashboard" aria-selected="false">Панель</button>
+  </nav>
+  <div class="spacer"></div>
+  <button class="btn" id="searchBtn" aria-label="Поиск">Поиск по всему <kbd id="kbd">Ctrl K</kbd></button>
+  <span class="sub" id="syncInfo"></span>
+  <button class="btn" id="exportBtn" title="Правки из страницы в виде JSON для Tools/projectmap/apply_edits.py">Копировать правки <span id="editCount"></span></button>
+</header>
+<main>
+  <div id="loading">Загружаю карту…</div>
+  <section class="view on" id="mapView">
+    <div class="toolbar">
+      <div class="row">
+        <div class="seg" id="depthSeg" role="group" aria-label="Глубина"><button data-d="0">Области</button><button data-d="1" class="on">Системы</button><button data-d="2">Всё</button></div>
+        <div class="seg" id="colorSeg" role="group" aria-label="Цвет"><button data-c="area" class="on">По областям</button><button data-c="status">По статусу</button></div>
+        <label class="chip"><input type="checkbox" id="depsChk"> все связи</label>
+        <button class="btn" id="fitBtn">Вписать</button>
+      </div>
+      <div class="row" id="areaChips"></div>
+    </div>
+    <canvas id="cv" aria-label="Интерактивная карта проекта"></canvas>
+    <div class="legend" id="legend"></div>
+    <div id="tip"></div>
+  </section>
+  <section class="view" id="treeView"></section>
+  <section class="view" id="assetView">
+    <div class="filters">
+      <input type="text" id="fq" placeholder="Фильтр по тексту" aria-label="Фильтр по тексту">
+      <select id="fRoom" aria-label="Комната"></select>
+      <select id="fGroup" aria-label="Группа"></select>
+      <select id="fStatus" aria-label="Статус"></select>
+      <select id="fSource" aria-label="Источник"></select>
+      <label class="chip"><input type="checkbox" id="fParts"> только с частями</label>
+      <span class="count" id="fCount"></span>
+    </div>
+    <div class="board" id="board"></div>
+  </section>
+  <section class="view" id="dashView"></section>
+  <aside id="detail" aria-label="Карточка узла"></aside>
+</main>
+<div id="pal"><div class="in"><input type="text" id="palIn" placeholder="Искать систему, ассет, файл, промпт…" aria-label="Поиск"><ul id="palList"></ul></div></div>
+<div id="modal"><div class="in"><div class="row"><b id="mTitle">Правки</b><span class="spacer"></span><button class="btn" id="mClose">Закрыть</button></div><textarea id="mText" readonly aria-label="Правки"></textarea><div class="sub">Скопируй и сохрани в edits.json, затем: python Tools/projectmap/apply_edits.py edits.json</div></div></div>
+<div id="toast"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script>
+"use strict";
+/* ---------- helpers ---------- */
+const $=s=>document.querySelector(s);
+function h(tag,attrs,...kids){const e=document.createElement(tag);if(attrs)for(const k in attrs){const v=attrs[k];if(v==null||v===false)continue;if(k==='class')e.className=v;else if(k==='style')e.style.cssText=v;else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);else if(k==='text')e.textContent=v;else e.setAttribute(k,v===true?'':v)}for(const c of kids.flat()){if(c==null||c===false)continue;e.append(c.nodeType?c:document.createTextNode(String(c)))}return e}
+function toast(t){const e=$('#toast');e.textContent=t;e.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.display='none',1800)}
+async function copy(text,msg){try{await navigator.clipboard.writeText(text);toast(msg||'Скопировано')}catch(e){$('#mTitle').textContent='Скопируй вручную';$('#mText').value=text;$('#modal').classList.add('on');$('#mText').select()}}
+const STATUS_COL={'idea':'#8a8277','designed':'#8aa0c0','in-progress':'#e8a33a','in-game':'#7fc15a','polished':'#c6e86a','blocked':'#e0594a','deprecated':'#6a5a50','prompt-ready':'#b79ae0','generated':'#4fc1d6','imported':'#3fa890','approved':'#f0cf5a','open':'#e0594a','closed':'#7fc15a'};
+const STATUS_RU={'idea':'идея','designed':'проект','in-progress':'в работе','in-game':'в игре','polished':'отполировано','blocked':'блок','deprecated':'устарело','prompt-ready':'промпт готов','generated':'сгенерено','imported':'импорт','approved':'утверждено','open':'открыто','closed':'закрыто'};
+const SYS_STATUS=['idea','designed','in-progress','in-game','polished','blocked','deprecated'];
+const ASSET_STATUS=['idea','prompt-ready','generated','imported','in-game','approved'];
+const FLOW=['idea','prompt-ready','generated','imported','in-game','approved'];
+const OWNERS=['','Юра','Кирилл','Данила','Денис','Claude'];
+const TYPE_RU={area:'область',system:'система',character:'персонаж',asset:'ассет','asset-part':'часть',file:'файл',doc:'документ',build:'сборка',bug:'проблема',decision:'решение'};
+const KIND_COL={uses:'#6fa8dc','part-of':'#9a8a70',renders:'#e58bb0',triggers:'#e0a030',stores:'#7fc15a',documents:'#8c8c8c'};
+function stChip(s){return h('span',{class:'st',style:'background:'+(STATUS_COL[s]||'#888')},STATUS_RU[s]||s||'?')}
+const isAssetish=n=>n.type==='asset'||n.type==='asset-part'||n.type==='character';
+
+/* ---------- state ---------- */
+const S={nodes:[],by:{},kids:{},out:{},inn:{},areas:[],meta:{},recent:[]};
+let E={}; let db=null, dbMode='локально';
+const eff=id=>{const n=S.by[id],e=E[id];return e?Object.assign({},n,{status:e.status||n.status,owner:e.owner!=null&&e.owner!==''?e.owner:n.owner,note:e.note,tasks:e.tasks,edited:true}):n};
+const keyOf=id=>id.replace(/\./g,'~');
+function areaColor(a){return (S.areaCol&&S.areaCol[a])||'#999'}
+
+async function load(){
+  const r=await fetch('data/map.json');const d=await r.json();
+  S.meta=d.meta;S.recent=d.recent||[];S.areas=d.areas;S.areaCol={};d.areas.forEach(a=>S.areaCol[a.id]=a.color);
+  S.nodes=d.nodes;d.nodes.forEach(n=>{S.by[n.id]=n;S.kids[n.id]=[];S.out[n.id]=[];S.inn[n.id]=[]});
+  d.nodes.forEach(n=>{if(n.parent&&S.kids[n.parent])S.kids[n.parent].push(n.id)});
+  S.edges=d.edges.filter(e=>S.by[e.from]&&S.by[e.to]);
+  S.edges.forEach(e=>{S.out[e.from].push(e);S.inn[e.to].push(e)});
+  const cnt=id=>{let c=0;for(const k of S.kids[id]){c+=1+cnt(k)}S.by[id].desc=c;return c};
+  d.nodes.filter(n=>n.type==='area').forEach(n=>cnt(n.id));
+  $('#syncInfo').textContent='git '+S.meta.head+' · '+(S.meta.generated||'').slice(0,10);
+  try{E=JSON.parse(localStorage.getItem('pm_edits')||'{}')}catch(e){E={}}
+  $('#loading').remove();
+  initGraph();renderTree();initAssets();renderDash();route();updEditCount();
+  initDb();
+}
+/* ---------- db ---------- */
+async function initDb(){
+  try{
+    db=await claude.use('db');
+    if(!db)return;
+    dbMode='общий';
+    let first=true;
+    const t=setTimeout(()=>{},10000);
+    db.collection('edits').onSnapshot(snap=>{
+      clearTimeout(t);
+      const docs=[];snap.forEach?snap.forEach(d=>docs.push(d)):(snap.docs||[]).forEach(d=>docs.push(d));
+      const nE={};docs.forEach(d=>{const v=typeof d.data==='function'?d.data():d.data||d;if(v&&v.id&&S.by[v.id])nE[v.id]=v});
+      // local-only edits that never reached db get pushed once
+      if(first){first=false;for(const id in E){if(!nE[id]&&S.by[id])saveDb(id)}}
+      for(const id in nE)E[id]=nE[id];
+      persistLocal();refreshAll();
+    },err=>{dbMode='локально'});
+  }catch(e){db=null;dbMode='локально'}
+}
+function persistLocal(){try{localStorage.setItem('pm_edits',JSON.stringify(E))}catch(e){}}
+async function saveDb(id){if(!db)return;try{await db.doc('edits/'+keyOf(id)).set(E[id]);return true}catch(e){return false}}
+const pending={};
+function saveEdit(id,patch,instant){
+  E[id]=Object.assign({},E[id]||{},patch,{id,updated:new Date().toISOString(),by:'Юра'});
+  persistLocal();updEditCount();
+  clearTimeout(pending[id]);
+  const go=async()=>{const ok=await saveDb(id);const s=$('#savedMsg');if(s){s.textContent=ok?'сохранено в общую базу':'сохранено локально'}};
+  if(instant)go();else pending[id]=setTimeout(go,700);
+  refreshAll(true);
+}
+function updEditCount(){const c=Object.keys(E).length;$('#editCount').textContent=c?'('+c+')':''}
+function refreshAll(keepDetail){drawDirty();renderTree();renderDash();renderBoard();if(!keepDetail&&sel)showDetail(sel)}
+
+/* ---------- views / routing ---------- */
+const VIEWS={map:'mapView',tree:'treeView',assets:'assetView',dashboard:'dashView'};
+function setView(v,noHash){
+  if(!VIEWS[v])v='map';
+  document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.v===v));
+  document.querySelectorAll('.view').forEach(x=>x.classList.toggle('on',x.id===VIEWS[v]));
+  if(!noHash)history.replaceState(null,'','#'+v);
+  if(v==='map'){resize();drawDirty()}
+  if(v==='assets')renderBoard();
+}
+function route(){setView((location.hash||'#map').slice(1),true)}
+addEventListener('hashchange',route);
+document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.v)));
+
+/* ---------- graph ---------- */
+const cv=$('#cv'),ctx=cv.getContext('2d');
+let T={k:1,x:0,y:0},dpr=1,W=800,H=600,sim,vn=[],vl=[],vd=[],expanded=new Set(),sel=null,hover=null,colorMode='area',showDeps=false,hiddenAreas=new Set(),dirty=true,focusSet=null;
+function resize(){const r=cv.getBoundingClientRect();dpr=devicePixelRatio||1;W=r.width;H=r.height;cv.width=W*dpr;cv.height=H*dpr;drawDirty()}
+addEventListener('resize',resize);
+function radius(n){if(n.type==='area')return 28;if(n.type==='system'||n.type==='character')return 10+Math.min(8,Math.sqrt(n.desc||0)*.8);if(n.type==='asset')return 8;if(n.type==='file'||n.type==='doc')return 6;return 5.5}
+function initGraph(){
+  const ang=S.areas.length;S.areas.forEach((a,i)=>{const t=i/ang*Math.PI*2-Math.PI/2;S.by['area.'+a.id].cx=Math.cos(t)*640;S.by['area.'+a.id].cy=Math.sin(t)*460});
+  $('#areaChips').append(...S.areas.map(a=>{const c=h('button',{class:'chip',style:'cursor:pointer',title:'Развернуть/свернуть область'},h('i',{style:'background:'+a.color}),a.name,h('span',{class:'sub'},String(S.by['area.'+a.id].desc)));
+    c.addEventListener('click',e=>{const id='area.'+a.id;if(expanded.has(id)){expanded.delete(id);c.classList.add('off')}else{expanded.add(id);c.classList.remove('off')}relayout();});c.dataset.a=a.id;return c}));
+  setDepth(1,true);
+  sim=d3.forceSimulation().alphaDecay(.035).velocityDecay(.4)
+    .force('link',d3.forceLink().id(d=>d.id).distance(l=>l.source.type==='area'?90:l.source.type==='system'?55:34).strength(.7))
+    .force('charge',d3.forceManyBody().strength(n=>n.type==='area'?-700:n.type==='system'||n.type==='character'?-160:-50).distanceMax(500))
+    .force('collide',d3.forceCollide().radius(n=>radius(n)+3))
+    .force('x',d3.forceX(n=>S.by['area.'+n.area]?S.by['area.'+n.area].cx:0).strength(n=>n.type==='area'?.3:.1))
+    .force('y',d3.forceY(n=>S.by['area.'+n.area]?S.by['area.'+n.area].cy:0).strength(n=>n.type==='area'?.3:.1))
+    .on('tick',()=>{dirty=true});
+  relayout(true);updLegend();
+  resize();setTimeout(()=>{fit()},700);
+  requestAnimationFrame(loop);
+}
+function setDepth(d,silent){
+  expanded.clear();
+  for(const n of S.nodes){if(S.kids[n.id].length){const depth=n.type==='area'?0:n.type==='system'||n.type==='character'?1:2;if(depth<d||(d===2&&true))expanded.add(n.id)}}
+  if(d===0)expanded.clear(); if(d===1){expanded.clear();S.nodes.filter(n=>n.type==='area').forEach(n=>expanded.add(n.id))}
+  document.querySelectorAll('#depthSeg button').forEach(b=>b.classList.toggle('on',+b.dataset.d===d));
+  document.querySelectorAll('#areaChips .chip').forEach(c=>c.classList.toggle('off',!expanded.has('area.'+c.dataset.a)));
+  if(!silent)relayout();
+}
+$('#depthSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(b){setDepth(+b.dataset.d);setTimeout(fit,900)}});
+$('#colorSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;colorMode=b.dataset.c;document.querySelectorAll('#colorSeg button').forEach(x=>x.classList.toggle('on',x===b));updLegend();drawDirty()});
+$('#depsChk').addEventListener('change',e=>{showDeps=e.target.checked;relayout()});
+$('#fitBtn').addEventListener('click',()=>fit());
+function liftOf(id){let n=S.by[id];while(n){if(visSet.has(n.id))return n.id;n=S.by[n.parent]}return null}
+let visSet=new Set(),focusId=null;
+function relayout(initial){
+  const old=new Map(vn.map(n=>[n.id,n]));
+  vn=[];
+  const walk=id=>{const n=S.by[id];vn.push(n);if(expanded.has(id))for(const c of S.kids[id])walk(c)};
+  vn=[];S.nodes.filter(n=>n.type==='area').forEach(a=>walk(a.id));
+  visSet=new Set(vn.map(n=>n.id));
+  for(const n of vn){if(n.x==null||!old.has(n.id)){const p=S.by[n.parent];const bx=p&&p.x!=null?p.x:(S.by['area.'+n.area]||{}).cx||0,by=p&&p.y!=null?p.y:(S.by['area.'+n.area]||{}).cy||0;n.x=bx+(Math.random()-.5)*30;n.y=by+(Math.random()-.5)*30;n.vx=0;n.vy=0}}
+  vl=vn.filter(n=>n.parent&&visSet.has(n.parent)).map(n=>({source:n.parent,target:n.id}));
+  vd=[];
+  {const agg=new Map();for(const e of S.edges){const a=liftOf(e.from),b=liftOf(e.to);if(!a||!b||a===b)continue;if(e.kind==='part-of'&&S.by[e.from].parent===e.to)continue;const k=a+'|'+b+'|'+e.kind;const g=agg.get(k);if(g)g.w+=(e.w||1);else agg.set(k,{a,b,kind:e.kind,w:e.w||1})}vd=[...agg.values()]}
+  sim.nodes(vn);sim.force('link').links(vl.map(l=>({source:l.source,target:l.target})));
+  sim.alpha(initial?1:.6).restart();
+  computeFocus();drawDirty();
+}
+function computeFocus(){
+  if(!sel||!visSet.has(sel)&&!liftOf(sel)){focusSet=null;focusId=null;return}
+  const f=new Set();const s=liftOf(sel);focusId=s;f.add(s);const n=S.by[s];
+  if(n.parent&&visSet.has(n.parent))f.add(n.parent);
+  for(const c of S.kids[s])if(visSet.has(c))f.add(c);
+  for(const d of vd){if(d.a===s)f.add(d.b);if(d.b===s)f.add(d.a)}
+  focusSet=f;
+}
+function nodeColor(n){if(colorMode==='status'){return STATUS_COL[eff(n.id).status]||'#888'}return areaColor(n.area)}
+function wpos(n){return[n.x*T.k+T.x,n.y*T.k+T.y]}
+function drawDirty(){dirty=true}
+function loop(){if(dirty&&$('#mapView').classList.contains('on')){dirty=false;draw()}requestAnimationFrame(loop)}
+function draw(){
+  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+  ctx.save();ctx.translate(T.x,T.y);ctx.scale(T.k,T.k);
+  const dim=focusSet?.15:1;
+  // tree links
+  ctx.lineWidth=1/T.k*1.2;
+  for(const l of vl){const a=S.by[l.source],b=S.by[l.target];const on=!focusSet||(focusSet.has(a.id)&&focusSet.has(b.id));ctx.strokeStyle=on?'rgba(201,165,107,.38)':'rgba(201,165,107,'+.38*dim+')';ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke()}
+  // deps
+  for(const d of vd){const a=S.by[d.a],b=S.by[d.b];const touch=focusSet&&(d.a===focusId||d.b===focusId);if(!showDeps&&!touch)continue;ctx.strokeStyle=KIND_COL[d.kind]||'#888';ctx.globalAlpha=touch?.95:(focusSet?.03:.2);ctx.lineWidth=Math.min(4,.8+Math.sqrt(d.w)*.5)/T.k;ctx.setLineDash([5/T.k,4/T.k]);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.setLineDash([]);
+    if(touch){const dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,r=radius(b)+3,ux=dx/L,uy=dy/L,px=b.x-ux*r,py=b.y-uy*r;ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(px-ux*8/T.k-uy*4/T.k,py-uy*8/T.k+ux*4/T.k);ctx.lineTo(px-ux*8/T.k+uy*4/T.k,py-uy*8/T.k-ux*4/T.k);ctx.closePath();ctx.fillStyle=ctx.strokeStyle;ctx.fill()}}
+  ctx.globalAlpha=1;
+  // nodes
+  const labelAll=T.k>1.1;
+  for(const n of vn){
+    const e=eff(n.id);const r=radius(n);const on=!focusSet||focusSet.has(n.id);ctx.globalAlpha=on?1:dim;
+    ctx.beginPath();ctx.arc(n.x,n.y,r,0,7);ctx.fillStyle=nodeColor(n);ctx.fill();
+    if(n.type!=='area'){ctx.lineWidth=2.4/Math.max(T.k,.7);ctx.strokeStyle=colorMode==='status'?'#1b130c':(STATUS_COL[e.status]||'#888');ctx.stroke()}
+    else{ctx.lineWidth=3;ctx.strokeStyle='#f2e6d0';ctx.stroke()}
+    if(e.edited){ctx.beginPath();ctx.arc(n.x+r*.75,n.y-r*.75,3.2/Math.max(T.k,.8),0,7);ctx.fillStyle='#fff';ctx.fill()}
+    const hid=expanded.has(n.id)?0:(n.desc||0);
+    if(hid&&n.type!=='asset-part'){ctx.fillStyle='#1b130c';ctx.font='bold '+Math.max(9,r*.8)+'px "PT Sans Narrow",sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(hid>99?'99+':'+'+hid,n.x,n.y+.5)}
+    if(sel&&n.id===sel){ctx.beginPath();ctx.arc(n.x,n.y,r+5,0,7);ctx.lineWidth=2.5/T.k;ctx.strokeStyle='#fff';ctx.stroke()}
+    if(n===hover){ctx.beginPath();ctx.arc(n.x,n.y,r+3,0,7);ctx.lineWidth=2/T.k;ctx.strokeStyle='#e8a33a';ctx.stroke()}
+    if(n.type==='area'||(focusSet&&focusSet.has(n.id))||(labelAll&&(n.type==='system'||n.type==='character'))||T.k>2.2||n===hover){
+      const fs=n.type==='area'?15:12;ctx.font=(n.type==='area'?'':'')+fs/Math.min(T.k,1.4)+'px '+(n.type==='area'?'"Russo One",sans-serif':'"PT Sans Narrow",sans-serif');ctx.textAlign='center';ctx.textBaseline='top';
+      const t=n.type==='area'?n.name.toUpperCase():(n.name.length>34?n.name.slice(0,33)+'…':n.name);
+      ctx.lineWidth=3/T.k;ctx.strokeStyle='#14100d';ctx.strokeText(t,n.x,n.y+r+3);ctx.fillStyle='#f2e6d0';ctx.fillText(t,n.x,n.y+r+3)}
+    ctx.globalAlpha=1;
+  }
+  ctx.restore();
+}
+function updLegend(){
+  $('#legend').replaceChildren(...(colorMode==='status'?Object.keys(STATUS_COL).slice(0,11).map(s=>h('span',null,h('i',{style:'border-color:#2b211a;background:'+STATUS_COL[s]}),STATUS_RU[s])):['in-game','in-progress','designed','prompt-ready','idea','blocked'].map(s=>h('span',null,h('i',{style:'border-color:'+STATUS_COL[s]+';background:#555'}),'обводка: '+STATUS_RU[s])).concat([h('span',null,'клик: связи узла · двойной клик: развернуть')])));
+}
+function fit(){
+  if(!vn.length)return;let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(const n of vn){x0=Math.min(x0,n.x);x1=Math.max(x1,n.x);y0=Math.min(y0,n.y);y1=Math.max(y1,n.y)}
+  const pad=60,k=Math.min((W-pad*2-($('#detail').classList.contains('on')&&innerWidth>760?410:0))/Math.max(x1-x0,1),(H-pad*2)/Math.max(y1-y0,1),2.5);
+  T.k=k;T.x=(W-($('#detail').classList.contains('on')&&innerWidth>760?410:0))/2-(x0+x1)/2*k;T.y=H/2-(y0+y1)/2*k+10;drawDirty();
+}
+function hit(mx,my){const x=(mx-T.x)/T.k,y=(my-T.y)/T.k;let best=null,bd=1e9;for(const n of vn){const d=Math.hypot(n.x-x,n.y-y);const r=radius(n)+4/T.k;if(d<r&&d<bd){best=n;bd=d}}return best}
+let drag=null;
+cv.addEventListener('pointerdown',e=>{const r=cv.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;const n=hit(mx,my);cv.setPointerCapture(e.pointerId);drag={n,mx,my,sx:mx,sy:my,moved:false,tx:T.x,ty:T.y};if(n){sim.alphaTarget(.25).restart();n.fx=n.x;n.fy=n.y}else cv.classList.add('drag')});
+cv.addEventListener('pointermove',e=>{const r=cv.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;
+  if(drag){if(Math.hypot(mx-drag.sx,my-drag.sy)>4)drag.moved=true;if(drag.n){drag.n.fx=(mx-T.x)/T.k;drag.n.fy=(my-T.y)/T.k}else{T.x=drag.tx+mx-drag.sx;T.y=drag.ty+my-drag.sy}drawDirty();return}
+  const n=hit(mx,my);if(n!==hover){hover=n;drawDirty();const tip=$('#tip');if(n){const e2=eff(n.id);tip.textContent=n.name+' · '+(TYPE_RU[n.type]||n.type)+' · '+(STATUS_RU[e2.status]||e2.status||'');tip.style.display='block'}else tip.style.display='none'}
+  if(n){const tip=$('#tip');tip.style.left=Math.min(mx+14,W-200)+'px';tip.style.top=(my+14)+'px'}});
+cv.addEventListener('pointerup',e=>{if(!drag)return;const d=drag;drag=null;cv.classList.remove('drag');sim.alphaTarget(0);if(d.n){d.n.fx=null;d.n.fy=null;if(!d.moved)selectNode(d.n.id,{noFit:true})}else if(!d.moved){selectNode(null)}});
+cv.addEventListener('dblclick',e=>{const r=cv.getBoundingClientRect();const n=hit(e.clientX-r.left,e.clientY-r.top);if(n&&S.kids[n.id].length){if(expanded.has(n.id))expanded.delete(n.id);else expanded.add(n.id);relayout()}});
+cv.addEventListener('pointerleave',()=>{hover=null;$('#tip').style.display='none';drawDirty()});
+cv.addEventListener('wheel',e=>{e.preventDefault();const r=cv.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;const f=Math.exp(-e.deltaY*.0015);const k=Math.max(.12,Math.min(6,T.k*f));T.x=mx-(mx-T.x)*k/T.k;T.y=my-(my-T.y)*k/T.k;T.k=k;drawDirty()},{passive:false});
+function revealNode(id){let n=S.by[id];const chain=[];while(n&&n.parent){chain.push(n.parent);n=S.by[n.parent]}chain.forEach(p=>expanded.add(p));document.querySelectorAll('#areaChips .chip').forEach(c=>c.classList.toggle('off',!expanded.has('area.'+c.dataset.a)))}
+function selectNode(id,opt){
+  opt=opt||{};sel=id;
+  if(id){if(opt.reveal){revealNode(id);relayout()}else{computeFocus()}showDetail(id);
+    if(opt.reveal||opt.focus){setTimeout(()=>{const n=S.by[liftOf(id)||id];if(n&&n.x!=null){T.x=W/2-(innerWidth>760?205:0)-n.x*T.k;T.y=H/2-n.y*T.k;if(T.k<1)T.k=1.3;drawDirty()}},opt.reveal?1200:0)}}
+  else{$('#detail').classList.remove('on');focusSet=null}
+  computeFocus();drawDirty();
+}
+/* ---------- detail ---------- */
+function showDetail(id){
+  const n=S.by[id];if(!n)return;const e=eff(id);const d=$('#detail');d.classList.add('on');
+  const isA=isAssetish(n)||n.type==='file'&&false;
+  const stList=(n.type==='asset'||n.type==='asset-part')?ASSET_STATUS:(n.type==='bug'?['open','closed']:SYS_STATUS);
+  const stOpts=[...new Set([...stList,e.status].filter(Boolean))];
+  const kids=S.kids[id].map(c=>S.by[c]);
+  const outs=S.out[id],ins=S.inn[id];
+  const go=(t)=>h('button',{class:'lnk',onclick:()=>jump(t)},S.by[t].name);
+  const group=(arr,dir)=>{const g={};arr.forEach(x=>{(g[x.kind]=g[x.kind]||[]).push(dir==='out'?x.to:x.from)});return Object.entries(g).map(([k,v])=>h('div',{class:'pill'},h('span',{class:'tag',style:'border-color:'+(KIND_COL[k]||'#777')},(dir==='out'?'':'← ')+k),h('span',null,...v.slice(0,12).flatMap((t,i)=>[i?' · ':'',go(t)]),v.length>12?' …+'+(v.length-12):'')))};
+  const wrap=h('div',null,
+    h('button',{class:'x',onclick:()=>selectNode(null),'aria-label':'Закрыть'},'×'),
+    h('div',null,h('span',{class:'tag'},TYPE_RU[n.type]||n.type),h('span',{class:'tag',style:'border-color:'+areaColor(n.area)},(S.by['area.'+n.area]||{}).name||''),...(n.tags||[]).slice(0,3).map(t=>h('span',{class:'tag'},t))),
+    h('h2',null,n.name),
+    n.title&&n.title!==n.name?h('div',{class:'sub'},n.title):null,
+    h('div',{class:'mono'},n.id),
+    h('div',{style:'margin:8px 0'},stChip(e.status),e.edited?h('span',{class:'tag',style:'margin-left:6px'},'правка'):null,n.updated?h('span',{class:'sub',style:'margin-left:8px'},'обновлено '+n.updated):null),
+    n.summary?h('p',null,n.summary):null,
+    h('div',{class:'fld'},h('label',{for:'dSt'},'Статус'),h('select',{id:'dSt',onchange:ev=>saveEdit(id,{status:ev.target.value},true)},stOpts.map(s=>h('option',{value:s,selected:s===e.status},STATUS_RU[s]||s)))),
+    h('div',{class:'fld'},h('label',{for:'dOw'},'Владелец'),h('select',{id:'dOw',onchange:ev=>saveEdit(id,{owner:ev.target.value},true)},[...new Set([...OWNERS,e.owner||''])].map(s=>h('option',{value:s,selected:s===(e.owner||'')},s||'не назначен')))),
+    h('h3',null,'Заметка'),
+    h('textarea',{id:'dNote','aria-label':'Заметка',placeholder:'Что важно помнить про этот узел',oninput:ev=>saveEdit(id,{note:ev.target.value})},e.note||''),
+    h('h3',null,'Задачи'),taskBox(id,e),
+    h('span',{class:'saved',id:'savedMsg'},dbMode==='общий'?'общая база подключена':'правки хранятся локально, кнопка «Копировать правки»'),
+    n.size||n.tris||n.tex||n.source||n.owner?h('h3',null,'Параметры'):null,
+    n.size?h('div',null,'Размер: '+n.size):null,n.tris?h('div',null,'Полигоны: '+n.tris):null,n.tex?h('div',null,'Текстуры: '+n.tex):null,n.source?h('div',null,'Источник: '+n.source):null,n.mesh?h('div',null,'Меш: '+n.mesh):null,n.kind?h('div',null,'Тип: '+n.kind):null,
+    n.info?h('div',{class:'sub',style:'margin-top:6px'},n.info):null,
+    n.prompt?[h('h3',null,'Промпт'),h('div',{class:'prompt'},n.prompt),h('button',{class:'btn primary',onclick:()=>copy(n.prompt,'Промпт скопирован')},'Копировать промпт')]:null,
+    n.variants&&n.variants.length?[h('h3',null,'Варианты ('+n.variants.length+')'),...n.variants.map(v=>h('div',null,h('div',{class:'prompt'},'v'+v.v+': '+v.prompt),h('button',{class:'btn',onclick:()=>copy(v.prompt,'Вариант v'+v.v+' скопирован')},'Копировать v'+v.v)))]:null,
+    n.stand_in&&n.stand_in.length?[h('h3',null,'Заглушка в игре'),h('div',null,n.stand_in.join(', '))]:null,
+    kids.length?[h('h3',null,(n.type==='asset'?'Части':'Состав')+' ('+kids.length+')'),...kids.slice(0,40).map(k=>h('div',{class:'pill'},h('span',{class:'dot',style:'background:'+(STATUS_COL[eff(k.id).status]||'#888')}),go(k.id),h('span',{class:'sub'},STATUS_RU[eff(k.id).status]||'')) ),kids.length>40?h('div',{class:'sub'},'… ещё '+(kids.length-40)):null]:null,
+    outs.length||ins.length?[h('h3',null,'Зависимости'),...group(outs,'out'),...group(ins,'in')]:null,
+    n.includes&&n.includes.length?[h('h3',null,'Включает'),h('div',{class:'sub'},n.includes.join(', '))]:null,
+    n.known_issues&&n.known_issues.length?[h('h3',null,'Известные проблемы'),...n.known_issues.map(k=>h('div',{class:'pill'},'· '+k))]:null,
+    n.files&&n.files.length?[h('h3',null,'Файлы'),...n.files.slice(0,10).map(f=>{const l=(n.links||[]).find(x=>x.title===f);return h('div',{class:'mono'},l?h('a',{class:'lnk',href:l.url,target:'_blank',rel:'noopener'},f):f)})]:null,
+    n.links&&n.links.filter(l=>!(n.files||[]).includes(l.title)).length?[h('h3',null,'Ссылки'),...n.links.filter(l=>!(n.files||[]).includes(l.title)).map(l=>h('div',null,h('a',{class:'lnk',href:l.url,target:'_blank',rel:'noopener'},l.title)))]:null,
+    n.docs&&n.docs.length?[h('h3',null,'Документы'),...n.docs.map(f=>h('div',{class:'mono'},h('a',{class:'lnk',href:S.meta.blob_base+f,target:'_blank',rel:'noopener'},f)))]:null,
+    n.commits&&n.commits.length?[h('h3',null,'Последние коммиты'+(n.commit_count?' (всего '+n.commit_count+')':'')),...n.commits.map(c=>h('div',{class:'commit'},h('a',{class:'lnk mono',href:'https://github.com/'+S.meta.repo+'/commit/'+c.hash,target:'_blank',rel:'noopener'},c.hash),' ',c.date+' · '+c.subject))]:null,
+    n.branch||n.date?h('div',{class:'sub',style:'margin-top:12px'},[n.date,n.branch].filter(Boolean).join(' · ')):null
+  );
+  d.replaceChildren(wrap);d.scrollTop=0;
+}
+function taskBox(id,e){
+  const tasks=(e.tasks||[]).slice();const box=h('div',{class:'tasks'});
+  const render=()=>{box.replaceChildren(...tasks.map((t,i)=>h('label',{class:t.done?'done':''},h('input',{type:'checkbox',checked:t.done,onchange:ev=>{t.done=ev.target.checked;saveEdit(id,{tasks});render()}}),h('span',{style:'flex:1'},t.text),h('button',{class:'x',style:'font-size:16px','aria-label':'Удалить',onclick:ev=>{ev.preventDefault();tasks.splice(i,1);saveEdit(id,{tasks});render()}},'×'))),
+    h('div',{class:'row',style:'margin-top:6px'},h('input',{type:'text',id:'newTask','aria-label':'Новая задача',placeholder:'Новая задача',onkeydown:ev=>{if(ev.key==='Enter')add()}}),h('button',{class:'btn',onclick:()=>add()},'Добавить')))};
+  const add=()=>{const v=$('#newTask').value.trim();if(!v)return;tasks.push({text:v,done:false});saveEdit(id,{tasks},true);render()};
+  render();return box;
+}
+function jump(id){if($('#mapView').classList.contains('on')){selectNode(id,{reveal:true})}else{sel=id;showDetail(id)}}
+function openNode(id){setView('map');setTimeout(()=>selectNode(id,{reveal:true}),60)}
+/* ---------- tree ---------- */
+const tOpen=new Set(S.areas?[]:[]);
+function renderTree(){
+  const root=$('#treeView');const top=root.scrollTop;const rows=[];
+  const walk=(id,d)=>{const n=S.by[id],e=eff(id);const k=S.kids[id];const open=tOpen.has(id);
+    rows.push(h('div',{class:'trow',style:'padding-left:'+(d*18+6)+'px'},
+      h('span',{class:'tg',onclick:()=>{if(!k.length)return;open?tOpen.delete(id):tOpen.add(id);renderTree()}},k.length?(open?'▾':'▸'):''),
+      h('span',{class:'dot',style:'background:'+areaColor(n.area)}),
+      h('span',{class:'nm',title:n.name,onclick:()=>openNode(id)},n.name),
+      h('span',{class:'cnt'},k.length?String(n.desc):''),
+      stChip(e.status),h('span',{class:'tag'},TYPE_RU[n.type]||n.type)));
+    if(open)for(const c of k)walk(c,d+1)};
+  S.nodes.filter(n=>n.type==='area').forEach(a=>walk(a.id,0));
+  root.replaceChildren(h('div',{class:'row',style:'margin-bottom:10px'},h('button',{class:'btn',onclick:()=>{S.nodes.forEach(n=>{if(S.kids[n.id].length&&(n.type==='area'))tOpen.add(n.id)});renderTree()}},'Развернуть области'),h('button',{class:'btn',onclick:()=>{tOpen.clear();renderTree()}},'Свернуть всё')),...rows);root.scrollTop=top;
+}
+/* ---------- assets ---------- */
+let abuilt=false;
+function initAssets(){
+  const A=assetList();const uniq=f=>[...new Set(A.map(f).filter(Boolean))].sort();
+  const fill=(sel,label,vals,fmt)=>{sel.replaceChildren(h('option',{value:''},label),...vals.map(v=>h('option',{value:v},fmt?fmt(v):v)))};
+  fill($('#fRoom'),'Все комнаты',uniq(n=>n.room_code),v=>(A.find(n=>n.room_code===v)||{}).room+' ('+v+')');
+  fill($('#fGroup'),'Все группы',uniq(n=>n.group_code));
+  fill($('#fStatus'),'Все статусы',ASSET_STATUS,v=>STATUS_RU[v]);
+  fill($('#fSource'),'Все источники',uniq(n=>n.source));
+  ['#fq','#fRoom','#fGroup','#fStatus','#fSource','#fParts'].forEach(s=>$(s).addEventListener('input',renderBoard));abuilt=true;
+}
+const assetList=()=>S.nodes.filter(n=>n.type==='asset'&&(n.tags||[]).some(t=>t==='bible'||t==='mesh'||t==='caste')).sort((a,b)=>((a.tags||[]).includes('bible')?0:1)-((b.tags||[]).includes('bible')?0:1));
+function roomCol(c){const m={KIT:'#c9783c',LIV:'#8a6bb0',HAL:'#6f8f7a',KID:'#d9a05b',GRN:'#b86a8a',OUT:'#6aa84f',FOOD:'#7fae4a',TOOL:'#d65a4a',MIC:'#3fa7b8',CHR:'#9c6bd0'};return m[c]||'#8a7a60'}
+function renderBoard(){
+  if(!abuilt)return;const q=$('#fq').value.toLowerCase(),r=$('#fRoom').value,g=$('#fGroup').value,s=$('#fStatus').value,so=$('#fSource').value,pp=$('#fParts').checked;
+  let A=assetList().filter(n=>{const e=eff(n.id);if(r&&n.room_code!==r)return false;if(g&&n.group_code!==g)return false;if(s&&e.status!==s)return false;if(so&&n.source!==so)return false;if(pp&&!(S.kids[n.id].length))return false;
+    if(q&&!((n.id+' '+n.name+' '+(n.title||'')+' '+(n.prompt||'')+' '+(n.summary||'')).toLowerCase().includes(q)||S.kids[n.id].some(k=>(S.by[k].prompt||'').toLowerCase().includes(q))))return false;return true});
+  $('#fCount').textContent=A.length+' из '+assetList().length;
+  const shown=A.slice(0,300);
+  $('#board').replaceChildren(...shown.map(n=>{const e=eff(n.id);const kids=S.kids[n.id].map(k=>S.by[k]);
+    const allPrompts=()=>{const out=[];if(n.prompt)out.push(n.prompt);kids.forEach(k=>k.prompt&&out.push(k.name+': '+k.prompt));(n.variants||[]).forEach(v=>out.push('v'+v.v+': '+v.prompt));return out.join('\n\n')};
+    const has=n.prompt||kids.some(k=>k.prompt)||(n.variants||[]).length;
+    return h('div',{class:'acard',tabindex:0,onclick:()=>{showDetail(n.id);sel=n.id},onkeydown:ev=>{if(ev.key==='Enter')showDetail(n.id)}},
+      h('div',{class:'th',style:'background:linear-gradient(135deg,'+roomCol(n.room_code)+',#3a2a1c)'},n.room_code||'3D'),
+      h('div',{class:'id'},n.id),h('div',{class:'ti'},n.title||n.summary||n.name),
+      h('div',{class:'row'},stChip(e.status),h('span',{class:'sub',style:'color:#4a3320'},(kids.length?kids.length+' част.':'')+((n.variants||[]).length?' · '+n.variants.length+' вар.':''))),
+      h('div',{class:'meta'},[n.size,n.tris,n.tex].filter(Boolean).join(' · ')),
+      h('div',{class:'row',style:'margin-top:8px'},h('span',{class:'meta'},(n.source||'')+(e.owner?' · '+e.owner:'')),has?h('button',{class:'cp',onclick:ev=>{ev.stopPropagation();copy(allPrompts(),'Промпты карточки скопированы')}},'промпт'):null))}),
+    A.length>300?h('div',{class:'sub'},'Показаны первые 300, уточни фильтр'):null);
+}
+/* ---------- dashboard ---------- */
+function renderDash(){
+  const root=$('#dashView');if(!S.nodes.length)return;
+  const prog=S.nodes.filter(n=>['system','character','asset','asset-part'].includes(n.type)&&!(n.tags||[]).includes('content-folder')&&!(n.tags||[]).includes('person')&&!(n.tags||[]).includes('asset-group'));
+  const done=s=>['in-game','polished','approved'].includes(s);
+  const byArea={};prog.forEach(n=>{const e=eff(n.id);const a=byArea[n.area]=byArea[n.area]||{t:0,c:{}};a.t++;a.c[e.status]=(a.c[e.status]||0)+1});
+  const order=['polished','approved','in-game','imported','generated','in-progress','designed','prompt-ready','idea','blocked','deprecated'];
+  const areaRows=S.areas.map(a=>{const x=byArea[a.id];if(!x)return null;const dn=Object.entries(x.c).filter(([s])=>done(s)).reduce((p,[,v])=>p+v,0);
+    return h('div',{class:'arow',onclick:()=>{setView('map');setTimeout(()=>selectNode('area.'+a.id,{reveal:true}),80)}},h('span',{class:'nmx',style:'font:14px var(--display)'},a.name),
+      h('div',{class:'bar',title:order.map(s=>x.c[s]?STATUS_RU[s]+' '+x.c[s]:'').filter(Boolean).join(', ')},order.map(s=>x.c[s]?h('b',{style:'width:'+x.c[s]/x.t*100+'%;background:'+STATUS_COL[s]}):null)),
+      h('span',{class:'mono'},dn+'/'+x.t))}).filter(Boolean);
+  const A=S.nodes.filter(n=>n.type==='asset'&&(n.tags||[]).includes('bible')),P=S.nodes.filter(n=>n.type==='asset-part'&&(n.tags||[]).includes('bible'));
+  const funnel=(list,title)=>{const c={};list.forEach(n=>{const s=eff(n.id).status;c[s]=(c[s]||0)+1});const mx=Math.max(1,...FLOW.map(s=>c[s]||0));
+    // cumulative: reached at least stage i
+    return h('div',null,h('div',{class:'sub'},title+': '+list.length),...FLOW.map((s,i)=>{const reached=FLOW.slice(i).reduce((p,x)=>p+(c[x]||0),0);return h('div',{class:'frow'},h('span',null,STATUS_RU[s]),h('div',{class:'bar'},h('b',{style:'width:'+reached/Math.max(1,list.length)*100+'%;background:'+STATUS_COL[s]})),h('span',{class:'mono'},reached+' ('+(c[s]||0)+')'))}))};
+  const bugs=S.nodes.filter(n=>n.type==='bug'&&eff(n.id).status!=='closed');
+  const myTasks=[];Object.entries(E).forEach(([id,e])=>(e.tasks||[]).forEach(t=>{if(!t.done&&S.by[id])myTasks.push([id,t])}));
+  const edited=Object.keys(E).filter(id=>S.by[id]);
+  const st={};prog.forEach(n=>{const s=eff(n.id).status;st[s]=(st[s]||0)+1});
+  const total=prog.length,dn=Object.entries(st).filter(([s])=>done(s)).reduce((p,[,v])=>p+v,0);
+  root.replaceChildren(
+    h('div',{class:'kpis'},h('div',null,h('div',{class:'big'},S.nodes.length),h('small',null,'узлов в карте')),h('div',null,h('div',{class:'big'},S.edges.length),h('small',null,'связей')),
+      h('div',null,h('div',{class:'big'},dn+'/'+total),h('small',null,'систем и ассетов в игре')),h('div',null,h('div',{class:'big'},A.length),h('small',null,'карточек библии Meshy')),h('div',null,h('div',{class:'big'},bugs.length+myTasks.length),h('small',null,'открытых вопросов'))),
+    h('div',{class:'grid2'},
+      h('div',{class:'box'},h('h2',null,'Прогресс по областям'),...areaRows,h('div',{class:'sub'},'Полоса: доли статусов. Справа: сколько в игре из скольки. Клик открывает область на карте.')),
+      h('div',{class:'box'},h('h2',null,'Воронка ассетов (дошли до этапа)'),funnel(A,'Карточки'),h('div',{style:'height:10px'}),funnel(P,'Части'))),
+    h('div',{class:'grid2'},
+      h('div',{class:'box'},h('h2',null,'Недавние изменения в git'),h('ul',{class:'plain'},...S.recent.slice(0,14).map(c=>h('li',null,h('a',{class:'lnk mono',href:'https://github.com/'+S.meta.repo+'/commit/'+c.hash,target:'_blank',rel:'noopener'},c.hash),' ',c.date+' · '+c.subject)))),
+      h('div',{class:'box'},h('h2',null,'Открытые проблемы и задачи'),h('ul',{class:'plain'},
+        ...bugs.map(b=>h('li',null,h('button',{class:'lnk',onclick:()=>openNode(b.id)},b.name))),
+        ...myTasks.map(([id,t])=>h('li',null,'☐ '+t.text+' ',h('button',{class:'lnk',onclick:()=>openNode(id)},'('+S.by[id].name+')'))),
+        !bugs.length&&!myTasks.length?h('li',{class:'sub'},'Пусто'):null))),
+    edited.length?h('div',{class:'box'},h('h2',null,'Правки со страницы ('+edited.length+')'),h('ul',{class:'plain'},...edited.map(id=>{const e=E[id];return h('li',null,h('button',{class:'lnk',onclick:()=>openNode(id)},S.by[id].name),' ',e.status?stChip(e.status):null,' ',e.owner?h('span',{class:'tag'},e.owner):null,' ',e.note?h('span',{class:'sub'},e.note.slice(0,80)):null)}))):null
+  );
+}
+/* ---------- search palette ---------- */
+let pIdx=0,pRes=[];
+const hay=n=>(n.name+' '+n.id+' '+(n.title||'')+' '+(n.summary||'')+' '+(n.prompt||'')+' '+(n.files||[]).join(' ')+' '+(n.group||'')+' '+(n.room||'')).toLowerCase();
+function palSearch(q){q=q.toLowerCase().trim();if(!q){pRes=S.nodes.filter(n=>n.type==='system'||n.type==='character').slice(0,40)}else{const w=q.split(/\s+/);const sc=[];for(const n of S.nodes){if(!n.__h)n.__h=hay(n);let ok=true,s=0;for(const x of w){const i=n.__h.indexOf(x);if(i<0){ok=false;break}s+=(n.name.toLowerCase().includes(x)?0:20)+(n.id.toLowerCase().includes(x)?0:5)+Math.min(i,50)/50}if(ok)sc.push([s+(n.type==='asset-part'?3:0)+(n.type==='file'?1:0),n])}sc.sort((a,b)=>a[0]-b[0]);pRes=sc.slice(0,60).map(x=>x[1])}
+  pIdx=0;renderPal()}
+function renderPal(){$('#palList').replaceChildren(...pRes.map((n,i)=>h('li',{class:i===pIdx?'sel':'',onclick:()=>pick(n)},h('span',{class:'t'},TYPE_RU[n.type]||n.type),h('span',{class:'dot',style:'background:'+areaColor(n.area)}),h('span',{style:'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'},n.name),stChip(eff(n.id).status))));const s=$('#palList .sel');if(s)s.scrollIntoView({block:'nearest'})}
+function openPal(){$('#pal').classList.add('on');$('#palIn').value='';$('#palIn').focus();palSearch('')}
+function pick(n){$('#pal').classList.remove('on');if(n.type==='asset'&&!$('#mapView').classList.contains('on')){sel=n.id;showDetail(n.id)}else openNode(n.id)}
+$('#searchBtn').addEventListener('click',openPal);
+$('#palIn').addEventListener('input',e=>palSearch(e.target.value));
+$('#palIn').addEventListener('keydown',e=>{if(e.key==='ArrowDown'){pIdx=Math.min(pRes.length-1,pIdx+1);renderPal();e.preventDefault()}else if(e.key==='ArrowUp'){pIdx=Math.max(0,pIdx-1);renderPal();e.preventDefault()}else if(e.key==='Enter'&&pRes[pIdx])pick(pRes[pIdx]);else if(e.key==='Escape')$('#pal').classList.remove('on')});
+$('#pal').addEventListener('click',e=>{if(e.target.id==='pal')$('#pal').classList.remove('on')});
+addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openPal()}else if(e.key==='/'&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)){e.preventDefault();openPal()}else if(e.key==='Escape'){$('#modal').classList.remove('on');$('#pal').classList.remove('on')}});
+if(/Mac|iPhone|iPad/.test(navigator.platform))$('#kbd').textContent='⌘ K';
+/* ---------- export ---------- */
+$('#exportBtn').addEventListener('click',()=>{const o={};for(const id in E){const e=E[id];o[id]={status:e.status,owner:e.owner,note:e.note,tasks:e.tasks,updated:e.updated}}copy(JSON.stringify(o,null,1),'Правки скопированы: '+Object.keys(o).length)});
+$('#mClose').addEventListener('click',()=>$('#modal').classList.remove('on'));
+load().catch(err=>{$('#loading').textContent='Не удалось загрузить data/map.json: '+err.message});
+</script>
+</body>
+</html>

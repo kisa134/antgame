@@ -1,0 +1,20 @@
+# Области карты проекта. Ручной файл: правь названия и цвета здесь.
+meta:
+  repo: kisa134/antgame
+  blob_branch: code/ANT-v14   # ветка для ссылок на файлы в GitHub
+  viewer_url: https://claude.ai/artifact/8rs9aDgofMHhTbwH2vu8Y5
+  viewer_slug: 3fa651ed-b3ea-48d3-8daf-7abc4d247e16
+areas:
+  - {id: gameplay,   name: Геймплей,                 color: "#e0a030", summary: "Муравей-игрок, перенос, рой, рейд, оружие, режим Человек против муравьёв, Учебка."}
+  - {id: world,      name: Мир и уровень,            color: "#c9783c", summary: "Квартира v4: кухня, гостиная, коридор, детская, двор; живая квартира; интерактивные предметы."}
+  - {id: characters, name: Персонажи,                color: "#d65a4a", summary: "Человек (папа), бабушка, малыш: тело из сегментов, ИИ, маршруты."}
+  - {id: creatures,  name: Существа,                 color: "#9c6bd0", summary: "Кошка Муся, Бадрик, муха, паук и другие жильцы."}
+  - {id: items,      name: Предметы и еда,           color: "#7fae4a", summary: "Лут и еда по ярусам T0-T3, мебель и посуда, библиотека ассетов Meshy."}
+  - {id: physics,    name: Физика и системность,     color: "#3fa7b8", summary: "Вода, грязь, разрушения, материалы и цепные реакции."}
+  - {id: meta,       name: Мета-прогрессия,          color: "#e58bb0", summary: "Муравейник, боец и отряд, ветераны, облик."}
+  - {id: ui,         name: Интерфейс,                color: "#8aa0d8", summary: "Кухонный штаб: меню, лобби, HUD, донесение, настройки."}
+  - {id: audio,      name: Звук,                     color: "#b9c04a", summary: "Адаптивный саундтрек, звуки, озвучка RU/EN."}
+  - {id: tech,       name: Техника, сеть, сборки,    color: "#8c8c8c", summary: "Ядро, сеть (listen server), админ-режим, сборки Dist, релизы playtest."}
+  - {id: tools,      name: Инструменты и пайплайн,   color: "#6f8f7a", summary: "Скрипты Tools/, Blender, импорт Meshy, карта проекта."}
+  - {id: marketing,  name: Маркетинг и медиа,        color: "#d9b36a", summary: "Съёмка, трейлеры, Higgsfield, ролики, страница Steam."}
+  - {id: team,       name: Команда и процесс,        color: "#a07860", summary: "Люди, правила работы, Jira, решения по дизайну."}

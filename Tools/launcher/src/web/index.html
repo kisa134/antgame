@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Ant Kitchen Launcher</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <aside class="side">
+    <div class="brand">
+      <img src="img/emblem.png" alt="">
+      <div>
+        <div class="brand-t">ANT KITCHEN</div>
+        <div class="brand-s">лаунчер плейтеста</div>
+      </div>
+    </div>
+    <nav id="nav">
+      <button data-tab="play" class="on"><i>▶</i>Играть</button>
+      <button data-tab="news"><i>✉</i>Новости<b id="nav-news-dot" hidden></b></button>
+      <button data-tab="guide"><i>✎</i>Как играть</button>
+      <button data-tab="coop"><i>☻</i>Кооп</button>
+      <button data-tab="links"><i>⚓</i>Ссылки</button>
+      <button data-tab="bug"><i>⚠</i>Отчёт о баге</button>
+      <button data-tab="settings"><i>⚙</i>Настройки</button>
+    </nav>
+    <div class="side-foot">
+      <div class="note">Прогресс игры хранится в <code>Saved</code> и переживает обновления.</div>
+      <div class="ver" id="ver-line">лаунчер v1.0.0</div>
+    </div>
+  </aside>
+
+  <main>
+    <header class="top">
+      <div class="seg" id="plat-seg" title="Платформа определена автоматически">
+        <button data-plat="windows">Windows</button>
+        <button data-plat="mac">macOS</button>
+      </div>
+      <div class="chips" id="top-chips"></div>
+      <button class="btn small ghost" id="btn-refresh" title="Проверить новые сборки">⟳ Обновить список</button>
+    </header>
+    <div id="banners"></div>
+
+    <div class="content">
+      <!-- PLAY (Windows) -->
+      <section class="tab on" id="tab-play">
+        <div id="play-win">
+          <div class="hero paper tape">
+            <div class="hero-l">
+              <div class="kicker" id="p-kicker">СТАТУС</div>
+              <h1 id="p-title">Проверяем…</h1>
+              <p id="p-sub" class="sub"></p>
+
+              <div class="actions" id="p-actions">
+                <button id="btn-main" class="bigbtn" disabled>…</button>
+                <button id="btn-sec" class="btn" hidden></button>
+              </div>
+
+              <div class="progress" id="p-progress" hidden>
+                <div class="pr-head"><span id="pr-phase">Скачиваем</span><span id="pr-pct">0%</span></div>
+                <div class="bar"><i id="pr-fill"></i></div>
+                <div class="pr-foot"><span id="pr-info"></span><span class="grow"></span>
+                  <button class="btn small" id="pr-pause">Пауза</button>
+                  <button class="btn small ghost" id="pr-cancel">Отмена</button>
+                </div>
+              </div>
+
+              <div class="opts" id="p-opts">
+                <label class="chip"><input type="checkbox" id="o-tutorial"><span>Учебка</span></label>
+                <label class="chip"><input type="checkbox" id="o-admin"><span>Админ-режим</span></label>
+                <label class="chip"><input type="checkbox" id="o-windowed"><span>В окне</span></label>
+                <input type="text" id="o-args" class="field" placeholder="свои параметры запуска…" spellcheck="false">
+              </div>
+            </div>
+
+            <div class="receipt" id="p-receipt"></div>
+          </div>
+
+          <div class="checks" id="p-checks"></div>
+
+          <div class="card" id="p-latest"></div>
+        </div>
+
+        <div id="play-mac" hidden></div>
+      </section>
+
+      <section class="tab" id="tab-news"><div id="news-list"></div></section>
+      <section class="tab" id="tab-guide"></section>
+      <section class="tab" id="tab-coop"></section>
+      <section class="tab" id="tab-links"></section>
+      <section class="tab" id="tab-bug"></section>
+      <section class="tab" id="tab-settings"></section>
+    </div>
+  </main>
+</div>
+
+<div id="toast"></div>
+<div id="modal" hidden>
+  <div class="modal-box paper tape">
+    <h3 id="m-title"></h3>
+    <p id="m-text"></p>
+    <div class="m-btns"><button class="btn ghost" id="m-no">Отмена</button><button class="btn amber" id="m-yes">ОК</button></div>
+  </div>
+</div>
+
+<script src="content.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
