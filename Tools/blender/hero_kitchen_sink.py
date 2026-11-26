@@ -166,21 +166,35 @@ def ragpile(M):
     R = random.Random(5)
     parts = []
     for k, (m, w, d) in enumerate((("ragBlue", 400, 290), ("ragCheck", 380, 270), ("ragYellow", 350, 250))):
-        a = math.radians(R.uniform(-7, 7)); z0 = k * 34
+        a = math.radians(R.uniform(-7, 7)); z0 = k * 25
         def sheet_fn(uu, v, w=w, d=d, z0=z0, a=a):
             x = (uu - 0.5) * w; y = (v - 0.5) * d
             bulge = 26 * math.sin(math.pi * uu) ** 0.3 * math.sin(math.pi * v) ** 0.3 + 3 * math.sin(uu * 21 + v * 13)
             ca, sa = math.cos(a), math.sin(a)
             return (x * ca - y * sa, x * sa + y * ca, z0 + 4 + bulge)
-        parts.append((grid_sheet("Rag%d" % k, sheet_fn, 24, 18, M[m], 6), 0))
-        # the folded front edge: a soft roll
+        # (pass 2: no separate roll tube on the front edge - it read as a pipe. The sheet itself folds: flat on top, round the
+        #  front edge (a 10 uu bend) and back under itself, with soft creases; a cloth, not tubes)
+        def folded(uu, v, w=w, d=d, z0=z0, a=a, k=k):
+            x = (uu - 0.5) * w
+            L = d * 0.82; rb = 10.0                                        # top run, the bend radius at the front edge
+            s = v * (L + math.pi * rb + L * 0.55)                          # arc length along the cloth
+            crease = 3.5 * math.sin(uu * 17.0 + k) * math.sin(v * 9.0 + k * 2) + 2.0 * math.sin(uu * 41 + v * 23)
+            sag = 5.0 * math.sin(math.pi * uu) ** 0.5
+            if s <= L:
+                y = d / 2 - s; z = z0 + 2 * rb + sag + crease * 0.6
+            elif s <= L + math.pi * rb:
+                t = (s - L) / rb
+                y = d / 2 - L - math.sin(t) * rb * 1.05; z = z0 + rb + math.cos(t) * rb + sag * (1 - t / math.pi)
+            else:
+                y = d / 2 - L + (s - L - math.pi * rb); z = z0 + 1.0 + crease * 0.2
+            ca, sa = math.cos(a), math.sin(a)
+            return (x * ca - y * sa, x * sa + y * ca, max(z0 + 0.5, z))
+        parts.append((grid_sheet("Rag%d" % k, folded, 30, 36, M[m], 3.5), 0))
         ca, sa = math.cos(a), math.sin(a)
-        p0 = (-w / 2 * ca + d / 2 * sa, -w / 2 * sa - d / 2 * ca, z0 + 16); p1 = (w / 2 * ca + d / 2 * sa, w / 2 * sa - d / 2 * ca, z0 + 16)
-        parts.append((tube("Fold%d" % k, [p0, ((p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2 - 3, z0 + 17), p1], 15, M[m], 6, 3), 0))
-        for t in range(9):                                            # frayed threads at the side
-            s = R.uniform(-0.45, 0.45) * d; x0 = w / 2 * (1 if t % 2 else -1)
-            q0 = (x0 * ca - s * sa, x0 * sa + s * ca, z0 + 10); q1 = (q0[0] + R.uniform(-14, 14) + (12 if x0 > 0 else -12), q0[1] + R.uniform(-10, 10), z0 + 2)
-            parts.append((tube("Thread", [q0, ((q0[0] + q1[0]) / 2, (q0[1] + q1[1]) / 2, z0 + 9), q1], 1.6, M[m], 4, 1), 0))
+        for t in range(4):                                            # a few frayed threads at the side, thin
+            s = R.uniform(-0.4, 0.4) * d; x0 = w / 2 * (1 if t % 2 else -1)
+            q0 = (x0 * ca - s * sa, x0 * sa + s * ca, z0 + 6); q1 = (q0[0] + R.uniform(-8, 8) + (9 if x0 > 0 else -9), q0[1] + R.uniform(-8, 8), z0 + 1)
+            parts.append((tube("Thread", [q0, ((q0[0] + q1[0]) / 2, (q0[1] + q1[1]) / 2, z0 + 5), q1], 0.9, M[m], 4, 1), 0))
     return parts
 
 def sprayer(M):
@@ -288,6 +302,13 @@ def hulls_board(n):
 def _copy(o, name):
     c = o.copy(); c.data = o.data.copy(); c.name = name; c.data.name = name; H.link(c); return c
 
+def neck_snap(lod0, name, z_uu, jag, seed):
+    """a plastic bottle snaps at the neck (pass 2: a real ragged fracture, so both pieces carry the Break slot - split by parts
+    they had no fracture face and the slot was dropped in the export)"""
+    src = _copy(lod0, name + "_Brk0")
+    lo, up = H.split(src, H.cutter(u(0, 0, z_uu), (0.18, 0.08, 1.0), 0.4, jag * 0.25, seed, sub=6, depth=1.0), name + "_Brk0", name + "_Brk1")
+    return [x for x in (lo, up) if len(x.data.polygons)]
+
 def by_parts(lod0, name, groups):
     return [H.keep_parts(lod0, g, "%s_Brk%d" % (name, i)) for i, g in enumerate(groups)]
 
@@ -312,10 +333,10 @@ SPECS = {
     "SM_V3_Pail": dict(build=pail, movers=True, hulls=hulls_pail, lods=(0.4, 0.12), collision_lod=0, breaks=breaks_pail, sway={"parts": (0,), "from": 0.30, "span": 0.25}),
     "SM_V3_WireRack": dict(build=wirerack, hulls=hulls_rack, lods=(0.4, 0.15), collision_lod=0, breaks=None),
     "SM_V3_RagPile": dict(build=ragpile, hulls=lambda n: hulls_box(n, -215, 215, -160, 160, 0, 105), lods=(0.35, 0.12), collision_lod=1, breaks=None),
-    "SM_V3_Sprayer": dict(build=sprayer, hulls=hulls_sprayer, lods=(0.4, 0.15), collision_lod=0, breaks=lambda o, n: by_parts(o, n, ([0], [1]))),
+    "SM_V3_Sprayer": dict(build=sprayer, hulls=hulls_sprayer, lods=(0.4, 0.15), collision_lod=0, breaks=lambda o, n: neck_snap(o, n, 332, 0.010, 23)),
     "SM_V3_Plunger": dict(build=plunger, hulls=hulls_plunger, lods=(0.4, 0.15), collision_lod=0, breaks=lambda o, n: snap(o, n, 1, u(0, 0, 470), (0.2, 0.1, 1.0))),
     "SM_V3_SoakBoard": dict(build=soakboard, hulls=hulls_board, lods=(0.4, 0.15), collision_lod=0, breaks=breaks_board),
-    "SM_V3_DishSoap": dict(build=dishsoap, hulls=hulls_soap, lods=(0.4, 0.15), collision_lod=0, breaks=lambda o, n: by_parts(o, n, ([0], [1]))),
+    "SM_V3_DishSoap": dict(build=dishsoap, hulls=hulls_soap, lods=(0.4, 0.15), collision_lod=0, breaks=lambda o, n: neck_snap(o, n, 272, 0.006, 29)),
 }
 
 # ------------------------------------------------------------------------------------------------ review (overall, the ant's view, wet, charred, broken)
@@ -358,7 +379,7 @@ def main():
     t0 = time.time()
     H.reset()
     os.makedirs(OUT, exist_ok=True); os.makedirs(REV, exist_ok=True)
-    mpath = os.path.join(OUT, "hero_manifest.json")
+    mpath = os.path.join(OUT, os.environ.get("HERO_MANIFEST", "hero_kitchen_manifest.json"))
     doc = json.load(open(mpath, encoding="utf-8")) if os.path.exists(mpath) else {"pieces": []}
     H.plastic("Break", (0.8, 0.8, 0.78), 0.7)
     for name, sp in SPECS.items():

@@ -231,10 +231,17 @@ private:
 	uint16 LookLost = 0xffff;
 	int32 LookDents = -1;
 	bool bWasRiding = false;
-	/** hero props: how much the loose parts sway (custom primitive data 4), from how fast it moves */
+	/** hero props: how much the loose parts sway (custom primitive data 15: M_Hero's StateSway), from how fast it moves */
 	float Sway = 0.f;
 	FVector SwayLast = FVector::ZeroVector;
 	bool bSwayLast = false;
+	/** KAN-22: a round tall thing (the mop bucket, the pail) that, once tipping, goes over onto its side and rolls; the bucket
+	 *  pours its water into the real water (UAntFluidWorld) as it goes over. */
+	bool bRoller = false;
+	bool bRolled = false;
+	bool bPoured = false;
+	FVector TipDir = FVector::ZeroVector;
+	void RollerTick(float Dt);
 };
 
 /** Per-world bits: the merged debris piles (local on every machine) and the awake count. */
