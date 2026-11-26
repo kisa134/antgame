@@ -747,6 +747,7 @@ void AAntLabHatch::EnsurePlate()
 	if (Plate) { Plate->ComponentTags.Add(TEXT("AntNoClimb")); }
 	UsePointsLocal.Reset();
 	for (const FVector& U : D.Use) { UsePointsLocal.Add(U - GetActorLocation()); }
+	UE_LOG(LogTemp, Display, TEXT("ANTLAB hatch «%s» in place on this machine (%s), %s"), *D.Id, GetNetMode() == NM_Client ? TEXT("client") : TEXT("server"), bOpen ? TEXT("open") : TEXT("shut"));
 	Apply();
 }
 
@@ -792,6 +793,7 @@ void AAntLabHatch::SetDoorOpen(bool bInOpen)
 
 void AAntLabHatch::OnRep_Open()
 {
+	UE_LOG(LogTemp, Display, TEXT("ANTLAB hatch %d %s (replicated)"), (int32)HatchIndex, bOpen ? TEXT("opened") : TEXT("shut"));
 	Apply();
 }
 
