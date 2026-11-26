@@ -4254,206 +4254,6 @@
    "ucx": 5
   },
   {
-   "name": "SM_K_Chair",
-   "file": "SM_K_Chair.fbx",
-   "set": "hero_kitchen",
-   "dest": "/Game/Hero/SM_K_Chair",
-   "break_class": "wood",
-   "textures": {
-    "C": "SM_K_Chair/tex/T_SM_K_Chair_C.png",
-    "N": "SM_K_Chair/tex/T_SM_K_Chair_N.png",
-    "R": "SM_K_Chair/tex/T_SM_K_Chair_R.png"
-   },
-   "collision_lod": 0,
-   "movers": [],
-   "breaks": [
-    {
-     "name": "SM_K_Chair_Brk0",
-     "file": "SM_K_Chair_Brk0.fbx",
-     "triangles": 524,
-     "bbox_min_m": [
-      -0.218,
-      0.2393,
-      0.4907
-     ],
-     "bbox_max_m": [
-      0.218,
-      0.2765,
-      0.874
-     ],
-     "materials": [
-      "Hero_SM_K_Chair",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_Chair_Brk1",
-     "file": "SM_K_Chair_Brk1.fbx",
-     "triangles": 1424,
-     "bbox_min_m": [
-      -0.2368,
-      -0.2368,
-      0.0
-     ],
-     "bbox_max_m": [
-      0.2368,
-      0.2789,
-      0.5105
-     ],
-     "materials": [
-      "Hero_SM_K_Chair",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_Chair_Brk2",
-     "file": "SM_K_Chair_Brk2.fbx",
-     "triangles": 548,
-     "bbox_min_m": [
-      -0.2211,
-      0.2393,
-      0.8562
-     ],
-     "bbox_max_m": [
-      0.2211,
-      0.2765,
-      1.1053
-     ],
-     "materials": [
-      "Hero_SM_K_Chair",
-      "Break"
-     ]
-    }
-   ],
-   "source": "kitchen/SM_K_Chair.fbx (the owner's kitchen model, same frame)",
-   "old_slots": [
-    "Cabinet",
-    "Walnut"
-   ],
-   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 1912,
-   "bbox_min_m": [
-    -0.2368,
-    -0.2368,
-    0.0
-   ],
-   "bbox_max_m": [
-    0.2368,
-    0.2789,
-    1.1053
-   ],
-   "materials": [
-    "Hero_SM_K_Chair"
-   ],
-   "lod_triangles": [
-    1912,
-    956,
-    478
-   ],
-   "ucx": 6
-  },
-  {
-   "name": "SM_K_HighChair",
-   "file": "SM_K_HighChair.fbx",
-   "set": "hero_kitchen",
-   "dest": "/Game/Hero/SM_K_HighChair",
-   "break_class": "wood",
-   "textures": {
-    "C": "SM_K_HighChair/tex/T_SM_K_HighChair_C.png",
-    "N": "SM_K_HighChair/tex/T_SM_K_HighChair_N.png",
-    "R": "SM_K_HighChair/tex/T_SM_K_HighChair_R.png"
-   },
-   "collision_lod": 0,
-   "movers": [],
-   "breaks": [
-    {
-     "name": "SM_K_HighChair_Brk0",
-     "file": "SM_K_HighChair_Brk0.fbx",
-     "triangles": 2660,
-     "bbox_min_m": [
-      -0.2316,
-      -0.3684,
-      0.6668
-     ],
-     "bbox_max_m": [
-      0.2316,
-      0.1895,
-      1.081
-     ],
-     "materials": [
-      "Hero_SM_K_HighChair",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_HighChair_Brk1",
-     "file": "SM_K_HighChair_Brk1.fbx",
-     "triangles": 1126,
-     "bbox_min_m": [
-      -0.2473,
-      -0.248,
-      -0.0018
-     ],
-     "bbox_max_m": [
-      0.2473,
-      0.248,
-      0.7494
-     ],
-     "materials": [
-      "Hero_SM_K_HighChair",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_HighChair_Brk2",
-     "file": "SM_K_HighChair_Brk2.fbx",
-     "triangles": 460,
-     "bbox_min_m": [
-      -0.1895,
-      0.1421,
-      1.0122
-     ],
-     "bbox_max_m": [
-      0.1895,
-      0.2053,
-      1.4211
-     ],
-     "materials": [
-      "Hero_SM_K_HighChair",
-      "Break"
-     ]
-    }
-   ],
-   "source": "level_v2/SM_K_HighChair.fbx (the owner's kitchen model, same frame)",
-   "old_slots": [
-    "Butcher",
-    "Plinth",
-    "Teal",
-    "Enamel"
-   ],
-   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 3364,
-   "bbox_min_m": [
-    -0.2473,
-    -0.3684,
-    -0.0018
-   ],
-   "bbox_max_m": [
-    0.2473,
-    0.248,
-    1.4211
-   ],
-   "materials": [
-    "Hero_SM_K_HighChair"
-   ],
-   "lod_triangles": [
-    3364,
-    1682,
-    840
-   ],
-   "ucx": 10
-  },
-  {
    "name": "SM_K_Bin",
    "file": "SM_K_Bin.fbx",
    "set": "hero_kitchen",
@@ -4576,48 +4376,6 @@
    "ucx": 2
   },
   {
-   "name": "SM_L_Radiator",
-   "file": "SM_L_Radiator.fbx",
-   "set": "hero_kitchen",
-   "dest": "/Game/Hero/SM_L_Radiator",
-   "break_class": "",
-   "textures": {
-    "C": "SM_L_Radiator/tex/T_SM_L_Radiator_C.png",
-    "N": "SM_L_Radiator/tex/T_SM_L_Radiator_N.png",
-    "R": "SM_L_Radiator/tex/T_SM_L_Radiator_R.png"
-   },
-   "collision_lod": 0,
-   "movers": [],
-   "breaks": [],
-   "source": "living/SM_L_Radiator.fbx (the owner's kitchen model, same frame)",
-   "old_slots": [
-    "Enamel",
-    "Steel",
-    "Chrome"
-   ],
-   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 2484,
-   "bbox_min_m": [
-    -0.4526,
-    -0.0526,
-    0.0
-   ],
-   "bbox_max_m": [
-    0.4526,
-    0.0526,
-    0.5789
-   ],
-   "materials": [
-    "Hero_SM_L_Radiator"
-   ],
-   "lod_triangles": [
-    2484,
-    1242,
-    620
-   ],
-   "ucx": 11
-  },
-  {
    "name": "SM_V3_WireRack",
    "file": "SM_V3_WireRack.fbx",
    "set": "hero",
@@ -4630,24 +4388,24 @@
    "movers": [],
    "breaks": [],
    "note": "KAN-23 hero rebuild of the v3.2 piece (same frame and box)",
-   "triangles": 1420,
+   "triangles": 1724,
    "bbox_min_m": [
-    -0.1563,
-    -0.1246,
+    -0.1603,
+    -0.1287,
     0.0
    ],
    "bbox_max_m": [
-    0.1563,
-    0.1246,
+    0.1603,
+    0.1287,
     0.2594
    ],
    "materials": [
     "Hero_SM_V3_WireRack"
    ],
    "lod_triangles": [
-    1420,
-    568,
-    213
+    1724,
+    689,
+    257
    ],
    "ucx": 5
   }

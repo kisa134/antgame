@@ -56,11 +56,10 @@ PIECES = {
     # small appliances
     "SM_K_Microwave": ("kitchen", M_, 2048), "SM_K_Microwave_Door": ("kitchen", M_, 1024), "SM_K_Microwave_Plate": ("kitchen", P, 512),
     "SM_K_Toaster": ("kitchen", M_, 1024), "SM_K_Toaster_Lever": ("kitchen", M_, 256), "SM_K_Kettle": ("kitchen", M_, 1024),
-    # table, chairs
-    "SM_K_Table": ("kitchen", W, 4096), "SM_K_Chair": ("kitchen", W, 2048), "SM_K_HighChair": ("level_v2", W, 2048),
-    # bin, radiator
+    # table (the chairs, the high chair and the radiators are the living set's: Tools/blender/hero_living.py, code/ANT-art-living)
+    "SM_K_Table": ("kitchen", W, 4096),
+    # bin
     "SM_K_Bin": ("kitchen", M_, 2048), "SM_K_Bin_Lid": ("kitchen", M_, 1024), "SM_K_Bin_Pedal": ("kitchen", M_, 512),
-    "SM_L_Radiator": ("living", M_, 2048),
 }
 GROUPS = {
     "cabinets": [n for n in PIECES if n.startswith(("SM_K_Base1", "SM_K_BaseDrawers"))],
@@ -71,8 +70,8 @@ GROUPS = {
     "range": [n for n in PIECES if n.startswith(("SM_K_Range", "SM_K_Hood"))],
     "dishwasher": [n for n in PIECES if n.startswith("SM_K_Dishwasher")],
     "small": [n for n in PIECES if n.startswith(("SM_K_Microwave", "SM_K_Toaster", "SM_K_Kettle"))],
-    "table": ["SM_K_Table", "SM_K_Chair", "SM_K_HighChair"],
-    "bin": [n for n in PIECES if n.startswith("SM_K_Bin")] + ["SM_L_Radiator"],
+    "table": ["SM_K_Table"],
+    "bin": [n for n in PIECES if n.startswith("SM_K_Bin")],
 }
 
 # ------------------------------------------------------------------------------------------------ materials of the block
