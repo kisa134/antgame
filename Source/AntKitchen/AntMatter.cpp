@@ -210,6 +210,12 @@ void AAntMatterNet::BeginPlay()
 			L->SetLightColor(FLinearColor(1.f, 0.55f, 0.22f));
 			L->SetAttenuationRadius(600.f);
 			L->SetCastShadows(false);
+			// (KAN-21 fire pass 4: the v14.9 shots - a towel in a white cupboard niche, a napkin by a white hob - lit the whole
+			//  niche / hob orange: Lumen bounced the point light round the white box. The flame lights what it faces, the bounce is faint.)
+			L->SetIndirectLightingIntensity(0.15f);
+			L->SetVolumetricScatteringIntensity(0.f);
+			L->SetSourceRadius(0.f);   // (a 25 uu source was a white disc mirrored in a puddle of oil, a blob on a wet napkin)
+			L->SetSpecularScale(0.25f);
 			L->SetVisibility(false);
 			L->RegisterComponent();
 			Lights.Add(L);
@@ -221,7 +227,7 @@ void AAntMatterNet::BeginPlay()
 		FireGrade->Priority = 5.f;
 		FireGrade->BlendWeight = 0.f;
 		FireGrade->Settings.bOverride_LocalExposureHighlightContrastScale = true;
-		FireGrade->Settings.LocalExposureHighlightContrastScale = 0.55f;
+		FireGrade->Settings.LocalExposureHighlightContrastScale = 0.45f;
 		FireGrade->Settings.bOverride_LocalExposureShadowContrastScale = true;
 		FireGrade->Settings.LocalExposureShadowContrastScale = 0.85f;
 		// and the eye does not open up for the dark round a fire at night (that blew a lit cupboard out to white)
@@ -489,6 +495,18 @@ bool AAntMatterNet::IsAtRest(const FBody& B) const
 	return true;
 }
 
+int32 AAntMatterNet::PutOutFar(const FVector& At, float Keep, const TCHAR* Why)
+{
+	int32 N = 0;
+	for (FBody& B : Bodies)
+	{
+		const UPrimitiveComponent* C = B.C.Get();
+		if (B.bBurning && C && FVector::Dist(C->Bounds.Origin, At) > Keep) { Extinguish(B, Why); ++N; }
+	}
+	UE_LOG(LogTemp, Display, TEXT("ANTMATTER put out %d fires farther than %.0f from %s (%s)"), N, Keep, *At.ToCompactString(), Why);
+	return N;
+}
+
 bool AAntMatterNet::Ignite(UPrimitiveComponent* C, const FVector& At, const TCHAR* Why)
 {
 	C = TakeOver(C);
@@ -670,7 +688,12 @@ void AAntMatterNet::StepBody(FBody& B, float Dt)
 		if (Bd.GetBox().ComputeSquaredDistanceToPoint(H.At) < H.Radius * H.Radius && H.Temp > B.HeatIn) { B.HeatIn = H.Temp; B.HeatFrom = Bd.GetBox().GetClosestPointTo(H.At); }
 	}
 	const float Target = B.bBurning ? FMath::Max(650.f, B.HeatIn) : (B.HeatIn > -999.f ? (Env < Room ? Env : FMath::Max(Env, B.HeatIn)) : Env);
-	const float K = FMath::Clamp(M.HeatTake, 0.05f, 1.f) * (B.bBurning ? 1.5f : 0.6f);
+	// (KAN-21 fire pass 4: by its size too. The oven, the hob and the cupboard round it are each ONE big metal body; a napkin or
+	//  a towel burning by it took the whole of it to 700 C in seconds, and all of it glowed orange - the niche and the hob of the
+	//  v14.9 shots. A big thing that does not burn (metal, enamel, glass) warms slowly; what burns keeps its pace, so fire
+	//  still spreads from a rag to a door as before.)
+	const float Mass = (B.bBurning || Burns(B.M)) ? 1.f : FMath::Clamp(80.f / FMath::Max(1.f, (float)Bd.SphereRadius), 0.03f, 1.f);
+	const float K = FMath::Clamp(M.HeatTake, 0.05f, 1.f) * (B.bBurning ? 1.5f : 0.6f) * Mass;
 	B.T += (Target - B.T) * (1.f - FMath::Exp(-K * Dt));
 	// water boils off before it gets any hotter
 	if (B.Wet > 0.02f && B.T > 100.f)
@@ -701,7 +724,9 @@ void AAntMatterNet::StepBody(FBody& B, float Dt)
 	// ---- a heated patch where the heat comes in (metal glows there first)
 	if (B.HeatIn > B.T + 60.f && B.HeatIn > 250.f && M.Conduct > 0.5f)
 	{
-		AddServerSpot(B, B.HeatFrom, FMath::Clamp((float)Bd.SphereRadius * 0.45f, 30.f, 300.f), AntState::Heat, FMath::Clamp((B.HeatIn - 100.f) / 700.f, 0.f, 1.f));
+		// (KAN-21 fire pass 4: by what the metal has reached, not by the flame on it: a pot next to a burning napkin glowed a flat
+		//  orange patch at once, as if red-hot. The glow of the material starts at about 0.55, i.e. ~500 C.)
+		AddServerSpot(B, B.HeatFrom, FMath::Clamp((float)Bd.SphereRadius * 0.45f, 30.f, 300.f), AntState::Heat, FMath::Clamp((B.T - 100.f) / 700.f, 0.f, 1.f));
 	}
 
 	// ---- wood, wool, leather scorch where strong heat reaches them, flame or not (pyrolysis): a char patch that spreads
@@ -759,12 +784,12 @@ void AAntMatterNet::StepBody(FBody& B, float Dt)
 		if (!B.bMelting) { UE_LOG(LogTemp, Display, TEXT("ANTMATTER %s/%s [%s] melts (%.0f C > %.0f)"), *GetNameSafe(C->GetOwner()), *C->GetName(), *M.Id, B.T, M.MeltAt); }
 		B.bMelting = true;
 		B.MeltFor += Dt;
-		B.Dmg = FMath::Max(B.Dmg, FMath::Min(0.85f, B.MeltFor / 25.f));
+		B.Dmg = FMath::Max(B.Dmg, FMath::Min(0.85f, B.MeltFor / 12.f));   // (fire pass 4: /25 - ten seconds in, it had barely slumped)
 		B.Fuel = FMath::Max(0.05f, B.Fuel - Dt * 0.01f);
 		if (LocalClock >= B.NextSmoke)
 		{
-			B.NextSmoke = LocalClock + 6.f;
-			if (AAntReactNet* RN = AAntReactNet::Get(W)) { RN->AddCloud(AntCloudKind::Smoke, Ctr + FVector(0.f, 0.f, 140.f), 260.f + Bd.SphereRadius, 8.f, FVector(0.f, 0.f, 25.f), FVector::ZeroVector, 0.f, TEXT("matter")); }
+			B.NextSmoke = LocalClock + 4.f;
+			if (AAntReactNet* RN = AAntReactNet::Get(W)) { RN->AddCloud(AntCloudKind::Smoke, Ctr + FVector(0.f, 0.f, 60.f + Bd.BoxExtent.Z), 160.f + Bd.SphereRadius, 8.f, FVector(0.f, 0.f, 25.f), FVector::ZeroVector, 0.f, TEXT("matter")); }
 		}
 	}
 	else { B.bMelting = false; }
@@ -788,26 +813,30 @@ void AAntMatterNet::StepBody(FBody& B, float Dt)
 			TArray<int32> Near;
 			Query(Ctr, Bd.SphereRadius + 140.f, Near);
 			bool bSparked = false;
+			// the spark jumps across the shortest gap between the live edge and thin fuel (fire pass 4: it took the first in the
+			// registry's order - a cardboard box at the far end of the hob every time, never the napkin right by the pot)
+			float BestGap = 120.f; FVector BP, BQ;
 			for (int32 Idx : Near)
 			{
 				UPrimitiveComponent* O = Reg[Idx].C.Get();
 				const FAntMatProps* OM = Reg[Idx].M;
 				if (!O || O == C || !Burns(OM) || OM->IgniteAt > 270.f) { continue; }
+				if (const FBody* OB = BodyOf(O, false)) { if (OB->bBurning || OB->bGone) { continue; } }   // (not again into what already burns)
 				// the spark jumps across the gap between the live edge and the paper
 				FVector P = Bd.GetBox().GetClosestPointTo(O->Bounds.Origin);
 				if (Bd.BoxExtent.GetMax() > 300.f)
 				{
 					// a big live thing (a cabinet run, a rail): its box takes in the shelves above it; the spark leaves its real surface
 					FVector OnC;
-					if (C->GetClosestPointOnCollision(O->Bounds.Origin, OnC) < 0.f) { continue; }
-					P = OnC;
+					// (fire pass 4: a mesh with no collision to ask - the hero pot, 800 uu wide - keeps its box point; skipping
+					//  it left the napkin by the live pot unlit)
+					if (C->GetClosestPointOnCollision(O->Bounds.Origin, OnC) >= 0.f) { P = OnC; }
 				}
 				const FVector Q = O->Bounds.GetBox().GetClosestPointTo(P);
-				if (FVector::Dist(P, Q) > 120.f) { continue; }
-				Spark((P + Q) * 0.5f, (Q - P).GetSafeNormal(), TEXT("искра с металла под током"));
-				bSparked = true;
-				break;
+				const float Gap = (float)FVector::Dist(P, Q) + FMath::FRand() * 15.f;
+				if (Gap < BestGap) { BestGap = Gap; BP = P; BQ = Q; bSparked = true; }
 			}
+			if (bSparked) { Spark((BP + BQ) * 0.5f, (BQ - BP).GetSafeNormal(), TEXT("искра с металла под током")); }
 			if (!bSparked)
 			{
 				const FVector E = Ctr + FVector(FMath::FRandRange(-1.f, 1.f) * Bd.BoxExtent.X, FMath::FRandRange(-1.f, 1.f) * Bd.BoxExtent.Y, Bd.BoxExtent.Z);
@@ -1945,12 +1974,16 @@ void AAntMatterNet::DrawFires(float Dt)
 			ToCam = ToCam.GetSafeNormal(UE_SMALL_NUMBER, FVector(1.f, 0.f, 0.f));
 			const FVector Ext = Box.GetExtent();
 			const float Thick = (float)(FMath::Abs(ToCam.X) * Ext.X + FMath::Abs(ToCam.Y) * Ext.Y);
-			const int32 K = CamD < 2500.f ? FMath::Clamp(1 + FMath::RoundToInt32(Big / 45.f), 2, 6) : FMath::Clamp(1 + FMath::RoundToInt32(Big / 90.f), 1, 3);
+			// (fire pass 4: a thing burning all over had its few tongues bunched where it caught, the rest of it a glowing sheet:
+			//  then they stand all over it, from its lower part up)
+			const bool bAllOver = R.S[AntState::Burn] > 0;
+			const int32 K = CamD < 2500.f ? FMath::Clamp(1 + FMath::RoundToInt32(Big / 45.f), 2, bAllOver ? 9 : 6) : FMath::Clamp(1 + FMath::RoundToInt32(Big / 90.f), 1, 3);
+			const FVector Seat = bAllOver ? FVector(Box.GetCenter().X, Box.GetCenter().Y, Box.Min.Z + Ext.Z * 0.7f) : Front;
 			for (int32 k = 0; k < K; ++k)
 			{
 				const float U = Hash01(R.Id, k * 4) * 2.f - 1.f, V = Hash01(R.Id, k * 4 + 1) * 2.f - 1.f, Sd = Hash01(R.Id, k * 4 + 2);
 				const float Spread = k == 0 ? 0.f : Big * 0.7f;
-				FVector P = Box.ExpandBy(-1.f).GetClosestPointTo(Front + FVector(U * Spread, V * Spread, -FMath::Abs(V) * Spread * 0.3f));
+				FVector P = Box.ExpandBy(-1.f).GetClosestPointTo(Seat + FVector(U * Spread, V * Spread, (bAllOver ? V * 0.6f : -FMath::Abs(V) * 0.3f) * Spread));
 				if (Thick < 60.f) { P += ToCam * ((float)FVector::DotProduct(Box.GetCenter() - P, ToCam) + Thick + 3.f); }
 				else { P += ToCam * 6.f; }
 				FCard Cd;
@@ -2026,7 +2059,7 @@ void AAntMatterNet::DrawFires(float Dt)
 			const FVector Ext = Box.GetExtent();
 			const float Dim = (float)FMath::Max(Ext.X, Ext.Y);
 			// molten drops running down its sides and dropping to the floor, where they spread into little puddles
-			if (FMath::FRand() < Step * 4.f * Lod)
+			if (FMath::FRand() < Step * 6.f * Lod)
 			{
 				if (S && S->MeltColor.R < 0.f)
 				{
@@ -2054,16 +2087,17 @@ void AAntMatterNet::DrawFires(float Dt)
 				Fx->Emit(B);
 			}
 			// thick dark acrid smoke off its top
-			if (FMath::FRand() < Step * 3.5f * Lod)
+			// (fire pass 4: 3.5 a second at 0.6 did not read in a shot by day; a steady column now, denser)
+			if (FMath::FRand() < Step * 7.f * Lod)
 			{
 				FAntFxBit B;
 				B.Look = EAntFxLook::Smoke;
-				B.Pos = FVector(Box.GetCenter().X, Box.GetCenter().Y, Box.Max.Z) + FVector(FMath::FRandRange(-0.5f, 0.5f) * Ext.X, FMath::FRandRange(-0.5f, 0.5f) * Ext.Y, 10.f);
+				B.Pos = FVector(Box.GetCenter().X, Box.GetCenter().Y, Box.Max.Z) + FVector(FMath::FRandRange(-0.4f, 0.4f) * Ext.X, FMath::FRandRange(-0.4f, 0.4f) * Ext.Y, 10.f);
 				B.Vel = FVector(FMath::FRandRange(-12.f, 12.f), FMath::FRandRange(-12.f, 12.f), FMath::FRandRange(45.f, 80.f));
 				const float Sz = FMath::Clamp(Dim / 90.f, 0.4f, 2.2f);
-				B.Scale0 = FVector(Sz * 0.7f);
-				B.Scale1 = FVector(Sz * 3.2f);
-				B.Color = FLinearColor(0.16f, 0.15f, 0.14f, 0.6f);   // sooty grey: black smoke vanished against a dark room at night
+				B.Scale0 = FVector(Sz * 0.6f);
+				B.Scale1 = FVector(Sz * 2.8f);
+				B.Color = FLinearColor(0.13f, 0.12f, 0.11f, 0.8f);   // sooty grey: black smoke vanished against a dark room at night
 				B.Life = FMath::FRandRange(3.f, 4.5f);
 				B.FadeIn = 0.2f;
 				B.FadePow = 1.3f;
@@ -2127,9 +2161,31 @@ void AAntMatterNet::DrawFires(float Dt)
 		if (!Lit.IsValidIndex(i)) { if (L->IsVisible()) { L->SetVisibility(false); } continue; }
 		const FLit& F = Lit[i];
 		const float Fl = 0.75f + 0.25f * FMath::Sin(LocalClock * 23.f + i * 1.7f) * FMath::Sin(LocalClock * 7.3f + i);
-		L->SetWorldLocation(F.At + FVector(0.f, 0.f, 30.f + F.Size * 0.4f));
-		L->SetAttenuationRadius(FMath::Min(250.f + F.Size * 1.6f, 1000.f));
-		L->SetIntensity(FMath::Min(10.f + F.Size * 0.25f, 80.f) * Fl);   // candelas
+		// (KAN-21 fire pass 4) the light stands in the body of the flames, not on the surface under them: 30 uu over a white hob
+		// it burnt a hot orange disc into it. And in a box (a cupboard niche, under the hood) it is dimmer: six short rays say how
+		// shut in it is; open on most sides is a fire in the room, shut on most is a fire in a cupboard that would light it all up.
+		FVector LP = F.At + FVector(0.f, 0.f, FMath::Clamp(60.f + F.Size * 0.35f, 60.f, 260.f));
+		float Open = 0.f, MinD = 1.e6f;
+		{
+			static const FVector Dirs[6] = { FVector(1, 0, 0), FVector(-1, 0, 0), FVector(0, 1, 0), FVector(0, -1, 0), FVector(0, 0, 1), FVector(0, 0, -1) };
+			FCollisionQueryParams Q(SCENE_QUERY_STAT(AntMatterLight), false);
+			FHitResult Up;   // (not up through the shelf over a niche into the next cupboard)
+			if (GetWorld()->LineTraceSingleByChannel(Up, F.At + FVector(0.f, 0.f, 5.f), LP + FVector(0.f, 0.f, 20.f), ECC_Visibility, Q)) { LP.Z = FMath::Max(F.At.Z + 10.f, Up.ImpactPoint.Z - 20.f); }
+			for (const FVector& Dd : Dirs)
+			{
+				FHitResult H;
+				const bool bHit = GetWorld()->LineTraceSingleByChannel(H, LP, LP + Dd * 300.f, ECC_Visibility, Q);
+				Open += bHit ? (float)H.Distance / 300.f : 1.f;
+				// (the floor under it is meant to be lit, but not burnt white: it counts from closer - a burning tub's own top was)
+				if (bHit) { MinD = FMath::Min(MinD, (float)H.Distance * (Dd.Z < 0.f ? 1.6f : 1.f)); }
+			}
+			Open /= 6.f;
+		}
+		// and a wall (a pot's side) right by it does not get a white hot spot
+		const float Shut = FMath::Clamp((Open - 0.2f) / 0.6f, 0.25f, 1.f) * FMath::Clamp(FMath::Square(MinD / 110.f), 0.3f, 1.f);
+		L->SetWorldLocation(LP);
+		L->SetAttenuationRadius(FMath::Min(250.f + F.Size * 1.6f, 1000.f) * (0.6f + 0.4f * Shut));
+		L->SetIntensity(FMath::Min(8.f + F.Size * 0.2f, 60.f) * Fl * Shut);   // candelas
 		if (!L->IsVisible()) { L->SetVisibility(true); }
 	}
 	if (Lights.Num() > 0 && Lights.Last() && Lights.Last()->IsVisible() && LocalClock > FlashUntil) { Lights.Last()->SetVisibility(false); }
@@ -2742,6 +2798,9 @@ bool DevCommand(AAntKitchenGameMode* GM, const TArray<FString>& A)
 				const FBox B = Pot->Bounds.GetBox();
 				const FVector Ctr = B.GetCenter();
 				const FVector Nap(B.Max.X + 18.f + 80.f, Ctr.Y - 40.f, B.Min.Z);
+				// (fire pass 4: with the hero kitchen the earlier scenes' fires had spread to the fire cap of 24, and the napkin
+				//  "did not catch". The scene is about the spark: what still burns far away is put out first.)
+				N->PutOutFar(Ctr, 1500.f, TEXT("тест: место для искры"));
 				TArray<FString> Cmd = { TEXT("matter"), TEXT("thing"), TEXT("napkin"), FString::SanitizeFloat(Nap.X), FString::SanitizeFloat(Nap.Y), FString::SanitizeFloat(Nap.Z), TEXT("12") };
 				DevCommand(N->GetWorld()->GetAuthGameMode<AAntKitchenGameMode>(), Cmd);
 				UE_LOG(LogTemp, Display, TEXT("ANTMATTER test spark: pot %s box %s, napkin at %s"), *Pot->GetName(), *Ctr.ToCompactString(), *Nap.ToCompactString());

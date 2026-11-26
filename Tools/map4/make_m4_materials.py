@@ -296,9 +296,12 @@ float3 em = float3(0, 0, 0);
     float s_gl = smoothstep(0.55, 1.0, s_heat);
     em += lerp(float3(0.9, 0.05, 0.0), float3(3.2, 1.3, 0.35), s_gl) * s_gl * s_gl * 1.6;
     float s_fl = frac(sin(dot(floor(W.xy / 7.0 + W.zz / 9.0) + floor(Tm * 9.0) * 3.17, float2(41.3, 289.1))) * 15731.7);
-    float s_em = s_burn * smoothstep(0.45, 0.8, s_fine) * (0.55 + 0.45 * s_fl);
-    em += float3(1.6, 0.36, 0.04) * s_em;
-    em += float3(1.8, 0.65, 0.12) * s_ring * (0.6 + 0.4 * s_fl);
+    // (fire pass 4: half the burning side was embers - a towel or a pot read as a flat printed sheet of fire, and a rug under
+    //  burning oil as a red disc. Embers are thin glowing veins in the black char, the rim a narrow line; the fire is the cards.)
+    float s_vein = 1.0 - smoothstep(0.0, 0.05, abs(s_fine - 0.62));
+    float s_em = s_burn * max(s_vein * 0.8, smoothstep(0.78, 0.95, s_fine)) * (0.45 + 0.55 * s_fl);
+    em += float3(1.2, 0.27, 0.03) * s_em;
+    em += float3(1.0, 0.36, 0.06) * s_ring * (0.5 + 0.5 * s_fl);
     float s_sp = frac(sin(dot(floor(W.xy / 5.0 + W.zz / 5.0) + floor(Tm * 14.0) * 7.31, float2(12.9898, 78.233))) * 43758.5453);
     em += float3(0.5, 0.8, 3.0) * s_chg * step(0.965, s_sp) * 6.0;
 }
