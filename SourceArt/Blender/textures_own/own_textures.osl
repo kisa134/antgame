@@ -330,10 +330,21 @@ shader own_textures(
         float crack = id < 0.18 ? (1.0 - smoothstep(0.0, 0.006, crackn)) * smoothstep(0.1, 0.3, fbm(u, v, 4, 4, 2, 0.5, 65)) : 0.0;
         float stain = fbm(u, v, 4, 4, 4, 0.5, 63);
         float grit = fbm(u, v, 256, 256, 2, 0.6, 64);
-        H = cham * 0.55 + agg * 0.12 + grit * 0.06 - crack * 0.3 + stain * 0.05;
-        C = lc(0.60, 0.57, 0.52) * (0.92 + id * 0.16) * (1.0 + stain * 0.25 + agg * 0.08 + grit * 0.05);
+        // street wear: dark rain / oil blotches, dirt and moss in the joints, grime along them, chipped arrises, gum spots
+        float blot = smoothstep(0.1, 0.35, fbm(u, v, 3, 3, 5, 0.55, 66));
+        float jdirt = (1.0 - smoothstep(0.003, 0.02, d)) * (0.5 + 0.5 * fbm(u, v, 64, 64, 2, 0.5, 67));
+        float moss = joint * smoothstep(0.0, 0.3, fbm(u, v, 12, 12, 3, 0.5, 68));
+        float chipe = (1.0 - smoothstep(0.004, 0.012, d)) * smoothstep(0.3, 0.5, fbm(u, v, 24, 24, 3, 0.5, 69));
+        float g1, g2, gq; worley(u, v, 9, 9, 70, g1, g2, gq);
+        float gum = gq < 0.12 ? 1.0 - smoothstep(0.08, 0.12, g1) : 0.0;
+        H = cham * 0.55 + agg * 0.12 + grit * 0.06 - crack * 0.3 + stain * 0.05 - chipe * 0.3 + gum * 0.1;
+        C = lc(0.60, 0.57, 0.52) * color(0.88 + id * 0.22, 0.88 + id * 0.2, 0.88 + id * 0.18) * (1.0 + stain * 0.25 + agg * 0.08 + grit * 0.06);
+        C *= 1.0 - 0.3 * blot - 0.35 * jdirt;
         C = mix(C, lc(0.25, 0.24, 0.21), max(joint * 0.8, crack * 0.6));
-        R = 0.84 + grit * 0.04 + joint * 0.1;
+        C = mix(C, lc(0.24, 0.30, 0.15), moss * 0.6);
+        C = mix(C, lc(0.68, 0.66, 0.62), chipe * 0.5);
+        C = mix(C, lc(0.30, 0.29, 0.28), gum * 0.8);
+        R = 0.84 + grit * 0.04 + joint * 0.1 - blot * 0.2 - gum * 0.3;
     }
     else if (Mat == 7)   // Soil: garden earth with crumbs, a few stones, rootlets, twigs and bits of leaf, 0.37 m (700 uu)
     {
@@ -399,36 +410,68 @@ shader own_textures(
     }
     else if (Mat == 10 || Mat == 11)   // TileCream: 4 x 4 glazed cream tiles, 31 cm on the floor (2400 uu); FloorTile: grey stoneware
     {
+        // lived-in kitchen floor: every tile its own tone, greasy smudges, duller worn walkways, dark dirt in and along the grout,
+        // chipped edges, scratches and pinholes in the glaze, dust settled in the tile corners
         tiles(u, v, 4, 4, d, id, lx, ly);
+        float id2 = hs(floor(u * 4.0), floor(v * 4.0), 97.0), id3 = hs(floor(u * 4.0), floor(v * 4.0), 98.0);
         float grout = 1.0 - smoothstep(0.0016, 0.0024, d);
         float edge = smoothstep(0.0016, 0.006, d);
         float wav = fbm(u, v, 8, 8, 3, 0.5, 101 + id * 7.0);
         float sand = fbm(u, v, 512, 512, 2, 0.6, 102);
         worley(u, v, 300, 300, 103, f1, f2, r);
-        float pin = r < 0.06 ? 1.0 - smoothstep(0.05, 0.14, f1) : 0.0;           // pinholes in the glaze
-        float scr = streaks(u, v, 128, 0.006, 104) * smoothstep(0.1, 0.4, fbm(u, v, 6, 6, 2, 0.5, 105));   // fine scratches
-        float chip = (id > 0.86) ? (1.0 - smoothstep(0.002, 0.009, d)) * smoothstep(0.2, 0.4, fbm(u, v, 12, 12, 2, 0.5, 106)) : 0.0;
+        float pin = r < 0.06 ? 1.0 - smoothstep(0.05, 0.14, f1) : 0.0;
+        float wear = smoothstep(-0.05, 0.35, fbm(u, v, 2, 2, 3, 0.5, 120));                         // the walkways
+        float grease = smoothstep(0.12, 0.32, fbm(u + 0.03 * wav, v, 5, 5, 5, 0.55, 121)) * (0.5 + 0.5 * smoothstep(-0.2, 0.3, fbm(u, v, 24, 24, 3, 0.5, 122)));
+        float smear = smoothstep(0.55, 0.9, 1.0 - abs(fbm(u, v, 3, 7, 4, 0.5, 123))) * 0.6;            // wiped mop / shoe smears
+        float scr = streaks(u, v, 128, 0.006 + 0.006 * wear, 104) * smoothstep(-0.2, 0.3, fbm(u, v, 6, 6, 2, 0.5, 105) + wear * 0.4);
+        float nick = (id3 > 0.45 ? 1.0 : 0.0) * smoothstep(0.3, 0.5, fbm(u, v, 160, 160, 2, 0.5, 124));   // tiny dents in the glaze
+        float chip = (1.0 - smoothstep(0.0024, 0.0075, d)) * smoothstep(0.18, 0.38, fbm(u, v, 20, 20, 3, 0.5, 106)) * (id2 > 0.25 ? 1.0 : 0.0);
+        float cx = min(lx, 1.0 - lx), cy = min(ly, 1.0 - ly);
+        float corner = 1.0 - smoothstep(0.015, 0.11, hypot(cx, cy));
+        float dust = clamp(corner * (0.6 + 0.8 * fbm(u, v, 96, 96, 3, 0.6, 126)), 0.0, 1.0);
+        float dirtband = (1.0 - smoothstep(0.0024, 0.011, d)) * (0.6 + 0.4 * fbm(u, v, 64, 64, 2, 0.5, 127));
+        float speck = hs(floor(u * 2048.0), floor(v * 2048.0), 109) - 0.5;
         float mot = fbm(u, v, 16, 16, 4, 0.55, 107);
         color tc = (Mat == 10) ? lc(0.88, 0.82, 0.71) : lc(0.62, 0.60, 0.58);
-        tc *= 0.93 + 0.14 * id + mot * 0.10 + (hs(floor(u * 2048.0), floor(v * 2048.0), 109) - 0.5) * 0.05;
-        tc *= 1.0 - 0.12 * (1.0 - smoothstep(0.0024, 0.009, d)) - 0.06 * smoothstep(0.1, 0.5, fbm(u, v, 3, 3, 4, 0.5, 110));
+        tc *= color(0.86 + 0.26 * id, 0.86 + 0.24 * id + 0.03 * (id2 - 0.5), 0.86 + 0.22 * id + 0.06 * (id3 - 0.5));   // each tile its own tone
+        float film = fbm(u, v, 128, 128, 3, 0.6, 129);                                                  // a thin dirt film the ant walks on
+        float k1, k2, kq; worley(u, v, 700, 700, 130, k1, k2, kq);
+        float crumbs = (kq < 0.05 ? 1.0 - smoothstep(0.1, 0.3, k1) : 0.0) * smoothstep(0.0, 0.35, fbm(u, v, 12, 12, 2, 0.5, 131));   // grains of dirt, crumbs
+        tc *= 1.0 + mot * 0.08 + speck * 0.10 + film * 0.08;
+        tc = mix(tc, lc(0.38, 0.30, 0.22), crumbs * 0.55);
         if (Mat == 11) { tc *= 1.0 + 0.25 * (smoothstep(0.55, 0.6, hs(floor(u * 1024.0), floor(v * 1024.0), 108)) - 0.2); }
-        color gr = lc(0.55, 0.52, 0.47) * (1.0 + sand * 0.2);
-        H = edge * (0.6 + wav * 0.08) + scr * -0.03 - pin * 0.08 - chip * 0.25 + grout * sand * 0.05;
+        tc = mix(tc, tc * color(0.80, 0.74, 0.62), grease * 0.55);                                      // greasy, yellow-brown
+        tc = mix(tc, tc * 0.86, smear);
+        tc = mix(tc, tc * color(1.04, 1.03, 1.02), wear * 0.5);                                          // worn glaze reads paler
+        tc *= 1.0 - 0.38 * dirtband - 0.22 * scr;
+        tc = mix(tc, lc(0.62, 0.60, 0.56), dust * 0.55);
+        color gr = mix(lc(0.42, 0.38, 0.32), lc(0.20, 0.17, 0.13), smoothstep(-0.3, 0.4, fbm(u, v, 48, 48, 3, 0.5, 128))) * (1.0 + sand * 0.25);
+        H = edge * (0.6 + wav * 0.08) - scr * 0.08 - pin * 0.1 - chip * 0.35 - nick * 0.03 + grout * sand * 0.05 + dust * 0.03 + crumbs * 0.08 + film * 0.02;
         C = mix(tc, gr, grout);
-        C = mix(C, lc(0.70, 0.66, 0.60), chip * 0.7);
-        R = mix(0.22 + scr * 0.1 + mot * 0.03 + 0.18 * smoothstep(0.0, 0.5, fbm(u, v, 4, 4, 4, 0.5, 111)), 0.92, max(grout, chip));
+        C = mix(C, lc(0.72, 0.67, 0.58) * (0.9 + 0.2 * sand), chip * 0.85);                             // the biscuit under a chip
+        R = 0.2 + mot * 0.03 + scr * 0.18 + wear * 0.3 - grease * 0.12 + smear * 0.08 + dust * 0.35;
+        R = mix(R, 0.93, max(grout, chip));
     }
-    else if (Mat == 12)   // Oak: oiled butcher-block worktop, 12 strips x 2 pieces, 0.58 m (1100 uu)
+    else if (Mat == 12)   // Oak: oiled butcher-block worktop, 12 strips x 2 pieces, 0.58 m (1100 uu): used, stained, cut
     {
         float lu, lv, e;
         boards(u, v, 12, 2, 121, lu, lv, d, e, id);
         float late = woodgrain(lu * 0.29, lv * 0.048 + id * 3.0, id * 31.0, 220.0, pr);
         float seam = 1.0 - smoothstep(0.0, 0.0012, min(d, e));
+        float grime = 1.0 - smoothstep(0.0012, 0.006, min(d, e));
+        float worn = smoothstep(-0.1, 0.35, fbm(u, v, 3, 3, 4, 0.5, 125));                              // dried-out, paler where used most
+        float oil = smoothstep(0.15, 0.35, fbm(u, v, 5, 5, 4, 0.55, 126));                              // dark oily / wet patches
+        float rr1, rr2, rq; worley(u, v, 5, 5, 127, rr1, rr2, rq);
+        float ring = rq < 0.35 ? (1.0 - smoothstep(0.0, 0.025, abs(rr1 - 0.3 - 0.1 * rq))) * smoothstep(-0.3, 0.2, fbm(u, v, 20, 20, 2, 0.5, 128)) : 0.0;   // cup rings
+        float cut = streaks(u, v, 96, 0.004, 129) * smoothstep(-0.1, 0.3, fbm(u, v, 8, 8, 2, 0.5, 130)) * (0.4 + 0.6 * worn);   // knife marks
         color wc = mix(lc(0.56, 0.36, 0.20), lc(0.36, 0.20, 0.10), late * 0.8) * (0.85 + 0.3 * id);
-        H = -late * 0.25 - pr * 0.15 - seam * 0.5 + fbm(u, v, 64, 8, 2, 0.5, 122) * 0.05;
+        wc = mix(wc, wc * color(1.18, 1.15, 1.1), worn * 0.45);
+        wc = mix(wc, wc * 0.7, oil * 0.6);
+        wc *= 1.0 - 0.35 * ring - 0.3 * grime;
+        wc = mix(wc, wc * color(1.25, 1.2, 1.15), cut * 0.5);                                            // fresh cuts show pale fibre
+        H = -late * 0.25 - pr * 0.15 - seam * 0.5 - cut * 0.12 + fbm(u, v, 64, 8, 2, 0.5, 122) * 0.05;
         C = wc * (1.0 - pr * 0.18) * (1.0 - seam * 0.4);
-        R = 0.32 + late * 0.08 + pr * 0.1;
+        R = 0.32 + late * 0.08 + pr * 0.1 + worn * 0.25 - oil * 0.12 + cut * 0.15 + ring * 0.08;
     }
     else if (Mat == 13)   // TableWood: worn table top, 4 boards along the tile, 0.68 m (1300 uu)
     {
