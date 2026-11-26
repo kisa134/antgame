@@ -25,6 +25,9 @@ struct FAntTrailLine
 	/** Still being laid by its owner (drawn, no workers yet). */
 	UPROPERTY() bool bLaying = false;
 	UPROPERTY() uint16 Id = 0;
+	/** Delivered home along this trail so far: pieces and their food value (the trail's counter, KAN-32). */
+	UPROPERTY() int32 Delivered = 0;
+	UPROPERTY() int32 DeliveredValue = 0;
 	// server
 	TArray<float> Dist;      // distance from the nest at each point
 	float Length = 0.f;
@@ -41,6 +44,8 @@ struct FAntFerry
 	UPROPERTY() float Speed = 150.f;
 	UPROPERTY() FColor Color = FColor::White;
 	UPROPERTY() uint8 Size = 10;       // radius of the crumb drawn
+	/** Brought to the trail by a squad (drawn with a ring: the hand-off), not picked up by the trail's own workers. */
+	UPROPERTY() bool bFromSquad = false;
 	// server
 	TWeakObjectPtr<AKitchenLoot> Load;
 };
@@ -94,6 +99,14 @@ public:
 	/** Where a ferry is now (every machine). */
 	bool FerryPos(const FAntFerry& F, float Now, FVector& Out) const;
 	const FAntTrailLine* LineById(uint16 Id) const;
+	/** The point of this player's working trails (finished, with workers) nearest to P, within MaxDist (2D). Its distance from
+	 *  the nest along the trail goes to OutAlong. False: none. */
+	bool NearestTrailPoint(const APlayerState* PS, const FVector& P, float MaxDist, FVector& OutPoint, uint16& OutTrail, float* OutAlong = nullptr) const;
+	/** Server: a squad brought this load to the trail: its workers take it from here and walk it home (a heavy one slowly).
+	 *  False: refused (no such trail, the cake, already held). */
+	bool HandOff(AKitchenLoot* Load, uint16 Trail);
+	/** Server time on every machine (the ferries move by it). */
+	float NetNow() const;
 
 private:
 	UFUNCTION() void OnRep_Lines();
@@ -131,8 +144,31 @@ private:
 	UPROPERTY() TArray<UStaticMeshComponent*> FerryAnts;
 	UPROPERTY() TArray<UMaterialInstanceDynamic*> FerryMIDs;
 	UPROPERTY() TArray<UMaterialInstanceDynamic*> MIDs;
+	/** The direction of the flow: glowing dashes along each working trail, gliding towards the nest like a conveyor's belt
+	 *  (walked by the swarm's GPU material, as the workers are: no cost per frame). */
+	UPROPERTY() UInstancedStaticMeshComponent* Flow = nullptr;
+	/** A gold disc under every load on its way home: food being hauled reads from far away. */
+	UPROPERTY() TArray<UStaticMeshComponent*> FerryRings;
 	bool bHasMaterial = false;
 	float TimeSync = 0.f;
+};
+
+/** A read-only view of one pheromone trail for the HUD and the minimap (every machine). */
+struct FAntTrailView
+{
+	uint16 Id = 0;
+	const APlayerState* Owner = nullptr;
+	/** Nest first, the far end last. */
+	TArray<FVector> Points;
+	float Length = 0.f;
+	int32 Workers = 0;
+	/** Still being laid (no workers yet). */
+	bool bLaying = false;
+	/** Pieces delivered home along it so far, and their food value. */
+	int32 Delivered = 0;
+	int32 DeliveredValue = 0;
+	/** The loads on their way home along it right now: where each is. */
+	TArray<FVector> Loads;
 };
 
 namespace AntTrail
@@ -141,4 +177,8 @@ namespace AntTrail
 	ANTKITCHEN_API bool OnToggleKey(AAntCharacter* Ant);
 	ANTKITCHEN_API bool OnRecallKey(AAntCharacter* Ant);
 	ANTKITCHEN_API void OnBlow(UWorld* World, const FVector& Center, float Radius);
+	/** Every trail of the raid (OnlyOwner: only that player's), with its counter and the loads moving on it. Every machine. */
+	ANTKITCHEN_API void GetTrails(const UWorld* World, TArray<FAntTrailView>& Out, const APlayerState* OnlyOwner = nullptr);
+	/** The local player's HUD: a label over every trail (workers, on the way, delivered). Called from AntRts::DrawHud. */
+	ANTKITCHEN_API void DrawHud(class AHUD* Hud, class UCanvas* Canvas, class APlayerController* PC);
 }

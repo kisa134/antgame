@@ -30,6 +30,7 @@
 #include "Camera/CameraActor.h"
 #include "GameFramework/HUD.h"
 #include "Camera/CameraComponent.h"
+#include "AntDifficulty.h"
 
 // The fighter: ranks, perks, medals, cosmetics, the profile and the server's side of the raid (docs/FIGHTER.md).
 // The veterans' own rules are in AntVeterans.cpp, the screens in AntFighterUi.cpp, the dressing in AntCosmetics.cpp.
@@ -1309,6 +1310,12 @@ namespace AntFighter
 			if (Line && Line->bCameHome) { Xs.Add({ 50, TEXT("вернулся живым") }); }
 			Xs.Add({ 20, TEXT("вышел в рейд") });
 			for (uint8 F : T.Feats) { Xs.Add({ AntFeat::Def(F).Xp + (T.NewMedals.Contains(F) ? 100 : 0), FString::Printf(TEXT("%s «%s»"), T.NewMedals.Contains(F) ? TEXT("медаль") : TEXT("подвиг"), AntFeat::Def(F).Name) }); }
+			// The difficulty's bonus (hard: +50 % of the sum).
+			{
+				int32 Sum = 0;
+				for (const FXp& X : Xs) { Sum += X.N; }
+				if (const int32 Bonus = AntDifficulty::BonusXp(PS, Sum)) { Xs.Add({ Bonus, AntDifficulty::XpWhy(PS) }); }
+			}
 			// (before the RPCs: on a listen host they run at once and the profile pushes its new loadout straight back)
 			const int32 XpBefore = PS->Loadout.Xp;
 			const int32 RaidsBefore = PS->Loadout.Raids;

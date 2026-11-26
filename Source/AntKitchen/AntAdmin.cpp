@@ -737,6 +737,10 @@ const TArray<FString>& AntAdmin::Help()
 			TEXT("seed N | seed random | seed info — сид уровня v3"),
 			TEXT("restart — перезапуск уровня (новый сид)"),
 			TEXT("breakaim x y z — сломать предмет у прицела"),
+			TEXT("matter fire|spark|short|live|douse|freeze|oil|flour|info x y z [r] — вещество: огонь, вода, лёд, ток (вкладка «Вещество»)"),
+			TEXT("matter heat x y z [°C] [r] [с] / matter wet x y z [r] / matter soak oil|cola|honey|jam x y z [r]"),
+			TEXT("matter thing napkin|rag|pot|box|plastic|bread x y z — вещь для опытов"),
+			TEXT("state spot wet|char|burn|heat|frost|charge|dirt|damage|spoil 1 x y z [r] — пятно состояния"),
 			TEXT("unfastenaim x y z — открутить все крепежи предмета"),
 			TEXT("chain C1..C6 / state chaos — цепные реакции"),
 			TEXT("fastener list | fastener undo id|all — крепёж"),
@@ -814,7 +818,7 @@ private:
 	AAntCharacter* MyAnt() const { return PC.IsValid() ? Cast<AAntCharacter>(PC->GetPawn()) : nullptr; }
 };
 
-static const TCHAR* GTabNames[] = { TEXT("Я"), TEXT("Телепорт"), TEXT("Спавн"), TEXT("NPC"), TEXT("Мир"), TEXT("Рейд"), TEXT("Колония"), TEXT("Экран") };
+static const TCHAR* GTabNames[] = { TEXT("Я"), TEXT("Телепорт"), TEXT("Спавн"), TEXT("NPC"), TEXT("Мир"), TEXT("Рейд"), TEXT("Колония"), TEXT("Экран"), TEXT("Вещество") };
 static int32 GLastTab = 0;
 
 void SAntAdminPanel::Construct(const FArguments& InArgs)
@@ -1423,6 +1427,46 @@ void SAntAdminPanel::Rebuild()
 		Btn(TEXT("Сбросить колонию (старая — colony.old)"), R(TEXT("colony reset")), Danger);
 		Btn(TEXT("Записать как старое сохранение v1 (тест миграции)"), R(TEXT("colony v1save")));
 		Btn(TEXT("Перечитать сохранение"), R(TEXT("colony reload")));
+	}
+	else if (Tab == 8)   // ---------------------------------------------------------------- matter (KAN-21, docs/MATERIALS.md «Вещество»)
+	{
+		Section(TEXT("Огонь и жар — у прицела"));
+		Btn(TEXT("Поджечь"), RA(TEXT("matter fire")), Danger);
+		Btn(TEXT("Раскалить (800 °C, 8 с)"), [this]() { Run(TEXT("matter heat ") + Aim() + TEXT(" 800 140 8")); }, Danger);
+		Btn(TEXT("Нагреть (250 °C, 10 с)"), [this]() { Run(TEXT("matter heat ") + Aim() + TEXT(" 250 160 10")); });
+		Btn(TEXT("Искра"), RA(TEXT("matter spark")), Danger);
+		Btn(TEXT("Короткое замыкание"), RA(TEXT("matter short")), Danger);
+		Btn(TEXT("Под ток (4 с, без пробок)"), RA(TEXT("matter live")), Danger);
+		Section(TEXT("Вода, холод, жидкости — у прицела"));
+		Btn(TEXT("Плеснуть водой"), RA(TEXT("matter douse")), Blue);
+		Btn(TEXT("Намочить край"), [this]() { Run(TEXT("matter wet ") + Aim() + TEXT(" 90 1")); }, Blue);
+		Btn(TEXT("Заморозить (лёд из лужи)"), RA(TEXT("matter freeze")), Blue);
+		Btn(TEXT("Пропитать маслом"), [this]() { Run(TEXT("matter soak oil ") + Aim() + TEXT(" 120")); });
+		Btn(TEXT("Пропитать колой"), [this]() { Run(TEXT("matter soak cola ") + Aim() + TEXT(" 120")); });
+		Btn(TEXT("Пропитать мёдом"), [this]() { Run(TEXT("matter soak honey ") + Aim() + TEXT(" 120")); });
+		Btn(TEXT("Вымазать вареньем"), [this]() { Run(TEXT("matter soak jam ") + Aim() + TEXT(" 120")); });
+		Btn(TEXT("Лужа масла (0,4 л)"), RA(TEXT("matter oil")));
+		Btn(TEXT("Облако муки"), RA(TEXT("matter flour")), Danger);
+		Section(TEXT("Вещи для опытов — у прицела (до следующего рейда)"));
+		Btn(TEXT("Бумажная салфетка"), [this]() { Run(TEXT("matter thing napkin ") + Aim()); });
+		Btn(TEXT("Тряпка"), [this]() { Run(TEXT("matter thing rag ") + Aim()); });
+		Btn(TEXT("Кастрюля"), [this]() { Run(TEXT("matter thing pot ") + Aim()); });
+		Btn(TEXT("Коробка"), [this]() { Run(TEXT("matter thing box ") + Aim()); });
+		Btn(TEXT("Пластик"), [this]() { Run(TEXT("matter thing plastic ") + Aim()); });
+		Btn(TEXT("Хлеб"), [this]() { Run(TEXT("matter thing bread ") + Aim()); });
+		Section(TEXT("Видимые состояния вручную (слой AntState) — у прицела"));
+		static const TCHAR* St[][2] = { { TEXT("wet"), TEXT("мокрое") }, { TEXT("char"), TEXT("обугленное") }, { TEXT("burn"), TEXT("тлеет") }, { TEXT("heat"), TEXT("раскалённое") },
+			{ TEXT("frost"), TEXT("иней") }, { TEXT("charge"), TEXT("искрит") }, { TEXT("dirt"), TEXT("грязное") }, { TEXT("damage"), TEXT("битое") }, { TEXT("spoil"), TEXT("испорченное") } };
+		for (const auto& S : St)
+		{
+			const FString K(S[0]);
+			Btn(FString(S[1]) + TEXT(" (пятно)"), [this, K]() { Run(TEXT("state spot ") + K + TEXT(" 1 ") + Aim() + TEXT(" 120")); });
+		}
+		Btn(TEXT("Снять ручные состояния"), [this]() { Run(TEXT("state clear 0 ") + Aim() + TEXT(" 400")); }, On);
+		Section(TEXT("Сведения"));
+		Btn(TEXT("Что тут (в лог)"), RA(TEXT("matter info")));
+		Btn(TEXT("Статистика вещества"), R(TEXT("matter stats")));
+		Btn(TEXT("Всё как было (сброс вещества)"), R(TEXT("matter reset")), On);
 	}
 	else   // ---------------------------------------------------------------- screen
 	{

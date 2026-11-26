@@ -181,12 +181,16 @@ return c * k;
 """
 
 # Thin-film interference for the oil: the colour depends on the thickness of the film and on the viewing angle.
+# (KAN-21 run 3: the colours only where the film is really thin, i.e. at the rim of a puddle; a few soft bands, never more than
+#  a pixel can show: the phase is faded out where it changes faster than the screen can draw, which was the moire.)
 IRID = r"""
 float th = max(Th, 0.0);
 float cosv = saturate(dot(normalize(N), normalize(V)));
-float ph = th * 9.0 * (0.55 + 0.45 * cosv) + 0.6 * (1.0 - cosv);
+float ph = th * 0.9 * (0.6 + 0.4 * cosv) + 0.15 * (1.0 - cosv);
 float3 col = 0.5 + 0.5 * cos(6.28318 * (ph * float3(1.0, 1.18, 1.42) + float3(0.0, 0.33, 0.67)));
-return col;
+float fw = fwidth(ph);
+col = lerp(col, float3(0.62, 0.6, 0.55), saturate(fw * 3.0 - 0.3));
+return lerp(float3(0.8, 0.78, 0.72), col, 0.55);
 """
 
 def build_liquid():
@@ -280,7 +284,7 @@ def build_liquid():
     # how much of the surface the top layer covers: foam, or the film of oil
     # what lies on the water: foam (white) and the oil film (interference colours), each by its own coverage; clear water shows neither
     SURF = r"""
-float oil = saturate(Th * 6.0) * 0.32;
+float oil = smoothstep(0.02, 0.25, Th) * (1.0 - smoothstep(0.6, 2.2, Th)) * 0.16;   // a thin film: only the rim, faint
 float c = max(Foam, oil);
 float3 col = (Ir * oil + Top * Foam) / max(oil + Foam, 1e-3);
 return float4(col, c);

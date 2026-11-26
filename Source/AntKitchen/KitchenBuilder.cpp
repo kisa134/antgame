@@ -6,6 +6,7 @@
 #include "KitchenArt.h"
 #include "LevelV2.h"
 #include "LevelV3.h"
+#include "AntLab.h"
 #include "KitchenFixture.h"
 #include "Map4Look.h"
 #include "AntLife.h"
@@ -71,6 +72,12 @@ AKitchenBuilder::AKitchenBuilder()
 void AKitchenBuilder::BeginPlay()
 {
 	Super::BeginPlay();
+	if (AntLab::Get())
+	{
+		bLab = true;
+		BuildLab();   // KAN-37: the grey-box flat of the lab variant instead of the kitchen (KitchenBuilderLab.cpp)
+		return;
+	}
 	Build();
 	AntLife::Spawn(GetWorld());   // the living flat: the TV, the world outside, the small life of the rooms (AntLife.h)
 }
@@ -82,6 +89,10 @@ void AKitchenBuilder::BeginPlay()
 // Level v2: the fire ants' nest is the red anthill in yard B (SM_Y_AntHill), not a mound in the kitchen. The box-built kitchen keeps the old place.
 FVector AKitchenBuilder::NestLocation(uint8 Team)
 {
+	if (const FAntLabVariant* Lab = AntLab::Get())
+	{
+		return Team == 0 ? Lab->Nest : Lab->Origin + FVector(0.f, -80000.f, 0.f);   // the lab has no red hill: far away and out of reach
+	}
 	if (Team == 0)
 	{
 		return FVector(-7900.f, -2500.f, 0.f);
@@ -107,8 +118,21 @@ void AKitchenBuilder::HeavySpots(TArray<FVector>& Out)
 	Out.Add(FVector(1000.f, -900.f, 1430.f));   // on the table: drop it down!
 	Out.Add(FVector(-4000.f, -1600.f, 0.f));    // near our nest
 }
+float AKitchenBuilder::NestRadius(uint8 Team)
+{
+	if (const FAntLabVariant* Lab = AntLab::Get())
+	{
+		return Team == 0 ? Lab->NestRadius : 560.f;
+	}
+	return Team == 0 ? 950.f : 560.f;
+}
+
 FVector AKitchenBuilder::HomeFor(uint8 Team, const FVector& From)
 {
+	if (AntLab::Get() && Team == 0)
+	{
+		return AntLab::HomeFor(From);   // the lab: the nearer of the nest's two entrances
+	}
 	if (Team == 0 && KitchenArt::Enabled() && Region(From) == 2)
 	{
 		return LevelV2::SouthEntrance();
@@ -119,17 +143,25 @@ FVector AKitchenBuilder::HomeFor(uint8 Team, const FVector& From)
 // Level v2: the poop lies in yard A by a stepping stone, the bin stands at the east end of yard B.
 FVector AKitchenBuilder::YardPoop() { return KitchenArt::Enabled() ? FVector(1300.f, -8300.f, 0.f) : FVector(-3000.f, -9500.f, 0.f); }
 FVector AKitchenBuilder::YardBin() { return KitchenArt::Enabled() ? FVector(18600.f, -11000.f, 0.f) : FVector(4200.f, -13000.f, 0.f); }
-FVector AKitchenBuilder::HumanSpawn() { return FVector(3800.f, -3200.f, 1720.f); }
-FVector AKitchenBuilder::HumanFleePoint() { return FVector(5600.f, -4200.f, 1720.f); }
+FVector AKitchenBuilder::HumanSpawn() { if (const FAntLabVariant* Lab = AntLab::Get()) { return FVector(Lab->HumanSpawn, Lab->Origin.Z + 1720.f); } return FVector(3800.f, -3200.f, 1720.f); }
+FVector AKitchenBuilder::HumanFleePoint() { if (AntLab::Get()) { return HumanSpawn(); } return FVector(5600.f, -4200.f, 1720.f); }
 FBox AKitchenBuilder::HotBurner() { return FBox(FVector(-610.f, 3240.f, 1735.f), FVector(-90.f, 3760.f, 1900.f)); }
 FBox AKitchenBuilder::PlayArea()
 {
+	if (AntLab::Get())
+	{
+		return AntLab::PlayArea();
+	}
 	const FBox2D B = LevelV2::WanderBox(0);   // level v2: the east end belongs to the rubbish corner now (x up to 5000, it was 6200)
 	return FBox(FVector(B.Min.X, B.Min.Y, 0.f), FVector(KitchenArt::Enabled() ? B.Max.X : 6200.f, B.Max.Y, 0.f));
 }
 
 FVector AKitchenBuilder::RandomFloorPoint(FRandomStream* Rng)
 {
+	if (AntLab::Get())
+	{
+		return AntLab::RandomFloorPoint(Rng);
+	}
 	auto R = [Rng](float A, float B) { return Rng ? Rng->FRandRange(A, B) : FMath::FRandRange(A, B); };
 	// ~60% kitchen, ~40% living room.
 	if (R(0.f, 1.f) < 0.6f)
@@ -147,6 +179,10 @@ FVector AKitchenBuilder::RandomFloorPoint(FRandomStream* Rng)
 
 int32 AKitchenBuilder::Region(const FVector& P)
 {
+	if (AntLab::Get())
+	{
+		return AntLab::InHouse(P) ? 0 : 2;   // the lab: the whole flat (loggia too) is one region; the graph does the routing
+	}
 	if (P.Y < -5150.f && (P.X < 7100.f || P.Y < -9150.f))
 	{
 		return 2;   // the yard: A under the kitchen window, B behind the living room (level v2)
@@ -160,6 +196,10 @@ int32 AKitchenBuilder::Region(const FVector& P)
 
 FVector AKitchenBuilder::RandomYardPoint(FRandomStream* Rng)
 {
+	if (AntLab::Get())
+	{
+		return AntLab::RandomFloorPoint(Rng);
+	}
 	auto R = [Rng](float A, float B) { return Rng ? Rng->FRandRange(A, B) : FMath::FRandRange(A, B); };
 	if (!KitchenArt::Enabled())
 	{
@@ -246,6 +286,10 @@ namespace
 
 FVector AKitchenBuilder::Route(const FVector& From, const FVector& To, bool bFlying)
 {
+	if (AntLab::Get())
+	{
+		return AntLab::Route(From, To);   // the lab: room to room over the variant's route graph
+	}
 	const int32 RF = Region(From), RT = Region(To);
 	const bool bV2 = KitchenArt::Enabled();
 	if (RF == RT)
@@ -1914,6 +1958,11 @@ void AKitchenBuilder::BuildLivingRoom()
 
 void AKitchenBuilder::EnvironmentFor(const AAntCharacter* Ant, FAntEnv& Env)
 {
+	if (AntLab::Get())
+	{
+		AntLab::EnvironmentFor(Ant, Env);   // the lab: the variant's zones (heat, cold, water, steam)
+		return;
+	}
 	if (const UAntFluidWorld* Fluid = UAntFluidWorld::Get(Ant)) { Fluid->AffectAnt(Ant, Env); }   // the liquid prototype (-AntFluid)
 	const FVector P = Ant->GetActorLocation();
 	const bool bV2 = KitchenArt::Enabled();
@@ -1978,6 +2027,10 @@ void AKitchenBuilder::EnvironmentFor(const AAntCharacter* Ant, FAntEnv& Env)
 void AKitchenBuilder::SetMainLights(bool bOn)
 {
 	bMainOn = bOn;
+	if (bLab)
+	{
+		return;   // the lab's grey box has its own plain lights
+	}
 	ApplyLights();
 }
 
@@ -2348,6 +2401,10 @@ void AKitchenBuilder::UpdateMounds(float Dt)
 void AKitchenBuilder::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	if (bLab)
+	{
+		return;   // the lab: nothing of the kitchen's life (time of day, drips, mounds) runs
+	}
 	FlatBoxTimer -= DeltaSeconds;
 	if (FlatBoxTimer <= 0.f)
 	{
@@ -2667,7 +2724,7 @@ void AKitchenBuilder::SetArtShown(int32 Inst, bool bShown)
 
 void AKitchenBuilder::ApplyV3Layout()
 {
-	if (!bBuilt || !LevelV3::Enabled())
+	if (!bBuilt || bLab || !LevelV3::Enabled())
 	{
 		return;
 	}

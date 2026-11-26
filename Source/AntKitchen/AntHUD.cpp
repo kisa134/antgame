@@ -41,6 +41,7 @@
 #include "AntFighterUi.h"
 #include "AntReact.h"
 #include "AntTutorial.h"
+#include "AntColonyVote.h"
 
 namespace
 {
@@ -241,6 +242,7 @@ void AAntHUD::DrawHUD()
 	{
 		DrawRaid(Raid, GS, Me);
 		AntFighterUi::DrawNest(this, Canvas, PC, Raid->Phase == AntRaidPhase::Results);   // the fighter's screens, the post-raid highlights (AntFighterUi.h)
+		if (Raid->Phase == AntRaidPhase::Nest) { AntColonyVote::DrawHud(this, Canvas, PC); }   // the colony vote's slip, over every nest screen (KAN-31)
 		DrawToastsAndNumbers(PC);
 		return;
 	}

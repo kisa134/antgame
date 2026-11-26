@@ -1,9 +1,54 @@
 ﻿#include "AntRoutes.h"
 #include "KitchenBuilder.h"
 #include "LevelV2.h"
+#include "AntLab.h"
 
 namespace AntRoutes
 {
+
+namespace
+{
+	// KAN-37: a lab variant brings its own graph (AntLab.h); the same queries walk it. Hatches shut = their edges are cut.
+	struct FLabGraph
+	{
+		const FAntLabVariant* For = nullptr;
+		TArray<FNode> Nodes;
+		TArray<FEdge> Edges;
+		TArray<FString> Gates;      // per edge, "" = always open
+		TArray<FString> Rooms;      // per node
+		TArray<bool> Holes;         // per node: in a wall or up high (not for a squad walking as a column)
+		int32 Nest = 0, South = 0;
+	};
+	FLabGraph GLabGraph;
+	const FLabGraph* LabGraph()
+	{
+		const FAntLabVariant* V = AntLab::Get();
+		if (!V)
+		{
+			return nullptr;
+		}
+		FLabGraph& G = GLabGraph;
+		if (G.For != V)
+		{
+			G = FLabGraph();
+			G.For = V;
+			for (const FAntLabNode& N : V->Nodes)
+			{
+				G.Nodes.Add({ (float)N.At.X, (float)N.At.Y, (float)N.At.Z, *N.Name });   // (the names live in the variant, as long as it does)
+				G.Rooms.Add(N.Room);
+				G.Holes.Add(N.bHole);
+			}
+			for (const FAntLabEdge& E : V->Edges)
+			{
+				G.Edges.Add({ E.A, E.B, E.RouteKind, E.Run, E.Seen });
+				G.Gates.Add(E.Gate);
+			}
+			G.Nest = FMath::Max(0, V->NodeIndex(TEXT("nest")));
+			G.South = FMath::Max(0, V->NodeIndex(TEXT("nest2")));
+		}
+		return &G;
+	}
+}
 
 namespace
 {
@@ -107,18 +152,23 @@ namespace
 	static const int32 JunctionList[] = { N_UnderTable, N_FridgeGap, N_Threshold, N_Corner };
 }
 
-int32 NumNodes() { return N_Count; }
-const FNode& Node(int32 Index) { return Nodes[FMath::Clamp(Index, 0, N_Count - 1)]; }
+int32 NumNodes() { if (const FLabGraph* G = LabGraph()) { return G->Nodes.Num(); } return N_Count; }
+const FNode& Node(int32 Index) { if (const FLabGraph* G = LabGraph()) { return G->Nodes[FMath::Clamp(Index, 0, G->Nodes.Num() - 1)]; } return Nodes[FMath::Clamp(Index, 0, N_Count - 1)]; }
 FVector Point(int32 Index) { const FNode& N = Node(Index); return FVector(N.X, N.Y, N.Z); }
-TConstArrayView<FEdge> Edges() { return TConstArrayView<FEdge>(EdgeTable, UE_ARRAY_COUNT(EdgeTable)); }
-TConstArrayView<int32> Junctions() { return TConstArrayView<int32>(JunctionList, UE_ARRAY_COUNT(JunctionList)); }
+TConstArrayView<FEdge> Edges() { if (const FLabGraph* G = LabGraph()) { return G->Edges; } return TConstArrayView<FEdge>(EdgeTable, UE_ARRAY_COUNT(EdgeTable)); }
+TConstArrayView<int32> Junctions() { if (LabGraph()) { return TConstArrayView<int32>(); } return TConstArrayView<int32>(JunctionList, UE_ARRAY_COUNT(JunctionList)); }
 bool IsJunction(int32 Index) { return Junctions().Contains(Index); }
-int32 NestNode() { return N_Crack; }
-int32 SouthNode() { return N_Corner; }
-int32 HillNode() { return N_Hill; }
+int32 NestNode() { if (const FLabGraph* G = LabGraph()) { return G->Nest; } return N_Crack; }
+int32 SouthNode() { if (const FLabGraph* G = LabGraph()) { return G->South; } return N_Corner; }
+int32 HillNode() { if (const FLabGraph* G = LabGraph()) { return G->Nest; } return N_Hill; }
 
 int32 Find(const TCHAR* Name)
 {
+	if (const FLabGraph* G = LabGraph())
+	{
+		for (int32 i = 0; i < G->Nodes.Num(); ++i) { if (FCString::Strcmp(G->Nodes[i].Name, Name) == 0) { return i; } }
+		return INDEX_NONE;
+	}
 	for (int32 i = 0; i < N_Count; ++i)
 	{
 		if (FCString::Strcmp(Nodes[i].Name, Name) == 0) { return i; }
@@ -130,6 +180,21 @@ int32 Nearest(const FVector& P)
 {
 	// The passages (cracks, the corridor in the wall, the flap) sit in walls where "which room" is anybody's guess: a node counts
 	// as being in the same part of the house if it is, or if it is one of those and close.
+	if (const FLabGraph* G = LabGraph())
+	{
+		// the lab: the nearest node of the same room (a floor node if there is one)
+		const int32 Room = AntLab::RoomIndexAt(P, 30.f);
+		const FString RoomId = (Room != INDEX_NONE) ? G->For->Rooms[Room].Id : FString();
+		int32 LBest = INDEX_NONE, LAny = 0;
+		float LBestD = 1.e18f, LAnyD = 1.e18f;
+		for (int32 i = 0; i < G->Nodes.Num(); ++i)
+		{
+			const float D = (float)FVector::DistSquared(P, Point(i)) + (G->Holes[i] ? 4.e6f : 0.f);
+			if (D < LAnyD) { LAnyD = D; LAny = i; }
+			if (D < LBestD && (RoomId.IsEmpty() || G->Rooms[i] == RoomId)) { LBestD = D; LBest = i; }
+		}
+		return LBest != INDEX_NONE ? LBest : LAny;
+	}
 	const int32 Region = AKitchenBuilder::Region(P);
 	int32 Best = INDEX_NONE, BestAny = 0;
 	float BestD = 1.e12f, BestAnyD = 1.e12f;
@@ -153,6 +218,35 @@ namespace
 bool Path(int32 From, int32 To, bool bSafe, TArray<int32>& Out, float* OutSeconds, uint32 Flags)
 {
 	Out.Reset();
+	if (const FLabGraph* G = LabGraph())
+	{
+		// the lab's graph: the same Dijkstra on arrays of its own size; shut hatches cut their edges
+		const int32 N = G->Nodes.Num();
+		if (From < 0 || From >= N || To < 0 || To >= N) { return false; }
+		TArray<float> Cost, Time; TArray<int32> Prev; TArray<bool> Done;
+		Cost.Init(1.e9f, N); Time.Init(0.f, N); Prev.Init(INDEX_NONE, N); Done.Init(false, N);
+		Cost[From] = 0.f;
+		for (int32 Step = 0; Step < N; ++Step)
+		{
+			int32 U = INDEX_NONE;
+			for (int32 i = 0; i < N; ++i) { if (!Done[i] && Cost[i] < 1.e8f && (U == INDEX_NONE || Cost[i] < Cost[U])) { U = i; } }
+			if (U == INDEX_NONE || U == To) { break; }
+			Done[U] = true;
+			for (int32 e = 0; e < G->Edges.Num(); ++e)
+			{
+				const FEdge& E = G->Edges[e];
+				const int32 V = E.A == U ? E.B : E.B == U ? E.A : INDEX_NONE;
+				if (V == INDEX_NONE || Done[V] || !AntLab::GateOpen(G->Gates[e])) { continue; }
+				if ((Flags & FloorOnly) && (E.Kind == InWall || G->Holes[E.A] || G->Holes[E.B])) { continue; }
+				const float C = Cost[U] + E.Run + (bSafe ? E.Seen * 4.f : 0.f);
+				if (C < Cost[V]) { Cost[V] = C; Time[V] = Time[U] + E.Run; Prev[V] = U; }
+			}
+		}
+		if (Cost[To] >= 1.e8f) { return false; }
+		for (int32 At = To; At != INDEX_NONE; At = Prev[At]) { Out.Insert(At, 0); }
+		if (OutSeconds) { *OutSeconds = Time[To]; }
+		return true;
+	}
 	if (From < 0 || From >= N_Count || To < 0 || To >= N_Count)
 	{
 		return false;

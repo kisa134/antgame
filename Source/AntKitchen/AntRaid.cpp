@@ -31,12 +31,16 @@
 #include "Misc/Parse.h"
 #include "EngineUtils.h"
 #include "Engine/World.h"
+#include "Engine/OverlapResult.h"
 #include "TimerManager.h"
 #include "NpcRoutine.h"
 #include "AntSnowball.h"
 #include "AntColony.h"
 #include "AntFighter.h"
 #include "AntTutorial.h"
+#include "AntLab.h"
+#include "AntDifficulty.h"
+#include "AntColonyVote.h"
 
 namespace
 {
@@ -76,6 +80,11 @@ bool AAntRaid::HillOpen()
 float AAntRaid::ClanRespawn() const
 {
 	return InRaid() ? TierDef().ClanRespawn : 5.f;
+}
+
+const AntTier::FDef& AAntRaid::TierDef() const
+{
+	return AntDifficulty::Scaled(this, Tier);   // (Normal: the tier's own row)
 }
 
 AAntRaid::AAntRaid()
@@ -204,6 +213,8 @@ void AAntRaid::ServerInit(AAntKitchenGameMode* InGM)
 {
 	GM = InGM;
 	GHillOpen = false;
+	AntDifficulty::Info(this);   // the two small replicated carriers exist from the start (the lobby reads them on every machine)
+	AntColonyVote::Info(this);
 	static bool bResetDone = false;   // once per process: the menu reloads the map
 	if (!bResetDone && FParse::Param(FCommandLine::Get(), TEXT("AntNestReset")))
 	{
@@ -316,7 +327,7 @@ void AAntRaid::EnterNest(bool bFirst)
 			if (Ant && !Ant->bDead && Ant->Creature == 0)
 			{
 				Ant->LetGo();
-				Ant->ApplyTeleport(AKitchenBuilder::NestLocation(0) + FVector(FMath::FRandRange(150.f, 350.f), FMath::FRandRange(-250.f, 250.f), 60.f));
+				Ant->ApplyTeleport(AntLab::Get() ? AntLab::SpawnPoint() : AKitchenBuilder::NestLocation(0) + FVector(FMath::FRandRange(150.f, 350.f), FMath::FRandRange(-250.f, 250.f), 60.f));
 			}
 			else if (!Cast<AHumanCharacter>(PC->GetPawn()) && (!Ant || Ant->bDead))
 			{
@@ -473,7 +484,7 @@ void AAntRaid::OnWorldReset()
 	const AntTier::FDef& T = TierDef();
 	const int32 Players = FMath::Max(1, GM->GetNumPlayers());
 	S->Shift = RaidNo;
-	S->Larvae = Nest.Larvae;
+	S->Larvae = AntDifficulty::LarvaeOut(this, Nest.Larvae);   // casual lends two, hard keeps one at home
 	S->ShiftStage = 0;
 	S->bQuotaMet = false;
 	// the cake, and side loot for every mouth (+40 % a player up to four, +25 % each from five to eight)
@@ -683,7 +694,7 @@ void AAntRaid::CountStartCost()
 
 void AAntRaid::StartClan()
 {
-	if (!InRaid() || !GM || FParse::Param(FCommandLine::Get(), TEXT("AntNoClan")) || AntTut::OwnsRaid(this))   // (dev: a raid without the red clan; the training)
+	if (!InRaid() || !GM || FParse::Param(FCommandLine::Get(), TEXT("AntNoClan")) || AntTut::OwnsRaid(this) || AntLab::Get())   // (KAN-37 lab: no red clan)   // (dev: a raid without the red clan; the training)
 	{
 		return;
 	}
@@ -1156,6 +1167,7 @@ void AAntRaid::OnPlayerDied(AAntCharacter* Ant, const FString& How)
 	LineOf(Ant).Deaths++;
 	AntColony::AddFallen(Nest, Ant->GetDisplayName(), RaidNo, How);
 	AntSquad::OnCommanderDied(Ant);   // half of his squad scatter, the rest wait by the body
+	AntRts::NoteOwnerDied(Ant);       // he comes back as one of his squad ants near here, if one is alive (AntRts::RespawnInSquad)
 	const FString Place = PlaceName(Ant->GetActorLocation());
 	Note(FString::Printf(TEXT("%s — %s %s%s"), *Clock(), *Ant->GetDisplayName(), *How, Place.IsEmpty() ? TEXT("") : *FString::Printf(TEXT(" (%s)"), *Place)));
 }
@@ -1300,7 +1312,7 @@ void AAntRaid::BuildResult(uint8 How)
 		for (int32 k = 0; k < AntFoodKind::Count; ++k) { AntColony::AddFood(Nest, (uint8)k, R.Kinds[k]); }
 	}
 	Nest.Jelly += R.Jelly;
-	Nest.Larvae = FMath::Clamp(S->Larvae, 0, AntNest::MaxLarvae);
+	Nest.Larvae = FMath::Clamp(AntDifficulty::LarvaeHome(this, S->Larvae, Nest.Larvae), 0, AntNest::MaxLarvae);   // (the lent ones are not kept)
 	R.LarvaeLeft = Nest.Larvae;
 	Nest.Raids = RaidNo;
 	Nest.Wipes += bWiped ? 1 : 0;
@@ -1371,6 +1383,11 @@ void AAntRaid::PlayerCommand(AAntPlayerController* PC, uint8 Cmd, int32 A, int32
 {
 	AAntGameState* S = GS();
 	if (!PC || !S || !GM)
+	{
+		return;
+	}
+	// The difficulty (host, in the nest) and the colony vote (KAN-31: with votes on, a build is a proposal the squad decides).
+	if (AntDifficulty::Command(this, PC, Cmd, A) || AntColonyVote::Command(this, PC, Cmd, A, B))
 	{
 		return;
 	}
@@ -1748,6 +1765,26 @@ bool AAntRaid::DevCommand(const TArray<FString>& A)
 			UE_LOG(LogTemp, Display, TEXT("ANTSQUAD dev bridge to %s: %s, squad now %d"), *FVector(Num(2), Num(3), Num(4)).ToCompactString(), Ch ? TEXT("built") : TEXT("refused"), Sq->Count);
 		}
 		else if (Sub == TEXT("kill") && Sq) { Sq->Lose((int32)Num(2, 1.f)); }
+		else if (Sub == TEXT("probe") && A.Num() >= 6)
+		{
+			// squad probe x0 y0 x1 y1 [ztop]: every solid thing in that floor box (to see what a squad ant gets caught on)
+			const FVector Lo(FMath::Min(Num(2), Num(4)), FMath::Min(Num(3), Num(5)), -50.f);
+			const FVector Hi(FMath::Max(Num(2), Num(4)), FMath::Max(Num(3), Num(5)), Num(6, 400.f));
+			TArray<FOverlapResult> Ov;
+			FCollisionObjectQueryParams Obj(FCollisionObjectQueryParams::AllObjects);
+			GetWorld()->OverlapMultiByObjectType(Ov, (Lo + Hi) * 0.5f, FQuat::Identity, Obj, FCollisionShape::MakeBox((Hi - Lo) * 0.5f));
+			for (const FOverlapResult& O : Ov)
+			{
+				const UPrimitiveComponent* C = O.GetComponent();
+				if (!C || Cast<APawn>(O.GetActor())) { continue; }
+				const UStaticMeshComponent* SM = Cast<UStaticMeshComponent>(C);
+				const FBox B = C->Bounds.GetBox();
+				UE_LOG(LogTemp, Display, TEXT("ANTSQUAD probe: %s / %s mesh %s profile %s type %d enabled %d mobility %d pawn-block %d box (%.0f,%.0f,%.0f)-(%.0f,%.0f,%.0f)"), *GetNameSafe(O.GetActor()), *C->GetName(),
+					SM && SM->GetStaticMesh() ? *SM->GetStaticMesh()->GetName() : TEXT("-"), *C->GetCollisionProfileName().ToString(), (int32)C->GetCollisionObjectType(), (int32)C->GetCollisionEnabled(),
+					(int32)C->Mobility, C->GetCollisionResponseToChannel(ECC_Pawn) == ECR_Block ? 1 : 0, B.Min.X, B.Min.Y, B.Min.Z, B.Max.X, B.Max.Y, B.Max.Z);
+			}
+			UE_LOG(LogTemp, Display, TEXT("ANTSQUAD probe: %d hits in %s-%s"), Ov.Num(), *Lo.ToCompactString(), *Hi.ToCompactString());
+		}
 		else if (Sub == TEXT("info"))
 		{
 			for (TActorIterator<AAntArmy> It(GetWorld()); It; ++It)

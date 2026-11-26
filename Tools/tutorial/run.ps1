@@ -1,6 +1,6 @@
-param([string]$Name = "run", [string]$Do = "", [string]$Extra = "", [int]$Timeout = 600, [string]$Res = "1280x720", [switch]$Packaged, [string]$Dist = "DistTutorial", [switch]$NoQuit)
+param([string]$Name = "run", [string]$Do = "", [string]$Extra = "", [int]$Timeout = 600, [string]$Res = "1280x720", [switch]$Packaged, [string]$Dist = "DistTut2", [switch]$NoQuit)
 # Off-screen game run from the editor binary (uncooked) or the package (-Packaged). Log -> _tut\<Name>.log
-$w = "C:\Users\HYPERPC\Documents\Unreal Projects\AntKitchen_tutorial"
+$w = (Resolve-Path "$PSScriptRoot\..\..").Path
 $rx, $ry = $Res.Split("x")
 $log = "$w\_tut\$Name.log"
 if (Test-Path $log) { Remove-Item $log -Force }

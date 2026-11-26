@@ -309,7 +309,7 @@ void AntCarry::AddWorkerStrength(const AKitchenLoot* L, float* TeamStr)
 	{
 		if (M.IsWorker() && M.Army.IsValid())
 		{
-			TeamStr[FMath::Clamp<int32>(M.Army->Team, 0, 1)] += M.Army->WorkerStr;
+			TeamStr[FMath::Clamp<int32>(M.Army->Team, 0, 1)] += M.Army->WorkerStr;   // (the difficulty is in WorkerStr: AntSquad.cpp)
 		}
 	}
 }

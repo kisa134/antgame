@@ -13,6 +13,8 @@
 #include "KitchenInteractables.h"
 #include "EngineUtils.h"
 #include "Engine/World.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 
 AAntBotController::AAntBotController()
 {
@@ -462,9 +464,43 @@ void AAntBotController::Steer(AAntCharacter* Ant, const FVector& FinalTarget, fl
 		const bool bSlowOnPurpose = Ant->IsCarrying() && Ant->Carrying && (Ant->Carrying->CarryRatio() < 1.f || bCarryWithPlayer);
 		if (!bSlowOnPurpose && FVector::Dist(Me, LastCheckPos) < 70.f * AAntCharacter::AntShrink && UnstickTime <= 0.f)
 		{
-			UnstickTime = 1.f;
-			UnstickDir = FVector::CrossProduct(N, D.GetSafeNormal()) * (FMath::RandBool() ? 1.f : -1.f) + N * 0.2f;
+			// The same obstacle again: keep going round it the same way and a little longer; after three tries the other way.
+			if (UnstickStreak > 0 && FVector::Dist(Me, LastUnstickAt) < 200.f * AAntCharacter::AntShrink * 3.f)
+			{
+				++UnstickStreak;
+				if (UnstickStreak == 4) { UnstickSign = -UnstickSign; }
+			}
+			else
+			{
+				UnstickStreak = 1;
+				UnstickSign = FMath::RandBool() ? 1.f : -1.f;
+			}
+			LastUnstickAt = Me;
+			UnstickTime = FMath::Min(1.f + 0.5f * (UnstickStreak - 1), 3.f);
+			UnstickDir = FVector::CrossProduct(N, D.GetSafeNormal()) * UnstickSign + N * 0.2f;
+			// What is in front of it (a short sweep towards where it wants to go).
+			FHitResult H;
+			FCollisionQueryParams Q(SCENE_QUERY_STAT(BotStuck), false, Ant);
+			const bool bHit = GetWorld()->SweepSingleByChannel(H, Me + N * 3.f, Me + N * 3.f + D.GetSafeNormal() * 60.f, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeSphere(3.f), Q);
+			if (UnstickStreak >= 2 && !(bHit && Cast<APawn>(H.GetActor())))
+			{
+				// Stuck at the same thing again (a bowl's rim, a shoe, a bag): walk round it along the floor instead of pushing on:
+				// down off it, then along its side (the same side every time) and a little away from it (KAN-27).
+				FVector Away = bHit && H.ImpactNormal.Z < 0.7f ? FVector(H.ImpactNormal.X, H.ImpactNormal.Y, 0.f).GetSafeNormal() : FVector::ZeroVector;
+				if (Away.IsNearlyZero()) { Away = -FVector(D.X, D.Y, 0.f).GetSafeNormal(); }
+				const FVector Along = FVector::CrossProduct(FVector::UpVector, Away) * UnstickSign;
+				UnstickDir = (Along + Away * 0.6f).GetSafeNormal();
+				UnstickTime = FMath::Min(1.5f + 0.75f * (UnstickStreak - 2), 3.5f);
+			}
 			if (!Ant->IsCarrying()) { Ant->Jump(); }
+			static const bool bLog = FParse::Param(FCommandLine::Get(), TEXT("AntStuckLog"));
+			if (bLog)
+			{
+				const UStaticMeshComponent* SM = bHit ? Cast<UStaticMeshComponent>(H.GetComponent()) : nullptr;
+				UE_LOG(LogTemp, Display, TEXT("ANTBOT stuck %s at %s up(%.1f,%.1f,%.1f) to %s crawl %d: front %s / %s n(%.1f,%.1f,%.1f)"), *Ant->GetName(), *Me.ToCompactString(), N.X, N.Y, N.Z, *Target.ToCompactString(),
+					Ant->IsCrawling() ? 1 : 0, bHit ? *GetNameSafe(H.GetActor()) : TEXT("-"), SM && SM->GetStaticMesh() ? *SM->GetStaticMesh()->GetName() : bHit ? *GetNameSafe(H.GetComponent()) : TEXT("-"),
+					H.ImpactNormal.X, H.ImpactNormal.Y, H.ImpactNormal.Z);
+			}
 		}
 		LastCheckPos = Me;
 		StuckCheckTimer = 0.f;

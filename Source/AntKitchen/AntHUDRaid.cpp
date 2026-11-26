@@ -1,6 +1,8 @@
 ﻿#include "AntHUD.h"
 #include "AntColonyView.h"
 #include "AntTutorial.h"
+#include "AntMinimap.h"
+#include "AntDifficulty.h"
 #include "AntUiStyle.h"
 #include "AntUiCanvas.h"
 #include "AntRaid.h"
@@ -121,6 +123,7 @@ void AAntHUD::DrawRaidTop(AAntRaid* Raid, AAntGameState* GS)
 	Txt(FString::Printf(TEXT("%d:%02d"), TimeLeft / 60, TimeLeft % 60), CX, 6.f * S, (Stage >= 2) ? QRed : QWhite, Med, 1.45f * S * ClockPulse, true);
 	TxtRight(FString::Printf(TEXT("РЕЙД %d  ·  УГРОЗА %s"), Raid->RaidNo, Roman(Raid->Tier)), CX - 76.f * S, 13.f * S, QGold, Small, 1.2f * S);
 	Txt(FString::Printf(TEXT("МОЛОЧКО +%d"), Raid->RaidJelly), CX + 76.f * S, 13.f * S, Raid->RaidJelly > 0 ? QJelly : QDim, Small, 1.15f * S);
+	AntDifficulty::DrawBadge(Canvas, this, CX + 322.f * S, 10.f * S, S, 2);   // КАЗУАЛ / ОБЫЧНЫЙ / ХАРД (KAN-30)
 
 	// --- Row 2: banked against what the Queen asked for ---
 	const float Frac = FMath::Clamp(Score / (float)Target, 0.f, 1.f);
@@ -290,6 +293,9 @@ void AAntHUD::DrawRaid(AAntRaid* Raid, AAntGameState* GS, APawn* Me)
 	{
 		return;   // (the training draws its own)
 	}
+
+	// --- The map of the flat in the corner (KAN-29): the team, the squads, the trails ---
+	AntMinimap::Draw(this, Canvas, PC, S);
 
 	// --- Where the cake is, once the team knows ---
 	if (Raid->bCakeKnown && (Raid->Cake == AntCake::Lying || Raid->Cake == AntCake::Clan || Raid->Cake == AntCake::InHill) && !Ant->bDead)

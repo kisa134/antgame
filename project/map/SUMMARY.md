@@ -1,10 +1,10 @@
-# Карта проекта Ant Kitchen: сводка (2026-11-24, e2ff0e3)
+# Карта проекта Ant Kitchen: сводка (2026-11-26, 6428da2)
 
 Интерактивная карта: https://claude.ai/artifact/8rs9aDgofMHhTbwH2vu8Y5 (артефакт claude.ai, slug `3fa651ed-b3ea-48d3-8daf-7abc4d247e16`). Правки со страницы лежат в базе артефакта, коллекция `edits`.
 
 Файл создаётся автоматически: `python Tools/projectmap/build_map.py`. Не правь руками. Ручные данные: `project/map/*.yaml`.
 
-Узлов: 1246, связей: 635. По типам: asset-part 430, asset 280, file 246, system 172, build 41, doc 38, area 13, decision 11, bug 9, character 6
+Узлов: 1265, связей: 648. По типам: asset-part 430, asset 280, file 255, system 174, build 45, doc 42, area 13, decision 11, bug 9, character 6
 
 ## Области и системы
 
@@ -24,6 +24,7 @@
 ### Мир и уровень
 Квартира v4: кухня, гостиная, коридор, детская, двор; живая квартира; интерактивные предметы.
 - **Квартира: уровень v4** [in-game] (Claude): Районы, сид рейда, оболочка стен и полов, свет и материалы, без примитивов. Код: AntNest.cpp, AntNest.h, KitchenArt.cpp, KitchenArt.h
+- **Лаборатория уровней (KAN-37): серые планировки из данных** [in-progress] (Claude): Планировка квартиры как JSON (Tools/levellab/build_lab.py -> docs/level/lab/lab_A.json): коробки с флагом лазания, зоны, люки в стенах, гне… Код: AntLab.cpp, AntLab.h, AntLabData.inl, KitchenBuilderLab.cpp
 - **Живая квартира: ТВ, мир за окном** [in-game] (Claude): Телевизор с каналами, улица за окном, робот-пылесос, посудомойка, мелочи масштаба муравья. Код: AntLife.h, AntLifeChannels.inl, AntLifeTV.cpp, AntLifeWorld.cpp
 - **Интерактивные предметы и гаджеты** [in-game] (Claude): Двери, ящики, кран, тостер, щиток, события кухни. Код: KitchenEvents.cpp, KitchenEvents.h, KitchenGadgets.cpp, KitchenGadgets.h
 
@@ -64,6 +65,7 @@
 - **Ядро, типы, эффекты** [in-game] (Claude): Модуль игры, общие типы, масштаб (AntShrink), эффекты. Код: AntFx.cpp, AntFx.h, AntKitchen.Build.cs, AntKitchen.cpp
 - **Админ-режим** [in-game] (Claude): Панель и команды для тестов и съёмки. Код: AntAdmin.cpp, AntAdmin.h
 - **Сеть: listen server** [in-game] (Claude): Listen server, UDP 7777, клиент-авторитетное движение, реплицируется состояние.
+- **Прочий код** [in-game] (Claude): Модули, которые не попали в другие системы. Код: AntState.cpp, AntState.h
 
 ### Инструменты и пайплайн
 Скрипты Tools/, Blender, импорт Meshy, карта проекта.
