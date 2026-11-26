@@ -437,11 +437,13 @@ shader own_textures(
         float film = fbm(u, v, 128, 128, 3, 0.6, 129);                                                  // a thin dirt film the ant walks on
         float k1, k2, kq; worley(u, v, 700, 700, 130, k1, k2, kq);
         float crumbs = (kq < 0.05 ? 1.0 - smoothstep(0.1, 0.3, k1) : 0.0) * smoothstep(0.0, 0.35, fbm(u, v, 12, 12, 2, 0.5, 131));   // grains of dirt, crumbs
-        tc *= 1.0 + mot * 0.08 + speck * 0.10 + film * 0.08;
+        float stain = smoothstep(0.05, 0.4, fbm(u + 0.05 * wav, v, 10, 10, 5, 0.6, 132));              // dried spills, dark mottling
+        tc *= 1.0 + mot * 0.10 + speck * 0.14 + film * 0.20;
+        tc = mix(tc, tc * color(0.62, 0.58, 0.52), stain * 0.65);
         tc = mix(tc, lc(0.38, 0.30, 0.22), crumbs * 0.55);
         if (Mat == 11) { tc *= 1.0 + 0.25 * (smoothstep(0.55, 0.6, hs(floor(u * 1024.0), floor(v * 1024.0), 108)) - 0.2); }
-        tc = mix(tc, tc * color(0.80, 0.74, 0.62), grease * 0.55);                                      // greasy, yellow-brown
-        tc = mix(tc, tc * 0.86, smear);
+        tc = mix(tc, tc * color(0.70, 0.62, 0.48), grease * 0.8);                                      // greasy, yellow-brown
+        tc = mix(tc, tc * 0.78, smear);
         tc = mix(tc, tc * color(1.04, 1.03, 1.02), wear * 0.5);                                          // worn glaze reads paler
         tc *= 1.0 - 0.38 * dirtband - 0.22 * scr;
         tc = mix(tc, lc(0.62, 0.60, 0.56), dust * 0.55);
@@ -449,7 +451,7 @@ shader own_textures(
         H = edge * (0.6 + wav * 0.08) - scr * 0.08 - pin * 0.1 - chip * 0.35 - nick * 0.03 + grout * sand * 0.05 + dust * 0.03 + crumbs * 0.08 + film * 0.02;
         C = mix(tc, gr, grout);
         C = mix(C, lc(0.72, 0.67, 0.58) * (0.9 + 0.2 * sand), chip * 0.85);                             // the biscuit under a chip
-        R = 0.2 + mot * 0.03 + scr * 0.18 + wear * 0.3 - grease * 0.12 + smear * 0.08 + dust * 0.35;
+        R = 0.2 + mot * 0.03 + scr * 0.18 + wear * 0.3 - grease * 0.12 + smear * 0.08 + dust * 0.35 + stain * 0.12 + film * 0.05;
         R = mix(R, 0.93, max(grout, chip));
     }
     else if (Mat == 12)   // Oak: oiled butcher-block worktop, 12 strips x 2 pieces, 0.58 m (1100 uu): used, stained, cut
