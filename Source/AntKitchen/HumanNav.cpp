@@ -1,5 +1,6 @@
 ﻿#include "HumanNav.h"
 #include "KitchenBuilder.h"
+#include "AntLab.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "Components/PrimitiveComponent.h"
@@ -13,6 +14,14 @@ void FHumanNav::Build(UWorld* World, const AActor* Ignore, float CapsuleRadius, 
 	Y0 = -9000.f;
 	W = FMath::CeilToInt((20200.f - X0) / Cell);
 	H = FMath::CeilToInt((5000.f - Y0) / Cell);
+	if (const FAntLabVariant* Lab = AntLab::Get())
+	{
+		// KAN-37: the lab flat's own bounds
+		X0 = (float)Lab->Bounds.Min.X - 400.f;
+		Y0 = (float)Lab->Bounds.Min.Y - 400.f;
+		W = FMath::CeilToInt(((float)Lab->Bounds.Max.X + 400.f - X0) / Cell);
+		H = FMath::CeilToInt(((float)Lab->Bounds.Max.Y + 400.f - Y0) / Cell);
+	}
 	Blocked.Init(1, W * H);
 	if (!World)
 	{

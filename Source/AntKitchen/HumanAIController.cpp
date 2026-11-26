@@ -25,6 +25,8 @@
 #include "KitchenInteractables.h"
 #include "AntRun.h"
 #include "AntRaid.h"
+#include "AntLab.h"
+#include "AntDifficulty.h"
 
 AHumanAIController::AHumanAIController()
 {
@@ -51,7 +53,7 @@ AAntCharacter* AHumanAIController::PickTarget(const AHumanCharacter* H) const
 {
 	AAntCharacter* Best = nullptr;
 	// «Тихий шаг»: he notices ants from 30% closer.
-	const float Notice = AntCard::Has(this, AntCard::Quiet) ? 0.7f : 1.f;
+	const float Notice = (AntCard::Has(this, AntCard::Quiet) ? 0.7f : 1.f) * AntDifficulty::NoticeMul(this);   // and the difficulty (KAN-30)
 	float BestScore = 8000.f * Notice;
 	const FVector Me = H->GetActorLocation();
 	const FVector Eyes = Me + FVector(0.f, 0.f, H->GetSimpleCollisionHalfHeight() * 0.8f);
@@ -76,7 +78,7 @@ AAntCharacter* AHumanAIController::PickTarget(const AHumanCharacter* H) const
 		}
 		// Past the line of the cabinet fronts he sees only what is in plain sight from where he stands (the back of the worktop,
 		// the tap, the spice shelves, the rail, the cabinet tops).
-		if (AL.Y > 4750.f && !NpcWorld::CanSee(GetWorld(), Eyes, AL + FVector(0.f, 0.f, 10.f)))
+		if ((AL.Y > 4750.f || AntLab::Get()) && !NpcWorld::CanSee(GetWorld(), Eyes, AL + FVector(0.f, 0.f, 10.f)))   // (KAN-37 lab: walls everywhere: always by sight)
 		{
 			continue;
 		}
@@ -336,8 +338,9 @@ void AHumanAIController::Tick(float DeltaSeconds)
 		const bool bFront = FVector::DotProduct(To.GetSafeNormal2D(), H->GetActorForwardVector()) > 0.35f;
 		const AAntRaid* RaidNow = AAntRaid::Get(GetWorld());
 		const int32 TierNow = RaidNow ? FMath::Clamp((int32)RaidNow->Tier, 1, 4) : 2;
-		const float Front = (RtPhase == 1 ? 1700.f : 1300.f) + 450.f * TierNow;
-		if (!(D < 900.f || (bFront && D < Front) || (T->IsCarrying() && D < 1200.f + 300.f * TierNow)))
+		const float NM = AntDifficulty::NoticeMul(this);
+		const float Front = ((RtPhase == 1 ? 1700.f : 1300.f) + 450.f * TierNow) * NM;
+		if (!(D < 900.f * NM || (bFront && D < Front) || (T->IsCarrying() && D < (1200.f + 300.f * TierNow) * NM)))
 		{
 			T = nullptr;
 		}

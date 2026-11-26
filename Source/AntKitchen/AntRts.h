@@ -33,11 +33,16 @@ public:
 	TArray<FVector> Way;
 	int32 WayAt = 0;
 	TWeakObjectPtr<AActor> WayFor;
+	/** The haul goes to the owner's nearest pheromone trail, not home: its id (0: home) and the point on it (KAN-32). */
+	uint16 WayTrail = 0;
+	FVector WayTrailAt = FVector::ZeroVector;
 	float StuckFor = 0.f;
 	float LeashDeadline = 0.f;   // follow watchdog: far from the owner and not getting closer by this time -> come out right behind him
 	float LeashBest = 0.f;
 	float LeashFarDeadline = 0.f;
 	FVector LeashAnchor = FVector::ZeroVector;
+	/** Times it was sent off to the side from this spot before the leash (AAntSquadBot::ThinkRts). */
+	int32 LeashDetours = 0;
 	FVector LastHaulPos = FVector::ZeroVector;
 	float NextShootPick = 0.f;
 	int32 Slot = 0;
@@ -85,6 +90,8 @@ public:
 	FVector2D Screen = FVector2D(1600.f, 900.f);
 	float LastOrderAt = -100.f;
 	FString LastOrderText;
+	/** The body this player played last tick (logged when it changes). */
+	TWeakObjectPtr<APawn> LastPawn;
 
 	// ---- actions (keys and dev commands)
 	void SelectBox(const FVector2D& A, const FVector2D& B, bool bAdd);
@@ -139,6 +146,13 @@ namespace AntRts
 	ANTKITCHEN_API bool RecallAll(AAntCharacter* Ant);
 	/** Server: a squad ant died. True: it was one (no respawn, no kill feed line). */
 	ANTKITCHEN_API bool OnSquadBotKilled(AAntCharacter* Ant);
+	/** Server: a player's ant died in the raid here (where to look for his squad when he comes back). */
+	ANTKITCHEN_API void NoteOwnerDied(const AAntCharacter* Ant);
+	/** Server: the player comes back as one of his own squad ants alive near where he died (that ant is used up), not at the
+	 *  nest (KAN-32). False: none near: the usual respawn. */
+	ANTKITCHEN_API bool RespawnInSquad(AController* C);
+	/** How far from where he died a squad ant may be to take him in. */
+	constexpr float RespawnReach = 6000.f;
 	/** Server: the RPC body (AAntPlayerController::ServerSwarm). */
 	ANTKITCHEN_API void ServerCommand(AAntPlayerController* PC, uint8 Cmd, int32 A, const TArray<AAntCharacter*>& Ants, const FVector& Point, AActor* Target);
 	/** Server: give these ants (of this player) a task. */
