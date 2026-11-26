@@ -1331,6 +1331,94 @@ def build_scratch_post():
     parts.append((ball, 2))
     return parts, hs
 
+
+def build_window():
+    """window lining in the 3000 x 2000 uu opening (no glass on purpose: the game's window is an open hole), white-painted
+    timber: lining, mullion and transom with putty beads, an architrave on the room side (-Y), a brass casement stay and handle"""
+    hs = Hulls(); parts = []; wp = M("WindowPaint", paint, (0.90, 0.89, 0.85), 0.32, 0.03, 0.2, (0.70, 0.66, 0.58)); br = BRASS()
+    oy = -88 * U
+    def ub(x0, x1, y0, y1, z0, z1, m=wp, bev=0.003, part=0):
+        o = box("W", x0 * U, x1 * U, y0 * U + oy, y1 * U + oy, z0 * U, z1 * U, m, bev, 3); parts.append((o, part)); return o
+    for x0, x1 in ((-1500, -1440), (1440, 1500)): hs.add(ub(x0, x1, -20, 200, 0, 2000, part=1))
+    hs.add(ub(-1440, 1440, -20, 200, 1940, 2000, part=1)); hs.add(ub(-1440, 1440, -20, 200, 0, 60, part=1))
+    hs.add(ub(-30, 30, 60, 120, 60, 1940, part=2)); hs.add(ub(-1440, 1440, 60, 120, 970, 1030, part=2))
+    for x0, x1 in ((-1610, -1500), (1500, 1610)): hs.add(ub(x0, x1, -24, 0, 0, 2110, bev=0.004, part=3))
+    hs.add(ub(-1610, 1610, -24, 0, 2000, 2110, bev=0.004, part=3))
+    # putty / glazing beads round the four lights (the glass is out), the casement stay and an espagnolette handle
+    putty = M("Putty", lambda n: H.plastic(n, (0.82, 0.80, 0.74), 0.7, 0.05, 0.1))
+    for (x0, x1, z0, z1) in ((-1440, -30, 60, 970), (30, 1440, 60, 970), (-1440, -30, 1030, 1940), (30, 1440, 1030, 1940)):
+        parts.append((pipe("Bead", [rot_xz(rect_loop((x0 + 6) * U, (x1 - 6) * U, (z0 + 6) * U, (z1 - 6) * U, 60 * U + oy))], 0.004, putty, True), 2))
+    parts.append((box("Stay", 400 * U, 700 * U, 50 * U + oy, 58 * U + oy, 1000 * U, 1014 * U, br, 0.001, 2), 2))
+    parts.append((box("Handle", -12 * U, 12 * U, 30 * U + oy, 60 * U + oy, 1150 * U, 1350 * U, br, 0.003, 3), 2))
+    parts.append((cyl("HandleRose", 0.012, 0.004, (0, 58 * U + oy, 1250 * U), br, "Y", 16), 2))
+    return parts, hs
+
+def build_window_sill():
+    """inner window sill 1.737 x 0.095 x 0.042 m: oak with a rounded nosing, a drip groove under it, rings of the plant pot"""
+    hs = Hulls(); parts = []
+    b = box("Sill", -1650 * U, 1650 * U, -90 * U, 90 * U, 0, 80 * U, W_OAK("X"), 0.006, 4); parts.append((b, 0)); hs.add(b)
+    parts.append((box("Drip", -1600 * U, 1600 * U, -80 * U, -76 * U, -0.0002, 0.003, M("Hole", H.rubber, (0.02, 0.015, 0.01), 0.9), 0.0, 0), 0))
+    stain = M("Stain", lambda n: H.plastic(n, (0.30, 0.17, 0.07), 0.25, 0.02, 0.1))
+    parts.append((lathe("Ring", [(0.031, 80 * U + 0.0002), (0.035, 80 * U + 0.0002), (0.035, 80 * U + 0.0004), (0.031, 80 * U + 0.0004)], stain, (-0.62, 0.0, 0), 40), 0))
+    return parts, hs
+
+def pillow_shell(name, w, h, dome, rim, m, nx=26, nz=22):
+    """a stuffed pillow: two domed faces sewn together at the rim (corners pinched), standing in the XZ plane, z 0..h"""
+    bm = bmesh.new()
+    def f(u, v): return (max(0.0, 1 - u * u) * max(0.0, 1 - v * v)) ** 0.6
+    grids = []
+    for s in (-1, 1):
+        g = []
+        for i in range(nx + 1):
+            row = []
+            for k in range(nz + 1):
+                u, v = 2 * i / nx - 1, 2 * k / nz - 1
+                x = u * w / 2 * (1 - 0.06 * (1 - v * v)); z = h / 2 + v * h / 2 * (1 - 0.06 * (1 - u * u))   # (the seams pull in)
+                row.append(bm.verts.new((x, s * (rim + dome * f(u, v)), z)))
+            g.append(row)
+        grids.append(g)
+    for s, g in zip((-1, 1), grids):
+        for i in range(nx):
+            for k in range(nz):
+                q = (g[i][k], g[i + 1][k], g[i + 1][k + 1], g[i][k + 1])
+                bm.faces.new(q if s > 0 else q[::-1])
+    a, b = grids
+    ring = [(i, 0) for i in range(nx)] + [(nx, k) for k in range(nz)] + [(i, nz) for i in range(nx, 0, -1)] + [(0, k) for k in range(nz, 0, -1)]
+    for j in range(len(ring)):
+        (i0, k0), (i1, k1) = ring[j], ring[(j + 1) % len(ring)]
+        bm.faces.new((a[i0][k0], a[i1][k1], b[i1][k1], b[i0][k0]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    me = bpy.data.meshes.new(name); bm.to_mesh(me); bm.free()
+    o = H.link(bpy.data.objects.new(name, me)); o.data.materials.append(m)
+    s_ = o.modifiers.new("sub", "SUBSURF"); s_.levels = 1; s_.render_levels = 1
+    for p in o.data.polygons: p.use_smooth = True
+    return o
+
+def build_pillow(main, accent):
+    """throw pillow 0.38 x 0.12 x 0.33 m (origin bottom centre): two domed faces, pinched corners, piped seam, a covered button each side"""
+    hs = Hulls(); parts = []
+    c = pillow_shell("Pillow", 0.38, 0.33, 0.052, 0.006, main); parts.append((c, 0)); hs.add(c)
+    seam = [(x * (1 - 0.06 * (1 - v * v)), 0.0, 0.165 + 0.165 * v * (1 - 0.06 * (1 - (x / 0.19) ** 2))) for x, v in
+            [(-0.19 + 0.38 * t / 40, -1.0) for t in range(41)] + [(0.19, -1 + 2 * t / 30) for t in range(1, 31)] +
+            [(0.19 - 0.38 * t / 40, 1.0) for t in range(1, 41)] + [(-0.19, 1 - 2 * t / 30) for t in range(1, 30)]]
+    parts.append((pipe("Piping", [seam], 0.0055, main, True), 0))
+    for s in (-1, 1):
+        parts.append((lathe("Button", [(0, 0.0), (0.020, 0.0), (0.022, 0.004), (0.016, 0.010), (0, 0.011)], accent, (0, s * 0.054, 0.165), 20, 0, (-s * math.pi / 2, 0, 0)), 0))
+        for k in range(6):     # the pleats the button pulls in
+            a_ = k * math.pi / 3
+            parts.append((pipe("Pleat", [[(0.024 * math.cos(a_), s * 0.052, 0.165 + 0.024 * math.sin(a_)), (0.07 * math.cos(a_), s * 0.046, 0.165 + 0.07 * math.sin(a_))]], 0.002, main), 0))
+    return parts, hs
+
+def build_floor_cushion():
+    """big floor cushion 0.58 x 0.58 x 0.16 m: honey corduroy, piped, a carry handle"""
+    hs = Hulls(); parts = []
+    cord = M("Corduroy", fabric, (0.72, 0.48, 0.16), (0.52, 0.32, 0.08), 120.0, 0.7)
+    c = soft("Cushion", -0.2895, 0.2895, -0.2895, 0.2895, 0.026, 0.11, cord, 0.04, 4, 0.5, 2); parts.append((c, 0)); hs.add(c)
+    for z in (0.034, 0.102):
+        parts.append((pipe("Piping", [rect_loop(-0.283, 0.283, -0.283, 0.283, z, 0.06, 6)], 0.0055, cord, True), 0))
+    parts.append((pipe("Handle", [[(-0.05, -0.29, 0.10), (-0.04, -0.31, 0.11), (0.04, -0.31, 0.11), (0.05, -0.29, 0.10)]], 0.006, cord), 0))
+    return parts, hs
+
 # ================================================================================================ the table of pieces
 def T(x, y, z): return Matrix.Translation((x, y, z))
 SOFA_HD = 1700 / S / 2
@@ -1400,6 +1488,14 @@ PIECES.update({
     "SM_K_HighChair": (build_high_chair, 2048, groups([[0], [1], [2], [3]]), "wood", "high chair: beech, splayed legs, teal pads, footrest, white tray, strap", None),
     "SM_L_DogBed": (build_dog_bed, 2048, groups([[0], [1]]), "cloth", "oval dog bed: quilted red bolster, sherpa cushion, non-slip base", None),
     "SM_L_CatScratchPost": (build_scratch_post, 2048, groups([[0], [1], [2]]), "cloth", "scratching post: carpeted base, sisal rope post, platform pad, ball on a string", None),
+})
+
+PIECES.update({
+    "SM_K_Window": (build_window, 2048, groups([[1], [2], [3]]), "wood", "window lining, mullion and transom with putty beads (no glass on purpose), architrave, brass stay and handle", None),
+    "SM_K_WindowSill": (build_window_sill, 2048, groups([[0]], [(0, (0.2, 0, 0.02), (1, 0.1, 0.0), 0.004, 26, 0.01)]), "wood", "oak window sill with nosing, drip groove, a pot ring", None),
+    "SM_L_Pillow_A": (lambda: build_pillow(F_MUSTARD(), M("RedButton", fabric, (0.55, 0.07, 0.05), None, 300.0, 0.5)), 1024, groups([[0]], [(0, (0.0, 0, 0.17), (1, 0, 0.3), 0.01, 27, 0.0)]), "cloth", "throw pillow, mustard, piped, red buttons", None),
+    "SM_L_Pillow_B": (lambda: build_pillow(M("PillowRed", fabric, (0.55, 0.07, 0.05), (0.38, 0.04, 0.03), 260.0, 0.6), F_MUSTARD()), 1024, groups([[0]], [(0, (0.0, 0, 0.17), (1, 0, -0.3), 0.01, 28, 0.0)]), "cloth", "throw pillow, red, piped, mustard buttons", None),
+    "SM_V3_FloorCushion": (build_floor_cushion, 2048, groups([[0]], [(0, (0.0, 0.05, 0.07), (1, 0.4, 0.0), 0.01, 29, 0.0)]), "cloth", "floor cushion: honey corduroy, piped, carry handle", None),
 })
 
 ORDER = list(PIECES.keys())

@@ -569,6 +569,326 @@
    "ucx": 1
   },
   {
+   "name": "SM_K_Window",
+   "file": "SM_K_Window.fbx",
+   "set": "hero_living",
+   "break_class": "wood",
+   "textures": {
+    "C": "SM_K_Window/tex/T_SM_K_Window_C.png",
+    "N": "SM_K_Window/tex/T_SM_K_Window_N.png",
+    "R": "SM_K_Window/tex/T_SM_K_Window_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_K_Window_Brk0",
+     "file": "SM_K_Window_Brk0.fbx",
+     "triangles": 752,
+     "bbox_min_m": [
+      -0.7895,
+      -0.0568,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.7895,
+      0.0589,
+      1.0526
+     ],
+     "materials": [
+      "Hero_SM_K_Window",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_Window_Brk1",
+     "file": "SM_K_Window_Brk1.fbx",
+     "triangles": 988,
+     "bbox_min_m": [
+      -0.7579,
+      -0.0305,
+      0.0316
+     ],
+     "bbox_max_m": [
+      0.7579,
+      0.0168,
+      1.0211
+     ],
+     "materials": [
+      "Hero_SM_K_Window",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_Window_Brk2",
+     "file": "SM_K_Window_Brk2.fbx",
+     "triangles": 564,
+     "bbox_min_m": [
+      -0.8474,
+      -0.0589,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.8474,
+      -0.0463,
+      1.1105
+     ],
+     "materials": [
+      "Hero_SM_K_Window",
+      "Break"
+     ]
+    }
+   ],
+   "note": "window lining, mullion and transom with putty beads (no glass on purpose), architrave, brass stay and handle",
+   "kept_slots": [],
+   "triangles": 2304,
+   "bbox_min_m": [
+    -0.8474,
+    -0.0589,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.8474,
+    0.0589,
+    1.1105
+   ],
+   "materials": [
+    "Hero_SM_K_Window"
+   ],
+   "lod_triangles": [
+    2304,
+    806,
+    276
+   ],
+   "ucx": 9
+  },
+  {
+   "name": "SM_K_WindowSill",
+   "file": "SM_K_WindowSill.fbx",
+   "set": "hero_living",
+   "break_class": "wood",
+   "textures": {
+    "C": "SM_K_WindowSill/tex/T_SM_K_WindowSill_C.png",
+    "N": "SM_K_WindowSill/tex/T_SM_K_WindowSill_N.png",
+    "R": "SM_K_WindowSill/tex/T_SM_K_WindowSill_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_K_WindowSill_Brk0",
+     "file": "SM_K_WindowSill_Brk0.fbx",
+     "triangles": 368,
+     "bbox_min_m": [
+      -0.8684,
+      -0.0474,
+      -0.0002
+     ],
+     "bbox_max_m": [
+      0.8684,
+      0.0474,
+      0.0421
+     ],
+     "materials": [
+      "Hero_SM_K_WindowSill",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_WindowSill_Brk1",
+     "file": "SM_K_WindowSill_Brk1.fbx",
+     "triangles": 240,
+     "bbox_min_m": [
+      -0.655,
+      -0.035,
+      0.0423
+     ],
+     "bbox_max_m": [
+      -0.585,
+      0.035,
+      0.0425
+     ],
+     "materials": [
+      "Hero_SM_K_WindowSill",
+      "Break"
+     ]
+    }
+   ],
+   "note": "oak window sill with nosing, drip groove, a pot ring",
+   "kept_slots": [],
+   "triangles": 552,
+   "bbox_min_m": [
+    -0.8684,
+    -0.0474,
+    -0.0002
+   ],
+   "bbox_max_m": [
+    0.8684,
+    0.0474,
+    0.0425
+   ],
+   "materials": [
+    "Hero_SM_K_WindowSill"
+   ],
+   "lod_triangles": [
+    552,
+    192,
+    66
+   ],
+   "ucx": 1
+  },
+  {
+   "name": "SM_L_Armchair",
+   "file": "SM_L_Armchair.fbx",
+   "set": "hero_living",
+   "break_class": "cloth",
+   "textures": {
+    "C": "SM_L_Armchair/tex/T_SM_L_Armchair_C.png",
+    "N": "SM_L_Armchair/tex/T_SM_L_Armchair_N.png",
+    "R": "SM_L_Armchair/tex/T_SM_L_Armchair_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_L_Armchair_Brk0",
+     "file": "SM_L_Armchair_Brk0.fbx",
+     "triangles": 2770,
+     "bbox_min_m": [
+      -0.5589,
+      -0.4473,
+      0.002
+     ],
+     "bbox_max_m": [
+      0.5589,
+      0.4274,
+      0.3421
+     ],
+     "materials": [
+      "Hero_SM_L_Armchair",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_L_Armchair_Brk1",
+     "file": "SM_L_Armchair_Brk1.fbx",
+     "triangles": 1518,
+     "bbox_min_m": [
+      -0.583,
+      -0.4536,
+      0.056
+     ],
+     "bbox_max_m": [
+      -0.4697,
+      0.4513,
+      0.6356
+     ],
+     "materials": [
+      "Hero_SM_L_Armchair",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_L_Armchair_Brk2",
+     "file": "SM_L_Armchair_Brk2.fbx",
+     "triangles": 1516,
+     "bbox_min_m": [
+      0.4697,
+      -0.4536,
+      0.056
+     ],
+     "bbox_max_m": [
+      0.583,
+      0.4513,
+      0.6356
+     ],
+     "materials": [
+      "Hero_SM_L_Armchair",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_L_Armchair_Brk3",
+     "file": "SM_L_Armchair_Brk3.fbx",
+     "triangles": 1496,
+     "bbox_min_m": [
+      -0.5819,
+      0.3386,
+      0.057
+     ],
+     "bbox_max_m": [
+      0.5819,
+      0.4504,
+      1.0015
+     ],
+     "materials": [
+      "Hero_SM_L_Armchair",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_L_Armchair_Brk4",
+     "file": "SM_L_Armchair_Brk4.fbx",
+     "triangles": 4054,
+     "bbox_min_m": [
+      -0.4724,
+      -0.4461,
+      0.3193
+     ],
+     "bbox_max_m": [
+      0.4724,
+      0.3449,
+      0.4319
+     ],
+     "materials": [
+      "Hero_SM_L_Armchair",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_L_Armchair_Brk5",
+     "file": "SM_L_Armchair_Brk5.fbx",
+     "triangles": 2856,
+     "bbox_min_m": [
+      -0.4499,
+      0.2859,
+      0.3948
+     ],
+     "bbox_max_m": [
+      0.4499,
+      0.3583,
+      0.9362
+     ],
+     "materials": [
+      "Hero_SM_L_Armchair",
+      "Break"
+     ]
+    }
+   ],
+   "note": "mustard armchair: piped arms, loose seat and back cushions, crocheted doily on the back",
+   "kept_slots": [],
+   "triangles": 14210,
+   "bbox_min_m": [
+    -0.583,
+    -0.4536,
+    0.002
+   ],
+   "bbox_max_m": [
+    0.583,
+    0.4513,
+    1.0015
+   ],
+   "materials": [
+    "Hero_SM_L_Armchair"
+   ],
+   "lod_triangles": [
+    14210,
+    4972,
+    1704
+   ],
+   "ucx": 9
+  },
+  {
    "name": "SM_L_Bookshelf",
    "file": "SM_L_Bookshelf.fbx",
    "set": "hero_living",
@@ -1575,6 +1895,118 @@
     539
    ],
    "ucx": 3
+  },
+  {
+   "name": "SM_L_Pillow_A",
+   "file": "SM_L_Pillow_A.fbx",
+   "set": "hero_living",
+   "break_class": "cloth",
+   "textures": {
+    "C": "SM_L_Pillow_A/tex/T_SM_L_Pillow_A_C.png",
+    "N": "SM_L_Pillow_A/tex/T_SM_L_Pillow_A_N.png",
+    "R": "SM_L_Pillow_A/tex/T_SM_L_Pillow_A_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_L_Pillow_A_Brk0",
+     "file": "SM_L_Pillow_A_Brk0.fbx",
+     "triangles": 336,
+     "bbox_min_m": [
+      -0.0703,
+      -0.054,
+      0.1034
+     ],
+     "bbox_max_m": [
+      0.0703,
+      0.054,
+      0.2266
+     ],
+     "materials": [
+      "Hero_SM_L_Pillow_A",
+      "Break"
+     ]
+    }
+   ],
+   "note": "throw pillow, mustard, piped, red buttons",
+   "kept_slots": [],
+   "triangles": 12736,
+   "bbox_min_m": [
+    -0.194,
+    -0.065,
+    -0.0045
+   ],
+   "bbox_max_m": [
+    0.194,
+    0.065,
+    0.3345
+   ],
+   "materials": [
+    "Hero_SM_L_Pillow_A"
+   ],
+   "lod_triangles": [
+    12736,
+    4456,
+    1527
+   ],
+   "ucx": 1
+  },
+  {
+   "name": "SM_L_Pillow_B",
+   "file": "SM_L_Pillow_B.fbx",
+   "set": "hero_living",
+   "break_class": "cloth",
+   "textures": {
+    "C": "SM_L_Pillow_B/tex/T_SM_L_Pillow_B_C.png",
+    "N": "SM_L_Pillow_B/tex/T_SM_L_Pillow_B_N.png",
+    "R": "SM_L_Pillow_B/tex/T_SM_L_Pillow_B_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_L_Pillow_B_Brk0",
+     "file": "SM_L_Pillow_B_Brk0.fbx",
+     "triangles": 336,
+     "bbox_min_m": [
+      -0.0703,
+      -0.054,
+      0.1034
+     ],
+     "bbox_max_m": [
+      0.0703,
+      0.054,
+      0.2266
+     ],
+     "materials": [
+      "Hero_SM_L_Pillow_B",
+      "Break"
+     ]
+    }
+   ],
+   "note": "throw pillow, red, piped, mustard buttons",
+   "kept_slots": [],
+   "triangles": 12736,
+   "bbox_min_m": [
+    -0.194,
+    -0.065,
+    -0.0045
+   ],
+   "bbox_max_m": [
+    0.194,
+    0.065,
+    0.3345
+   ],
+   "materials": [
+    "Hero_SM_L_Pillow_B"
+   ],
+   "lod_triangles": [
+    12736,
+    4456,
+    1527
+   ],
+   "ucx": 1
   },
   {
    "name": "SM_L_Radiator",
@@ -3218,155 +3650,79 @@
    "ucx": 1
   },
   {
-   "name": "SM_L_Armchair",
-   "file": "SM_L_Armchair.fbx",
+   "name": "SM_V3_FloorCushion",
+   "file": "SM_V3_FloorCushion.fbx",
    "set": "hero_living",
    "break_class": "cloth",
    "textures": {
-    "C": "SM_L_Armchair/tex/T_SM_L_Armchair_C.png",
-    "N": "SM_L_Armchair/tex/T_SM_L_Armchair_N.png",
-    "R": "SM_L_Armchair/tex/T_SM_L_Armchair_R.png"
+    "C": "SM_V3_FloorCushion/tex/T_SM_V3_FloorCushion_C.png",
+    "N": "SM_V3_FloorCushion/tex/T_SM_V3_FloorCushion_N.png",
+    "R": "SM_V3_FloorCushion/tex/T_SM_V3_FloorCushion_R.png"
    },
    "collision_lod": 0,
    "movers": [],
    "breaks": [
     {
-     "name": "SM_L_Armchair_Brk0",
-     "file": "SM_L_Armchair_Brk0.fbx",
-     "triangles": 2770,
+     "name": "SM_V3_FloorCushion_Brk0",
+     "file": "SM_V3_FloorCushion_Brk0.fbx",
+     "triangles": 7860,
      "bbox_min_m": [
-      -0.5589,
-      -0.4473,
-      0.002
+      -0.1043,
+      -0.3042,
+      0.0062
      ],
      "bbox_max_m": [
-      0.5589,
-      0.4274,
-      0.3421
+      0.3094,
+      0.3094,
+      0.1298
      ],
      "materials": [
-      "Hero_SM_L_Armchair",
+      "Hero_SM_V3_FloorCushion",
       "Break"
      ]
     },
     {
-     "name": "SM_L_Armchair_Brk1",
-     "file": "SM_L_Armchair_Brk1.fbx",
-     "triangles": 1518,
+     "name": "SM_V3_FloorCushion_Brk1",
+     "file": "SM_V3_FloorCushion_Brk1.fbx",
+     "triangles": 8388,
      "bbox_min_m": [
-      -0.583,
-      -0.4536,
-      0.056
+      -0.3094,
+      -0.3094,
+      0.0061
      ],
      "bbox_max_m": [
-      -0.4697,
-      0.4513,
-      0.6356
+      0.1461,
+      0.3067,
+      0.1299
      ],
      "materials": [
-      "Hero_SM_L_Armchair",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_L_Armchair_Brk2",
-     "file": "SM_L_Armchair_Brk2.fbx",
-     "triangles": 1516,
-     "bbox_min_m": [
-      0.4697,
-      -0.4536,
-      0.056
-     ],
-     "bbox_max_m": [
-      0.583,
-      0.4513,
-      0.6356
-     ],
-     "materials": [
-      "Hero_SM_L_Armchair",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_L_Armchair_Brk3",
-     "file": "SM_L_Armchair_Brk3.fbx",
-     "triangles": 1496,
-     "bbox_min_m": [
-      -0.5819,
-      0.3386,
-      0.057
-     ],
-     "bbox_max_m": [
-      0.5819,
-      0.4504,
-      1.0015
-     ],
-     "materials": [
-      "Hero_SM_L_Armchair",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_L_Armchair_Brk4",
-     "file": "SM_L_Armchair_Brk4.fbx",
-     "triangles": 4054,
-     "bbox_min_m": [
-      -0.4724,
-      -0.4461,
-      0.3193
-     ],
-     "bbox_max_m": [
-      0.4724,
-      0.3449,
-      0.4319
-     ],
-     "materials": [
-      "Hero_SM_L_Armchair",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_L_Armchair_Brk5",
-     "file": "SM_L_Armchair_Brk5.fbx",
-     "triangles": 2856,
-     "bbox_min_m": [
-      -0.4499,
-      0.2859,
-      0.3948
-     ],
-     "bbox_max_m": [
-      0.4499,
-      0.3583,
-      0.9362
-     ],
-     "materials": [
-      "Hero_SM_L_Armchair",
+      "Hero_SM_V3_FloorCushion",
       "Break"
      ]
     }
    ],
-   "note": "mustard armchair: piped arms, loose seat and back cushions, crocheted doily on the back",
+   "note": "floor cushion: honey corduroy, piped, carry handle",
    "kept_slots": [],
-   "triangles": 14210,
+   "triangles": 14500,
    "bbox_min_m": [
-    -0.583,
-    -0.4536,
-    0.002
+    -0.3094,
+    -0.3149,
+    0.0061
    ],
    "bbox_max_m": [
-    0.583,
-    0.4513,
-    1.0015
+    0.3094,
+    0.3094,
+    0.1299
    ],
    "materials": [
-    "Hero_SM_L_Armchair"
+    "Hero_SM_V3_FloorCushion"
    ],
    "lod_triangles": [
-    14210,
-    4972,
-    1704
+    14500,
+    5074,
+    1740
    ],
-   "ucx": 9
+   "ucx": 1
   }
  ],
  "note": "Hero art, living room & furniture (Tools/blender/hero_living.py): LOD0 + UCX in <name>.fbx, _LOD1/_LOD2, _Brk<i> pieces; tex/T_<name>_{C,N,R}.png"

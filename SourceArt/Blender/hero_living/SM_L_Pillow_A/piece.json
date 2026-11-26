@@ -1,0 +1,56 @@
+{
+ "name": "SM_L_Pillow_A",
+ "file": "SM_L_Pillow_A.fbx",
+ "set": "hero_living",
+ "break_class": "cloth",
+ "textures": {
+  "C": "SM_L_Pillow_A/tex/T_SM_L_Pillow_A_C.png",
+  "N": "SM_L_Pillow_A/tex/T_SM_L_Pillow_A_N.png",
+  "R": "SM_L_Pillow_A/tex/T_SM_L_Pillow_A_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_L_Pillow_A_Brk0",
+   "file": "SM_L_Pillow_A_Brk0.fbx",
+   "triangles": 336,
+   "bbox_min_m": [
+    -0.0703,
+    -0.054,
+    0.1034
+   ],
+   "bbox_max_m": [
+    0.0703,
+    0.054,
+    0.2266
+   ],
+   "materials": [
+    "Hero_SM_L_Pillow_A",
+    "Break"
+   ]
+  }
+ ],
+ "note": "throw pillow, mustard, piped, red buttons",
+ "kept_slots": [],
+ "triangles": 12736,
+ "bbox_min_m": [
+  -0.194,
+  -0.065,
+  -0.0045
+ ],
+ "bbox_max_m": [
+  0.194,
+  0.065,
+  0.3345
+ ],
+ "materials": [
+  "Hero_SM_L_Pillow_A"
+ ],
+ "lod_triangles": [
+  12736,
+  4456,
+  1527
+ ],
+ "ucx": 1
+}
