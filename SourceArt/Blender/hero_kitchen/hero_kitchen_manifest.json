@@ -882,206 +882,6 @@
    "ucx": 7
   },
   {
-   "name": "SM_K_Base1400_DoorL",
-   "file": "SM_K_Base1400_DoorL.fbx",
-   "set": "hero_kitchen",
-   "dest": "/Game/Hero/SM_K_Base1400_DoorL",
-   "break_class": "wood",
-   "textures": {
-    "C": "SM_K_Base1400_DoorL/tex/T_SM_K_Base1400_DoorL_C.png",
-    "N": "SM_K_Base1400_DoorL/tex/T_SM_K_Base1400_DoorL_N.png",
-    "R": "SM_K_Base1400_DoorL/tex/T_SM_K_Base1400_DoorL_R.png"
-   },
-   "collision_lod": 0,
-   "movers": [],
-   "breaks": [
-    {
-     "name": "SM_K_Base1400_DoorL_Brk0",
-     "file": "SM_K_Base1400_DoorL_Brk0.fbx",
-     "triangles": 552,
-     "bbox_min_m": [
-      0.0,
-      -0.028,
-      0.3724
-     ],
-     "bbox_max_m": [
-      0.3621,
-      -0.0,
-      0.5797
-     ],
-     "materials": [
-      "Hero_SM_K_Base1400_DoorL",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_Base1400_DoorL_Brk1",
-     "file": "SM_K_Base1400_DoorL_Brk1.fbx",
-     "triangles": 1240,
-     "bbox_min_m": [
-      -0.018,
-      -0.028,
-      0.0
-     ],
-     "bbox_max_m": [
-      0.3621,
-      0.012,
-      0.402
-     ],
-     "materials": [
-      "Hero_SM_K_Base1400_DoorL",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_Base1400_DoorL_Brk2",
-     "file": "SM_K_Base1400_DoorL_Brk2.fbx",
-     "triangles": 1610,
-     "bbox_min_m": [
-      -0.018,
-      -0.0628,
-      0.5547
-     ],
-     "bbox_max_m": [
-      0.3621,
-      0.012,
-      0.7553
-     ],
-     "materials": [
-      "Hero_SM_K_Base1400_DoorL",
-      "Break"
-     ]
-    }
-   ],
-   "source": "kitchen/SM_K_Base1400_DoorL.fbx (the owner's kitchen model, same frame)",
-   "old_slots": [
-    "CabinetInset",
-    "Cabinet",
-    "Brass"
-   ],
-   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 2304,
-   "bbox_min_m": [
-    -0.018,
-    -0.0628,
-    0.0
-   ],
-   "bbox_max_m": [
-    0.3621,
-    0.012,
-    0.7553
-   ],
-   "materials": [
-    "Hero_SM_K_Base1400_DoorL"
-   ],
-   "lod_triangles": [
-    2304,
-    1152,
-    576
-   ],
-   "ucx": 5
-  },
-  {
-   "name": "SM_K_Base1400_DoorR",
-   "file": "SM_K_Base1400_DoorR.fbx",
-   "set": "hero_kitchen",
-   "dest": "/Game/Hero/SM_K_Base1400_DoorR",
-   "break_class": "wood",
-   "textures": {
-    "C": "SM_K_Base1400_DoorR/tex/T_SM_K_Base1400_DoorR_C.png",
-    "N": "SM_K_Base1400_DoorR/tex/T_SM_K_Base1400_DoorR_N.png",
-    "R": "SM_K_Base1400_DoorR/tex/T_SM_K_Base1400_DoorR_R.png"
-   },
-   "collision_lod": 0,
-   "movers": [],
-   "breaks": [
-    {
-     "name": "SM_K_Base1400_DoorR_Brk0",
-     "file": "SM_K_Base1400_DoorR_Brk0.fbx",
-     "triangles": 546,
-     "bbox_min_m": [
-      -0.3621,
-      -0.028,
-      0.3736
-     ],
-     "bbox_max_m": [
-      0.0,
-      -0.0,
-      0.5811
-     ],
-     "materials": [
-      "Hero_SM_K_Base1400_DoorR",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_Base1400_DoorR_Brk1",
-     "file": "SM_K_Base1400_DoorR_Brk1.fbx",
-     "triangles": 1240,
-     "bbox_min_m": [
-      -0.3621,
-      -0.028,
-      0.0
-     ],
-     "bbox_max_m": [
-      0.018,
-      0.012,
-      0.4032
-     ],
-     "materials": [
-      "Hero_SM_K_Base1400_DoorR",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_Base1400_DoorR_Brk2",
-     "file": "SM_K_Base1400_DoorR_Brk2.fbx",
-     "triangles": 1610,
-     "bbox_min_m": [
-      -0.3621,
-      -0.0628,
-      0.556
-     ],
-     "bbox_max_m": [
-      0.018,
-      0.012,
-      0.7553
-     ],
-     "materials": [
-      "Hero_SM_K_Base1400_DoorR",
-      "Break"
-     ]
-    }
-   ],
-   "source": "kitchen/SM_K_Base1400_DoorR.fbx (the owner's kitchen model, same frame)",
-   "old_slots": [
-    "CabinetInset",
-    "Cabinet",
-    "Brass"
-   ],
-   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 2304,
-   "bbox_min_m": [
-    -0.3621,
-    -0.0628,
-    0.0
-   ],
-   "bbox_max_m": [
-    0.018,
-    0.012,
-    0.7553
-   ],
-   "materials": [
-    "Hero_SM_K_Base1400_DoorR"
-   ],
-   "lod_triangles": [
-    2304,
-    1152,
-    576
-   ],
-   "ucx": 5
-  },
-  {
    "name": "SM_K_Base1300",
    "file": "SM_K_Base1300.fbx",
    "set": "hero_kitchen",
@@ -1180,206 +980,6 @@
     340
    ],
    "ucx": 7
-  },
-  {
-   "name": "SM_K_Base1300_DoorL",
-   "file": "SM_K_Base1300_DoorL.fbx",
-   "set": "hero_kitchen",
-   "dest": "/Game/Hero/SM_K_Base1300_DoorL",
-   "break_class": "wood",
-   "textures": {
-    "C": "SM_K_Base1300_DoorL/tex/T_SM_K_Base1300_DoorL_C.png",
-    "N": "SM_K_Base1300_DoorL/tex/T_SM_K_Base1300_DoorL_N.png",
-    "R": "SM_K_Base1300_DoorL/tex/T_SM_K_Base1300_DoorL_R.png"
-   },
-   "collision_lod": 0,
-   "movers": [],
-   "breaks": [
-    {
-     "name": "SM_K_Base1300_DoorL_Brk0",
-     "file": "SM_K_Base1300_DoorL_Brk0.fbx",
-     "triangles": 556,
-     "bbox_min_m": [
-      0.0,
-      -0.028,
-      0.3733
-     ],
-     "bbox_max_m": [
-      0.3358,
-      -0.0,
-      0.5787
-     ],
-     "materials": [
-      "Hero_SM_K_Base1300_DoorL",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_Base1300_DoorL_Brk1",
-     "file": "SM_K_Base1300_DoorL_Brk1.fbx",
-     "triangles": 1242,
-     "bbox_min_m": [
-      -0.018,
-      -0.028,
-      0.0
-     ],
-     "bbox_max_m": [
-      0.3358,
-      0.012,
-      0.4011
-     ],
-     "materials": [
-      "Hero_SM_K_Base1300_DoorL",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_Base1300_DoorL_Brk2",
-     "file": "SM_K_Base1300_DoorL_Brk2.fbx",
-     "triangles": 1610,
-     "bbox_min_m": [
-      -0.018,
-      -0.0628,
-      0.5556
-     ],
-     "bbox_max_m": [
-      0.3358,
-      0.012,
-      0.7553
-     ],
-     "materials": [
-      "Hero_SM_K_Base1300_DoorL",
-      "Break"
-     ]
-    }
-   ],
-   "source": "kitchen/SM_K_Base1300_DoorL.fbx (the owner's kitchen model, same frame)",
-   "old_slots": [
-    "CabinetInset",
-    "Cabinet",
-    "Brass"
-   ],
-   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 2304,
-   "bbox_min_m": [
-    -0.018,
-    -0.0628,
-    0.0
-   ],
-   "bbox_max_m": [
-    0.3358,
-    0.012,
-    0.7553
-   ],
-   "materials": [
-    "Hero_SM_K_Base1300_DoorL"
-   ],
-   "lod_triangles": [
-    2304,
-    1152,
-    576
-   ],
-   "ucx": 5
-  },
-  {
-   "name": "SM_K_Base1300_DoorR",
-   "file": "SM_K_Base1300_DoorR.fbx",
-   "set": "hero_kitchen",
-   "dest": "/Game/Hero/SM_K_Base1300_DoorR",
-   "break_class": "wood",
-   "textures": {
-    "C": "SM_K_Base1300_DoorR/tex/T_SM_K_Base1300_DoorR_C.png",
-    "N": "SM_K_Base1300_DoorR/tex/T_SM_K_Base1300_DoorR_N.png",
-    "R": "SM_K_Base1300_DoorR/tex/T_SM_K_Base1300_DoorR_R.png"
-   },
-   "collision_lod": 0,
-   "movers": [],
-   "breaks": [
-    {
-     "name": "SM_K_Base1300_DoorR_Brk0",
-     "file": "SM_K_Base1300_DoorR_Brk0.fbx",
-     "triangles": 554,
-     "bbox_min_m": [
-      -0.3358,
-      -0.028,
-      0.3745
-     ],
-     "bbox_max_m": [
-      0.0,
-      -0.0,
-      0.5801
-     ],
-     "materials": [
-      "Hero_SM_K_Base1300_DoorR",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_Base1300_DoorR_Brk1",
-     "file": "SM_K_Base1300_DoorR_Brk1.fbx",
-     "triangles": 1244,
-     "bbox_min_m": [
-      -0.3358,
-      -0.028,
-      0.0
-     ],
-     "bbox_max_m": [
-      0.018,
-      0.012,
-      0.4023
-     ],
-     "materials": [
-      "Hero_SM_K_Base1300_DoorR",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_Base1300_DoorR_Brk2",
-     "file": "SM_K_Base1300_DoorR_Brk2.fbx",
-     "triangles": 1612,
-     "bbox_min_m": [
-      -0.3358,
-      -0.0628,
-      0.557
-     ],
-     "bbox_max_m": [
-      0.018,
-      0.012,
-      0.7553
-     ],
-     "materials": [
-      "Hero_SM_K_Base1300_DoorR",
-      "Break"
-     ]
-    }
-   ],
-   "source": "kitchen/SM_K_Base1300_DoorR.fbx (the owner's kitchen model, same frame)",
-   "old_slots": [
-    "CabinetInset",
-    "Cabinet",
-    "Brass"
-   ],
-   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 2304,
-   "bbox_min_m": [
-    -0.3358,
-    -0.0628,
-    0.0
-   ],
-   "bbox_max_m": [
-    0.018,
-    0.012,
-    0.7553
-   ],
-   "materials": [
-    "Hero_SM_K_Base1300_DoorR"
-   ],
-   "lod_triangles": [
-    2304,
-    1152,
-    576
-   ],
-   "ucx": 5
   },
   {
    "name": "SM_K_Base1200",
@@ -1482,206 +1082,6 @@
    "ucx": 7
   },
   {
-   "name": "SM_K_Base1200_DoorL",
-   "file": "SM_K_Base1200_DoorL.fbx",
-   "set": "hero_kitchen",
-   "dest": "/Game/Hero/SM_K_Base1200_DoorL",
-   "break_class": "wood",
-   "textures": {
-    "C": "SM_K_Base1200_DoorL/tex/T_SM_K_Base1200_DoorL_C.png",
-    "N": "SM_K_Base1200_DoorL/tex/T_SM_K_Base1200_DoorL_N.png",
-    "R": "SM_K_Base1200_DoorL/tex/T_SM_K_Base1200_DoorL_R.png"
-   },
-   "collision_lod": 0,
-   "movers": [],
-   "breaks": [
-    {
-     "name": "SM_K_Base1200_DoorL_Brk0",
-     "file": "SM_K_Base1200_DoorL_Brk0.fbx",
-     "triangles": 538,
-     "bbox_min_m": [
-      0.0,
-      -0.028,
-      0.3741
-     ],
-     "bbox_max_m": [
-      0.3095,
-      -0.0,
-      0.5777
-     ],
-     "materials": [
-      "Hero_SM_K_Base1200_DoorL",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_Base1200_DoorL_Brk1",
-     "file": "SM_K_Base1200_DoorL_Brk1.fbx",
-     "triangles": 1234,
-     "bbox_min_m": [
-      -0.018,
-      -0.028,
-      0.0
-     ],
-     "bbox_max_m": [
-      0.3095,
-      0.012,
-      0.3999
-     ],
-     "materials": [
-      "Hero_SM_K_Base1200_DoorL",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_Base1200_DoorL_Brk2",
-     "file": "SM_K_Base1200_DoorL_Brk2.fbx",
-     "triangles": 1606,
-     "bbox_min_m": [
-      -0.018,
-      -0.0628,
-      0.5567
-     ],
-     "bbox_max_m": [
-      0.3095,
-      0.012,
-      0.7553
-     ],
-     "materials": [
-      "Hero_SM_K_Base1200_DoorL",
-      "Break"
-     ]
-    }
-   ],
-   "source": "kitchen/SM_K_Base1200_DoorL.fbx (the owner's kitchen model, same frame)",
-   "old_slots": [
-    "CabinetInset",
-    "Cabinet",
-    "Brass"
-   ],
-   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 2304,
-   "bbox_min_m": [
-    -0.018,
-    -0.0628,
-    0.0
-   ],
-   "bbox_max_m": [
-    0.3095,
-    0.012,
-    0.7553
-   ],
-   "materials": [
-    "Hero_SM_K_Base1200_DoorL"
-   ],
-   "lod_triangles": [
-    2304,
-    1152,
-    576
-   ],
-   "ucx": 5
-  },
-  {
-   "name": "SM_K_Base1200_DoorR",
-   "file": "SM_K_Base1200_DoorR.fbx",
-   "set": "hero_kitchen",
-   "dest": "/Game/Hero/SM_K_Base1200_DoorR",
-   "break_class": "wood",
-   "textures": {
-    "C": "SM_K_Base1200_DoorR/tex/T_SM_K_Base1200_DoorR_C.png",
-    "N": "SM_K_Base1200_DoorR/tex/T_SM_K_Base1200_DoorR_N.png",
-    "R": "SM_K_Base1200_DoorR/tex/T_SM_K_Base1200_DoorR_R.png"
-   },
-   "collision_lod": 0,
-   "movers": [],
-   "breaks": [
-    {
-     "name": "SM_K_Base1200_DoorR_Brk0",
-     "file": "SM_K_Base1200_DoorR_Brk0.fbx",
-     "triangles": 532,
-     "bbox_min_m": [
-      -0.3095,
-      -0.028,
-      0.3756
-     ],
-     "bbox_max_m": [
-      0.0,
-      -0.0,
-      0.579
-     ],
-     "materials": [
-      "Hero_SM_K_Base1200_DoorR",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_Base1200_DoorR_Brk1",
-     "file": "SM_K_Base1200_DoorR_Brk1.fbx",
-     "triangles": 1236,
-     "bbox_min_m": [
-      -0.3095,
-      -0.028,
-      0.0
-     ],
-     "bbox_max_m": [
-      0.018,
-      0.012,
-      0.4014
-     ],
-     "materials": [
-      "Hero_SM_K_Base1200_DoorR",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_Base1200_DoorR_Brk2",
-     "file": "SM_K_Base1200_DoorR_Brk2.fbx",
-     "triangles": 1604,
-     "bbox_min_m": [
-      -0.3095,
-      -0.0628,
-      0.558
-     ],
-     "bbox_max_m": [
-      0.018,
-      0.012,
-      0.7553
-     ],
-     "materials": [
-      "Hero_SM_K_Base1200_DoorR",
-      "Break"
-     ]
-    }
-   ],
-   "source": "kitchen/SM_K_Base1200_DoorR.fbx (the owner's kitchen model, same frame)",
-   "old_slots": [
-    "CabinetInset",
-    "Cabinet",
-    "Brass"
-   ],
-   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 2304,
-   "bbox_min_m": [
-    -0.3095,
-    -0.0628,
-    0.0
-   ],
-   "bbox_max_m": [
-    0.018,
-    0.012,
-    0.7553
-   ],
-   "materials": [
-    "Hero_SM_K_Base1200_DoorR"
-   ],
-   "lod_triangles": [
-    2304,
-    1152,
-    576
-   ],
-   "ucx": 5
-  },
-  {
    "name": "SM_K_BaseDrawers",
    "file": "SM_K_BaseDrawers.fbx",
    "set": "hero_kitchen",
@@ -1780,309 +1180,6 @@
     292
    ],
    "ucx": 6
-  },
-  {
-   "name": "SM_K_BaseDrawers_Drawer1",
-   "file": "SM_K_BaseDrawers_Drawer1.fbx",
-   "set": "hero_kitchen",
-   "dest": "/Game/Hero/SM_K_BaseDrawers_Drawer1",
-   "break_class": "wood",
-   "textures": {
-    "C": "SM_K_BaseDrawers_Drawer1/tex/T_SM_K_BaseDrawers_Drawer1_C.png",
-    "N": "SM_K_BaseDrawers_Drawer1/tex/T_SM_K_BaseDrawers_Drawer1_N.png",
-    "R": "SM_K_BaseDrawers_Drawer1/tex/T_SM_K_BaseDrawers_Drawer1_R.png"
-   },
-   "collision_lod": 0,
-   "movers": [],
-   "breaks": [
-    {
-     "name": "SM_K_BaseDrawers_Drawer1_Brk0",
-     "file": "SM_K_BaseDrawers_Drawer1_Brk0.fbx",
-     "triangles": 618,
-     "bbox_min_m": [
-      -0.3432,
-      -0.4402,
-      0.0053
-     ],
-     "bbox_max_m": [
-      0.3432,
-      -0.1756,
-      0.1316
-     ],
-     "materials": [
-      "Hero_SM_K_BaseDrawers_Drawer1",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_BaseDrawers_Drawer1_Brk1",
-     "file": "SM_K_BaseDrawers_Drawer1_Brk1.fbx",
-     "triangles": 1898,
-     "bbox_min_m": [
-      -0.3642,
-      -0.9049,
-      0.0
-     ],
-     "bbox_max_m": [
-      0.3642,
-      -0.4229,
-      0.1421
-     ],
-     "materials": [
-      "Hero_SM_K_BaseDrawers_Drawer1",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_BaseDrawers_Drawer1_Brk2",
-     "file": "SM_K_BaseDrawers_Drawer1_Brk2.fbx",
-     "triangles": 778,
-     "bbox_min_m": [
-      -0.3432,
-      -0.3267,
-      0.0053
-     ],
-     "bbox_max_m": [
-      0.3432,
-      0.0,
-      0.1316
-     ],
-     "materials": [
-      "Hero_SM_K_BaseDrawers_Drawer1",
-      "Break"
-     ]
-    }
-   ],
-   "source": "kitchen/SM_K_BaseDrawers_Drawer1.fbx (the owner's kitchen model, same frame)",
-   "old_slots": [
-    "CabinetInset",
-    "Cabinet",
-    "Brass",
-    "Butcher"
-   ],
-   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 2072,
-   "bbox_min_m": [
-    -0.3642,
-    -0.9049,
-    0.0
-   ],
-   "bbox_max_m": [
-    0.3642,
-    0.0,
-    0.1421
-   ],
-   "materials": [
-    "Hero_SM_K_BaseDrawers_Drawer1"
-   ],
-   "lod_triangles": [
-    2072,
-    1036,
-    518
-   ],
-   "ucx": 7
-  },
-  {
-   "name": "SM_K_BaseDrawers_Drawer2",
-   "file": "SM_K_BaseDrawers_Drawer2.fbx",
-   "set": "hero_kitchen",
-   "dest": "/Game/Hero/SM_K_BaseDrawers_Drawer2",
-   "break_class": "wood",
-   "textures": {
-    "C": "SM_K_BaseDrawers_Drawer2/tex/T_SM_K_BaseDrawers_Drawer2_C.png",
-    "N": "SM_K_BaseDrawers_Drawer2/tex/T_SM_K_BaseDrawers_Drawer2_N.png",
-    "R": "SM_K_BaseDrawers_Drawer2/tex/T_SM_K_BaseDrawers_Drawer2_R.png"
-   },
-   "collision_lod": 0,
-   "movers": [],
-   "breaks": [
-    {
-     "name": "SM_K_BaseDrawers_Drawer2_Brk0",
-     "file": "SM_K_BaseDrawers_Drawer2_Brk0.fbx",
-     "triangles": 638,
-     "bbox_min_m": [
-      -0.3432,
-      -0.4429,
-      0.0053
-     ],
-     "bbox_max_m": [
-      0.3432,
-      -0.1667,
-      0.2316
-     ],
-     "materials": [
-      "Hero_SM_K_BaseDrawers_Drawer2",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_BaseDrawers_Drawer2_Brk1",
-     "file": "SM_K_BaseDrawers_Drawer2_Brk1.fbx",
-     "triangles": 1880,
-     "bbox_min_m": [
-      -0.3642,
-      -0.9049,
-      0.0
-     ],
-     "bbox_max_m": [
-      0.3642,
-      -0.4156,
-      0.2895
-     ],
-     "materials": [
-      "Hero_SM_K_BaseDrawers_Drawer2",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_BaseDrawers_Drawer2_Brk2",
-     "file": "SM_K_BaseDrawers_Drawer2_Brk2.fbx",
-     "triangles": 800,
-     "bbox_min_m": [
-      -0.3432,
-      -0.3296,
-      0.0053
-     ],
-     "bbox_max_m": [
-      0.3432,
-      0.0,
-      0.2316
-     ],
-     "materials": [
-      "Hero_SM_K_BaseDrawers_Drawer2",
-      "Break"
-     ]
-    }
-   ],
-   "source": "kitchen/SM_K_BaseDrawers_Drawer2.fbx (the owner's kitchen model, same frame)",
-   "old_slots": [
-    "CabinetInset",
-    "Cabinet",
-    "Brass",
-    "Butcher"
-   ],
-   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 2072,
-   "bbox_min_m": [
-    -0.3642,
-    -0.9049,
-    0.0
-   ],
-   "bbox_max_m": [
-    0.3642,
-    0.0,
-    0.2895
-   ],
-   "materials": [
-    "Hero_SM_K_BaseDrawers_Drawer2"
-   ],
-   "lod_triangles": [
-    2072,
-    1036,
-    518
-   ],
-   "ucx": 5
-  },
-  {
-   "name": "SM_K_BaseDrawers_Drawer3",
-   "file": "SM_K_BaseDrawers_Drawer3.fbx",
-   "set": "hero_kitchen",
-   "dest": "/Game/Hero/SM_K_BaseDrawers_Drawer3",
-   "break_class": "wood",
-   "textures": {
-    "C": "SM_K_BaseDrawers_Drawer3/tex/T_SM_K_BaseDrawers_Drawer3_C.png",
-    "N": "SM_K_BaseDrawers_Drawer3/tex/T_SM_K_BaseDrawers_Drawer3_N.png",
-    "R": "SM_K_BaseDrawers_Drawer3/tex/T_SM_K_BaseDrawers_Drawer3_R.png"
-   },
-   "collision_lod": 0,
-   "movers": [],
-   "breaks": [
-    {
-     "name": "SM_K_BaseDrawers_Drawer3_Brk0",
-     "file": "SM_K_BaseDrawers_Drawer3_Brk0.fbx",
-     "triangles": 648,
-     "bbox_min_m": [
-      -0.3432,
-      -0.4437,
-      0.0053
-     ],
-     "bbox_max_m": [
-      0.3432,
-      -0.1664,
-      0.2421
-     ],
-     "materials": [
-      "Hero_SM_K_BaseDrawers_Drawer3",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_BaseDrawers_Drawer3_Brk1",
-     "file": "SM_K_BaseDrawers_Drawer3_Brk1.fbx",
-     "triangles": 1888,
-     "bbox_min_m": [
-      -0.3642,
-      -0.9049,
-      0.0
-     ],
-     "bbox_max_m": [
-      0.3642,
-      -0.4154,
-      0.2947
-     ],
-     "materials": [
-      "Hero_SM_K_BaseDrawers_Drawer3",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_BaseDrawers_Drawer3_Brk2",
-     "file": "SM_K_BaseDrawers_Drawer3_Brk2.fbx",
-     "triangles": 846,
-     "bbox_min_m": [
-      -0.3432,
-      -0.3304,
-      0.0053
-     ],
-     "bbox_max_m": [
-      0.3432,
-      0.0,
-      0.2421
-     ],
-     "materials": [
-      "Hero_SM_K_BaseDrawers_Drawer3",
-      "Break"
-     ]
-    }
-   ],
-   "source": "kitchen/SM_K_BaseDrawers_Drawer3.fbx (the owner's kitchen model, same frame)",
-   "old_slots": [
-    "CabinetInset",
-    "Cabinet",
-    "Brass",
-    "Butcher"
-   ],
-   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 2072,
-   "bbox_min_m": [
-    -0.3642,
-    -0.9049,
-    0.0
-   ],
-   "bbox_max_m": [
-    0.3642,
-    0.0,
-    0.2947
-   ],
-   "materials": [
-    "Hero_SM_K_BaseDrawers_Drawer3"
-   ],
-   "lod_triangles": [
-    2072,
-    1036,
-    518
-   ],
-   "ucx": 5
   },
   {
    "name": "SM_K_BaseSink",
@@ -2185,210 +1282,6 @@
    "ucx": 8
   },
   {
-   "name": "SM_K_BaseSink_DoorL",
-   "file": "SM_K_BaseSink_DoorL.fbx",
-   "set": "hero_kitchen",
-   "dest": "/Game/Hero/SM_K_BaseSink_DoorL",
-   "break_class": "wood",
-   "textures": {
-    "C": "SM_K_BaseSink_DoorL/tex/T_SM_K_BaseSink_DoorL_C.png",
-    "N": "SM_K_BaseSink_DoorL/tex/T_SM_K_BaseSink_DoorL_N.png",
-    "R": "SM_K_BaseSink_DoorL/tex/T_SM_K_BaseSink_DoorL_R.png"
-   },
-   "collision_lod": 0,
-   "movers": [],
-   "breaks": [
-    {
-     "name": "SM_K_BaseSink_DoorL_Brk0",
-     "file": "SM_K_BaseSink_DoorL_Brk0.fbx",
-     "triangles": 1676,
-     "bbox_min_m": [
-      -0.018,
-      -0.0628,
-      0.2388
-     ],
-     "bbox_max_m": [
-      0.3621,
-      0.012,
-      0.4921
-     ],
-     "materials": [
-      "Hero_SM_K_BaseSink_DoorL",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_BaseSink_DoorL_Brk1",
-     "file": "SM_K_BaseSink_DoorL_Brk1.fbx",
-     "triangles": 1304,
-     "bbox_min_m": [
-      -0.018,
-      -0.028,
-      0.0
-     ],
-     "bbox_max_m": [
-      0.3621,
-      0.012,
-      0.2654
-     ],
-     "materials": [
-      "Hero_SM_K_BaseSink_DoorL",
-      "Break"
-     ]
-    }
-   ],
-   "source": "kitchen/SM_K_BaseSink_DoorL.fbx (the owner's kitchen model, same frame)",
-   "old_slots": [
-    "CabinetInset",
-    "Cabinet",
-    "Brass"
-   ],
-   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 2304,
-   "bbox_min_m": [
-    -0.018,
-    -0.0628,
-    0.0
-   ],
-   "bbox_max_m": [
-    0.3621,
-    0.012,
-    0.4921
-   ],
-   "materials": [
-    "Hero_SM_K_BaseSink_DoorL"
-   ],
-   "lod_triangles": [
-    2304,
-    1152,
-    576
-   ],
-   "ucx": 5
-  },
-  {
-   "name": "SM_K_BaseSink_DoorR",
-   "file": "SM_K_BaseSink_DoorR.fbx",
-   "set": "hero_kitchen",
-   "dest": "/Game/Hero/SM_K_BaseSink_DoorR",
-   "break_class": "wood",
-   "textures": {
-    "C": "SM_K_BaseSink_DoorR/tex/T_SM_K_BaseSink_DoorR_C.png",
-    "N": "SM_K_BaseSink_DoorR/tex/T_SM_K_BaseSink_DoorR_N.png",
-    "R": "SM_K_BaseSink_DoorR/tex/T_SM_K_BaseSink_DoorR_R.png"
-   },
-   "collision_lod": 0,
-   "movers": [],
-   "breaks": [
-    {
-     "name": "SM_K_BaseSink_DoorR_Brk0",
-     "file": "SM_K_BaseSink_DoorR_Brk0.fbx",
-     "triangles": 1684,
-     "bbox_min_m": [
-      -0.3621,
-      -0.0628,
-      0.24
-     ],
-     "bbox_max_m": [
-      0.018,
-      0.012,
-      0.4921
-     ],
-     "materials": [
-      "Hero_SM_K_BaseSink_DoorR",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_BaseSink_DoorR_Brk1",
-     "file": "SM_K_BaseSink_DoorR_Brk1.fbx",
-     "triangles": 1296,
-     "bbox_min_m": [
-      -0.3621,
-      -0.028,
-      0.0
-     ],
-     "bbox_max_m": [
-      0.018,
-      0.012,
-      0.2665
-     ],
-     "materials": [
-      "Hero_SM_K_BaseSink_DoorR",
-      "Break"
-     ]
-    }
-   ],
-   "source": "kitchen/SM_K_BaseSink_DoorR.fbx (the owner's kitchen model, same frame)",
-   "old_slots": [
-    "CabinetInset",
-    "Cabinet",
-    "Brass"
-   ],
-   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 2304,
-   "bbox_min_m": [
-    -0.3621,
-    -0.0628,
-    0.0
-   ],
-   "bbox_max_m": [
-    0.018,
-    0.012,
-    0.4921
-   ],
-   "materials": [
-    "Hero_SM_K_BaseSink_DoorR"
-   ],
-   "lod_triangles": [
-    2304,
-    1152,
-    576
-   ],
-   "ucx": 5
-  },
-  {
-   "name": "SM_K_Sink",
-   "file": "SM_K_Sink.fbx",
-   "set": "hero_kitchen",
-   "dest": "/Game/Hero/SM_K_Sink",
-   "break_class": "",
-   "textures": {
-    "C": "SM_K_Sink/tex/T_SM_K_Sink_C.png",
-    "N": "SM_K_Sink/tex/T_SM_K_Sink_N.png",
-    "R": "SM_K_Sink/tex/T_SM_K_Sink_R.png"
-   },
-   "collision_lod": 0,
-   "movers": [],
-   "breaks": [],
-   "source": "kitchen/SM_K_Sink.fbx (the owner's kitchen model, same frame)",
-   "old_slots": [
-    "Steel",
-    "Chrome",
-    "Iron"
-   ],
-   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 2024,
-   "bbox_min_m": [
-    -0.3421,
-    -0.3947,
-    0.0
-   ],
-   "bbox_max_m": [
-    0.3421,
-    0.3947,
-    0.3274
-   ],
-   "materials": [
-    "Hero_SM_K_Sink"
-   ],
-   "lod_triangles": [
-    2024,
-    1012,
-    506
-   ],
-   "ucx": 6
-  },
-  {
    "name": "SM_K_Faucet",
    "file": "SM_K_Faucet.fbx",
    "set": "hero_kitchen",
@@ -2425,88 +1318,6 @@
     1604,
     802,
     400
-   ],
-   "ucx": 3
-  },
-  {
-   "name": "SM_K_Faucet_TapHot",
-   "file": "SM_K_Faucet_TapHot.fbx",
-   "set": "hero_kitchen",
-   "dest": "/Game/Hero/SM_K_Faucet_TapHot",
-   "break_class": "",
-   "textures": {
-    "C": "SM_K_Faucet_TapHot/tex/T_SM_K_Faucet_TapHot_C.png",
-    "N": "SM_K_Faucet_TapHot/tex/T_SM_K_Faucet_TapHot_N.png",
-    "R": "SM_K_Faucet_TapHot/tex/T_SM_K_Faucet_TapHot_R.png"
-   },
-   "collision_lod": 0,
-   "movers": [],
-   "breaks": [],
-   "source": "kitchen/SM_K_Faucet_TapHot.fbx (the owner's kitchen model, same frame)",
-   "old_slots": [
-    "Chrome",
-    "Red"
-   ],
-   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 568,
-   "bbox_min_m": [
-    -0.0263,
-    -0.0421,
-    0.0
-   ],
-   "bbox_max_m": [
-    0.0263,
-    0.0421,
-    0.07
-   ],
-   "materials": [
-    "Hero_SM_K_Faucet_TapHot"
-   ],
-   "lod_triangles": [
-    568,
-    284,
-    142
-   ],
-   "ucx": 3
-  },
-  {
-   "name": "SM_K_Faucet_TapCold",
-   "file": "SM_K_Faucet_TapCold.fbx",
-   "set": "hero_kitchen",
-   "dest": "/Game/Hero/SM_K_Faucet_TapCold",
-   "break_class": "",
-   "textures": {
-    "C": "SM_K_Faucet_TapCold/tex/T_SM_K_Faucet_TapCold_C.png",
-    "N": "SM_K_Faucet_TapCold/tex/T_SM_K_Faucet_TapCold_N.png",
-    "R": "SM_K_Faucet_TapCold/tex/T_SM_K_Faucet_TapCold_R.png"
-   },
-   "collision_lod": 0,
-   "movers": [],
-   "breaks": [],
-   "source": "kitchen/SM_K_Faucet_TapCold.fbx (the owner's kitchen model, same frame)",
-   "old_slots": [
-    "Chrome",
-    "Blue"
-   ],
-   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 568,
-   "bbox_min_m": [
-    -0.0263,
-    -0.0421,
-    0.0
-   ],
-   "bbox_max_m": [
-    0.0263,
-    0.0421,
-    0.07
-   ],
-   "materials": [
-    "Hero_SM_K_Faucet_TapCold"
-   ],
-   "lod_triangles": [
-    568,
-    284,
-    142
    ],
    "ucx": 3
   },
@@ -2846,206 +1657,6 @@
    "ucx": 8
   },
   {
-   "name": "SM_K_WallCab1250_DoorL",
-   "file": "SM_K_WallCab1250_DoorL.fbx",
-   "set": "hero_kitchen",
-   "dest": "/Game/Hero/SM_K_WallCab1250_DoorL",
-   "break_class": "wood",
-   "textures": {
-    "C": "SM_K_WallCab1250_DoorL/tex/T_SM_K_WallCab1250_DoorL_C.png",
-    "N": "SM_K_WallCab1250_DoorL/tex/T_SM_K_WallCab1250_DoorL_N.png",
-    "R": "SM_K_WallCab1250_DoorL/tex/T_SM_K_WallCab1250_DoorL_R.png"
-   },
-   "collision_lod": 0,
-   "movers": [],
-   "breaks": [
-    {
-     "name": "SM_K_WallCab1250_DoorL_Brk0",
-     "file": "SM_K_WallCab1250_DoorL_Brk0.fbx",
-     "triangles": 560,
-     "bbox_min_m": [
-      0.0,
-      -0.028,
-      0.2377
-     ],
-     "bbox_max_m": [
-      0.3226,
-      0.0,
-      0.5239
-     ],
-     "materials": [
-      "Hero_SM_K_WallCab1250_DoorL",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_WallCab1250_DoorL_Brk1",
-     "file": "SM_K_WallCab1250_DoorL_Brk1.fbx",
-     "triangles": 1608,
-     "bbox_min_m": [
-      -0.018,
-      -0.0628,
-      0.0
-     ],
-     "bbox_max_m": [
-      0.3226,
-      0.012,
-      0.3193
-     ],
-     "materials": [
-      "Hero_SM_K_WallCab1250_DoorL",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_WallCab1250_DoorL_Brk2",
-     "file": "SM_K_WallCab1250_DoorL_Brk2.fbx",
-     "triangles": 1242,
-     "bbox_min_m": [
-      -0.018,
-      -0.028,
-      0.4451
-     ],
-     "bbox_max_m": [
-      0.3226,
-      0.012,
-      0.6947
-     ],
-     "materials": [
-      "Hero_SM_K_WallCab1250_DoorL",
-      "Break"
-     ]
-    }
-   ],
-   "source": "kitchen/SM_K_WallCab1250_DoorL.fbx (the owner's kitchen model, same frame)",
-   "old_slots": [
-    "CabinetInset",
-    "Cabinet",
-    "Brass"
-   ],
-   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 2304,
-   "bbox_min_m": [
-    -0.018,
-    -0.0628,
-    0.0
-   ],
-   "bbox_max_m": [
-    0.3226,
-    0.012,
-    0.6947
-   ],
-   "materials": [
-    "Hero_SM_K_WallCab1250_DoorL"
-   ],
-   "lod_triangles": [
-    2304,
-    1152,
-    576
-   ],
-   "ucx": 5
-  },
-  {
-   "name": "SM_K_WallCab1250_DoorR",
-   "file": "SM_K_WallCab1250_DoorR.fbx",
-   "set": "hero_kitchen",
-   "dest": "/Game/Hero/SM_K_WallCab1250_DoorR",
-   "break_class": "wood",
-   "textures": {
-    "C": "SM_K_WallCab1250_DoorR/tex/T_SM_K_WallCab1250_DoorR_C.png",
-    "N": "SM_K_WallCab1250_DoorR/tex/T_SM_K_WallCab1250_DoorR_N.png",
-    "R": "SM_K_WallCab1250_DoorR/tex/T_SM_K_WallCab1250_DoorR_R.png"
-   },
-   "collision_lod": 0,
-   "movers": [],
-   "breaks": [
-    {
-     "name": "SM_K_WallCab1250_DoorR_Brk0",
-     "file": "SM_K_WallCab1250_DoorR_Brk0.fbx",
-     "triangles": 560,
-     "bbox_min_m": [
-      -0.3226,
-      -0.028,
-      0.2418
-     ],
-     "bbox_max_m": [
-      0.0,
-      0.0,
-      0.528
-     ],
-     "materials": [
-      "Hero_SM_K_WallCab1250_DoorR",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_WallCab1250_DoorR_Brk1",
-     "file": "SM_K_WallCab1250_DoorR_Brk1.fbx",
-     "triangles": 1604,
-     "bbox_min_m": [
-      -0.3226,
-      -0.0628,
-      0.0
-     ],
-     "bbox_max_m": [
-      0.018,
-      0.012,
-      0.3234
-     ],
-     "materials": [
-      "Hero_SM_K_WallCab1250_DoorR",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_WallCab1250_DoorR_Brk2",
-     "file": "SM_K_WallCab1250_DoorR_Brk2.fbx",
-     "triangles": 1246,
-     "bbox_min_m": [
-      -0.3226,
-      -0.028,
-      0.4493
-     ],
-     "bbox_max_m": [
-      0.018,
-      0.012,
-      0.6947
-     ],
-     "materials": [
-      "Hero_SM_K_WallCab1250_DoorR",
-      "Break"
-     ]
-    }
-   ],
-   "source": "kitchen/SM_K_WallCab1250_DoorR.fbx (the owner's kitchen model, same frame)",
-   "old_slots": [
-    "CabinetInset",
-    "Cabinet",
-    "Brass"
-   ],
-   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 2304,
-   "bbox_min_m": [
-    -0.3226,
-    -0.0628,
-    0.0
-   ],
-   "bbox_max_m": [
-    0.018,
-    0.012,
-    0.6947
-   ],
-   "materials": [
-    "Hero_SM_K_WallCab1250_DoorR"
-   ],
-   "lod_triangles": [
-    2304,
-    1152,
-    576
-   ],
-   "ucx": 5
-  },
-  {
    "name": "SM_K_WallCab1500",
    "file": "SM_K_WallCab1500.fbx",
    "set": "hero_kitchen",
@@ -3145,206 +1756,6 @@
    "ucx": 8
   },
   {
-   "name": "SM_K_WallCab1500_DoorL",
-   "file": "SM_K_WallCab1500_DoorL.fbx",
-   "set": "hero_kitchen",
-   "dest": "/Game/Hero/SM_K_WallCab1500_DoorL",
-   "break_class": "wood",
-   "textures": {
-    "C": "SM_K_WallCab1500_DoorL/tex/T_SM_K_WallCab1500_DoorL_C.png",
-    "N": "SM_K_WallCab1500_DoorL/tex/T_SM_K_WallCab1500_DoorL_N.png",
-    "R": "SM_K_WallCab1500_DoorL/tex/T_SM_K_WallCab1500_DoorL_R.png"
-   },
-   "collision_lod": 0,
-   "movers": [],
-   "breaks": [
-    {
-     "name": "SM_K_WallCab1500_DoorL_Brk0",
-     "file": "SM_K_WallCab1500_DoorL_Brk0.fbx",
-     "triangles": 596,
-     "bbox_min_m": [
-      0.0,
-      -0.028,
-      0.2317
-     ],
-     "bbox_max_m": [
-      0.3884,
-      0.0,
-      0.5317
-     ],
-     "materials": [
-      "Hero_SM_K_WallCab1500_DoorL",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_WallCab1500_DoorL_Brk1",
-     "file": "SM_K_WallCab1500_DoorL_Brk1.fbx",
-     "triangles": 1618,
-     "bbox_min_m": [
-      -0.018,
-      -0.0628,
-      0.0
-     ],
-     "bbox_max_m": [
-      0.3884,
-      0.012,
-      0.3261
-     ],
-     "materials": [
-      "Hero_SM_K_WallCab1500_DoorL",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_WallCab1500_DoorL_Brk2",
-     "file": "SM_K_WallCab1500_DoorL_Brk2.fbx",
-     "triangles": 1266,
-     "bbox_min_m": [
-      -0.018,
-      -0.028,
-      0.4379
-     ],
-     "bbox_max_m": [
-      0.3884,
-      0.012,
-      0.6947
-     ],
-     "materials": [
-      "Hero_SM_K_WallCab1500_DoorL",
-      "Break"
-     ]
-    }
-   ],
-   "source": "kitchen/SM_K_WallCab1500_DoorL.fbx (the owner's kitchen model, same frame)",
-   "old_slots": [
-    "CabinetInset",
-    "Cabinet",
-    "Brass"
-   ],
-   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 2304,
-   "bbox_min_m": [
-    -0.018,
-    -0.0628,
-    0.0
-   ],
-   "bbox_max_m": [
-    0.3884,
-    0.012,
-    0.6947
-   ],
-   "materials": [
-    "Hero_SM_K_WallCab1500_DoorL"
-   ],
-   "lod_triangles": [
-    2304,
-    1152,
-    576
-   ],
-   "ucx": 5
-  },
-  {
-   "name": "SM_K_WallCab1500_DoorR",
-   "file": "SM_K_WallCab1500_DoorR.fbx",
-   "set": "hero_kitchen",
-   "dest": "/Game/Hero/SM_K_WallCab1500_DoorR",
-   "break_class": "wood",
-   "textures": {
-    "C": "SM_K_WallCab1500_DoorR/tex/T_SM_K_WallCab1500_DoorR_C.png",
-    "N": "SM_K_WallCab1500_DoorR/tex/T_SM_K_WallCab1500_DoorR_N.png",
-    "R": "SM_K_WallCab1500_DoorR/tex/T_SM_K_WallCab1500_DoorR_R.png"
-   },
-   "collision_lod": 0,
-   "movers": [],
-   "breaks": [
-    {
-     "name": "SM_K_WallCab1500_DoorR_Brk0",
-     "file": "SM_K_WallCab1500_DoorR_Brk0.fbx",
-     "triangles": 582,
-     "bbox_min_m": [
-      -0.3884,
-      -0.028,
-      0.235
-     ],
-     "bbox_max_m": [
-      0.0,
-      0.0,
-      0.5361
-     ],
-     "materials": [
-      "Hero_SM_K_WallCab1500_DoorR",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_WallCab1500_DoorR_Brk1",
-     "file": "SM_K_WallCab1500_DoorR_Brk1.fbx",
-     "triangles": 1628,
-     "bbox_min_m": [
-      -0.3884,
-      -0.0628,
-      0.0
-     ],
-     "bbox_max_m": [
-      0.018,
-      0.012,
-      0.3295
-     ],
-     "materials": [
-      "Hero_SM_K_WallCab1500_DoorR",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_WallCab1500_DoorR_Brk2",
-     "file": "SM_K_WallCab1500_DoorR_Brk2.fbx",
-     "triangles": 1254,
-     "bbox_min_m": [
-      -0.3884,
-      -0.028,
-      0.4418
-     ],
-     "bbox_max_m": [
-      0.018,
-      0.012,
-      0.6947
-     ],
-     "materials": [
-      "Hero_SM_K_WallCab1500_DoorR",
-      "Break"
-     ]
-    }
-   ],
-   "source": "kitchen/SM_K_WallCab1500_DoorR.fbx (the owner's kitchen model, same frame)",
-   "old_slots": [
-    "CabinetInset",
-    "Cabinet",
-    "Brass"
-   ],
-   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 2304,
-   "bbox_min_m": [
-    -0.3884,
-    -0.0628,
-    0.0
-   ],
-   "bbox_max_m": [
-    0.018,
-    0.012,
-    0.6947
-   ],
-   "materials": [
-    "Hero_SM_K_WallCab1500_DoorR"
-   ],
-   "lod_triangles": [
-    2304,
-    1152,
-    576
-   ],
-   "ucx": 5
-  },
-  {
    "name": "SM_K_Fridge",
    "file": "SM_K_Fridge.fbx",
    "set": "hero_kitchen",
@@ -3387,53 +1798,6 @@
     1056
    ],
    "ucx": 5
-  },
-  {
-   "name": "SM_K_Fridge_DoorMain",
-   "file": "SM_K_Fridge_DoorMain.fbx",
-   "set": "hero_kitchen",
-   "dest": "/Game/Hero/SM_K_Fridge_DoorMain",
-   "break_class": "",
-   "textures": {
-    "C": "SM_K_Fridge_DoorMain/tex/T_SM_K_Fridge_DoorMain_C.png",
-    "N": "SM_K_Fridge_DoorMain/tex/T_SM_K_Fridge_DoorMain_N.png",
-    "R": "SM_K_Fridge_DoorMain/tex/T_SM_K_Fridge_DoorMain_R.png"
-   },
-   "collision_lod": 0,
-   "movers": [],
-   "breaks": [],
-   "source": "kitchen/SM_K_Fridge_DoorMain.fbx (the owner's kitchen model, same frame)",
-   "old_slots": [
-    "FridgeRed",
-    "FridgeLiner",
-    "ShelfGlass",
-    "Chrome",
-    "Fabric",
-    "Blue",
-    "Leaf",
-    "Paper"
-   ],
-   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
-   "triangles": 4556,
-   "bbox_min_m": [
-    0.0,
-    -0.1096,
-    0.0032
-   ],
-   "bbox_max_m": [
-    1.0526,
-    0.0789,
-    1.2495
-   ],
-   "materials": [
-    "Hero_SM_K_Fridge_DoorMain"
-   ],
-   "lod_triangles": [
-    4556,
-    2278,
-    1139
-   ],
-   "ucx": 9
   },
   {
    "name": "SM_K_Fridge_DoorFreezer",
@@ -4409,6 +2773,1642 @@
     94
    ],
    "ucx": 2
+  },
+  {
+   "name": "SM_K_Sink",
+   "file": "SM_K_Sink.fbx",
+   "set": "hero_kitchen",
+   "dest": "/Game/Hero/SM_K_Sink",
+   "break_class": "",
+   "textures": {
+    "C": "SM_K_Sink/tex/T_SM_K_Sink_C.png",
+    "N": "SM_K_Sink/tex/T_SM_K_Sink_N.png",
+    "R": "SM_K_Sink/tex/T_SM_K_Sink_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [],
+   "source": "kitchen/SM_K_Sink.fbx (the owner's kitchen model, same frame)",
+   "old_slots": [
+    "Steel",
+    "Chrome",
+    "Iron"
+   ],
+   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
+   "triangles": 3064,
+   "bbox_min_m": [
+    -0.3421,
+    -0.3947,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.3421,
+    0.3947,
+    0.3274
+   ],
+   "materials": [
+    "Hero_SM_K_Sink"
+   ],
+   "lod_triangles": [
+    3064,
+    1532,
+    766
+   ],
+   "ucx": 6
+  },
+  {
+   "name": "SM_K_BaseDrawers_Drawer2",
+   "file": "SM_K_BaseDrawers_Drawer2.fbx",
+   "set": "hero_kitchen",
+   "dest": "/Game/Hero/SM_K_BaseDrawers_Drawer2",
+   "break_class": "wood",
+   "textures": {
+    "C": "SM_K_BaseDrawers_Drawer2/tex/T_SM_K_BaseDrawers_Drawer2_C.png",
+    "N": "SM_K_BaseDrawers_Drawer2/tex/T_SM_K_BaseDrawers_Drawer2_N.png",
+    "R": "SM_K_BaseDrawers_Drawer2/tex/T_SM_K_BaseDrawers_Drawer2_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_K_BaseDrawers_Drawer2_Brk0",
+     "file": "SM_K_BaseDrawers_Drawer2_Brk0.fbx",
+     "triangles": 640,
+     "bbox_min_m": [
+      -0.3432,
+      -0.4366,
+      0.0053
+     ],
+     "bbox_max_m": [
+      0.3432,
+      -0.1631,
+      0.2316
+     ],
+     "materials": [
+      "Hero_SM_K_BaseDrawers_Drawer2",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_BaseDrawers_Drawer2_Brk1",
+     "file": "SM_K_BaseDrawers_Drawer2_Brk1.fbx",
+     "triangles": 2182,
+     "bbox_min_m": [
+      -0.3642,
+      -0.8917,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.3642,
+      -0.4093,
+      0.2895
+     ],
+     "materials": [
+      "Hero_SM_K_BaseDrawers_Drawer2",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_BaseDrawers_Drawer2_Brk2",
+     "file": "SM_K_BaseDrawers_Drawer2_Brk2.fbx",
+     "triangles": 834,
+     "bbox_min_m": [
+      -0.3432,
+      -0.3258,
+      0.0053
+     ],
+     "bbox_max_m": [
+      0.3432,
+      0.0,
+      0.2316
+     ],
+     "materials": [
+      "Hero_SM_K_BaseDrawers_Drawer2",
+      "Break"
+     ]
+    }
+   ],
+   "source": "kitchen/SM_K_BaseDrawers_Drawer2.fbx (the owner's kitchen model, same frame)",
+   "old_slots": [
+    "CabinetInset",
+    "Cabinet",
+    "Brass",
+    "Butcher"
+   ],
+   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
+   "triangles": 2368,
+   "bbox_min_m": [
+    -0.3642,
+    -0.8917,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.3642,
+    0.0,
+    0.2895
+   ],
+   "materials": [
+    "Hero_SM_K_BaseDrawers_Drawer2"
+   ],
+   "lod_triangles": [
+    2368,
+    1184,
+    591
+   ],
+   "ucx": 5
+  },
+  {
+   "name": "SM_K_WallCab1250_DoorL",
+   "file": "SM_K_WallCab1250_DoorL.fbx",
+   "set": "hero_kitchen",
+   "dest": "/Game/Hero/SM_K_WallCab1250_DoorL",
+   "break_class": "wood",
+   "textures": {
+    "C": "SM_K_WallCab1250_DoorL/tex/T_SM_K_WallCab1250_DoorL_C.png",
+    "N": "SM_K_WallCab1250_DoorL/tex/T_SM_K_WallCab1250_DoorL_N.png",
+    "R": "SM_K_WallCab1250_DoorL/tex/T_SM_K_WallCab1250_DoorL_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_K_WallCab1250_DoorL_Brk0",
+     "file": "SM_K_WallCab1250_DoorL_Brk0.fbx",
+     "triangles": 1036,
+     "bbox_min_m": [
+      0.0,
+      -0.028,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.3226,
+      -0.017,
+      0.5242
+     ],
+     "materials": [
+      "Hero_SM_K_WallCab1250_DoorL",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_WallCab1250_DoorL_Brk1",
+     "file": "SM_K_WallCab1250_DoorL_Brk1.fbx",
+     "triangles": 3054,
+     "bbox_min_m": [
+      -0.018,
+      -0.056,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.3226,
+      0.012,
+      0.6947
+     ],
+     "materials": [
+      "Hero_SM_K_WallCab1250_DoorL",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_WallCab1250_DoorL_Brk2",
+     "file": "SM_K_WallCab1250_DoorL_Brk2.fbx",
+     "triangles": 1416,
+     "bbox_min_m": [
+      -0.018,
+      -0.028,
+      0.4496
+     ],
+     "bbox_max_m": [
+      0.3226,
+      0.012,
+      0.6947
+     ],
+     "materials": [
+      "Hero_SM_K_WallCab1250_DoorL",
+      "Break"
+     ]
+    }
+   ],
+   "source": "kitchen/SM_K_WallCab1250_DoorL.fbx (the owner's kitchen model, same frame)",
+   "old_slots": [
+    "CabinetInset",
+    "Cabinet",
+    "Brass"
+   ],
+   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
+   "triangles": 4332,
+   "bbox_min_m": [
+    -0.018,
+    -0.056,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.3226,
+    0.012,
+    0.6947
+   ],
+   "materials": [
+    "Hero_SM_K_WallCab1250_DoorL"
+   ],
+   "lod_triangles": [
+    4332,
+    2166,
+    1082
+   ],
+   "ucx": 8
+  },
+  {
+   "name": "SM_K_Base1400_DoorL",
+   "file": "SM_K_Base1400_DoorL.fbx",
+   "set": "hero_kitchen",
+   "dest": "/Game/Hero/SM_K_Base1400_DoorL",
+   "break_class": "wood",
+   "textures": {
+    "C": "SM_K_Base1400_DoorL/tex/T_SM_K_Base1400_DoorL_C.png",
+    "N": "SM_K_Base1400_DoorL/tex/T_SM_K_Base1400_DoorL_N.png",
+    "R": "SM_K_Base1400_DoorL/tex/T_SM_K_Base1400_DoorL_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_K_Base1400_DoorL_Brk0",
+     "file": "SM_K_Base1400_DoorL_Brk0.fbx",
+     "triangles": 1038,
+     "bbox_min_m": [
+      0.0,
+      -0.028,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.3621,
+      -0.017,
+      0.5797
+     ],
+     "materials": [
+      "Hero_SM_K_Base1400_DoorL",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_Base1400_DoorL_Brk1",
+     "file": "SM_K_Base1400_DoorL_Brk1.fbx",
+     "triangles": 1034,
+     "bbox_min_m": [
+      -0.018,
+      -0.028,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.3621,
+      0.012,
+      0.7553
+     ],
+     "materials": [
+      "Hero_SM_K_Base1400_DoorL",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_Base1400_DoorL_Brk2",
+     "file": "SM_K_Base1400_DoorL_Brk2.fbx",
+     "triangles": 1964,
+     "bbox_min_m": [
+      -0.018,
+      -0.063,
+      0.5547
+     ],
+     "bbox_max_m": [
+      0.3621,
+      0.012,
+      0.7553
+     ],
+     "materials": [
+      "Hero_SM_K_Base1400_DoorL",
+      "Break"
+     ]
+    }
+   ],
+   "source": "kitchen/SM_K_Base1400_DoorL.fbx (the owner's kitchen model, same frame)",
+   "old_slots": [
+    "CabinetInset",
+    "Cabinet",
+    "Brass"
+   ],
+   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
+   "triangles": 2852,
+   "bbox_min_m": [
+    -0.018,
+    -0.063,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.3621,
+    0.012,
+    0.7553
+   ],
+   "materials": [
+    "Hero_SM_K_Base1400_DoorL"
+   ],
+   "lod_triangles": [
+    2852,
+    1426,
+    712
+   ],
+   "ucx": 6
+  },
+  {
+   "name": "SM_K_Base1400_DoorR",
+   "file": "SM_K_Base1400_DoorR.fbx",
+   "set": "hero_kitchen",
+   "dest": "/Game/Hero/SM_K_Base1400_DoorR",
+   "break_class": "wood",
+   "textures": {
+    "C": "SM_K_Base1400_DoorR/tex/T_SM_K_Base1400_DoorR_C.png",
+    "N": "SM_K_Base1400_DoorR/tex/T_SM_K_Base1400_DoorR_N.png",
+    "R": "SM_K_Base1400_DoorR/tex/T_SM_K_Base1400_DoorR_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_K_Base1400_DoorR_Brk0",
+     "file": "SM_K_Base1400_DoorR_Brk0.fbx",
+     "triangles": 1048,
+     "bbox_min_m": [
+      -0.3621,
+      -0.028,
+      0.0
+     ],
+     "bbox_max_m": [
+      -0.0,
+      -0.017,
+      0.5811
+     ],
+     "materials": [
+      "Hero_SM_K_Base1400_DoorR",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_Base1400_DoorR_Brk1",
+     "file": "SM_K_Base1400_DoorR_Brk1.fbx",
+     "triangles": 736,
+     "bbox_min_m": [
+      -0.3073,
+      -0.028,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.018,
+      0.012,
+      0.1075
+     ],
+     "materials": [
+      "Hero_SM_K_Base1400_DoorR",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_Base1400_DoorR_Brk2",
+     "file": "SM_K_Base1400_DoorR_Brk2.fbx",
+     "triangles": 1964,
+     "bbox_min_m": [
+      -0.3621,
+      -0.063,
+      0.556
+     ],
+     "bbox_max_m": [
+      0.018,
+      0.012,
+      0.7553
+     ],
+     "materials": [
+      "Hero_SM_K_Base1400_DoorR",
+      "Break"
+     ]
+    }
+   ],
+   "source": "kitchen/SM_K_Base1400_DoorR.fbx (the owner's kitchen model, same frame)",
+   "old_slots": [
+    "CabinetInset",
+    "Cabinet",
+    "Brass"
+   ],
+   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
+   "triangles": 2852,
+   "bbox_min_m": [
+    -0.3621,
+    -0.063,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.018,
+    0.012,
+    0.7553
+   ],
+   "materials": [
+    "Hero_SM_K_Base1400_DoorR"
+   ],
+   "lod_triangles": [
+    2852,
+    1426,
+    712
+   ],
+   "ucx": 6
+  },
+  {
+   "name": "SM_K_Base1300_DoorL",
+   "file": "SM_K_Base1300_DoorL.fbx",
+   "set": "hero_kitchen",
+   "dest": "/Game/Hero/SM_K_Base1300_DoorL",
+   "break_class": "wood",
+   "textures": {
+    "C": "SM_K_Base1300_DoorL/tex/T_SM_K_Base1300_DoorL_C.png",
+    "N": "SM_K_Base1300_DoorL/tex/T_SM_K_Base1300_DoorL_N.png",
+    "R": "SM_K_Base1300_DoorL/tex/T_SM_K_Base1300_DoorL_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_K_Base1300_DoorL_Brk0",
+     "file": "SM_K_Base1300_DoorL_Brk0.fbx",
+     "triangles": 724,
+     "bbox_min_m": [
+      0.0,
+      -0.028,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.3358,
+      -0.0,
+      0.7553
+     ],
+     "materials": [
+      "Hero_SM_K_Base1300_DoorL",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_Base1300_DoorL_Brk1",
+     "file": "SM_K_Base1300_DoorL_Brk1.fbx",
+     "triangles": 736,
+     "bbox_min_m": [
+      -0.018,
+      -0.028,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.281,
+      0.012,
+      0.1075
+     ],
+     "materials": [
+      "Hero_SM_K_Base1300_DoorL",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_Base1300_DoorL_Brk2",
+     "file": "SM_K_Base1300_DoorL_Brk2.fbx",
+     "triangles": 2302,
+     "bbox_min_m": [
+      -0.018,
+      -0.063,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.3358,
+      0.012,
+      0.7553
+     ],
+     "materials": [
+      "Hero_SM_K_Base1300_DoorL",
+      "Break"
+     ]
+    }
+   ],
+   "source": "kitchen/SM_K_Base1300_DoorL.fbx (the owner's kitchen model, same frame)",
+   "old_slots": [
+    "CabinetInset",
+    "Cabinet",
+    "Brass"
+   ],
+   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
+   "triangles": 2852,
+   "bbox_min_m": [
+    -0.018,
+    -0.063,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.3358,
+    0.012,
+    0.7553
+   ],
+   "materials": [
+    "Hero_SM_K_Base1300_DoorL"
+   ],
+   "lod_triangles": [
+    2852,
+    1426,
+    713
+   ],
+   "ucx": 8
+  },
+  {
+   "name": "SM_K_Base1300_DoorR",
+   "file": "SM_K_Base1300_DoorR.fbx",
+   "set": "hero_kitchen",
+   "dest": "/Game/Hero/SM_K_Base1300_DoorR",
+   "break_class": "wood",
+   "textures": {
+    "C": "SM_K_Base1300_DoorR/tex/T_SM_K_Base1300_DoorR_C.png",
+    "N": "SM_K_Base1300_DoorR/tex/T_SM_K_Base1300_DoorR_N.png",
+    "R": "SM_K_Base1300_DoorR/tex/T_SM_K_Base1300_DoorR_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_K_Base1300_DoorR_Brk0",
+     "file": "SM_K_Base1300_DoorR_Brk0.fbx",
+     "triangles": 1040,
+     "bbox_min_m": [
+      -0.3358,
+      -0.028,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.0,
+      -0.017,
+      0.5801
+     ],
+     "materials": [
+      "Hero_SM_K_Base1300_DoorR",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_Base1300_DoorR_Brk1",
+     "file": "SM_K_Base1300_DoorR_Brk1.fbx",
+     "triangles": 1034,
+     "bbox_min_m": [
+      -0.3358,
+      -0.028,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.018,
+      0.012,
+      0.7553
+     ],
+     "materials": [
+      "Hero_SM_K_Base1300_DoorR",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_Base1300_DoorR_Brk2",
+     "file": "SM_K_Base1300_DoorR_Brk2.fbx",
+     "triangles": 1966,
+     "bbox_min_m": [
+      -0.3358,
+      -0.063,
+      0.557
+     ],
+     "bbox_max_m": [
+      0.018,
+      0.012,
+      0.7553
+     ],
+     "materials": [
+      "Hero_SM_K_Base1300_DoorR",
+      "Break"
+     ]
+    }
+   ],
+   "source": "kitchen/SM_K_Base1300_DoorR.fbx (the owner's kitchen model, same frame)",
+   "old_slots": [
+    "CabinetInset",
+    "Cabinet",
+    "Brass"
+   ],
+   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
+   "triangles": 2852,
+   "bbox_min_m": [
+    -0.3358,
+    -0.063,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.018,
+    0.012,
+    0.7553
+   ],
+   "materials": [
+    "Hero_SM_K_Base1300_DoorR"
+   ],
+   "lod_triangles": [
+    2852,
+    1426,
+    713
+   ],
+   "ucx": 8
+  },
+  {
+   "name": "SM_K_Base1200_DoorL",
+   "file": "SM_K_Base1200_DoorL.fbx",
+   "set": "hero_kitchen",
+   "dest": "/Game/Hero/SM_K_Base1200_DoorL",
+   "break_class": "wood",
+   "textures": {
+    "C": "SM_K_Base1200_DoorL/tex/T_SM_K_Base1200_DoorL_C.png",
+    "N": "SM_K_Base1200_DoorL/tex/T_SM_K_Base1200_DoorL_N.png",
+    "R": "SM_K_Base1200_DoorL/tex/T_SM_K_Base1200_DoorL_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_K_Base1200_DoorL_Brk0",
+     "file": "SM_K_Base1200_DoorL_Brk0.fbx",
+     "triangles": 1058,
+     "bbox_min_m": [
+      0.0,
+      -0.028,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.3095,
+      -0.0,
+      0.7553
+     ],
+     "materials": [
+      "Hero_SM_K_Base1200_DoorL",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_Base1200_DoorL_Brk1",
+     "file": "SM_K_Base1200_DoorL_Brk1.fbx",
+     "triangles": 1030,
+     "bbox_min_m": [
+      -0.018,
+      -0.028,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.3095,
+      0.012,
+      0.7553
+     ],
+     "materials": [
+      "Hero_SM_K_Base1200_DoorL",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_Base1200_DoorL_Brk2",
+     "file": "SM_K_Base1200_DoorL_Brk2.fbx",
+     "triangles": 1972,
+     "bbox_min_m": [
+      -0.018,
+      -0.063,
+      0.0577
+     ],
+     "bbox_max_m": [
+      0.2547,
+      0.012,
+      0.7553
+     ],
+     "materials": [
+      "Hero_SM_K_Base1200_DoorL",
+      "Break"
+     ]
+    }
+   ],
+   "source": "kitchen/SM_K_Base1200_DoorL.fbx (the owner's kitchen model, same frame)",
+   "old_slots": [
+    "CabinetInset",
+    "Cabinet",
+    "Brass"
+   ],
+   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
+   "triangles": 2852,
+   "bbox_min_m": [
+    -0.018,
+    -0.063,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.3095,
+    0.012,
+    0.7553
+   ],
+   "materials": [
+    "Hero_SM_K_Base1200_DoorL"
+   ],
+   "lod_triangles": [
+    2852,
+    1426,
+    712
+   ],
+   "ucx": 8
+  },
+  {
+   "name": "SM_K_Base1200_DoorR",
+   "file": "SM_K_Base1200_DoorR.fbx",
+   "set": "hero_kitchen",
+   "dest": "/Game/Hero/SM_K_Base1200_DoorR",
+   "break_class": "wood",
+   "textures": {
+    "C": "SM_K_Base1200_DoorR/tex/T_SM_K_Base1200_DoorR_C.png",
+    "N": "SM_K_Base1200_DoorR/tex/T_SM_K_Base1200_DoorR_N.png",
+    "R": "SM_K_Base1200_DoorR/tex/T_SM_K_Base1200_DoorR_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_K_Base1200_DoorR_Brk0",
+     "file": "SM_K_Base1200_DoorR_Brk0.fbx",
+     "triangles": 1026,
+     "bbox_min_m": [
+      -0.3095,
+      -0.028,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.0,
+      -0.017,
+      0.579
+     ],
+     "materials": [
+      "Hero_SM_K_Base1200_DoorR",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_Base1200_DoorR_Brk1",
+     "file": "SM_K_Base1200_DoorR_Brk1.fbx",
+     "triangles": 736,
+     "bbox_min_m": [
+      -0.2547,
+      -0.028,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.018,
+      0.012,
+      0.1075
+     ],
+     "materials": [
+      "Hero_SM_K_Base1200_DoorR",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_Base1200_DoorR_Brk2",
+     "file": "SM_K_Base1200_DoorR_Brk2.fbx",
+     "triangles": 1960,
+     "bbox_min_m": [
+      -0.3095,
+      -0.063,
+      0.558
+     ],
+     "bbox_max_m": [
+      0.018,
+      0.012,
+      0.7553
+     ],
+     "materials": [
+      "Hero_SM_K_Base1200_DoorR",
+      "Break"
+     ]
+    }
+   ],
+   "source": "kitchen/SM_K_Base1200_DoorR.fbx (the owner's kitchen model, same frame)",
+   "old_slots": [
+    "CabinetInset",
+    "Cabinet",
+    "Brass"
+   ],
+   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
+   "triangles": 2852,
+   "bbox_min_m": [
+    -0.3095,
+    -0.063,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.018,
+    0.012,
+    0.7553
+   ],
+   "materials": [
+    "Hero_SM_K_Base1200_DoorR"
+   ],
+   "lod_triangles": [
+    2852,
+    1426,
+    712
+   ],
+   "ucx": 8
+  },
+  {
+   "name": "SM_K_BaseSink_DoorL",
+   "file": "SM_K_BaseSink_DoorL.fbx",
+   "set": "hero_kitchen",
+   "dest": "/Game/Hero/SM_K_BaseSink_DoorL",
+   "break_class": "wood",
+   "textures": {
+    "C": "SM_K_BaseSink_DoorL/tex/T_SM_K_BaseSink_DoorL_C.png",
+    "N": "SM_K_BaseSink_DoorL/tex/T_SM_K_BaseSink_DoorL_N.png",
+    "R": "SM_K_BaseSink_DoorL/tex/T_SM_K_BaseSink_DoorL_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_K_BaseSink_DoorL_Brk0",
+     "file": "SM_K_BaseSink_DoorL_Brk0.fbx",
+     "triangles": 2316,
+     "bbox_min_m": [
+      -0.018,
+      -0.063,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.3621,
+      0.012,
+      0.4921
+     ],
+     "materials": [
+      "Hero_SM_K_BaseSink_DoorL",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_BaseSink_DoorL_Brk1",
+     "file": "SM_K_BaseSink_DoorL_Brk1.fbx",
+     "triangles": 736,
+     "bbox_min_m": [
+      -0.018,
+      -0.028,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.3073,
+      0.012,
+      0.1075
+     ],
+     "materials": [
+      "Hero_SM_K_BaseSink_DoorL",
+      "Break"
+     ]
+    }
+   ],
+   "source": "kitchen/SM_K_BaseSink_DoorL.fbx (the owner's kitchen model, same frame)",
+   "old_slots": [
+    "CabinetInset",
+    "Cabinet",
+    "Brass"
+   ],
+   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
+   "triangles": 2852,
+   "bbox_min_m": [
+    -0.018,
+    -0.063,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.3621,
+    0.012,
+    0.4921
+   ],
+   "materials": [
+    "Hero_SM_K_BaseSink_DoorL"
+   ],
+   "lod_triangles": [
+    2852,
+    1426,
+    713
+   ],
+   "ucx": 6
+  },
+  {
+   "name": "SM_K_BaseSink_DoorR",
+   "file": "SM_K_BaseSink_DoorR.fbx",
+   "set": "hero_kitchen",
+   "dest": "/Game/Hero/SM_K_BaseSink_DoorR",
+   "break_class": "wood",
+   "textures": {
+    "C": "SM_K_BaseSink_DoorR/tex/T_SM_K_BaseSink_DoorR_C.png",
+    "N": "SM_K_BaseSink_DoorR/tex/T_SM_K_BaseSink_DoorR_N.png",
+    "R": "SM_K_BaseSink_DoorR/tex/T_SM_K_BaseSink_DoorR_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_K_BaseSink_DoorR_Brk0",
+     "file": "SM_K_BaseSink_DoorR_Brk0.fbx",
+     "triangles": 2678,
+     "bbox_min_m": [
+      -0.3621,
+      -0.063,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.018,
+      0.012,
+      0.4921
+     ],
+     "materials": [
+      "Hero_SM_K_BaseSink_DoorR",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_BaseSink_DoorR_Brk1",
+     "file": "SM_K_BaseSink_DoorR_Brk1.fbx",
+     "triangles": 1070,
+     "bbox_min_m": [
+      -0.3621,
+      -0.028,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.018,
+      0.012,
+      0.4921
+     ],
+     "materials": [
+      "Hero_SM_K_BaseSink_DoorR",
+      "Break"
+     ]
+    }
+   ],
+   "source": "kitchen/SM_K_BaseSink_DoorR.fbx (the owner's kitchen model, same frame)",
+   "old_slots": [
+    "CabinetInset",
+    "Cabinet",
+    "Brass"
+   ],
+   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
+   "triangles": 2852,
+   "bbox_min_m": [
+    -0.3621,
+    -0.063,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.018,
+    0.012,
+    0.4921
+   ],
+   "materials": [
+    "Hero_SM_K_BaseSink_DoorR"
+   ],
+   "lod_triangles": [
+    2852,
+    1426,
+    713
+   ],
+   "ucx": 6
+  },
+  {
+   "name": "SM_K_WallCab1250_DoorR",
+   "file": "SM_K_WallCab1250_DoorR.fbx",
+   "set": "hero_kitchen",
+   "dest": "/Game/Hero/SM_K_WallCab1250_DoorR",
+   "break_class": "wood",
+   "textures": {
+    "C": "SM_K_WallCab1250_DoorR/tex/T_SM_K_WallCab1250_DoorR_C.png",
+    "N": "SM_K_WallCab1250_DoorR/tex/T_SM_K_WallCab1250_DoorR_N.png",
+    "R": "SM_K_WallCab1250_DoorR/tex/T_SM_K_WallCab1250_DoorR_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_K_WallCab1250_DoorR_Brk0",
+     "file": "SM_K_WallCab1250_DoorR_Brk0.fbx",
+     "triangles": 714,
+     "bbox_min_m": [
+      -0.3226,
+      -0.028,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.0,
+      0.0,
+      0.6947
+     ],
+     "materials": [
+      "Hero_SM_K_WallCab1250_DoorR",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_WallCab1250_DoorR_Brk1",
+     "file": "SM_K_WallCab1250_DoorR_Brk1.fbx",
+     "triangles": 3052,
+     "bbox_min_m": [
+      -0.3226,
+      -0.056,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.018,
+      0.012,
+      0.6947
+     ],
+     "materials": [
+      "Hero_SM_K_WallCab1250_DoorR",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_WallCab1250_DoorR_Brk2",
+     "file": "SM_K_WallCab1250_DoorR_Brk2.fbx",
+     "triangles": 1752,
+     "bbox_min_m": [
+      -0.2678,
+      -0.028,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.018,
+      0.012,
+      0.6947
+     ],
+     "materials": [
+      "Hero_SM_K_WallCab1250_DoorR",
+      "Break"
+     ]
+    }
+   ],
+   "source": "kitchen/SM_K_WallCab1250_DoorR.fbx (the owner's kitchen model, same frame)",
+   "old_slots": [
+    "CabinetInset",
+    "Cabinet",
+    "Brass"
+   ],
+   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
+   "triangles": 4332,
+   "bbox_min_m": [
+    -0.3226,
+    -0.056,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.018,
+    0.012,
+    0.6947
+   ],
+   "materials": [
+    "Hero_SM_K_WallCab1250_DoorR"
+   ],
+   "lod_triangles": [
+    4332,
+    2166,
+    1082
+   ],
+   "ucx": 8
+  },
+  {
+   "name": "SM_K_WallCab1500_DoorL",
+   "file": "SM_K_WallCab1500_DoorL.fbx",
+   "set": "hero_kitchen",
+   "dest": "/Game/Hero/SM_K_WallCab1500_DoorL",
+   "break_class": "wood",
+   "textures": {
+    "C": "SM_K_WallCab1500_DoorL/tex/T_SM_K_WallCab1500_DoorL_C.png",
+    "N": "SM_K_WallCab1500_DoorL/tex/T_SM_K_WallCab1500_DoorL_N.png",
+    "R": "SM_K_WallCab1500_DoorL/tex/T_SM_K_WallCab1500_DoorL_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_K_WallCab1500_DoorL_Brk0",
+     "file": "SM_K_WallCab1500_DoorL_Brk0.fbx",
+     "triangles": 1044,
+     "bbox_min_m": [
+      0.0,
+      -0.028,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.3884,
+      -0.017,
+      0.532
+     ],
+     "materials": [
+      "Hero_SM_K_WallCab1500_DoorL",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_WallCab1500_DoorL_Brk1",
+     "file": "SM_K_WallCab1500_DoorL_Brk1.fbx",
+     "triangles": 3060,
+     "bbox_min_m": [
+      -0.018,
+      -0.056,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.3884,
+      0.012,
+      0.6947
+     ],
+     "materials": [
+      "Hero_SM_K_WallCab1500_DoorL",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_WallCab1500_DoorL_Brk2",
+     "file": "SM_K_WallCab1500_DoorL_Brk2.fbx",
+     "triangles": 1428,
+     "bbox_min_m": [
+      -0.018,
+      -0.028,
+      0.4427
+     ],
+     "bbox_max_m": [
+      0.3884,
+      0.012,
+      0.6947
+     ],
+     "materials": [
+      "Hero_SM_K_WallCab1500_DoorL",
+      "Break"
+     ]
+    }
+   ],
+   "source": "kitchen/SM_K_WallCab1500_DoorL.fbx (the owner's kitchen model, same frame)",
+   "old_slots": [
+    "CabinetInset",
+    "Cabinet",
+    "Brass"
+   ],
+   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
+   "triangles": 4332,
+   "bbox_min_m": [
+    -0.018,
+    -0.056,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.3884,
+    0.012,
+    0.6947
+   ],
+   "materials": [
+    "Hero_SM_K_WallCab1500_DoorL"
+   ],
+   "lod_triangles": [
+    4332,
+    2166,
+    1082
+   ],
+   "ucx": 6
+  },
+  {
+   "name": "SM_K_WallCab1500_DoorR",
+   "file": "SM_K_WallCab1500_DoorR.fbx",
+   "set": "hero_kitchen",
+   "dest": "/Game/Hero/SM_K_WallCab1500_DoorR",
+   "break_class": "wood",
+   "textures": {
+    "C": "SM_K_WallCab1500_DoorR/tex/T_SM_K_WallCab1500_DoorR_C.png",
+    "N": "SM_K_WallCab1500_DoorR/tex/T_SM_K_WallCab1500_DoorR_N.png",
+    "R": "SM_K_WallCab1500_DoorR/tex/T_SM_K_WallCab1500_DoorR_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_K_WallCab1500_DoorR_Brk0",
+     "file": "SM_K_WallCab1500_DoorR_Brk0.fbx",
+     "triangles": 1036,
+     "bbox_min_m": [
+      -0.3884,
+      -0.028,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.0,
+      -0.017,
+      0.5365
+     ],
+     "materials": [
+      "Hero_SM_K_WallCab1500_DoorR",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_WallCab1500_DoorR_Brk1",
+     "file": "SM_K_WallCab1500_DoorR_Brk1.fbx",
+     "triangles": 3066,
+     "bbox_min_m": [
+      -0.3884,
+      -0.056,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.018,
+      0.012,
+      0.6947
+     ],
+     "materials": [
+      "Hero_SM_K_WallCab1500_DoorR",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_WallCab1500_DoorR_Brk2",
+     "file": "SM_K_WallCab1500_DoorR_Brk2.fbx",
+     "triangles": 1424,
+     "bbox_min_m": [
+      -0.3884,
+      -0.028,
+      0.4464
+     ],
+     "bbox_max_m": [
+      0.018,
+      0.012,
+      0.6947
+     ],
+     "materials": [
+      "Hero_SM_K_WallCab1500_DoorR",
+      "Break"
+     ]
+    }
+   ],
+   "source": "kitchen/SM_K_WallCab1500_DoorR.fbx (the owner's kitchen model, same frame)",
+   "old_slots": [
+    "CabinetInset",
+    "Cabinet",
+    "Brass"
+   ],
+   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
+   "triangles": 4332,
+   "bbox_min_m": [
+    -0.3884,
+    -0.056,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.018,
+    0.012,
+    0.6947
+   ],
+   "materials": [
+    "Hero_SM_K_WallCab1500_DoorR"
+   ],
+   "lod_triangles": [
+    4332,
+    2166,
+    1082
+   ],
+   "ucx": 6
+  },
+  {
+   "name": "SM_K_BaseDrawers_Drawer1",
+   "file": "SM_K_BaseDrawers_Drawer1.fbx",
+   "set": "hero_kitchen",
+   "dest": "/Game/Hero/SM_K_BaseDrawers_Drawer1",
+   "break_class": "wood",
+   "textures": {
+    "C": "SM_K_BaseDrawers_Drawer1/tex/T_SM_K_BaseDrawers_Drawer1_C.png",
+    "N": "SM_K_BaseDrawers_Drawer1/tex/T_SM_K_BaseDrawers_Drawer1_N.png",
+    "R": "SM_K_BaseDrawers_Drawer1/tex/T_SM_K_BaseDrawers_Drawer1_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_K_BaseDrawers_Drawer1_Brk0",
+     "file": "SM_K_BaseDrawers_Drawer1_Brk0.fbx",
+     "triangles": 150,
+     "bbox_min_m": [
+      -0.3432,
+      -0.4324,
+      0.0158
+     ],
+     "bbox_max_m": [
+      -0.3326,
+      -0.1733,
+      0.1316
+     ],
+     "materials": [
+      "Hero_SM_K_BaseDrawers_Drawer1",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_BaseDrawers_Drawer1_Brk1",
+     "file": "SM_K_BaseDrawers_Drawer1_Brk1.fbx",
+     "triangles": 2086,
+     "bbox_min_m": [
+      -0.3642,
+      -0.8917,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.3642,
+      0.0,
+      0.1421
+     ],
+     "materials": [
+      "Hero_SM_K_BaseDrawers_Drawer1",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_BaseDrawers_Drawer1_Brk2",
+     "file": "SM_K_BaseDrawers_Drawer1_Brk2.fbx",
+     "triangles": 360,
+     "bbox_min_m": [
+      -0.3432,
+      -0.1951,
+      0.0158
+     ],
+     "bbox_max_m": [
+      0.3326,
+      0.0,
+      0.1316
+     ],
+     "materials": [
+      "Hero_SM_K_BaseDrawers_Drawer1",
+      "Break"
+     ]
+    }
+   ],
+   "source": "kitchen/SM_K_BaseDrawers_Drawer1.fbx (the owner's kitchen model, same frame)",
+   "old_slots": [
+    "CabinetInset",
+    "Cabinet",
+    "Brass",
+    "Butcher"
+   ],
+   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
+   "triangles": 2368,
+   "bbox_min_m": [
+    -0.3642,
+    -0.8917,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.3642,
+    0.0,
+    0.1421
+   ],
+   "materials": [
+    "Hero_SM_K_BaseDrawers_Drawer1"
+   ],
+   "lod_triangles": [
+    2368,
+    1184,
+    592
+   ],
+   "ucx": 7
+  },
+  {
+   "name": "SM_K_BaseDrawers_Drawer3",
+   "file": "SM_K_BaseDrawers_Drawer3.fbx",
+   "set": "hero_kitchen",
+   "dest": "/Game/Hero/SM_K_BaseDrawers_Drawer3",
+   "break_class": "wood",
+   "textures": {
+    "C": "SM_K_BaseDrawers_Drawer3/tex/T_SM_K_BaseDrawers_Drawer3_C.png",
+    "N": "SM_K_BaseDrawers_Drawer3/tex/T_SM_K_BaseDrawers_Drawer3_N.png",
+    "R": "SM_K_BaseDrawers_Drawer3/tex/T_SM_K_BaseDrawers_Drawer3_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_K_BaseDrawers_Drawer3_Brk0",
+     "file": "SM_K_BaseDrawers_Drawer3_Brk0.fbx",
+     "triangles": 506,
+     "bbox_min_m": [
+      -0.3432,
+      -0.8421,
+      0.0158
+     ],
+     "bbox_max_m": [
+      0.3432,
+      -0.1639,
+      0.2421
+     ],
+     "materials": [
+      "Hero_SM_K_BaseDrawers_Drawer3",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_BaseDrawers_Drawer3_Brk1",
+     "file": "SM_K_BaseDrawers_Drawer3_Brk1.fbx",
+     "triangles": 1914,
+     "bbox_min_m": [
+      -0.3642,
+      -0.8917,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.3642,
+      0.0,
+      0.2947
+     ],
+     "materials": [
+      "Hero_SM_K_BaseDrawers_Drawer3",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_BaseDrawers_Drawer3_Brk2",
+     "file": "SM_K_BaseDrawers_Drawer3_Brk2.fbx",
+     "triangles": 562,
+     "bbox_min_m": [
+      -0.3432,
+      -0.3267,
+      0.0158
+     ],
+     "bbox_max_m": [
+      0.3432,
+      0.0,
+      0.2421
+     ],
+     "materials": [
+      "Hero_SM_K_BaseDrawers_Drawer3",
+      "Break"
+     ]
+    }
+   ],
+   "source": "kitchen/SM_K_BaseDrawers_Drawer3.fbx (the owner's kitchen model, same frame)",
+   "old_slots": [
+    "CabinetInset",
+    "Cabinet",
+    "Brass",
+    "Butcher"
+   ],
+   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
+   "triangles": 2368,
+   "bbox_min_m": [
+    -0.3642,
+    -0.8917,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.3642,
+    0.0,
+    0.2947
+   ],
+   "materials": [
+    "Hero_SM_K_BaseDrawers_Drawer3"
+   ],
+   "lod_triangles": [
+    2368,
+    1184,
+    592
+   ],
+   "ucx": 5
+  },
+  {
+   "name": "SM_K_Fridge_DoorMain",
+   "file": "SM_K_Fridge_DoorMain.fbx",
+   "set": "hero_kitchen",
+   "dest": "/Game/Hero/SM_K_Fridge_DoorMain",
+   "break_class": "",
+   "textures": {
+    "C": "SM_K_Fridge_DoorMain/tex/T_SM_K_Fridge_DoorMain_C.png",
+    "N": "SM_K_Fridge_DoorMain/tex/T_SM_K_Fridge_DoorMain_N.png",
+    "R": "SM_K_Fridge_DoorMain/tex/T_SM_K_Fridge_DoorMain_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [],
+   "source": "kitchen/SM_K_Fridge_DoorMain.fbx (the owner's kitchen model, same frame)",
+   "old_slots": [
+    "FridgeRed",
+    "FridgeLiner",
+    "ShelfGlass",
+    "Chrome",
+    "Fabric",
+    "Blue",
+    "Leaf",
+    "Paper"
+   ],
+   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
+   "triangles": 6248,
+   "bbox_min_m": [
+    0.0,
+    -0.1096,
+    0.0032
+   ],
+   "bbox_max_m": [
+    1.0526,
+    0.0789,
+    1.2495
+   ],
+   "materials": [
+    "Hero_SM_K_Fridge_DoorMain"
+   ],
+   "lod_triangles": [
+    6248,
+    3124,
+    1562
+   ],
+   "ucx": 9
+  },
+  {
+   "name": "SM_K_Faucet_TapHot",
+   "file": "SM_K_Faucet_TapHot.fbx",
+   "set": "hero_kitchen",
+   "dest": "/Game/Hero/SM_K_Faucet_TapHot",
+   "break_class": "",
+   "textures": {
+    "C": "SM_K_Faucet_TapHot/tex/T_SM_K_Faucet_TapHot_C.png",
+    "N": "SM_K_Faucet_TapHot/tex/T_SM_K_Faucet_TapHot_N.png",
+    "R": "SM_K_Faucet_TapHot/tex/T_SM_K_Faucet_TapHot_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [],
+   "source": "kitchen/SM_K_Faucet_TapHot.fbx (the owner's kitchen model, same frame)",
+   "old_slots": [
+    "Chrome",
+    "Red"
+   ],
+   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
+   "triangles": 824,
+   "bbox_min_m": [
+    -0.0263,
+    -0.0421,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.0263,
+    0.0421,
+    0.07
+   ],
+   "materials": [
+    "Hero_SM_K_Faucet_TapHot"
+   ],
+   "lod_triangles": [
+    824,
+    412,
+    206
+   ],
+   "ucx": 5
+  },
+  {
+   "name": "SM_K_Faucet_TapCold",
+   "file": "SM_K_Faucet_TapCold.fbx",
+   "set": "hero_kitchen",
+   "dest": "/Game/Hero/SM_K_Faucet_TapCold",
+   "break_class": "",
+   "textures": {
+    "C": "SM_K_Faucet_TapCold/tex/T_SM_K_Faucet_TapCold_C.png",
+    "N": "SM_K_Faucet_TapCold/tex/T_SM_K_Faucet_TapCold_N.png",
+    "R": "SM_K_Faucet_TapCold/tex/T_SM_K_Faucet_TapCold_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [],
+   "source": "kitchen/SM_K_Faucet_TapCold.fbx (the owner's kitchen model, same frame)",
+   "old_slots": [
+    "Chrome",
+    "Blue"
+   ],
+   "note": "KAN-22 pass 2: the kitchen block on the hero bar (bevels and materials baked high -> low, grime, UCX per part, break pieces)",
+   "triangles": 824,
+   "bbox_min_m": [
+    -0.0263,
+    -0.0421,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.0263,
+    0.0421,
+    0.07
+   ],
+   "materials": [
+    "Hero_SM_K_Faucet_TapCold"
+   ],
+   "lod_triangles": [
+    824,
+    412,
+    206
+   ],
+   "ucx": 5
   }
  ],
  "note": "Kitchen hero art (Tools/blender/hero_kitchen_a.py, hero_kitchen_sink.py, hero_kitchen_block.py): -> /Game/Hero/<Name>/<Name>"

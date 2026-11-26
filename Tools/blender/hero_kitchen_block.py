@@ -336,7 +336,118 @@ def appliance_detail(name, E):
             out.append(dcyl("Pin", 0.002, 0.018, (dx, 0.174, 0.011), E["chrome"], (math.pi / 2, 0, 0), 8))
     return out
 
-DETAILS = (door_hinges, worktop_detail, fridge_detail, range_detail, hood_detail, sink_detail, appliance_detail)
+# ---- pass 4: frame-and-panel fronts, handle types, the fridge door's bins, the sink's sag, the taps' cartridges
+FRONT_W = {"SM_K_Base1400": 0.362, "SM_K_Base1300": 0.336, "SM_K_Base1200": 0.309, "SM_K_BaseSink": 0.362, "SM_K_WallCab1250": 0.323, "SM_K_WallCab1500": 0.388}
+FRONT_H = {"SM_K_Base1400": 0.755, "SM_K_Base1300": 0.755, "SM_K_Base1200": 0.755, "SM_K_BaseSink": 0.492, "SM_K_WallCab1250": 0.695, "SM_K_WallCab1500": 0.695}
+DRAWER_H = {"SM_K_BaseDrawers_Drawer1": 0.142, "SM_K_BaseDrawers_Drawer2": 0.289, "SM_K_BaseDrawers_Drawer3": 0.295}
+
+def front_rect(name):
+    """the front of a door / drawer: (x0, x1, z0, z1, panel plane y) - the frame is 55 mm on every front of the owner's kitchen"""
+    if name in DRAWER_H: return (-0.364, 0.364, 0.0, DRAWER_H[name], -0.860)
+    base = name.rsplit("_Door", 1)[0]
+    if "_Door" in name and base in FRONT_W:
+        w = FRONT_W[base]
+        return ((0.0, w) if name.endswith("L") else (-w, 0.0)) + (0.0, FRONT_H[base], -0.018)
+    return None
+
+def _clusters(vals, gap=0.01):
+    vals = sorted(set(round(v, 4) for v in vals)); out = [[vals[0]]]
+    for v in vals[1:]:
+        if v - out[-1][-1] > gap: out.append([v])
+        else: out[-1].append(v)
+    return [sum(c) / len(c) for c in out]
+
+def frame_panel(name, E, work):
+    """a raised field in the recessed panel and a quarter-round moulding where the panel meets the frame; the frame's inner
+    edges are read off the old model's frame (its rails are not all 55 mm: a wall cabinet door has a deep bottom rail)"""
+    r = front_rect(name)
+    if not r: return []
+    x0, x1, z0, z1, y = r
+    cab = [i for i, s in enumerate(work.material_slots) if s.material and s.material.name.startswith("Hero_Cabinet") and not s.material.name.startswith("Hero_CabinetInset")]
+    vs = [work.data.vertices[v].co for p in work.data.polygons if p.material_index in cab for v in p.vertices if work.data.vertices[v].co.y < y - 0.002]
+    if len(vs) < 8: return []
+    cx = _clusters([v.x for v in vs]); cz = _clusters([v.z for v in vs])
+    if len(cx) < 4 or len(cz) < 4: return []
+    ix0, ix1, iz0, iz1 = cx[1], cx[-2], cz[1], cz[-2]
+    if ix1 - ix0 < 0.04 or iz1 - iz0 < 0.03: return []
+    m = look("Cabinet", (0.42, 0.6, 0.44))
+    c = 0.004; yy = y - 0.003
+    out = [drod("Moulding", [(ix0 + c, yy, iz0 + c), (ix1 - c, yy, iz0 + c)], 0.0042, m, 2, 2), drod("Moulding", [(ix0 + c, yy, iz1 - c), (ix1 - c, yy, iz1 - c)], 0.0042, m, 2, 2),
+           drod("Moulding", [(ix0 + c, yy, iz0 + c), (ix0 + c, yy, iz1 - c)], 0.0042, m, 2, 2), drod("Moulding", [(ix1 - c, yy, iz0 + c), (ix1 - c, yy, iz1 - c)], 0.0042, m, 2, 2)]
+    inset = 0.028 if iz1 - iz0 > 0.12 else 0.014
+    if ix1 - ix0 > 2 * inset + 0.02 and iz1 - iz0 > 2 * inset + 0.02:
+        out.append(dbox("RaisedField", ix0 + inset, ix1 - inset, y - 0.0045, y, iz0 + inset, iz1 - inset, m, 0.002))
+    return out
+
+def cup_pull(cx, yf, cz, m, w=0.096):
+    """a bin (cup) pull: a back plate and a half-round shell open at the bottom"""
+    plate = dbox("PullPlate", cx - w / 2, cx + w / 2, yf - 0.004, yf, cz - 0.006, cz + 0.022, m, 0.0015)
+    sh = H.cyl("PullCup", 0.017, w - 0.012, (cx, yf - 0.004, cz + 0.006), (0, math.pi / 2, 0), 24)
+    bm = bmesh.new(); bm.from_mesh(sh.data)
+    # (local frame: the axis is local z = world x, local -x = world up, local y = world y): keep the front-upper quarter -
+    #  a hood over the fingers, open at the bottom
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if v.co.y > 0.0005 or v.co.x > 0.0005], context="VERTS")
+    bm.to_mesh(sh.data); bm.free()
+    s = sh.modifiers.new("sol", "SOLIDIFY"); s.thickness = 0.0016; s.offset = 0
+    sh.data.materials.append(m)
+    return [plate, sh]
+
+def knob(cx, yf, cz, m):
+    return [dcyl("KnobStem", 0.006, 0.016, (cx, yf - 0.008, cz), m, (math.pi / 2, 0, 0), 16),
+            H.smooth(dcyl("KnobHead", 0.015, 0.012, (cx, yf - 0.022, cz), m, (math.pi / 2, 0, 0), 32), 1, 0.004)]
+
+def handles(name, E, work):
+    """handle types: base doors keep their bar on two posts, wall cabinet doors get round knobs, drawers get cup pulls"""
+    r = front_rect(name)
+    if not r: return []
+    brass = [i for i, s in enumerate(work.material_slots) if s.material and s.material.name.startswith("Hero_Brass")]
+    if not brass: return []
+    vs = [work.matrix_world @ work.data.vertices[v].co for p in work.data.polygons if p.material_index in brass for v in p.vertices]
+    mn = Vector(map(min, *vs)); mx = Vector(map(max, *vs)); c = (mn + mx) * 0.5
+    m = work.material_slots[brass[0]].material
+    yf = r[4] - 0.010                                                  # the frame's face (10 mm in front of the panel)
+    if name.startswith("SM_K_Base") and "_Door" in name:
+        return [dcyl("BarPost", 0.0045, mx.y - mn.y, (x, (mn.y + mx.y) / 2, c.z), m, (math.pi / 2, 0, 0), 12) for x in (mn.x + 0.012, mx.x - 0.012)]
+    # the others: the old bar goes, its place takes the new handle
+    bm = bmesh.new(); bm.from_mesh(work.data)
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.material_index in brass], context="FACES")
+    bm.to_mesh(work.data); bm.free()
+    if name in DRAWER_H: return cup_pull(c.x, yf, c.z - 0.008, m)
+    far = mx.x if abs(mx.x) > abs(mn.x) else mn.x                      # the knob near the opening edge (away from the hinge)
+    return knob(far - math.copysign(0.02, far), yf, c.z, m)
+
+def fridge_bins(name, E):
+    """the door bins of the fridge door: the old model has their front lips; now a bottom and two sides each"""
+    if name != "SM_K_Fridge_DoorMain": return []
+    m = look("ShelfGlass", (0.62, 0.82, 0.88)); out = []
+    for z0 in (0.279, 0.700, 1.016):
+        out.append(dbox("BinFloor", 0.081, 0.972, 0.006, 0.077, z0, z0 + 0.003, m, 0.001))
+        for x in (0.081, 0.969):
+            out.append(dbox("BinSide", x, x + 0.003, 0.006, 0.077, z0, z0 + 0.05, m, 0.001))
+    return out
+
+def tap_cartridge(name, E, work):
+    """the cartridge bonnet under each tap head: a hex nut and a ceramic-disc housing, on the tap's own axis (the centre of
+    its foot - the lever makes the box lopsided)"""
+    if name not in ("SM_K_Faucet_TapHot", "SM_K_Faucet_TapCold"): return []
+    foot = [v.co for v in work.data.vertices if v.co.z < 0.004]
+    if not foot: return []
+    cx = sum(v.x for v in foot) / len(foot); cy = sum(v.y for v in foot) / len(foot)
+    return [dcyl("Bonnet", 0.017, 0.008, (cx, cy, 0.004), E["chrome"], seg=6), dcyl("Housing", 0.013, 0.010, (cx, cy, 0.013), E["chrome"], seg=24)]
+
+DETAILS = (door_hinges, worktop_detail, fridge_detail, range_detail, hood_detail, sink_detail, appliance_detail, fridge_bins)
+
+def sink_sag(work):
+    """stainless pressed thin sags a little to the drain: the basin floor (and the drain with it) dips up to 2.5 mm"""
+    bm = bmesh.new(); bm.from_mesh(work.data)
+    X, Y = 0.316, 0.368
+    floor = [f for f in bm.faces if all(v.co.z < 0.03 and abs(v.co.x) < X + 0.001 and abs(v.co.y) < Y + 0.001 for v in f.verts) and abs(f.normal.z) > 0.9]
+    if floor:
+        bmesh.ops.subdivide_edges(bm, edges=list({e for f in floor for e in f.edges}), cuts=10, use_grid_fill=True)
+    for v in bm.verts:
+        if v.co.z < 0.036 and abs(v.co.x) < X and abs(v.co.y) < Y:
+            v.co.z -= 0.0025 * (1 - (v.co.x / X) ** 2) * (1 - (v.co.y / Y) ** 2)
+    bm.to_mesh(work.data); bm.free()
 
 # ------------------------------------------------------------------------------------------------ one piece
 def find_src(name, folder):
@@ -469,10 +580,12 @@ def produce(name, folder, brk, size, mats):
     old_colours(old, mats)
     # pass 3: the modelled hardware and parts (hinges, seals, grilles, frames, caps, keys, the cord...)
     E = mats_extra()
-    extra = [o for f in DETAILS for o in f(name, E)]
+    extra = frame_panel(name, E, work) + handles(name, E, work) + tap_cartridge(name, E, work) + [o for f in DETAILS for o in f(name, E)]
     if extra:
         work = H.join([work] + extra, name + "_W")
         print("HERO %s: %d detail parts" % (name, len(extra)))
+    if name == "SM_K_Sink":
+        sink_sag(work)
     bw = max(0.0006, min(0.004, small * 0.12))
     hi = bevelled(work, name + "_HI", bw, 3, True)
     lo = bevelled(work, name, bw * 0.6, 1, False)
