@@ -12,6 +12,7 @@ public class AntKitchen : ModuleRules
 		{
 			"Core", "CoreUObject", "Engine", "InputCore", "AIModule", "NetCore", "PhysicsCore", "OnlineSubsystem", "OnlineSubsystemUtils", "Slate", "SlateCore", "ProceduralMeshComponent", "Niagara", "RenderCore", "RHI", "MoviePlayer", "Chaos", "Json", "JsonUtilities", "CoreOnline", "MediaAssets", "Media", "AudioMixer"
 		});
+		PrivateDependencyModuleNames.Add("MeshDescription");   // AntArtTools: LODs of the hero props from their own meshes (editor import)
 		DynamicallyLoadedModuleNames.Add("OnlineSubsystemSteam");
 	}
 }

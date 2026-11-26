@@ -7,6 +7,7 @@
 #include "Materials/Material.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "GameFramework/Actor.h"
+#include "Misc/PackageName.h"
 
 namespace
 {
@@ -130,6 +131,77 @@ namespace
 		}
 	}
 
+	/**
+	 * Pre-cut break pieces of a hero prop (KAN-22, Tools/blender/hero_lib.py): <Name>_Brk0.. next to the mesh, imported CPU-readable,
+	 * slot 0 the surface (the prop's own textures and UVs), slot 1 "Break" the fresh fracture. Authored once, the same on every machine.
+	 */
+	TMap<FString, TArray<TSharedPtr<const FGeo>>> GPre;
+	const TArray<TSharedPtr<const FGeo>>& PreCut(UStaticMesh* Mesh)
+	{
+		const FString Key = Mesh->GetPathName();
+		if (const TArray<TSharedPtr<const FGeo>>* F = GPre.Find(Key))
+		{
+			return *F;
+		}
+		TArray<TSharedPtr<const FGeo>>& Out = GPre.Add(Key);
+		const FString Dir = FPackageName::GetLongPackagePath(Mesh->GetOutermost()->GetName());
+		for (int32 i = 0; i < 16; ++i)
+		{
+			const FString N = FString::Printf(TEXT("%s_Brk%d"), *Mesh->GetName(), i);
+			UStaticMesh* P = LoadObject<UStaticMesh>(nullptr, *FString::Printf(TEXT("%s/%s.%s"), *Dir, *N, *N), nullptr, LOAD_NoWarn | LOAD_Quiet);
+			if (!P)
+			{
+				break;
+			}
+			if (!P->bAllowCPUAccess || !P->GetRenderData() || P->GetRenderData()->LODResources.Num() == 0)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("ANTWRECK %s: not CPU-readable, skipped"), *N);
+				continue;
+			}
+			P->AddToRoot();
+			TSharedPtr<FGeo> G = MakeShared<FGeo>();
+			const FStaticMeshSectionArray& Secs = P->GetRenderData()->LODResources[0].Sections;
+			for (int32 s = 0; s < Secs.Num(); ++s)
+			{
+				TArray<FVector> V; TArray<int32> Idx; TArray<FVector> Nn; TArray<FVector2D> UV; TArray<FProcMeshTangent> Tan;
+				UKismetProceduralMeshLibrary::GetSectionFromStaticMesh(P, 0, s, V, Idx, Nn, UV, Tan);
+				if (Idx.Num() < 3)
+				{
+					continue;
+				}
+				FProcMeshSection S;
+				for (int32 k = 0; k < V.Num(); ++k)
+				{
+					FProcMeshVertex PV;
+					PV.Position = V[k];
+					PV.Normal = Nn.IsValidIndex(k) ? Nn[k] : FVector::UpVector;
+					PV.Tangent = Tan.IsValidIndex(k) ? Tan[k] : FProcMeshTangent();
+					PV.UV0 = UV.IsValidIndex(k) ? UV[k] : FVector2D::ZeroVector;
+					PV.Color = FColor::White;
+					S.ProcVertexBuffer.Add(PV);
+					S.SectionLocalBox += V[k];
+				}
+				for (int32 I : Idx) { S.ProcIndexBuffer.Add(I); }
+				S.bEnableCollision = false;
+				const int32 Mi = Secs[s].MaterialIndex;
+				const bool bBreak = P->GetStaticMaterials().IsValidIndex(Mi) && P->GetStaticMaterials()[Mi].MaterialSlotName.ToString().StartsWith(TEXT("Break"));
+				if (bBreak) { G->BreakMat = P->GetMaterial(Mi); }
+				G->Box += S.SectionLocalBox;
+				G->Sections.Add(MoveTemp(S));
+				G->Slot.Add(bBreak ? -1 : 0);
+			}
+			if (G->IsValid())
+			{
+				Out.Add(G);
+			}
+		}
+		if (Out.Num() > 0)
+		{
+			UE_LOG(LogTemp, Display, TEXT("ANTWRECK %s: %d pre-cut pieces"), *Mesh->GetName(), Out.Num());
+		}
+		return Out;
+	}
+
 	FBox BoxOf(UProceduralMeshComponent* P)
 	{
 		FBox B(ForceInit);
@@ -185,6 +257,10 @@ TSharedPtr<const FGeo> AntWreckGeo::Base(UStaticMesh* Mesh)
 	}
 	const int32 RenderTris = Mesh->GetNumLODs() > 0 ? Mesh->GetNumTriangles(0) : 0;
 	G->bProxy = Tris.Num() == 0 || (RenderTris > 0 && Tris.Num() < RenderTris / 2);
+	if (G->bProxy && PreCut(Mesh).Num() > 0)
+	{
+		G->bProxy = false;   // (a hero prop collides with a lighter LOD, but its pieces are the drawn model)
+	}
 	UE_LOG(LogTemp, Display, TEXT("ANTWRECK geo %s: %d collision triangles (drawn %d)%s, %d slots"), *Mesh->GetName(), Tris.Num(), RenderTris, G->bProxy ? TEXT(" - a stand-in, its chunks are not shown in place") : TEXT(""), G->Sections.Num());
 	GBase.Add(Key, G);
 	return G;
@@ -196,6 +272,11 @@ const TArray<TSharedPtr<const FGeo>>& AntWreckGeo::Cut(AActor* Scratch, UStaticM
 	if (!Mesh || !Scratch)
 	{
 		return None;
+	}
+	const TArray<TSharedPtr<const FGeo>>& Pre = PreCut(Mesh);
+	if (Pre.Num() > 0)
+	{
+		return Pre;   // authored break pieces: how this thing really breaks (plastic splits, a stick snaps)
 	}
 	const FString Key = FString::Printf(TEXT("%s|%d|%d"), *Mesh->GetPathName(), Seed, Count);
 	if (const TArray<TSharedPtr<const FGeo>>* F = GCuts.Find(Key))
@@ -293,6 +374,28 @@ const TArray<FBox>& AntWreckGeo::Hull(UStaticMesh* Mesh, const FVector& Scale)
 		return *F;
 	}
 	TArray<FBox>& Out = GHulls.Add(Key);
+	// Authored convex hulls (UCX_ of the hero props: a hollow bucket is a bottom and eight wall segments, a mop a stick, a socket
+	// and its yarn): one box round each.
+	const bool bHero = Mesh->GetStaticMaterials().Num() > 0 && Mesh->GetStaticMaterials()[0].MaterialSlotName.ToString().StartsWith(TEXT("Hero_"));
+	if (UBodySetup* BS = bHero ? Mesh->GetBodySetup() : nullptr)
+	{
+		const FVector Min3 = FVector(25.f) / Scale.GetAbs().ComponentMax(FVector(0.01f));
+		for (const FKConvexElem& E : BS->AggGeom.ConvexElems)
+		{
+			FBox U(ForceInit);
+			for (const FVector& V : E.VertexData) { U += V; }
+			if (!U.IsValid) { U = E.ElemBox; }   // (a cooked hull may keep only its box)
+			if (!U.IsValid) { continue; }
+			const FVector Ext = U.GetExtent().ComponentMax(Min3);
+			Out.Add(FBox(U.GetCenter() - Ext, U.GetCenter() + Ext));
+		}
+		if (Out.Num() > 0 && Out.Num() <= 24)
+		{
+			UE_LOG(LogTemp, Display, TEXT("ANTWRECK hull %s: %d boxes from its authored hulls"), *Mesh->GetName(), Out.Num());
+			return Out;
+		}
+		Out.Reset();
+	}
 	TArray<FTri> Tris;
 	const FBox B = Mesh->GetBoundingBox();
 	if (!ReadTris(Mesh, Tris) || !B.IsValid)
