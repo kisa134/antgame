@@ -188,7 +188,14 @@ namespace
 				if (bBreak) { G->BreakMat = P->GetMaterial(Mi); }
 				G->Box += S.SectionLocalBox;
 				G->Sections.Add(MoveTemp(S));
-				G->Slot.Add(bBreak ? -1 : 0);
+				// a surface section takes the prop's slot of the same name (hero props: Hero_Glass is the glass), else slot 0
+				int32 Own = 0;
+				if (!bBreak && P->GetStaticMaterials().IsValidIndex(Mi))
+				{
+					const int32 J = Mesh->GetMaterialIndex(P->GetStaticMaterials()[Mi].MaterialSlotName);
+					if (J != INDEX_NONE) { Own = J; }
+				}
+				G->Slot.Add(bBreak ? -1 : Own);
 			}
 			if (G->IsValid())
 			{

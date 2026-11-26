@@ -152,12 +152,19 @@ def hero_mesh(fbx, dest, name, ucx=False):
     AT.import_asset_tasks([t])
     return unreal.load_asset(dest + "/" + name + "." + name)
 
-def hero_slots(mesh, mats):
-    """slot i gets mats[i] (keeping the slot names: Hero_<Name>, Break)"""
+def hero_slots(mesh, mats, by_name=None):
+    """slot i gets mats[i] (keeping the slot names: Hero_<Name>, Break); by_name {prefix: material} wins for slots named so
+    (hero props: Hero_Glass -> the glass instance, Break -> the fracture of the piece's class)"""
     # (set_material, not a copied static_materials list: the copy came back as WorldGridMaterial in the cook)
-    for i in range(len(mesh.get_editor_property("static_materials"))):
-        if i < len(mats) and mats[i]:
-            mesh.set_material(i, mats[i])
+    sl = mesh.get_editor_property("static_materials")
+    for i in range(len(sl)):
+        sn = str(sl[i].get_editor_property("material_slot_name"))
+        pick = None
+        for pre, m in (by_name or {}).items():
+            if sn.startswith(pre) and m: pick = m; break
+        if pick is None and i < len(mats): pick = mats[i]
+        if pick:
+            mesh.set_material(i, pick)
     got = [mesh.get_material(i) for i in range(len(mesh.get_editor_property("static_materials")))]
     log("hero slots %s: %s" % (mesh.get_name(), [g.get_name() if g else None for g in got]))
 
@@ -204,6 +211,21 @@ def import_hero(only_names=None, HERO_SRC=HERO_SRC, manifest="hero_manifest.json
         for k, t in texs.items():
             if t: MEL.set_material_instance_texture_parameter_value(mi, k, t)
         EAL.save_asset(dest + "/" + mi_name)
+        # glass (hero props): slot Hero_Glass -> MI_<Name>_Glass, parent M_HeroGlass (translucent; Tools/art/make_hero_glass.py)
+        gmi = None
+        gpar = unreal.load_asset(HERO_MAT + "/M_HeroGlass") if p.get("glass") else None
+        if gpar:
+            gname = "MI_%s_Glass" % name
+            if not EAL.does_asset_exist(dest + "/" + gname):
+                AT.create_asset(gname, dest, unreal.MaterialInstanceConstant, unreal.MaterialInstanceConstantFactoryNew())
+            gmi = unreal.load_asset(dest + "/" + gname)
+            MEL.set_material_instance_parent(gmi, gpar)
+            for k, t in texs.items():
+                if t: MEL.set_material_instance_texture_parameter_value(gmi, k, t)
+            MEL.set_material_instance_scalar_parameter_value(gmi, "Opacity", float(p["glass"].get("opacity", 0.16)))
+            EAL.save_asset(dest + "/" + gname)
+        elif p.get("glass"):
+            log("hero %s: M_HeroGlass missing - run Tools/art/make_hero_glass.py" % name)
         mesh = hero_mesh(os.path.join(src, p["file"]), dest, name, ucx=True)
         if not mesh:
             log("FAILED hero " + name); continue
@@ -215,7 +237,7 @@ def import_hero(only_names=None, HERO_SRC=HERO_SRC, manifest="hero_manifest.json
                 ok = tmp and unreal.AntArtTools.set_lod_from_mesh(mesh, i, tmp, screen)
                 if not ok: log("hero %s: LOD%d FAILED" % (name, i))
                 if tmp: EAL.delete_asset(HERO_MAT + "/Tmp/%s_LOD%d" % (name, i))
-        hero_slots(mesh, [mi])
+        hero_slots(mesh, [mi], {"Hero_Glass": gmi})
         hull = hero_collision(mesh, True, True)
         mesh.set_editor_property("lod_for_collision", int(p.get("collision_lod", 0)))
         EAL.save_loaded_asset(mesh)
@@ -229,12 +251,12 @@ def import_hero(only_names=None, HERO_SRC=HERO_SRC, manifest="hero_manifest.json
         for mv in p.get("movers", []):
             m2 = hero_mesh(os.path.join(src, mv["file"]), dest, mv["name"])
             if m2:
-                hero_slots(m2, [mi]); hero_collision(m2, True, False); EAL.save_loaded_asset(m2)
+                hero_slots(m2, [mi], {"Hero_Glass": gmi}); hero_collision(m2, True, False); EAL.save_loaded_asset(m2)
                 log("hero %s mover %s tris %d" % (name, mv["name"], m2.get_num_triangles(0)))
         for bp in p.get("breaks", []):
             m3 = hero_mesh(os.path.join(src, bp["file"]), dest, bp["name"])
             if m3:
-                hero_slots(m3, [mi, brk.get(cls)])
+                hero_slots(m3, [mi, brk.get(cls)], {"Hero_Glass": gmi, "Break": brk.get(cls), "Hero_": mi})
                 hero_collision(m3, False, False)
                 m3.set_editor_property("allow_cpu_access", True)
                 EAL.save_loaded_asset(m3)
