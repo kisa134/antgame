@@ -36,8 +36,9 @@ namespace LevelV2
 	ANTKITCHEN_API const TCHAR* CalloutNear(const FVector& P, float Radius = 900.f);
 
 	// ---- the second way home (the south nest entrance at the house corner, reached through the cat flap and the yard)
-	inline FVector SouthEntrance() { return FVector(-8150.f, -5750.f, 0.f); }
-	inline float SouthEntranceRadius() { return 500.f; }
+	/** (KAN-37 lab: the nest's second entrance of the variant) */
+	ANTKITCHEN_API FVector SouthEntrance();
+	ANTKITCHEN_API float SouthEntranceRadius();
 
 	// ---- the cat flap in the living room's west wall: only opened from the living-room side
 	inline bool OnLatchSideOfCatFlap(const FVector& P) { return P.X > 7150.f; }

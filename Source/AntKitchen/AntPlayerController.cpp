@@ -742,7 +742,12 @@ void AAntPlayerController::ServerAdmin_Implementation(const FString& Cmd)
 // «Учебка» and the sandbox (AntTutorial.h)
 void AAntPlayerController::TutEnterDown() { AntTut::OnEnter(this, true); }
 void AAntPlayerController::TutEnterUp() { AntTut::OnEnter(this, false); }
-void AAntPlayerController::TutTool(int32 Tool) { if (AntTut::SandboxActive(this)) { ServerTut((uint8)(10 + Tool)); } }
+void AAntPlayerController::TutTool(int32 Tool)
+{
+	if (!AntTut::SandboxActive(this)) { return; }
+	if (Tool == 2) { AntTut::ToggleSandboxPanel(this); return; }   // F2: the sandbox's lite panel (AntTutorial.cpp)
+	ServerTut((uint8)(10 + Tool));
+}
 
 void AAntPlayerController::ServerTut_Implementation(uint8 Cmd)
 {

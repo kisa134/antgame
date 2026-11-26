@@ -35,6 +35,8 @@
 #include "AntRts.h"
 #include "AntFighter.h"
 #include "AntTutorial.h"
+#include "AntLab.h"
+#include "AntDifficulty.h"
 
 namespace GMColors
 {
@@ -64,6 +66,14 @@ AAntKitchenGameMode::AAntKitchenGameMode()
 	PlayerStateClass = AAntPlayerState::StaticClass();
 	GameStateClass = AAntGameState::StaticClass();
 	HUDClass = AAntHUD::StaticClass();
+}
+
+void AAntKitchenGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
+{
+	Super::InitGame(MapName, Options, ErrorMessage);
+	// KAN-37: the level lab variant of this world (-AntLab=X or the menu), before anything asks where things are. The game state
+	// carries it to the clients (AAntGameState::LabVariant).
+	AntLab::Activate(AntLab::Wanted());
 }
 
 void AAntKitchenGameMode::BeginPlay()
@@ -194,10 +204,22 @@ void AAntKitchenGameMode::BeginPlay()
 	}
 
 	SpawnHuman();
-	SpawnGadgets();
-	AKitchenSpillBottle::SpawnAll(GetWorld());   // level v2: the oil and the water bottle ants can tip over
+	const bool bLab = AntLab::Get() != nullptr;
+	if (!bLab)   // KAN-37 lab: a grey box with the Human only (no gadgets, residents, pets, bottles, background swarm)
+	{
+		SpawnGadgets();
+		AKitchenSpillBottle::SpawnAll(GetWorld());   // level v2: the oil and the water bottle ants can tip over
+	}
 	RunBeginPlay();
-	SpawnSwarm();
+	if (!bLab)
+	{
+		SpawnSwarm();
+	}
+	else
+	{
+		AntLab::SpawnHatches(GetWorld());
+		AntLab::LogCheck();   // the automatic check, in every lab log
+	}
 	SpawnInitialLoot();
 
 	// Bots: -AntBots=allies,rivals on the command line (default 2,3).
@@ -213,6 +235,10 @@ void AAntKitchenGameMode::BeginPlay()
 	GetWorldTimerManager().SetTimer(BotTimer, FTimerDelegate::CreateWeakLambda(this, [this]()
 	{
 		AddBots(0, AllyBots);
+		if (AntLab::Get())
+		{
+			return;   // the lab: no fire ants, spider or flies
+		}
 		AddBots(1, RivalBots);
 		SpawnSpider();
 		SpawnFly();
@@ -682,7 +708,7 @@ void AAntKitchenGameMode::SpawnHeavyLoot()
 void AAntKitchenGameMode::KitchenLifeEvent()
 {
 	AAntGameState* GS = GetGameState<AAntGameState>();
-	if (!GS || GS->Phase != 0)
+	if (!GS || GS->Phase != 0 || AntLab::Get())
 	{
 		return;
 	}
@@ -747,6 +773,11 @@ void AAntKitchenGameMode::RestartPlayer(AController* NewPlayer)
 	}
 	const AAntPlayerState* PS = NewPlayer->GetPlayerState<AAntPlayerState>();
 	const uint8 Team = PS ? PS->Team : 0;
+	if (AntLab::Get() && Team == 0)
+	{
+		RestartPlayerAtTransform(NewPlayer, FTransform(FRotator(0.f, FMath::FRandRange(-180.f, 180.f), 0.f), AntLab::SpawnPoint()));   // KAN-37: in front of the lab nest
+		return;
+	}
 	const FVector Nest = AKitchenBuilder::NestLocation(Team);
 	// Inside the safe zone of the nest; both nests open towards the middle of the kitchen.
 	const float Out = Team == 0 ? 1.f : -1.f;
@@ -770,6 +801,10 @@ void AAntKitchenGameMode::RespawnAnt(AController* C)
 		}
 		C->UnPossess();
 		P->Destroy();
+	}
+	if (AntRts::RespawnInSquad(C))
+	{
+		return;   // the snowball raid: he is back as one of his squad ants near where he fell (KAN-32)
 	}
 	RestartPlayer(C);
 }
@@ -1292,7 +1327,8 @@ void AAntKitchenGameMode::OnAntKilled(AAntCharacter* Ant, AController* Killer, A
 	TWeakObjectPtr<AController> WeakC = Ant->GetController();
 	FTimerHandle Handle;
 	// (a raid: the rival clan's dead come back as reinforcements, later the lower the threat)
-	const float Delay = (bRaid && Raid && Ant->Team == 1 && Ant->Creature == 0 && !Cast<APlayerController>(Ant->GetController())) ? Raid->ClanRespawn() : RespawnDelay;
+	const float Delay = (bRaid && Raid && Ant->Team == 1 && Ant->Creature == 0 && !Cast<APlayerController>(Ant->GetController())) ? Raid->ClanRespawn()
+		: RespawnDelay * ((bRaid && Ant->Team == 0) ? AntDifficulty::RespawnMul(this) : 1.f);   // (KAN-30: casual sooner, hard later)
 	GetWorldTimerManager().SetTimer(Handle, FTimerDelegate::CreateWeakLambda(this, [this, WeakC]()
 	{
 		RespawnAnt(WeakC.Get());
@@ -1782,6 +1818,10 @@ void AAntKitchenGameMode::WarTick()
 
 void AAntKitchenGameMode::SpawnTrophy(int32 Slot)
 {
+	if (AntLab::Get())
+	{
+		return;   // KAN-37 lab: one cake and the variant's food, nothing on the kitchen's trophy spots
+	}
 	struct FTrophy { const TCHAR* Name; int32 Value; int32 Weight; FLinearColor Color; EAntShape Shape; FVector Scale; FVector Where; };
 	static const FTrophy Defs[] =
 	{
