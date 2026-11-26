@@ -150,6 +150,8 @@ public:
 	float DepthAt(const FVector& P) const;
 	/** Server: a towel or a mop takes the liquid in a disc away (about 6 uu of depth a second). */
 	void Mop(const FVector& At, float Radius, float Dt);
+	/** Server: takes Depth (uu) of one layer (AntFluid::ELayer) in a disc: the oil a fire burns up, the water that freezes (AntMatter). */
+	void DrainLayer(const FVector& At, float Radius, uint8 Layer, float Depth);
 	/** Server: dry everything, the tap off (a new raid: AKitchenFixture::ResetAll). */
 	static void ResetAll(UWorld* World);
 	void Dry();

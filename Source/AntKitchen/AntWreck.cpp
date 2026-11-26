@@ -1,4 +1,5 @@
 ﻿#include "AntWreck.h"
+#include "AntState.h"
 #include "AntWreckGeo.h"
 #include "AntSwing.h"
 #include "AntAudio.h"
@@ -1037,6 +1038,24 @@ void AAntWreckBody::RebuildLook()
 	LookStage = Stage;
 	LookLost = LostMask;
 	LookDents = Dents.Num();
+	// the state layer (AntState.h, KAN-21): the stage shows as damage over the whole piece, the dents as damaged spots;
+	// on every machine, from the replicated stage and dents
+	for (UPrimitiveComponent* P : { (UPrimitiveComponent*)Mesh, (UPrimitiveComponent*)Chunks })
+	{
+		TArray<AntState::FSpot, TInlineAllocator<AntState::MaxSpots>> Sp;
+		const float Sc = (float)Mesh->GetComponentScale().GetAbsMax();
+		for (int32 i = Dents.Num() - 1; i >= 0 && Sp.Num() < AntState::MaxSpots; --i)
+		{
+			const FVector W = Mesh->GetComponentTransform().TransformPosition(FVector(Dents[i].At));
+			AntState::FSpot& S = Sp.AddDefaulted_GetRef();
+			S.Local = P->GetComponentTransform().InverseTransformPosition(W);
+			S.Radius = FMath::Max(25.f, Dents[i].Radius * Sc * 1.6f);
+			S.Kind = AntState::Damage;
+			S.Strength = FMath::Clamp(0.55f + Dents[i].Depth * Sc / 30.f, 0.f, 1.f);
+		}
+		AntState::SetSource(P, AntState::Wreck, AntState::Damage, FMath::Clamp(Stage * 0.22f, 0.f, 0.9f));
+		AntState::SetSpots(P, AntState::Wreck, Sp);
+	}
 	if (IsBroken())
 	{
 		const TSharedPtr<const AntWreckGeo::FGeo> B0 = AntWreckGeo::Base(Mesh->GetStaticMesh());

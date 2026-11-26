@@ -66,6 +66,19 @@ struct ANTKITCHEN_API FAntMatProps
 	FString Sound;              // AntAudio id of its knock / step
 	float Noise = 0.f;          // how loud it is when it falls (0..1: the residents come)
 	FString Does;               // what it does in the game, one line (Russian)
+	// ---- matter (KAN-21, AntMatter.h): fire, water, the body of the thing
+	float IgniteAt = -1.f;      // °C it catches fire at (-1: never burns)
+	float BurnRate = 0.f;       // cm/s the flame front runs over it (upwards ~3x faster)
+	FString BurnsInto;          // "ash" (burns away), "char" (stays black), "melt" (softens, drips, acrid smoke), "toast" (food: browns first)
+	float WetSpeed = 0.3f;      // how fast it takes liquid it touches, 0..1 of full per second (a sponge 1, wood 0.03)
+	float DrySpeed = 0.01f;     // how fast it dries in room air, 0..1 per second (faster when hot)
+	float Stiffness = 0.6f;     // 0 limp (cloth, paper) .. 1 rigid (metal, glass)
+	float Tear = 0.5f;          // tear strength 0..1 (wet paper and cardboard lose most of it)
+	float Crumbly = 0.f;        // 0..1 falls apart (soaked bread, cake)
+	float Plastic = 0.f;        // 0..1 plasticity: how soft it gets when hot (butter, chocolate, plastic)
+	float SpoilRate = 0.f;      // food: 0..1 per minute it goes off at room temperature (x2 warm, /4 in the fridge)
+	float Juicy = 0.f;          // food: 0..1 how much juice it gives when bitten or crushed
+	FString Smell;              // food: who it draws ("ants,fly,dog,cat")
 };
 
 namespace AntMaterials
@@ -92,7 +105,8 @@ namespace AntMaterials
 // Replicated state
 // ------------------------------------------------------------------------------------------------------------------------
 
-namespace AntCloudKind { enum : uint8 { Pepper = 0, Flour = 1, Steam = 2, Static = 3, Count }; }
+/** Smoke (KAN-21): the acrid smoke of melting plastic and of fires - drawn dark, makes people and pets sneeze like pepper. */
+namespace AntCloudKind { enum : uint8 { Pepper = 0, Flour = 1, Steam = 2, Static = 3, Smoke = 4, Count }; }
 
 /** A cloud of powder (or steam) hanging in the air: every machine draws it from these numbers. */
 USTRUCT()
@@ -178,6 +192,10 @@ public:
 	/** A short circuit at Where: sparks, the live water zaps the ants in it, the breaker trips. */
 	void Short(const FVector& Where, const TCHAR* Why, AAntCharacter* By);
 	int32 AddCloud(uint8 Kind, const FVector& Center, float Radius, float Life, const FVector& Drift, const FVector& Source = FVector::ZeroVector, float PourFor = 0.f, const TCHAR* Chain = nullptr);
+	/** 0..1 how thick the clouds of Kind are at P now (the thickest one); OutId = that cloud's id, OutCenter its centre now. */
+	float CloudThickness(uint8 Kind, const FVector& P, uint8* OutId = nullptr, FVector* OutCenter = nullptr, float* OutRadius = nullptr) const;
+	/** Server: a cloud is gone at once (the flour that went up in a flash). */
+	void EndCloud(uint8 Id);
 	/** Server: which chain made each cloud (for the log). */
 	TMap<uint8, FString> CloudChain;
 	void Mark(AActor* Who, uint8 Kind, float Seconds);

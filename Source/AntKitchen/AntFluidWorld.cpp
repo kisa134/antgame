@@ -38,6 +38,7 @@
 #include "RHI.h"
 #include "AntFighter.h"
 #include "AntReact.h"
+#include "AntMatter.h"
 
 using namespace AntFluid;
 
@@ -963,7 +964,7 @@ void UAntFluidWorld::CoupleAnts(float Dt)
 		FSample S; int32 b = -1;
 		const bool bIn = SampleAt(P, S, &b) && S.Total > 0.4f && P.Z - R < S.Surface + 2.f;
 		const bool bSwim = bIn && (S.Depth[LWater] > R * 1.1f);
-		const bool bOil = bIn && S.Depth[LOil] > 0.03f && S.Depth[LWater] < 1.f;
+		const bool bOil = (bIn && S.Depth[LOil] > 0.03f && S.Depth[LWater] < 1.f) || AntMatter::IceAt(W, P - FVector(0.f, 0.f, R), 25.f);   // oil or ice: no grip
 		if (bOil && !AntGrip.Contains(Ant)) { AntGrip.Add(Ant, FVector2f(CM->GroundFriction, CM->BrakingDecelerationWalking)); CM->GroundFriction = 0.15f; CM->BrakingDecelerationWalking = 20.f; }
 		else if (!bOil && AntGrip.Contains(Ant)) { const FVector2f G0 = AntGrip.FindAndRemoveChecked(Ant); CM->GroundFriction = G0.X; CM->BrakingDecelerationWalking = G0.Y; }
 		// honey holds: an ant in it barely moves
@@ -2074,6 +2075,7 @@ void UAntFluidWorld::WashStains(float Step)
 	AAntMess* M = AAntMess::Get(this);
 	if (!M) { return; }
 	TArray<TPair<FVector, float>> Wash;
+	TArray<FMessStain> Dough;
 	TSet<uint16> Seen;
 	for (const FMessStain& S : M->Stains)
 	{
@@ -2084,7 +2086,17 @@ void UAntFluidWorld::WashStains(float Step)
 		Seen.Add(S.Id);
 		float& T = StainWet.FindOrAdd(S.Id);
 		T += Step * FMath::Clamp(Smp.Depth[LWater] / 5.f + Smp.Vel.Size() / 250.f, 0.4f, 3.f);
+		// flour does not wash away: with water it turns into a sticky dough where it lies (KAN-21)
+		if (S.Kind == MessKind::Flour) { if (T > 2.f) { Dough.Add(S); } continue; }
 		if (T > 4.f) { Wash.Add(TPair<FVector, float>(P, FMath::Max(20.f, S.Size * 0.15f))); }
+	}
+	for (const FMessStain& D : Dough)
+	{
+		const FVector P = D.Pos;
+		M->Clean(P, FMath::Max(30.f, D.Size * 0.45f));
+		AntMess::StainAt(this, MessKind::Cream, P, D.Normal, FMath::Max(60.f, D.Size * 0.7f), D.Seed);
+		LevelV3::AddZone(0, P, FMath::Max(60.f, D.Size * 0.4f));
+		UE_LOG(LogTemp, Display, TEXT("ANTFLUID flour + water at %s: a sticky dough (sticky zone r %.0f)"), *P.ToCompactString(), FMath::Max(60.f, D.Size * 0.4f));
 	}
 	for (auto It = StainWet.CreateIterator(); It; ++It) { if (!Seen.Contains(It.Key())) { It.RemoveCurrent(); } }
 	for (const TPair<FVector, float>& Wp : Wash)
@@ -2278,6 +2290,7 @@ float UAntFluidWorld::DepthAt(const FVector& P) const
 
 bool UAntFluidWorld::IsSlippery(const FVector& P) const
 {
+	if (AntMatter::IceAt(GetWorld(), P, 60.f)) { return true; }   // a frozen puddle (AntMatter): slipperier than the water was
 	FSample S;
 	if (!bReady || !SampleAt(P, S) || FMath::Abs((float)P.Z - S.Bed) > 60.f) { return false; }
 	return S.Depth[LWater] > 0.8f || S.Depth[LOil] > 0.03f;
@@ -2288,6 +2301,13 @@ void UAntFluidWorld::Mop(const FVector& At, float Radius, float Dt)
 	const int32 b = bReady ? BasinUnder(At + FVector(0.f, 0.f, 30.f)) : -1;
 	if (b < 0) { return; }
 	for (int32 L = 0; L < LCount; ++L) { Basins[b]->Drain((ELayer)L, (float)At.X, (float)At.Y, Radius, 6.f * Dt); }
+}
+
+void UAntFluidWorld::DrainLayer(const FVector& At, float Radius, uint8 Layer, float Depth)
+{
+	const int32 b = bReady && Layer < LCount ? BasinUnder(At + FVector(0.f, 0.f, 30.f)) : -1;
+	if (b < 0 || Depth <= 0.f) { return; }
+	Basins[b]->Drain((ELayer)Layer, (float)At.X, (float)At.Y, Radius, Depth);
 }
 
 float UAntFluidWorld::LitresIn(int32 b) const
