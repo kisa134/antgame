@@ -241,7 +241,7 @@ def mats():
     M["jam"] = jam_mat("Jam")
     M["lidRed"] = H.plastic("LidRedPaint", (0.55, 0.03, 0.03), 0.22, peel=0.02, scuff=0.18)
     M["jamLabel"] = label_cyl("LabelJam", "jam.png", 120, 50, 190)
-    return mats7(mats6(mats5(mats4(mats2(M)))))
+    return mats8(mats7(mats6(mats5(mats4(mats2(M))))))
 
 # ------------------------------------------------------------------------------------------------ the pieces (frames and boxes of the old ones)
 def plate(M):
@@ -571,7 +571,7 @@ def phone(M):
 
 def remote_ctl(M):
     parts = [(rrect("Lower", -300, 300, -98, 98, 0, 16.2, 70, M["remote"], 10, 6), 0),
-             (rrect("Seam", -299, 299, -97, 97, 16.0, 18.0, 69, M["remote"], 10, 0.2), 0),     # the parting line between the halves
+             (rrect("Seam", -299, 299, -97, 97, 16.0, 18.0, 69, M["remote"], 8, 0.2), 0),     # the parting line between the halves
              (rrect("Upper", -300, 300, -98, 98, 17.8, 34, 70, M["remote"], 10, 7), 0),
              (rrect("IR", 286, 301.5, -26, 26, 13, 27, 8, M["irWindow"], 4, 1.5), 0)]
     # the battery cover underneath: a recessed lid with grip ridges (pops off when it breaks)
@@ -582,11 +582,12 @@ def remote_ctl(M):
     # round keys as rounded squares bevelled to a disc: their flat tops carry the printed symbol (a turned key's top is a fan of
     # slivers round the axis, the bake smears the digit into streaks)
     for kind, x, y in keys:
-        parts.append((rrect("Key", x - 18.5, x + 18.5, y - 18.5, y + 18.5, 30, 44.5, 18, M["keys"], 6, 3.5), 0))
-    parts.append((rrect("Power", 232, 268, 37, 73, 30, 44, 18, M["keysRed"], 6, 3.5), 0))
-    parts.append((rrect("Mute", 234, 266, -71, -39, 30, 43, 16, M["keys"], 6, 3.0), 0))
+        parts.append((rrect("Key", x - 18.5, x + 18.5, y - 18.5, y + 18.5, 30, 44.5, 18, M["keys"], 4, 3.5), 0))
+    parts.append((rrect("Power", 232, 268, 37, 73, 30, 44, 18, M["keysRed"], 4, 3.5), 0))
+    parts.append((rrect("Mute", 234, 266, -71, -39, 30, 43, 16, M["keys"], 4, 3.0), 0))
     parts.append((rrect("Ok", 116, 164, -24, 24, 30, 43.5, 24, M["keys"], 8, 3.5), 0))
-    parts.append((lathe("Ring", [(30, 40), (52, 41), (56, 38), (57, 32), (57, 30), (30, 30)], M["keys"], 36, 0, (140, 0, 0)), 0))
+    # the d-pad ring: a flat annulus (a turned ring's top is slivers, its printed arrows would smear)
+    parts.append((slab("Ring", circle2(140, 0, 57, 32), [circle2(140, 0, 30, 24)], "z", 30, 11, M["keys"], 2.5), 0))
     for y in (60, -60):
         parts.append((rrect("Rock", 8, 72, y - 17, y + 17, 30, 41.5, 14, M["keys"], 4, 2.5), 0))
     for y, col in ((-66, "keyR"), (-22, "keyG"), (22, "keyY"), (66, "keyB")):
@@ -931,6 +932,8 @@ def mats5(M):
     M["buckwheat"] = powder("Leftovers", (0.46, 0.29, 0.14), (0.22, 0.12, 0.05))
     M["dogEnamel"] = enamel("DogBowlEnamel", (0.55, 0.05, 0.04), (0.93, 0.93, 0.90), 0.70)
     M["potSteel"] = H.metal("PotSteel", (0.82, 0.82, 0.81), 0.2)
+    for _n in M["potSteel"].node_tree.nodes:   # (satin, not hammered: a big pot shows the fingerprint noise as blotches)
+        if _n.bl_idname == "ShaderNodeMapRange": _n.inputs["To Max"].default_value = 0.26
     M["soup"] = soup_mat("Soup")
     M["carrot"] = H.plastic("Carrot", (0.85, 0.30, 0.04), 0.3, peel=0.05, scuff=0.1); H.tag(M["carrot"], 0.0, 0.4)
     M["potato"] = H.plastic("Potato", (0.86, 0.78, 0.55), 0.35, peel=0.08, scuff=0.1); H.tag(M["potato"], 0.0, 0.5)
@@ -947,7 +950,7 @@ def bowl(M):
     prof = [(0, 6), (120, 6), (128, 2), (134, 0), (142, 0), (148, 4), (152, 12), (185, 40), (214, 80), (228, 112), (230, 118), (228, 121), (222, 121),
             (219, 116), (206, 82), (176, 46), (142, 26), (100, 21), (0, 20)]
     parts = [(lathe("Bowl", prof, M["bowl"], 72), 0)]
-    parts.append((lathe("Leftovers", [(0, 34), (50, 33), (95, 29), (130, 24), (150, 21), (150, 19), (0, 19)], M["buckwheat"], 40, 0, (34, 22, 0)), 0))
+    parts.append((lathe("Leftovers", [(0, 41), (30, 40), (62, 36), (92, 31), (118, 26), (134, 22), (136, 19.5), (0, 19.5)], M["buckwheat"], 40, 0, (6, 5, 0)), 0))
     return parts
 
 def petbowl(M):
@@ -1177,7 +1180,7 @@ def sugarbowl(M):
     parts = [(lathe("Bowl", body, M["sugarBowl"], 72), 0), (lathe("Lid", lid, M["sugarBowl"], 72), 1), (lathe_s("Knob", knob, M["sugarBowl"], 40), 1)]
     for s in (1, -1):
         e = H.tubes("Ear", [[Vector(u(s * x, 0, z)) for x, z in ((226, 176), (268, 184), (296, 156), (288, 116), (246, 100), (228, 104))]], 12 * K, res_u=8, bevel_res=2, tip=0.8)
-        e.scale = (1, 0.75, 1); e.data.materials.append(M["sugarBowl"]); parts.append((e, 0))
+        e.scale = (1, 0.75, 1); e.data.materials.append(M["sugarBowl"]); parts.append((e, 2))   # (the ears: a piece of their own, they overlap the body)
     return parts
 
 def icetray(M):
@@ -1220,10 +1223,10 @@ def hulls_pin(n):
 def _box_hulls(*bs): return lambda n: [H.hull("UCX_%s_%02d" % (n, i), boxp(*b)) for i, b in enumerate(bs)]
 
 SPECS.update({   # batch 6
-    "SM_K_Ladle": dict(build=ladle, hulls=hulls_ladle, lods=(0.45, 0.2), cls="metal", breaks=None),
-    "SM_K_Spatula": dict(build=spatula, hulls=_box_hulls((-100, 100, -34, -26, -1010, -700), (-22, 22, -32, 6, -720, -440), (-25, 25, -13, 13, -470, 36)),
+    "SM_K_Ladle": dict(hang=True, build=ladle, hulls=hulls_ladle, lods=(0.45, 0.2), cls="metal", breaks=None),
+    "SM_K_Spatula": dict(hang=True, build=spatula, hulls=_box_hulls((-100, 100, -34, -26, -1010, -700), (-22, 22, -32, 6, -720, -440), (-25, 25, -13, 13, -470, 36)),
                          lods=(0.45, 0.2), cls="metal", breaks=None),
-    "SM_K_Whisk": dict(build=whisk, lods=(0.5, 0.25), cls="metal", breaks=None,
+    "SM_K_Whisk": dict(hang=True, build=whisk, lods=(0.5, 0.25), cls="metal", breaks=None,
                        hulls=lambda n: [H.hull("UCX_%s_00" % n, ring(12, -225, 8) + ring(58, -380, 12) + ring(66, -450, 12) + ring(32, -560, 8)),
                                         H.hull("UCX_%s_01" % n, ring(15, -248, 8) + ring(15, 36, 8))]),
     "SM_K_RollingPin": dict(build=rollingpin, hulls=hulls_pin, lods=(0.45, 0.2), cls="wood", breaks=None),
@@ -1231,7 +1234,7 @@ SPECS.update({   # batch 6
                               breaks=lambda o, n: cut_groups(o, n, [lambda p, g: True], [], [((60, 0, 25), (1.0, 0.12, 0.0), 0.004, 107, 0)])),   # split along the grain
     "SM_K_SugarBowl": dict(build=sugarbowl, lods=(0.45, 0.2), cls="ceramic",
                            hulls=lambda n: hulls_round(n, 238, 222, 232, (222, 310)) + [H.hull("UCX_%s_%02d" % (n, 2 + i), boxp(*b)) for i, b in enumerate(((226, 300, -12, 12, 96, 190), (-300, -226, -12, 12, 96, 190)))],
-                           breaks=lambda o, n: shatter(o, n, lambda p, g: p == 0, [], [lambda p, g: p == 1], n=9, seed=41, jag=0.0008, chips=6, chip_mat_glass=False)),
+                           breaks=lambda o, n: shatter(o, n, lambda p, g: p == 0, [], [lambda p, g: p == 1, lambda p, g: p == 2], n=9, seed=41, jag=0.0008, chips=6, chip_mat_glass=False)),
     "SM_K_IceTray": dict(build=icetray, hulls=_box_hulls((-150, 150, -150, 150, 0, 62), (-140, 140, -140, 140, 62, 100)), lods=(0.45, 0.2), cls="plastic", glass=0.3,
                          glassmat="ice", breaks=lambda o, n: cut_groups(o, n, [], [lambda p, g: p == 0, lambda p, g: p == 1], [])),    # the ice falls out
     "SM_K_EggTray": dict(build=eggtray, hulls=_box_hulls((-210, 210, -145, 145, 0, 56), (-180, 180, -112, 112, 56, 122)), lods=(0.45, 0.2), cls="paper",
@@ -1354,6 +1357,87 @@ SPECS.update({   # batch 7
     "SM_L_ToyTrain": dict(build=toytrain, hulls=_box_hulls((-110, 110, -250, 250, 0, 250), (-127, 127, 46, 250, 80, 326), (-48, 48, -218, -122, 192, 320)), lods=(0.45, 0.2),
                           cls="plastic", glass=0.3, glassmat="toyGlass", breaks=None),
     "SM_L_ToyMouse": dict(build=toymouse, hulls=_box_hulls((-78, 78, -160, 166, 0, 145)), lods=(0.45, 0.2), cls="cloth", breaks=None),
+})
+
+# ---- batch 8: packets and electronics (the soda can, the milk carton, the cereal box, the game console, the pad)
+def mats8(M):
+    M["alu"] = H.metal("CanAlu", (0.86, 0.87, 0.89), 0.18)
+    M["sodaLabel"] = label_cyl("LabelSoda", "soda.png", 180, 40, 330, 0.22, (0.69, 0.07, 0.09), 0.05)
+    M["milk"] = print_box("MilkPrint", {"front": "milk_front.png", "back": "milk_front.png", "side": "milk_side.png", "top": "milk_side.png"},
+                          -204, 204, -204, 204, 0, 560, 0.35, (0.95, 0.95, 0.96))
+    M["milkTop"] = H.plastic("MilkTop", (0.93, 0.94, 0.95), 0.4, peel=0.04, scuff=0.2); H.tag(M["milkTop"], 0.0, 0.5)   # (the gable and the fin: plain coated board)
+    M["cereal"] = print_box("CerealPrint", {"front": "cereal_front.png", "back": "cereal_back.png", "side": "cereal_side.png", "top": "cereal_top.png"},
+                            -190, 190, -80, 70, 0, 637, 0.45, (0.92, 0.59, 0.12))
+    M["consoleBody"] = H.plastic("ConsoleBody", (0.035, 0.035, 0.04), 0.45, peel=0.02, scuff=0.25)
+    M["consoleGloss"] = H.plastic("ConsoleGloss", (0.015, 0.015, 0.018), 0.08, peel=0.0, scuff=0.35)
+    M["teal"] = H.plastic("TealLight", (0.05, 0.62, 0.58), 0.2, peel=0.0, scuff=0.05)
+    M["padBody"] = H.plastic("PadBody", (0.80, 0.80, 0.78), 0.4, peel=0.03, scuff=0.3)
+    M["padDark"] = H.plastic("PadDark", (0.06, 0.06, 0.07), 0.55, peel=0.15, scuff=0.2)
+    for k, c in (("padR", (0.75, 0.08, 0.06)), ("padT", (0.05, 0.55, 0.52)), ("padY", (0.90, 0.66, 0.08)), ("padG", (0.14, 0.52, 0.18))):
+        M[k] = H.plastic("Pad" + k[-1], c, 0.25, peel=0.0, scuff=0.1)
+    return M
+
+def sodacan(M):
+    prof = [(0, 14), (60, 22), (84, 8), (96, 1), (104, 0), (112, 3), (120, 14), (123, 30), (123, 340), (118, 352), (108, 364), (104, 372), (106, 378),
+            (103, 380.5), (99, 378), (98, 370), (92, 366), (0, 368)]
+    P = [(lathe("Can", prof, M["alu"], 64), 0), (wrap_label("Print", 123.15, 40, 330, 180, M["sodaLabel"], 0.3, 96), 0)]
+    P.append((rbox("Tab", -14, 14, -10, 48, 368, 371, M["alu"], 1.5, 0, 2), 0))
+    ring_pts = [Vector(u(14 * math.cos(a), 30 + 18 * math.sin(a), 371)) for a in [2 * math.pi * k / 12 for k in range(13)]]
+    rg = H.tubes("PullRing", [ring_pts], 2.5 * K, res_u=3, bevel_res=1, tip=1.0); rg.data.materials.append(M["alu"]); P.append((rg, 0))
+    return P
+
+def gable(name, x, y, z0, z1, mat):
+    me = bpy.data.meshes.new(name); bm = bmesh.new()
+    v = [bm.verts.new(u(*p)) for p in ((-x, -y, z0), (x, -y, z0), (x, y, z0), (-x, y, z0), (-x, 0, z1), (x, 0, z1))]
+    for f in ((0, 3, 2, 1), (0, 1, 5, 4), (2, 3, 4, 5), (1, 2, 5), (3, 0, 4)): bm.faces.new([v[i] for i in f])
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:]); bm.to_mesh(me); bm.free()
+    o = H.link(bpy.data.objects.new(name, me)); o.data.materials.append(mat); H.smooth(o, 0, 1.5 * K, 1); return o
+
+def _tilt(o, rot, at):
+    o.rotation_euler = rot; o.location = u(*at); return o
+
+def milkcarton(M):
+    return [(rbox("Carton", -204, 204, -204, 204, 0, 562, M["milk"], 3, 0, 2), 0), (gable("Gable", 204, 204, 560, 690, M["milkTop"]), 0),
+            (rbox("Fin", -204, 204, -5, 5, 684, 725, M["milkTop"], 1.5, 0, 2), 0),
+            (_tilt(lathe_s("Cap", [(0, -6), (34, -6), (36, -2), (36, 30), (32, 34), (0, 34)], M["padT"], 32), (0.567, 0, 0), (0, -90, 633)), 1)]   # on the front slope
+
+def cerealbox(M):
+    return [(rbox("Box", -190, 190, -80, 70, 0, 637, M["cereal"], 2.5, 0, 2), 0)]
+
+def gameconsole(M):
+    P = [(rbox("Body", -290, 290, -195, 195, 12, 146, M["consoleBody"], 6, 0, 3), 0),
+         (rbox("Top", -296, 296, -201, 201, 140, 154, M["consoleGloss"], 5, 0, 3), 0),
+         (rbox("Strip", -200, 200, -203, -195, 64, 70, M["teal"], 1, 0, 1), 0),
+         (rbox("Slot", -150, 150, -199, -194, 96, 101, M["padDark"], 1, 0, 1), 0)]
+    for x in (-250, 250):
+        for y in (-160, 160): P.append((lathe_s("Foot", [(0, 0), (22, 0), (24, 4), (24, 12), (0, 12)], M["padDark"], 20, 0, (x, y, 0)), 0))
+    for k in range(14): P.append((rbox("Vent", 120 + k * 11, 125 + k * 11, -150, 150, 152, 155, M["padDark"], 1, 0, 1), 0))
+    b = lathe_s("Power", [(0, 0), (12, 0), (11, 3), (0, 4)], M["consoleBody"], 20); b.rotation_euler = (math.pi / 2, 0, 0); b.location = u(240, -195, 100); P.append((b, 0))
+    return P
+
+def controller(M):
+    """a pad: pale body, two grips, offset sticks (left high, right low), a d-pad, four coloured face buttons, two bumpers"""
+    P = [(rrect("Body", -104, 104, -48, 62, 18, 72, 40, M["padBody"], 10, 10), 0)]
+    for s in (1, -1):
+        g = lathe("Grip", sphere_prof(48, 14), M["padBody"], 32); g.scale = (1.0, 1.45, 0.78); g.location = u(s * 106, -4, 0); P.append((g, 0))
+        P.append((rbox("Bumper", 52 if s > 0 else -128, 128 if s > 0 else -52, 58, 72, 46, 66, M["padDark"], 6, 0, 2), 0))
+    for x, y in ((-66, 16), (34, -26)):
+        P.append((lathe_s("Stick", [(0, 66), (11, 66), (11, 90), (19, 93), (21, 99), (17, 104), (0, 105)], M["padDark"], 24, 0, (x, y, 0)), 0))
+        P.append((lathe_s("StickWell", [(0, 70), (24, 70), (25, 73), (23, 74), (0, 74)], M["padDark"], 24, 0, (x, y, 0)), 0))
+    P += [(rbox("DpadH", -58, -14, -34, -18, 70, 80, M["padDark"], 3, 0, 2), 0), (rbox("DpadV", -44, -28, -48, -4, 70, 80, M["padDark"], 3, 0, 2), 0)]
+    for (dx, dy), k in zip(((0, 16), (16, 0), (0, -16), (-16, 0)), ("padY", "padR", "padG", "padT")):
+        P.append((rrect("Btn", 74 + dx - 8, 74 + dx + 8, 18 + dy - 8, 18 + dy + 8, 70, 80, 7.5, M[k], 5, 2.0), 0))
+    return P
+
+SPECS.update({   # batch 8
+    "SM_L_SodaCan": dict(build=sodacan, hulls=lambda n: hulls_round(n, 123, 380), lods=(0.45, 0.2), cls="metal", breaks=None),
+    "SM_K_MilkCarton": dict(build=milkcarton, hulls=lambda n: [H.hull("UCX_%s_00" % n, boxp(-204, 204, -204, 204, 0, 562)),
+                                                               H.hull("UCX_%s_01" % n, [(x * K, y * K, z * K) for x in (-204, 204) for y, z in ((-204, 560), (204, 560), (0, 725))])],
+                            lods=(0.5, 0.25), cls="paper", breaks=lambda o, n: cut_groups(o, n, [lambda p, g: p == 0], [lambda p, g: p == 1], [((0, 0, 300), (0.15, 0.1, 1.0), 0.010, 113, 0)])),
+    "SM_V3_CerealBox": dict(build=cerealbox, hulls=_box_hulls((-190, 190, -80, 70, 0, 637)), lods=(0.5, 0.25), cls="cardboard",
+                            breaks=lambda o, n: cut_groups(o, n, [lambda p, g: True], [], [((0, 0, 380), (0.1, 0.05, 1.0), 0.010, 127, 0)])),
+    "SM_L_GameConsole": dict(build=gameconsole, hulls=_box_hulls((-300, 300, -203, 203, 0, 155)), lods=(0.45, 0.2), cls="plastic", breaks=None),
+    "SM_L_Controller": dict(build=controller, hulls=_box_hulls((-156, 156, -73, 73, 0, 80), (-60, 60, -40, 0, 80, 111)), lods=(0.45, 0.2), cls="plastic", breaks=None),
 })
 
 # ------------------------------------------------------------------------------------------------ one asset (hero_lib.produce + the glass slot)
@@ -1602,6 +1686,9 @@ def main():
         doc["pieces"] = [p for p in doc["pieces"] if p["name"] != name] + [man]
         json.dump(doc, open(mpath, "w", encoding="utf-8"), indent=1, ensure_ascii=False)
         prev = H.preview_material(name, paths)
+        if sp.get("hang"):   # the rail's tools hang from their hook point (the origin): stood on the review floor instead
+            mn, mx = H.bounds([lod0]); dz = -mn.z + 0.0005
+            for o in [lod0] + pieces: o.location.z += dz
         review(name, lod0, pieces, prev, M[sp.get("glassmat", "glass")])
         print("HERO_PROPS %s done" % name)
     print("HERO_PROPS_DONE %.0f s" % (time.time() - t0))
