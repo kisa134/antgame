@@ -241,7 +241,7 @@ def mats():
     M["jam"] = jam_mat("Jam")
     M["lidRed"] = H.plastic("LidRedPaint", (0.55, 0.03, 0.03), 0.22, peel=0.02, scuff=0.18)
     M["jamLabel"] = label_cyl("LabelJam", "jam.png", 120, 50, 190)
-    return mats8(mats7(mats6(mats5(mats4(mats2(M))))))
+    return mats11(mats10(mats9(mats8(mats7(mats6(mats5(mats4(mats2(M)))))))))
 
 # ------------------------------------------------------------------------------------------------ the pieces (frames and boxes of the old ones)
 def plate(M):
@@ -1222,6 +1222,7 @@ def hulls_pin(n):
 
 def _box_hulls(*bs): return lambda n: [H.hull("UCX_%s_%02d" % (n, i), boxp(*b)) for i, b in enumerate(bs)]
 
+SPECS.pop("SM_K_Kettle", None)   # (the kettle is the kitchen set's: the owner's stovetop kettle)
 SPECS.update({   # batch 6
     "SM_K_Ladle": dict(hang=True, build=ladle, hulls=hulls_ladle, lods=(0.45, 0.2), cls="metal", breaks=None),
     "SM_K_Spatula": dict(hang=True, build=spatula, hulls=_box_hulls((-100, 100, -34, -26, -1010, -700), (-22, 22, -32, 6, -720, -440), (-25, 25, -13, 13, -470, 36)),
@@ -1438,6 +1439,568 @@ SPECS.update({   # batch 8
                             breaks=lambda o, n: cut_groups(o, n, [lambda p, g: True], [], [((0, 0, 380), (0.1, 0.05, 1.0), 0.010, 127, 0)])),
     "SM_L_GameConsole": dict(build=gameconsole, hulls=_box_hulls((-300, 300, -203, 203, 0, 155)), lods=(0.45, 0.2), cls="plastic", breaks=None),
     "SM_L_Controller": dict(build=controller, hulls=_box_hulls((-156, 156, -73, 73, 0, 80), (-60, 60, -40, 0, 80, 111)), lods=(0.45, 0.2), cls="plastic", breaks=None),
+})
+
+# ---- batch 9: packets, jars, bottles, tubs, boxes
+def kraft(name, col=(0.60, 0.43, 0.26), flutes=0.0):
+    """kraft paper / corrugated board: matte brown, fibres, optional flute ridges along Z"""
+    m, p = H.mat(name); tc = N(m, "ShaderNodeTexCoord", -1300)
+    no = N(m, "ShaderNodeTexNoise", -1100); no.inputs["Scale"].default_value = 700; no.inputs["Detail"].default_value = 10; L(m, tc.outputs["Object"], no.inputs["Vector"])
+    cr = N(m, "ShaderNodeValToRGB", -900); e = cr.color_ramp.elements; e[0].color = (col[0] * 0.8, col[1] * 0.8, col[2] * 0.78, 1); e[1].color = (*col, 1)
+    L(m, no.outputs["Fac"], cr.inputs["Fac"]); L(m, cr.outputs["Color"], p.inputs["Base Color"]); p.inputs["Roughness"].default_value = 0.92
+    bp = N(m, "ShaderNodeBump", -300, -300); bp.inputs["Strength"].default_value = 0.25; bp.inputs["Distance"].default_value = 0.0004
+    L(m, no.outputs["Fac"], bp.inputs["Height"]); L(m, bp.outputs["Normal"], p.inputs["Normal"])
+    return H.tag(m, 0.0, 0.85)
+
+def checker_cloth(name, a=(0.75, 0.05, 0.05), b=(0.95, 0.93, 0.88), scale=900.0):
+    m = felt(name, b, 0.5, 0.6); p = m.node_tree.nodes["Principled BSDF"]
+    tc = N(m, "ShaderNodeTexCoord", -1300, -700); ch = N(m, "ShaderNodeTexChecker", -1100, -700); ch.inputs["Scale"].default_value = scale
+    ch.inputs["Color1"].default_value = (*a, 1); ch.inputs["Color2"].default_value = (*b, 1)
+    L(m, tc.outputs["Object"], ch.inputs["Vector"]); L(m, ch.outputs["Color"], p.inputs["Base Color"]); return m
+
+def mats9(M):
+    M["kraft"] = kraft("Kraft"); M["corr"] = kraft("Corrugated", (0.66, 0.48, 0.30))
+    M["tinPaint"] = H.plastic("CookieTinLid", (0.06, 0.14, 0.42), 0.18, peel=0.02, scuff=0.25)
+    M["cookieLabel"] = label_cyl("LabelCookieTin", "cookietin.png", 180, 20, 290, 0.2, (0.12, 0.24, 0.55), 0.05)
+    M["cookieTop"] = top_print("CookieTinTop", "cookietin_top.png", -350, 350, -350, 350, (0.12, 0.24, 0.55), 0.2, 0.0, 0.3, 0.05)
+    M["biscuit"] = H.plastic("Biscuit", (0.78, 0.55, 0.26), 0.7, peel=0.3, scuff=0.1); H.tag(M["biscuit"], 0.0, 0.7)
+    M["teaPaper"] = kraft("TeaPaper", (0.90, 0.86, 0.76)); M["string"] = H.fibre("TeaString", light=(0.95, 0.94, 0.9), dark=(0.8, 0.78, 0.72), dirt=(0.5, 0.5, 0.5), floor_h=0.0, twist=3000)
+    M["teaTag"] = print_box("TeaTag", {"front": "teatag.png", "back": "teatag.png", "side": "teatag.png", "top": "teatag.png"}, -80, 80, -2, 2, 1640, 1760, 0.6, (0.98, 0.97, 0.94))
+    M["dogBag"] = print_box("DogFoodPrint", {"front": "dogfood.png", "back": "dogfood.png", "side": "cereal_top.png", "top": "cereal_top.png"}, -300, 300, -190, 190, 0, 800, 0.35, (0.75, 0.14, 0.11))
+    M["flour"] = print_box("FlourPrint", {"front": "flour.png", "back": "flour.png", "side": "flour.png", "top": "flour.png"}, -280, 280, -190, 190, 0, 650, 0.85, (0.92, 0.89, 0.82))
+    M["flourTop"] = kraft("FlourPaper", (0.92, 0.89, 0.82)); M["twine"] = H.fibre("Twine", light=(0.75, 0.62, 0.42), dark=(0.5, 0.38, 0.22), dirt=(0.3, 0.25, 0.2), floor_h=0.0, twist=2600)
+    M["gingham"] = checker_cloth("Gingham")
+    M["jamLabelS"] = label_cyl("LabelJamSmall", "jam.png", 120, 30, 120, 0.55)
+    M["pickleLabel"] = label_cyl("LabelPickle", "pickle.png", 120, 120, 240, 0.5)
+    M["brine"] = glass_mat("Brine", (0.80, 0.85, 0.55), 0.05)
+    M["cuke"] = H.plastic("Pickle", (0.16, 0.30, 0.08), 0.45, peel=0.6, scuff=0.15); H.tag(M["cuke"], 0.0, 0.3)
+    M["pet"] = glass_mat("PetClear", (0.90, 0.95, 0.93), 0.03)
+    M["cola"] = H.plastic("Cola", (0.06, 0.02, 0.008), 0.05, peel=0.0, scuff=0.0); H.tag(M["cola"], 0.0, 0.0)
+    M["colaLabel"] = label_cyl("LabelCola", "cola.png", 180, 250, 380, 0.25, (0.70, 0.08, 0.10), 0.05)
+    M["capRed"] = knurl(H.plastic("CapRed", (0.70, 0.05, 0.05), 0.35), 60, 0.4)
+    M["grocery"] = print_box("GroceryPrint", {"front": "grocery.png", "back": "grocery.png", "side": "grocery.png", "top": "grocery.png"}, -550, 550, -730, 600, 0, 650, 0.9, (0.70, 0.55, 0.37))
+    M["bread"] = H.plastic("Baguette", (0.72, 0.42, 0.14), 0.6, peel=0.4, scuff=0.2); H.tag(M["bread"], 0.0, 0.7)
+    M["apple"] = H.plastic("Apple", (0.62, 0.06, 0.05), 0.25, peel=0.1, scuff=0.2)
+    M["box"] = print_box("BoxStamp", {"front": "boxstamp.png", "back": "boxstamp.png", "side": "boxstamp.png", "top": "boxstamp.png"}, -960, 960, -690, 690, 0, 1210, 0.9, (0.66, 0.48, 0.30))
+    M["tape"] = H.plastic("PackTape", (0.70, 0.55, 0.30), 0.2, peel=0.05, scuff=0.1)
+    M["butterTub"] = H.plastic("ButterTub", (0.96, 0.92, 0.70), 0.35, peel=0.02, scuff=0.2)
+    M["butterLabel"] = label_cyl("LabelButter", "butter.png", 180, 60, 250, 0.3, (0.98, 0.88, 0.47), 0.1)
+    M["butterTop"] = top_print("ButterTop", "butter_top.png", -230, 230, -230, 230, (0.98, 0.88, 0.47), 0.3, 0.0, 0.2, 0.1)
+    M["iceLabel"] = label_cyl("LabelIceCream", "icecream.png", 180, 20, 420, 0.45, (0.98, 0.78, 0.82), 0.5)
+    M["iceLid"] = H.plastic("IceCreamLid", (0.95, 0.70, 0.76), 0.4, peel=0.02, scuff=0.2)
+    return M
+
+def cookietin(M):
+    body = [(0, 3), (330, 3), (342, 0), (349, 6), (350, 16), (350, 286), (353, 292), (351, 297), (346, 296), (345, 290), (345, 16), (338, 9), (0, 8)]
+    P = [(lathe("Tin", body, M["tinPaint"], 96), 0), (wrap_label("Print", 350.2, 20, 290, 180, M["cookieLabel"], 0.3, 96), 0)]
+    R = random.Random(41)
+    for k in range(9):   # biscuits, some stacked, some leaning
+        a, r = R.uniform(0, 6.28), R.uniform(0, 230); c = lathe_s("Biscuit%d" % k, [(0, 0), (62, 0), (68, 4), (68, 14), (62, 18), (0, 18)], M["biscuit"], 32)
+        c.location = u(r * math.cos(a), r * math.sin(a), 9 + (k % 3) * 18); c.rotation_euler = (R.uniform(-0.15, 0.15), R.uniform(-0.15, 0.15), 0); P.append((c, 1))
+    lid = lathe("Lid", [(0, 60), (340, 60), (352, 56), (356, 46), (356, 0), (351, 0), (350, 44), (342, 54), (0, 55)], M["cookieTop"], 96)
+    lid.rotation_euler = (0, math.radians(-75), 0); lid.location = u(452, 0, 250); P.append((lid, 2))     # leaning on the tin, as before
+    return P
+
+def teabag(M):
+    bag = rbox("Bag", -105, 105, -14, 14, 0, 270, M["teaPaper"], 12, 1, 2)
+    P = [(bag, 0), (rbox("Fold", -105, 105, -9, 9, 262, 300, M["teaPaper"], 3, 0, 2), 0), (rbox("Staple", -10, 10, -10, 10, 286, 292, M["rail"], 1, 0, 1), 0)]
+    s = H.tubes("String", [[Vector(u(*p)) for p in ((0, 0, 296), (8, 2, 700), (-6, -3, 1200), (0, 0, 1640))]], 1.8 * K, res_u=6, bevel_res=1, tip=1.0)
+    s.data.materials.append(M["string"]); P.append((s, 0))
+    P.append((rbox("Tag", -80, 80, -2, 2, 1640, 1760, M["teaTag"], 1, 0, 1), 0))
+    return P
+
+def dogfoodbag(M):
+    return [(rbox("Bag", -300, 300, -190, 190, 0, 800, M["dogBag"], 60, 1, 3), 0), (rbox("Seal", -310, 310, -24, 24, 770, 890, M["dogBag"], 8, 0, 2), 0)]
+
+def floursack(M):
+    P = [(rbox("Sack", -280, 280, -190, 190, 0, 650, M["flour"], 50, 1, 3), 0)]
+    P.append((lathe("Gather", [(0, 640), (185, 640), (120, 690), (70, 720), (90, 760), (140, 790), (100, 792), (0, 760)], M["flourTop"], 24), 1))
+    tw = H.tubes("Twine", [[Vector(u(76 * math.cos(a), 76 * math.sin(a), 718)) for a in [2 * math.pi * k / 16 for k in range(17)]]], 5 * K, res_u=4, bevel_res=1, tip=1.0)
+    tw.data.materials.append(M["twine"]); P.append((tw, 1))
+    return P
+
+def jarsmall(M):
+    g = [(0, 0), (66, 0), (74, 3), (79, 10), (80, 20), (80, 140), (78, 148), (70, 156), (64, 162), (64, 196), (61, 199), (58, 196), (58, 162), (66, 154), (74, 146), (76, 138), (76, 22), (73, 12), (64, 7), (0, 6)]
+    return [(glass(lathe("Glass", g, M["glass"], 56)), 0),
+            (lathe("Jam", [(0, 6.6), (64, 6.6), (72, 11), (75.4, 22), (75.4, 128), (60, 131), (0, 132)], M["jam"], 40), 2),
+            (wrap_label("Label", 80.15, 30, 120, 120, M["jamLabelS"], 0.4, 40), 0)]
+
+def jarlid_cloth(M):
+    P = [(lathe("Cloth", [(0, 32), (40, 31.5), (62, 29), (70, 26), (78, 18), (86, 6), (88, 0), (85, 0), (75, 16), (67, 24), (0, 28)], M["gingham"], 48), 0)]
+    tw = H.tubes("Tie", [[Vector(u(69 * math.cos(a), 69 * math.sin(a), 22)) for a in [2 * math.pi * k / 16 for k in range(17)]]], 2.5 * K, res_u=4, bevel_res=1, tip=1.0)
+    tw.data.materials.append(M["twine"]); P.append((tw, 0))
+    return P
+
+def picklejar(M):
+    g = [(0, 0), (92, 0), (102, 4), (109, 14), (110, 30), (110, 260), (106, 272), (96, 280), (92, 284), (92, 300), (86, 300), (86, 286), (90, 278), (100, 270), (104, 258), (104, 32), (100, 16), (90, 8), (0, 7)]
+    P = [(glass(lathe("Glass", g, M["glass"], 64)), 0)]   # (no brine body: glass inside glass reads as a mirror)
+    R = random.Random(43)
+    for k in range(7):
+        c = lathe_s("Pickle%d" % k, [(0, 0), (12, 4), (20, 20), (22, 60), (20, 110), (12, 128), (0, 132)], M["cuke"], 16)
+        a = 2 * math.pi * k / 7; c.location = u(60 * math.cos(a), 60 * math.sin(a), 14 + (k % 2) * 90); c.rotation_euler = (R.uniform(-0.3, 0.3), R.uniform(-0.3, 0.3), 0); P.append((c, 2))
+    P.append((lathe("Lid", [(0, 330), (88, 330), (96, 326), (98, 318), (98, 292), (93, 290), (92.6, 296), (92.6, 324), (0, 325)], M["steel"], 64), 1))
+    P.append((wrap_label("Label", 110.15, 120, 240, 120, M["pickleLabel"], 0.4, 48), 0))
+    return P
+
+def colabottle(M):
+    g = [(0, 8), (30, 0), (50, 12), (62, 2), (80, 8), (96, 30), (101, 60), (101, 230), (96, 248), (101, 262), (101, 380), (96, 400), (78, 450), (50, 510), (30, 548), (28, 556),
+         (30, 562), (30, 570), (27, 572), (27, 600), (24, 610), (22, 610), (24, 600), (24, 574), (26, 568), (26, 560), (46, 512), (74, 452), (92, 402), (97, 380), (97, 64), (92, 34), (78, 12), (62, 6), (50, 16), (30, 5), (0, 12)]
+    return [(glass(lathe("Pet", g, M["pet"], 64)), 0),
+            (lathe("Cola", [(0, 14), (30, 10), (48, 20), (62, 10), (76, 16), (92, 36), (96.4, 64), (96.4, 380), (92, 400), (80, 430), (0, 430)], M["cola"], 48), 2),
+            (wrap_label("Label", 101.15, 250, 380, 180, M["colaLabel"], 0.3, 64), 0)]
+
+def colacap(M):
+    return [(lathe_s("Cap", [(0, 38), (24, 38), (28, 34), (28.5, 4), (27, 0), (24, 0), (24, 32), (0, 33)], M["capRed"], 40), 0)]
+
+def grocerybag(M):
+    """a paper bag lying on its side, its mouth to -Y, a baguette and apples spilling out"""
+    P = [(rbox(n, *b, M["grocery"], 2, 0, 1), 0) for n, b in (("Floor", (-550, 550, -700, 600, 0, 5)), ("Roof", (-540, 540, -690, 600, 640, 646)),
+                                                                ("SideL", (-550, -544, -700, 600, 0, 646)), ("SideR", (544, 550, -700, 600, 0, 646)), ("Back", (-550, 550, 594, 600, 0, 646)))]
+    P.append((rbox("Lip", -550, 550, -730, -700, 0, 4, M["grocery"], 1, 0, 1), 0))
+    b = lathe("Baguette", [(0, 0), (30, 6), (52, 30), (58, 120), (58, 700), (50, 760), (28, 790), (0, 796)], M["bread"], 24); b.rotation_euler = (math.pi / 2, 0, 0.2); b.location = u(-120, 400, 60)
+    P.append((b, 1))
+    for x, y in ((180, -560), (300, -420)):
+        P.append((lathe_s("Apple", [(r * 1.0, z) for r, z in sphere_prof(70, 14)], M["apple"], 32, 0, (x, y, 5)), 1))
+    return P
+
+def _hinge(o):
+    """the object's origin moved to the world origin (an rbox's is its centre): built round its hinge, it then turns about it"""
+    o.data.transform(Matrix.Translation(o.location)); o.location = (0, 0, 0); return o
+
+def cardboardbox(M):
+    """the fort: an open box, flaps up and out, a door cut in the front, packing tape"""
+    w, d, h, t = 880, 600, 1210, 10
+    P = [(rbox("Bottom", -w, w, -d, d, 0, t, M["box"], 3, 0, 1), 0), (rbox("Back", -w, w, d - t, d, 0, h, M["box"], 3, 0, 1), 0),
+         (rbox("Left", -w, -w + t, -d, d, 0, h, M["box"], 3, 0, 1), 0), (rbox("Right", w - t, w, -d, d, 0, h, M["box"], 3, 0, 1), 0),
+         (rbox("FrontL", -w, -260, -d, -d + t, 0, h, M["box"], 3, 0, 1), 0), (rbox("FrontR", 260, w, -d, -d + t, 0, h, M["box"], 3, 0, 1), 0),
+         (rbox("FrontTop", -260, 260, -d, -d + t, 640, h, M["box"], 3, 0, 1), 0)]
+    door = _hinge(rbox("Door", 0, 260, 0, t, 0, 620, M["box"], 3, 0, 1)); door.rotation_euler = (0, 0, math.radians(-25)); door.location = u(-260, -d, 0)   # the door flap swung out
+    P.append((door, 0))
+    for nm, pivot, size, ax, ang in (("FlapF", (0, -d, h), (2 * w, t, 400), "X", -12), ("FlapB", (0, d, h), (2 * w, t, 400), "X", 12),
+                                     ("FlapL", (-w, 0, h), (t, 2 * d, 400), "Y", -12), ("FlapR", (w, 0, h), (t, 2 * d, 400), "Y", 12)):
+        f = _hinge(rbox(nm, -size[0] / 2, size[0] / 2, -size[1] / 2, size[1] / 2, 0, size[2], M["corr"], 3, 0, 1))
+        f.rotation_euler = (math.radians(ang), 0, 0) if ax == "X" else (0, math.radians(ang), 0); f.location = u(*pivot); P.append((f, 0))
+    P.append((rbox("Tape", -60, 60, -d - 2, -d + t + 2, 900, h + 2, M["tape"], 1, 0, 1), 0))
+    return P
+
+def buttertub(M):
+    body = [(0, 0), (200, 0), (208, 4), (212, 14), (226, 300), (228, 304), (224, 306), (220, 302), (206, 16), (196, 8), (0, 8)]
+    return [(lathe("Tub", body, M["butterTub"], 64), 0), (lathe("Band", [(215, 60), (224.2, 250), (224.6, 250), (215.4, 60)], M["butterLabel"], 64), 0),
+            (lathe("Lid", [(0, 360), (210, 360), (226, 354), (232, 340), (232, 300), (228, 298), (226, 302), (226, 336), (0, 352)], M["butterTop"], 64), 1)]
+
+def icecreamtub(M):
+    body = [(0, 0), (270, 0), (280, 6), (286, 20), (338, 430), (340, 436), (336, 438), (332, 432), (280, 22), (270, 10), (0, 10)]
+    return [(lathe("Tub", body, M["iceLabel"], 72), 0),
+            (lathe("Lid", [(0, 500), (330, 500), (344, 494), (348, 480), (348, 420), (343, 418), (341, 424), (341, 476), (0, 488)], M["iceLid"], 72), 1)]
+
+def _cutp(z): return [((0, 0, z), (0.12, 0.08, 1.0), 0.010, 131, 0)]
+
+SPECS.update({   # batch 9
+    "SM_K_CookieTin": dict(build=cookietin, hulls=lambda n: hulls_round(n, 352, 297) + [H.hull("UCX_%s_01" % n, boxp(358, 545, -356, 356, 0, 594))], lods=(0.45, 0.2), cls="metal",
+                           breaks=lambda o, n: cut_groups(o, n, [], [lambda p, g: p == 0, lambda p, g: p == 1, lambda p, g: p == 2], [])),
+    "SM_K_TeaBag": dict(build=teabag, hulls=_box_hulls((-105, 105, -16, 16, 0, 300), (-80, 80, -6, 6, 1640, 1760)), lods=(0.5, 0.25), cls="paper", breaks=None),
+    "SM_V3_DogFoodBag": dict(build=dogfoodbag, hulls=_box_hulls((-300, 300, -190, 190, 0, 800), (-310, 310, -24, 24, 770, 890)), lods=(0.5, 0.25), cls="paper",
+                             breaks=lambda o, n: cut_groups(o, n, [lambda p, g: True], [], _cutp(520))),
+    "SM_K_FlourSack": dict(build=floursack, hulls=_box_hulls((-280, 280, -190, 190, 0, 650), (-140, 140, -140, 140, 640, 790)), lods=(0.5, 0.25), cls="paper",
+                           breaks=lambda o, n: cut_groups(o, n, [lambda p, g: p == 0], [lambda p, g: p == 1], _cutp(420))),
+    "SM_V3_JamJar": dict(build=jarsmall, hulls=lambda n: hulls_round(n, 80, 162, 64, (162, 199)), lods=(0.45, 0.18), cls="glass", glass=0.12,
+                         breaks=lambda o, n: shatter(o, n, lambda p, g: g == 1, [lambda p, g: g == 0 and p == 0], [], n=14, seed=47, jag=0.0004, chips=8)),
+    "SM_V3_JamJar_Lid": dict(build=jarlid_cloth, hulls=lambda n: hulls_round(n, 88, 32), lods=(0.5, 0.25), cls="cloth", breaks=None),
+    "SM_V3_PickleJar": dict(build=picklejar, hulls=lambda n: hulls_round(n, 110, 290, 98, (290, 330)), lods=(0.45, 0.18), cls="glass", glass=0.14,
+                            breaks=lambda o, n: shatter(o, n, lambda p, g: g == 1 and p == 0, [lambda p, g: g == 0 and p == 0], [lambda p, g: p == 1], n=15, seed=53, jag=0.0005, chips=9)),
+    "SM_V3_ColaBottle": dict(build=colabottle, hulls=lambda n: hulls_round(n, 101, 380) + [H.hull("UCX_%s_01" % n, ring(97, 380, 12) + ring(28, 560, 12) + ring(27, 610, 8))],
+                             lods=(0.45, 0.18), cls="plastic", glass=0.18, glassmat="pet",
+                             breaks=lambda o, n: cut_groups(o, n, [lambda p, g: p == 0], [], [((0, 0, 300), (0.3, 0.1, 1.0), 0.002, 137, 0)])),
+    "SM_V3_ColaCap": dict(build=colacap, hulls=lambda n: hulls_round(n, 28.5, 38), lods=(0.5, 0.25), cls="plastic", breaks=None),
+    "SM_K_GroceryBag": dict(build=grocerybag, hulls=_box_hulls((-550, 550, -700, 600, 0, 6), (-550, 550, -700, 600, 640, 646), (-550, -544, -700, 600, 0, 646),
+                                                                (544, 550, -700, 600, 0, 646), (-550, 550, 594, 600, 0, 646)), lods=(0.5, 0.25), cls="paper",
+                            breaks=lambda o, n: cut_groups(o, n, [lambda p, g: p == 0], [lambda p, g: p == 1], [((0, -100, 320), (1.0, 0.1, 0.1), 0.012, 139, 0)])),
+    "SM_K_CardboardBox": dict(build=cardboardbox, lods=(0.5, 0.25), cls="cardboard", breaks=None,
+                              hulls=_box_hulls((-880, 880, -600, 600, 0, 10), (-880, 880, 590, 600, 0, 1210), (-880, -870, -600, 600, 0, 1210), (870, 880, -600, 600, 0, 1210),
+                                               (-880, -260, -600, -590, 0, 1210), (260, 880, -600, -590, 0, 1210), (-260, 260, -600, -590, 640, 1210))),
+    "SM_K_ButterTub": dict(build=buttertub, hulls=lambda n: hulls_round(n, 228, 306, 232, (300, 360)), lods=(0.45, 0.2), cls="plastic",
+                           breaks=lambda o, n: cut_groups(o, n, [], [lambda p, g: p == 0, lambda p, g: p == 1], [])),
+    "SM_K_IceCreamTub": dict(build=icecreamtub, hulls=lambda n: [H.hull("UCX_%s_00" % n, ring(286, 0, 16) + ring(340, 436, 16))] + [H.hull("UCX_%s_01" % n, ring(348, 420, 16) + ring(330, 500, 16))],
+                             lods=(0.45, 0.2), cls="paper", breaks=lambda o, n: cut_groups(o, n, [], [lambda p, g: p == 0, lambda p, g: p == 1], [])),
+})
+
+# ---- batch 10: paper, cloth and cables (calendar, fridge note, kid's drawing, newspaper tent, magazines, towel, paper towel,
+#      fly paper, dustpan, charger, power strip)
+def sheet(name, path, x0, x1, mat, th=1.0, nx=24, wave=(0.0, 0.0), axis="x"):
+    """a thin sheet: the cross-section path [(y, z)] swept along X from x0 to x1 (nx steps), waved in Y by amp*sin(x*freq);
+    solidified th thick (applied by bake_mesh)"""
+    me = bpy.data.meshes.new(name); bm = bmesh.new(); rows = []
+    for i in range(nx + 1):
+        x = x0 + (x1 - x0) * i / nx; dy = wave[0] * math.sin(x * wave[1])
+        rows.append([bm.verts.new(u(x, y + dy, z)) for y, z in path])
+    for i in range(nx):
+        for j in range(len(path) - 1):
+            bm.faces.new((rows[i][j], rows[i + 1][j], rows[i + 1][j + 1], rows[i][j + 1]))
+    bm.to_mesh(me); bm.free()
+    o = H.link(bpy.data.objects.new(name, me)); o.data.materials.append(mat)
+    s = o.modifiers.new("solid", "SOLIDIFY"); s.thickness = th * K; s.offset = 0.0
+    for p in o.data.polygons: p.use_smooth = True
+    return o
+
+def stripes_cloth(name, a, b, period_uu=60.0):
+    m = felt(name, b, 0.7, 0.8); p = m.node_tree.nodes["Principled BSDF"]
+    tc = N(m, "ShaderNodeTexCoord", -1300, -700); wv = N(m, "ShaderNodeTexWave", -1100, -700); wv.bands_direction = "Z"; wv.wave_profile = "SIN"
+    wv.inputs["Scale"].default_value = 0.628 / (period_uu * K); wv.inputs["Distortion"].default_value = 0.0
+    L(m, tc.outputs["Object"], wv.inputs["Vector"])
+    mx = N(m, "ShaderNodeMix", -800, -700); mx.data_type = "RGBA"; mx.inputs[6].default_value = (*b, 1); mx.inputs[7].default_value = (*a, 1)
+    L(m, _math(m, "GREATER_THAN", wv.outputs["Fac"], 0.72, -950, -800), mx.inputs[0]); L(m, mx.outputs[2], p.inputs["Base Color"]); return m
+
+def sticky(name):
+    """fly paper: amber, wet-glossy, a few dark flies stuck on"""
+    m, p = H.mat(name); tc = N(m, "ShaderNodeTexCoord", -1100)
+    vo = N(m, "ShaderNodeTexVoronoi", -900); vo.inputs["Scale"].default_value = 40; L(m, tc.outputs["Object"], vo.inputs["Vector"])
+    sd = N(m, "ShaderNodeValToRGB", -700); e = sd.color_ramp.elements; e[0].position = 0.06; e[0].color = (0.02, 0.02, 0.02, 1); e[1].position = 0.075; e[1].color = (0.78, 0.48, 0.10, 1)
+    L(m, vo.outputs["Distance"], sd.inputs["Fac"]); L(m, sd.outputs["Color"], p.inputs["Base Color"])
+    p.inputs["Roughness"].default_value = 0.05; p.inputs["Coat Weight"].default_value = 1.0
+    return H.tag(m, 0.0, 0.0)
+
+def mats10(M):
+    M["calendar"] = print_box("CalendarPrint", {"front": "calendar.png", "back": "plain_white.png", "side": "plain_white.png", "top": "plain_white.png"}, -350, 350, -36, 0, 0, 1000, 0.6, (0.97, 0.96, 0.93))
+    M["note"] = print_box("NotePrint", {"front": "fridgenote.png", "back": "plain_yellow.png", "side": "plain_yellow.png", "top": "plain_yellow.png"}, -200, 200, -6, 0, 0, 520, 0.7, (0.99, 0.92, 0.47))
+    M["kid"] = print_box("KidPrint", {"front": "kiddrawing.png", "back": "plain_white.png", "side": "plain_white.png", "top": "plain_white.png"}, -200, 200, -9, 0, -285, 285, 0.8, (0.98, 0.98, 0.97))
+    M["news"] = top_print("NewsPrint", "newspaper.png", -450, 450, -527, 527, (0.91, 0.89, 0.84), 0.85, 0.0, 0.0, 0.8)
+    for k, (x0, y0) in enumerate(((-230, -290), (-190, -250), (-150, -300))):
+        M["mag%d" % k] = top_print("Magazine%d" % k, "magazine%d.png" % k, x0, x0 + 405, y0, y0 + 540, (0.9, 0.9, 0.88), 0.25, 0.0, 0.4, 0.4)
+    M["magPages"] = pages_mat("MagPages")
+    M["towel"] = stripes_cloth("TowelStripes", (0.70, 0.12, 0.10), (0.95, 0.94, 0.90))
+    M["paperTowel"] = felt("PaperTowel", (0.97, 0.97, 0.95), 0.4, 0.2)
+    M["chrome"] = H.metal("Chrome", (0.92, 0.92, 0.93), 0.08)
+    M["sticky"] = sticky("FlyPaper")
+    M["dustpan"] = H.plastic("DustpanRed", (0.62, 0.08, 0.06), 0.4, peel=0.04, scuff=0.35)
+    M["cable"] = H.plastic("CableWhite", (0.90, 0.90, 0.88), 0.35, peel=0.02, scuff=0.15)
+    M["magnetRed"] = H.plastic("MagnetRed", (0.75, 0.06, 0.05), 0.2, peel=0.0, scuff=0.1)
+    return M
+
+def calendar(M):
+    P = [(rbox("Back", -350, 350, -2, 0, 0, 1000, M["calendar"], 0.8, 0, 1), 0)]
+    P.append((sheet("Page", [(-3, 1000), (-4, 600), (-8, 200), (-20, 60), (-36, 0)], -350, 350, M["calendar"], 1.2, 12), 0))   # the top page curls off the wall
+    for k in range(14):   # the wire binding
+        x = -325 + k * 50
+        rg = H.tubes("Wire", [[Vector(u(x + 6 * math.cos(a) * 0, -6 + 12 * math.cos(a), 1000 + 14 * math.sin(a))) for a in [2 * math.pi * j / 10 for j in range(11)]]], 1.6 * K, res_u=2, bevel_res=0, tip=1.0)
+        rg.data.materials.append(M["rail"]); P.append((rg, 0))
+    P.append((lathe_s("Nail", [(0, 0), (8, 0), (8, 3), (2.5, 4), (2.5, 30), (0, 30)], M["rail"], 12, 0, (0, 0, 1035)), 0))
+    P[-1][0].rotation_euler = (-math.pi / 2, 0, 0)   # into the wall
+    return P
+
+def fridgenote(M):
+    mg = lathe_s("Magnet", [(0, 0), (30, 0), (32, 6), (30, 40), (22, 50), (0, 52)], M["magnetRed"], 32); mg.rotation_euler = (math.pi / 2, 0, 0); mg.location = u(150, -8, 478)
+    return [(sheet("Note", [(-4, 520), (-4, 200), (-10, 60), (-30, 0)], -200, 200, M["note"], 1.0, 12), 0), (mg, 1)]
+
+def kiddrawing(M):
+    P = [(sheet("Paper", [(-2, 285), (-3, 100), (-2, -100), (-6, -240), (-9, -285)], -200, 200, M["kid"], 1.0, 16, (1.5, 0.03)), 0)]
+    for x, c in ((-170, "padY"), (170, "padT")):
+        mg = lathe_s("Magnet", [(0, 0), (18, 0), (20, 4), (18, 9), (0, 10)], M[c], 24); mg.rotation_euler = (math.pi / 2, 0, 0); mg.location = u(x, -3, 255); P.append((mg, 1))
+    return P
+
+def newspaper(M):
+    return [(sheet("Tent", [(-527, 0), (-400, 80), (-260, 172), (-120, 270), (-30, 330), (0, 344), (30, 330), (120, 270), (260, 172), (400, 80), (527, 0)], -450, 450, M["news"], 2.0, 20, (4.0, 0.012)), 0)]
+
+def magazines(M):
+    P = []
+    for k, (x0, y0) in enumerate(((-230, -290), (-190, -250), (-150, -300))):
+        P.append((rbox("Pages%d" % k, x0 + 3, x0 + 402, y0 + 3, y0 + 537, k * 20, k * 20 + 19, M["magPages"], 1, 0, 1), 0))
+        P.append((rbox("Cover%d" % k, x0, x0 + 405, y0, y0 + 540, k * 20 + 19, k * 20 + 21, M["mag%d" % k], 0.6, 0, 1), 0))
+    return P
+
+def towel(M):
+    path = [(-40, 0), (-44, 300), (-38, 700), (-42, 1100), (-40, 1380), (-28, 1420), (0, 1436), (28, 1420), (40, 1380), (42, 1100), (44, 820), (48, 700)]
+    return [(sheet("Towel", path, -300, 300, M["towel"], 6.0, 30, (10.0, 0.02)), 0)]
+
+def papertowel(M):
+    roll = lay_x(lathe("Roll", [(40, -250), (140, -250), (145, -246), (145, 246), (140, 250), (40, 250)], M["paperTowel"], 48), 145)
+    P = [(roll, 0), (lay_x(lathe_s("Core", [(36, -252), (40, -252), (40, 252), (36, 252)], M["kraft"], 24), 145), 0)]
+    P.append((lay_x(lathe_s("Rod", [(0, -275), (14, -275), (14, 275), (0, 275)], M["chrome"], 16), 145), 0))
+    for x in (-270, 270): P.append((rbox("Stand", x - 5, x + 5, -60, 60, -25, 160, M["chrome"], 3, 0, 2), 0))
+    P.append((sheet("Sheet", [(-145, 145), (-147, 400), (-142, 700), (-136, 1000), (-120, 1250)], -240, 240, M["paperTowel"], 1.0, 16, (3.0, 0.02)), 0))
+    return P
+
+def flypaper(M):
+    me = bpy.data.meshes.new("Ribbon"); bm = bmesh.new(); rows = []; n = 120
+    for i in range(n + 1):
+        z = 1960 * i / n; a = z * 0.006
+        rows.append([bm.verts.new(u(s * 22 * math.cos(a), s * 22 * math.sin(a), z)) for s in (-1, 1)])
+    for i in range(n): bm.faces.new((rows[i][0], rows[i + 1][0], rows[i + 1][1], rows[i][1]))
+    bm.to_mesh(me); bm.free()
+    rb = H.link(bpy.data.objects.new("Ribbon", me)); rb.data.materials.append(M["sticky"]); s = rb.modifiers.new("solid", "SOLIDIFY"); s.thickness = 1.0 * K
+    for p in rb.data.polygons: p.use_smooth = True
+    P = [(rb, 0), (lathe_s("Tube", [(0, 1950), (22, 1950), (22, 2060), (0, 2060)], M["kraft"], 24), 0)]
+    rg = H.tubes("Loop", [[Vector(u(0, 14 * math.cos(a), 2075 + 18 * math.sin(a))) for a in [2 * math.pi * j / 10 - math.pi / 2 for j in range(11)]]], 1.5 * K, res_u=3, bevel_res=1, tip=1.0)
+    rg.data.materials.append(M["rail"]); P.append((rg, 0))
+    return P
+
+def dustpan(M):
+    P = [(rbox("Floor", -260, 260, -320, 120, 0, 6, M["dustpan"], 2, 0, 1), 0), (rbox("Lip", -258, 258, -326, -300, 0, 3, M["padDark"], 1, 0, 1), 0)]
+    for x0, x1 in ((-260, -252), (252, 260)): P.append((rbox("Side", x0, x1, -320, 120, 0, 120, M["dustpan"], 2, 0, 1), 0))
+    P.append((rbox("Back", -260, 260, 112, 120, 0, 130, M["dustpan"], 2, 0, 1), 0))
+    h = H.tubes("Handle", [[Vector(u(*p)) for p in ((0, 116, 60), (0, 200, 120), (0, 290, 190), (0, 336, 222))]], 18 * K, res_u=6, bevel_res=2, tip=0.8)
+    h.scale = (1.6, 1.0, 0.7); h.data.materials.append(M["dustpan"]); P.append((h, 0))
+    return P
+
+def charger(M):
+    P = [(rbox("Plug", -45, 45, -30, 30, 1260, 1370, M["cable"], 8, 0, 3), 0)]
+    for x in (-12, 12): P.append((lathe_s("Pin", [(0, 0), (3, 0), (3, 40), (0, 40)], M["rail"], 8, 0, (x, 30, 1300)), 0)); P[-1][0].rotation_euler = (-math.pi / 2, 0, 0)
+    pts = [(0, -30, 1280), (0, -70, 1100), (20, -60, 500), (60, -60, 40), (120, -100, 5), (180, -400, 5), (150, -900, 5), (40, -1250, 30), (-80, -1420, 300), (-120, -1500, 600), (-100, -1540, 700)]
+    c = H.tubes("Cable", [[Vector(u(*p)) for p in pts]], 5 * K, res_u=6, bevel_res=1, tip=1.0); c.data.materials.append(M["cable"]); P.append((c, 0))
+    P.append((rbox("Jack", -110, -88, -1552, -1530, 700, 740, M["cable"], 3, 0, 2), 0))
+    return P
+
+def powerstrip(M):
+    P = [(rbox("Strip", -280, 280, -60, 60, 0, 70, M["cable"], 12, 0, 3), 0), (rbox("Switch", 230, 266, -26, 26, 66, 80, M["padR"], 4, 0, 2), 0)]
+    for k, x in enumerate((-200, -110, -20, 70)):
+        P.append((lathe_s("Socket", [(0, 70.5), (34, 70.5), (36, 68), (0, 66)], M["padDark"], 24, 0, (x, 0, 0)), 0))
+        if k < 3:
+            P.append((rbox("Plug", x - 30, x + 30, -26, 26, 70, 130, M["padDark"], 8, 0, 3), 0))
+    for pts in (((-200, 0, 130), (-210, 60, 140), (-300, 200, 10), (-500, 300, 5)), ((-110, 0, 130), (-120, 80, 200), (-60, 300, 600), (100, 470, 1000), (180, 490, 1125)),
+                ((-20, 0, 130), (0, 70, 150), (100, 200, 10), (400, 420, 5), (510, 480, 5)), ((-280, 0, 35), (-340, -30, 20), (-460, -200, 5), (-500, -480, 5))):
+        c = H.tubes("Cord", [[Vector(u(*p)) for p in pts]], 6 * K, res_u=6, bevel_res=1, tip=1.0); c.data.materials.append(M["padDark"]); P.append((c, 0))
+    return P
+
+def _tear(z, axis=(0.1, 0.05, 1.0)): return [((0, 0, z), axis, 0.008, 151, 0)]
+
+SPECS.update({   # batch 10
+    "SM_K_Calendar": dict(build=calendar, hulls=_box_hulls((-350, 350, -36, 2, 0, 1015)), lods=(0.5, 0.25), cls="paper", breaks=None),
+    "SM_K_FridgeNote": dict(build=fridgenote, hulls=_box_hulls((-200, 200, -32, -2, 0, 520), (118, 182, -60, -8, 446, 510)), lods=(0.5, 0.25), cls="paper", breaks=None),
+    "SM_V3_KidDrawing": dict(build=kiddrawing, hulls=_box_hulls((-200, 200, -10, 0, -285, 285)), lods=(0.5, 0.25), cls="paper", breaks=None),
+    "SM_K_Newspaper": dict(build=newspaper, lods=(0.5, 0.25), cls="paper", breaks=None,
+                           hulls=lambda n: [H.hull("UCX_%s_%02d" % (n, i), [(x * K, y * K, z * K) for x in (-450, 450) for y, z in tri]) for i, tri in
+                                            enumerate((((-527, 0), (0, 344), (-5, 344), (-520, 0)), ((527, 0), (0, 344), (5, 344), (520, 0))))]),
+    "SM_L_Magazines": dict(build=magazines, hulls=_box_hulls((-230, 255, -300, 290, 0, 61)), lods=(0.5, 0.25), cls="paper", breaks=None),
+    "SM_K_Towel": dict(build=towel, hulls=_box_hulls((-300, 300, -52, -30, 0, 1400), (-300, 300, -45, 45, 1380, 1440), (-300, 300, 32, 58, 700, 1400)), lods=(0.5, 0.25), cls="cloth", breaks=None),
+    "SM_K_PaperTowel": dict(build=papertowel, hulls=lambda n: [H.hull("UCX_%s_00" % n, [(x * K, 145 * K * math.cos(a), (145 + 145 * math.sin(a)) * K) for x in (-250, 250) for a in [2 * math.pi * k / 12 for k in range(12)]])]
+                            + [H.hull("UCX_%s_01" % n, boxp(-240, 240, -150, -138, 145, 1250))], lods=(0.5, 0.25), cls="paper", breaks=None),
+    "SM_K_FlyPaper": dict(build=flypaper, hulls=lambda n: hulls_round(n, 24, 2096), lods=(0.5, 0.25), cls="paper", breaks=None),
+    "SM_K_Dustpan": dict(build=dustpan, hulls=_box_hulls((-260, 260, -326, 120, 0, 6), (-260, -252, -320, 120, 0, 120), (252, 260, -320, 120, 0, 120), (-260, 260, 112, 120, 0, 130), (-30, 30, 116, 341, 50, 237)),
+                         lods=(0.5, 0.25), cls="plastic", breaks=None),
+    "SM_L_Charger": dict(build=charger, hulls=_box_hulls((-45, 45, -30, 30, 1260, 1370)), lods=(0.5, 0.25), cls="plastic", breaks=None),
+    "SM_L_PowerStrip": dict(build=powerstrip, hulls=_box_hulls((-280, 280, -60, 60, 0, 130)), lods=(0.5, 0.25), cls="plastic", breaks=None),
+})
+
+# ---- batch 11: the rest of the flat's small things (fruit bowl, knife block, dish rack, biscuit plate, snack bowl, glasses, coin,
+#      knitting needle, sock, yarn ball, car track, train track, balloon and its weight, gift box and its lid)
+def sweep(name, pts_uu, sec_uu, mat, closed=False, caps=True, scale=None):
+    """a cross-section (a closed loop of (side, up) points, uu) swept along a 3D path (uu); scale(i) -> section scale"""
+    me = bpy.data.meshes.new(name); bm = bmesh.new(); P = [Vector(u(*p)) for p in pts_uu]; n = len(P); rings = []
+    for i in range(n):
+        t = (P[(i + 1) % n] - P[i - 1]) if closed else (P[min(i + 1, n - 1)] - P[max(i - 1, 0)])
+        t.normalize(); side = t.cross(Vector((0, 0, 1)))
+        if side.length < 1e-4: side = Vector((1, 0, 0))
+        side.normalize(); up = side.cross(t)
+        k = scale(i) if scale else 1.0
+        rings.append([bm.verts.new(P[i] + side * s * K * k + up * v * K * k) for s, v in sec_uu])
+    m = len(sec_uu)
+    for i in range(n if closed else n - 1):
+        a, b = rings[i], rings[(i + 1) % n]
+        for j in range(m): bm.faces.new((a[j], a[(j + 1) % m], b[(j + 1) % m], b[j]))
+    if caps and not closed:
+        bm.faces.new(list(reversed(rings[0]))); bm.faces.new(rings[-1])
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:]); bm.to_mesh(me); bm.free()
+    o = H.link(bpy.data.objects.new(name, me)); o.data.materials.append(mat)
+    for p in o.data.polygons: p.use_smooth = True
+    return o
+
+def circ(r, n=12, flat=1.0): return [(r * math.cos(2 * math.pi * k / n), r * flat * math.sin(2 * math.pi * k / n)) for k in range(n)]
+
+def coin_metal(name):
+    m = H.metal(name, (0.86, 0.66, 0.34), 0.28); p = m.node_tree.nodes["Principled BSDF"]; tc, sp = _sep(m)
+    uu = _maprange(m, sp.outputs["X"], -140 * K, 140 * K, 0.0, 1.0, False, -1000, -900); vv = _maprange(m, sp.outputs["Y"], -140 * K, 140 * K, 0.0, 1.0, False, -1000, -1000)
+    t = _img(m, os.path.join(LAB, "coin_height.png"), uu, vv, -700, -900)
+    bp = N(m, "ShaderNodeBump", -300, -900); bp.inputs["Strength"].default_value = 0.8; bp.inputs["Distance"].default_value = 0.0006
+    L(m, t.outputs["Color"], bp.inputs["Height"]); L(m, bp.outputs["Normal"], p.inputs["Normal"]); return m
+
+def latex(name, col=(0.75, 0.04, 0.05)):
+    m, p = H.mat(name); p.inputs["Base Color"].default_value = (*col, 1); p.inputs["Roughness"].default_value = 0.18
+    p.inputs["Subsurface Weight"].default_value = 0.3; p.inputs["Subsurface Radius"].default_value = (0.02, 0.005, 0.005); p.inputs["Coat Weight"].default_value = 0.4
+    return H.tag(m, 0.0, 0.0)
+
+def mats11(M):
+    M["fruitBowl"] = ceramic("FruitBowlGlaze", (0.10, 0.20, 0.52), 0.06, [(420, 450, (0.92, 0.90, 0.84))], 460.0, 4.0)
+    M["banana"] = H.plastic("Banana", (0.88, 0.70, 0.12), 0.45, peel=0.2, scuff=0.15); H.tag(M["banana"], 0.0, 0.3)
+    M["lemon"] = H.plastic("Lemon", (0.92, 0.80, 0.10), 0.35, peel=0.5, scuff=0.1); H.tag(M["lemon"], 0.0, 0.3)
+    M["pear"] = H.plastic("Pear", (0.50, 0.62, 0.16), 0.4, peel=0.25, scuff=0.15); H.tag(M["pear"], 0.0, 0.3)
+    M["stem"] = H.plastic("Stem", (0.25, 0.16, 0.08), 0.7, peel=0.1, scuff=0.1)
+    M["chromeWire"] = H.metal("RackChrome", (0.90, 0.90, 0.91), 0.12)
+    M["trayWhite"] = H.plastic("RackTray", (0.92, 0.92, 0.90), 0.3, peel=0.02, scuff=0.25)
+    M["plateSmall"] = ceramic("SmallPlate", (0.95, 0.94, 0.90), 0.05, [(176, 186, (0.75, 0.55, 0.18))], 200.0, 3.0)
+    M["crisps"] = H.plastic("Crisps", (0.90, 0.70, 0.30), 0.5, peel=0.8, scuff=0.1); H.tag(M["crisps"], 0.0, 0.5)
+    M["snackBowl"] = ceramic("SnackBowl", (0.78, 0.12, 0.10), 0.07, [(320, 333, (0.95, 0.93, 0.88))], 340.0, 4.0)
+    M["frame"] = H.plastic("GlassesFrame", (0.12, 0.06, 0.03), 0.2, peel=0.02, scuff=0.15)
+    M["lens"] = glass_mat("Lens", (0.95, 0.97, 0.98), 0.01)
+    M["coin"] = coin_metal("Coin")
+    M["needle"] = H.metal("NeedleSteel", (0.82, 0.82, 0.84), 0.15)
+    M["sock"] = stripes_cloth("SockStripes", (0.70, 0.10, 0.08), (0.92, 0.90, 0.84), 70.0)
+    M["yarn"] = H.fibre("YarnBall", light=(0.35, 0.62, 0.70), dark=(0.18, 0.38, 0.45), dirt=(0.2, 0.2, 0.2), floor_h=0.0, twist=1800)
+    M["trackOrange"] = H.plastic("CarTrack", (0.95, 0.45, 0.05), 0.3, peel=0.02, scuff=0.3)
+    M["trackBlue"] = H.plastic("TrackStand", (0.10, 0.30, 0.70), 0.3, peel=0.02, scuff=0.3)
+    M["beechTrack"] = H.wood("TrackBeech", (0.86, 0.70, 0.48), (0.66, 0.50, 0.30), 18.0, 0.3)
+    M["balloon"] = latex("Balloon")
+    M["gift"] = print_box("GiftWrap", {"front": "gift.png", "back": "gift.png", "side": "gift.png", "top": "gift.png"}, -452, 452, -352, 352, 0, 521, 0.35, (0.12, 0.27, 0.62))
+    M["giftLid"] = print_box("GiftWrapLid", {"front": "gift.png", "back": "gift.png", "side": "gift.png", "top": "gift.png"}, -472, 472, -372, 372, 0, 149, 0.35, (0.12, 0.27, 0.62))
+    M["ribbon"] = H.plastic("Ribbon", (0.72, 0.05, 0.06), 0.15, peel=0.02, scuff=0.05)
+    return M
+
+def _ball(name, r, at, mat, sx=1.0, sy=1.0, sz=1.0, n=24):
+    o = lathe_s(name, sphere_prof(r, 12), mat, n); o.scale = (sx, sy, sz); o.location = u(*at); return o
+
+def fruitbowl(M):
+    prof = [(0, 6), (150, 6), (158, 2), (166, 0), (176, 0), (182, 6), (186, 18), (300, 70), (400, 140), (440, 190), (450, 200), (446, 204), (438, 202), (430, 194),
+            (392, 146), (294, 80), (184, 36), (150, 30), (0, 28)]
+    P = [(lathe("Bowl", prof, M["fruitBowl"], 72), 0)]
+    for k, (x, y, z, m) in enumerate(((-120, -60, 110, "apple"), (90, -110, 105, "apple"), (20, 140, 115, "lemon"), (-150, 130, 150, "apple"), (160, 80, 150, "pear"))):
+        r = 82 if m != "lemon" else 70
+        P.append((_ball("Fruit%d" % k, r, (x, y, z - r), M[m], 1.0, 1.0 if m != "lemon" else 1.3, 1.0 if m != "pear" else 1.35), 1))
+        P.append((rbox("Stem%d" % k, x - 4, x + 4, y - 4, y + 4, z + r * (0.95 if m != "pear" else 1.3), z + r * (0.95 if m != "pear" else 1.3) + 26, M["stem"], 2, 0, 1), 1))
+    ban = sweep("Banana", [(-260, -40, 200), (-160, -120, 240), (-20, -150, 260), (120, -110, 245), (200, -30, 215)], circ(30, 10), M["banana"], scale=lambda i: (0.5, 0.95, 1.0, 0.95, 0.5)[i])
+    P.append((ban, 1))
+    return P
+
+def knifeblock(M):
+    blk = sweep("Block", [(-160, 0, 0), (160, 0, 0)], [(300, 0), (-300, 0), (-300, 760), (300, 480)], M["walnutHandle"])
+    P = [(blk, 0)]
+    ang = math.atan2(280, 600)
+    for k, (x, y) in enumerate(((-95, 120), (-30, 150), (35, 90), (100, 140), (-60, -20))):
+        z = 480 + (y + 300) * 280 / 600
+        h = _hinge(rbox("Handle%d" % k, -16, 16, -26, 26, 0, 300 if k < 4 else 220, M["padDark"], 8, 0, 3)); h.rotation_euler = (-ang, 0, 0); h.location = u(x, y, z - 10); P.append((h, 1))
+        for zz in (90, 190): P.append((_tilt(lathe_s("Rivet", [(0, 0), (6, 0), (5, 2), (0, 3)], M["brass"], 10), (0, math.pi / 2, 0), (x + 16, y - zz * math.sin(ang), z - 10 + zz * math.cos(ang))), 1))
+    return P
+
+def _wire(name, pts, M, r=5.0): return sweep(name, pts, circ(r, 6), M["chromeWire"])
+
+def dishrack(M):
+    P = [(rbox("Tray", -600, 600, -450, 450, 0, 30, M["trayWhite"], 8, 0, 2), 0), (rbox("TrayIn", -580, 580, -430, 430, 26, 32, M["trayWhite"], 3, 0, 1), 0)]
+    rect = lambda z, w, d: [(-w, -d, z), (w, -d, z), (w, d, z), (-w, d, z)]
+    P.append((sweep("Rim", rect(60, 570, 420), circ(6, 6), M["chromeWire"], closed=True), 0))
+    P.append((sweep("RimTop", rect(300, 570, 420), circ(5, 6), M["chromeWire"], closed=True), 0))
+    for k in range(-5, 6):
+        x = k * 100
+        P.append((_wire("Prong%d" % k, [(x, -420, 60), (x, -380, 200), (x, -330, 230)], M), 0))
+        P.append((_wire("Rib%d" % k, [(x, -420, 60), (x, 420, 60)], M, 4.0), 0))
+    for x in (-570, 570):
+        for y in (-420, 420): P.append((_wire("Post", [(x, y, 30), (x, y, 300)], M), 0))
+    for y in (-420, 420): P.append((_wire("Stay", [(-570, y, 180), (570, y, 180)], M, 4.0), 0))
+    return P
+
+def biscuitplate(M):
+    prof = [(0, 4), (100, 4), (106, 0), (114, 0), (118, 4), (150, 14), (186, 26), (200, 30), (198, 33), (186, 31), (150, 20), (116, 12), (0, 11)]
+    P = [(lathe("Plate", prof, M["plateSmall"], 64), 0)]
+    for k, (x, y, z, rx) in enumerate(((-40, -20, 12, 0.0), (45, 20, 12, 0.0), (5, 0, 30, 0.12))):
+        c = lathe_s("Biscuit%d" % k, [(0, 0), (62, 0), (68, 4), (68, 14), (62, 18), (0, 18)], M["biscuit"], 32); c.location = u(x, y, z); c.rotation_euler = (rx, 0.05 * k, 0); P.append((c, 1))
+    return P
+
+def snackbowl(M):
+    prof = [(0, 5), (140, 5), (148, 1), (156, 0), (164, 3), (168, 12), (260, 70), (318, 150), (332, 186), (328, 190), (320, 188), (306, 152), (250, 76), (164, 30), (0, 26)]
+    P = [(lathe("Bowl", prof, M["snackBowl"], 72), 0)]
+    R = random.Random(61)
+    for k in range(16):
+        a, r = R.uniform(0, 6.28), R.uniform(0, 230); c = lathe_s("Crisp%d" % k, [(0, 0), (40, 6), (46, 10), (40, 12), (0, 6)], M["crisps"], 16)
+        c.scale = (1.0, 0.75, 1.0); c.rotation_euler = (R.uniform(-0.7, 0.7), R.uniform(-0.7, 0.7), R.uniform(0, 3)); c.location = u(r * math.cos(a), r * math.sin(a), 40 + r * 0.35 + R.uniform(0, 50)); P.append((c, 1))
+    return P
+
+def glasses(M):
+    P = []
+    for s in (-1, 1):
+        cx = s * 66; ell = [(cx + 56 * math.cos(2 * math.pi * k / 24), 30 + 44 * math.sin(2 * math.pi * k / 24)) for k in range(24)]
+        P.append((glass(slab("Lens", ell, [], "y", -3.5, 3, M["lens"], 0.5)), 0))
+        P.append((sweep("Rim", [(x, -2, z) for x, z in [(cx + 58 * math.cos(2 * math.pi * k / 24), 30 + 46 * math.sin(2 * math.pi * k / 24)) for k in range(24)]], circ(3.5, 6), M["frame"], closed=True), 0))
+        P.append((sweep("Temple", [(s * 124, -2, 44), (s * 128, 10, 44), (s * 129, 60, 40), (s * 127, 78, 28)], circ(3, 6), M["frame"]), 0))
+    P.append((sweep("Bridge", [(-10, -2, 46), (0, -4, 52), (10, -2, 46)], circ(3, 6), M["frame"]), 0))
+    return P
+
+def coin(M):
+    return [(lathe_s("Coin", [(0, 17), (128, 17), (134, 16), (140, 12), (140, 5), (134, 1), (128, 0), (0, 0)], M["coin"], 64), 0)]
+
+def knitneedle(M):
+    n = lathe_s("Needle", [(0, -316), (3, -306), (8, -270), (9, -240), (9, 300), (0, 300)], M["needle"], 16)
+    b = lathe_s("Bead", [(0, 300), (11, 302), (13, 314), (11, 326), (0, 330)], M["padR"], 16)
+    for o in (n, b): o.rotation_euler = (0, math.pi / 2, 0)
+    return [(n, 0), (b, 0)]
+
+def sock(M):
+    pts = [(-527, -250, 90), (-300, -250, 90), (-60, -250, 90), (140, -238, 90), (270, -175, 90), (335, -40, 88), (342, 100, 86), (330, 200, 84), (318, 240, 80)]
+    sc = (1.0, 1.0, 1.0, 1.0, 0.98, 0.95, 0.9, 0.6, 0.1)
+    s = sweep("Sock", pts, circ(90, 16, 0.92), M["sock"], caps=False, scale=lambda i: sc[i])
+    so = s.modifiers.new("solid", "SOLIDIFY"); so.thickness = 6 * K; so.offset = -1.0     # the leg is open: a tunnel
+    return [(s, 0)]
+
+def yarnball(M):
+    P = [(lathe("Ball", sphere_prof(220, 20), M["yarn"], 48), 0)]
+    R = random.Random(67)
+    for k in range(7):   # a few strands wound over the top
+        ax = Vector((R.uniform(-1, 1), R.uniform(-1, 1), R.uniform(-1, 1))).normalized(); b1 = ax.orthogonal().normalized(); b2 = ax.cross(b1)
+        pts = [tuple((b1 * math.cos(2 * math.pi * j / 24) + b2 * math.sin(2 * math.pi * j / 24)) * 224 + Vector((0, 0, 220))) for j in range(24)]
+        P.append((sweep("Wrap%d" % k, pts, circ(5, 6), M["yarn"], closed=True), 0))
+    P.append((sweep("Strand", [(150, 140, 60), (250, 220, 12), (380, 260, 8), (515, 300, 8)], circ(6, 6), M["yarn"]), 0))
+    return P
+
+def cartrack(M):
+    pts = [(-1700, 0, 1440), (-1300, 0, 1440), (-900, 0, 1300), (-500, 0, 980), (-100, 0, 640), (300, 0, 330), (700, 0, 110), (1100, 0, 18), (1700, 0, 12)]
+    sec = [(-118, 0), (118, 0), (118, 34), (106, 34), (106, 8), (-106, 8), (-106, 34), (-118, 34)]
+    P = [(sweep("Track", pts, sec, M["trackOrange"]), 0)]
+    for x, z in ((-500, 980), (-100, 640), (300, 330)):
+        P.append((rbox("Leg", x - 20, x + 20, -60, 60, 0, z - 4, M["trackBlue"], 6, 0, 2), 0)); P.append((rbox("Foot", x - 70, x + 70, -100, 100, 0, 14, M["trackBlue"], 5, 0, 2), 0))
+    return P
+
+def traintrack(M):
+    pts = []; a, b, r = 1850, 950, 600
+    for cx, cy, a0 in ((a - r, b - r, 0), (-(a - r), b - r, 90), (-(a - r), -(b - r), 180), (a - r, -(b - r), 270)):
+        pts += [(cx + r * math.cos(math.radians(a0 + 90 * k / 8)), cy + r * math.sin(math.radians(a0 + 90 * k / 8)), 0) for k in range(9)]
+    sec = [(-38, 0), (38, 0), (38, 22), (26, 22), (26, 12), (14, 12), (14, 22), (-14, 22), (-14, 12), (-26, 12), (-26, 22), (-38, 22)]
+    return [(sweep("Track", pts, sec, M["beechTrack"], closed=True), 0)]
+
+def balloon(M):
+    prof = [(0, 0), (14, 2), (18, 12), (10, 24), (8, 36), (16, 44), (40, 60), (100, 110), (160, 180), (205, 270), (228, 360), (232, 420), (222, 500), (190, 570), (130, 620), (60, 638), (0, 640)]
+    return [(lathe("Balloon", prof, M["balloon"], 48), 0)]
+
+def balloonweight(M):
+    w = lathe_s("Weight", [(0, 0), (70, 0), (75, 8), (60, 40), (30, 70), (20, 80), (24, 88), (0, 92)], M["padR"], 32); w.scale = (1.0, 0.73, 1.0)
+    return [(w, 0)]
+
+def giftbox(M):
+    P = [(rbox("Box", -452, 452, -352, 352, 0, 521, M["gift"], 4, 0, 2), 0)]
+    P += [(rbox("RibbonX", -455, 455, -40, 40, -1, 523, M["ribbon"], 2, 0, 1), 0), (rbox("RibbonY", -40, 40, -355, 355, -1, 523, M["ribbon"], 2, 0, 1), 0)]
+    return P
+
+def giftlid(M):
+    P = [(rbox("Top", -472, 472, -372, 372, 64, 74, M["giftLid"], 3, 0, 1), 0)]
+    for b in ((-472, -464, -372, 372), (464, 472, -372, 372), (-472, 472, -372, -364), (-472, 472, 364, 372)):
+        P.append((rbox("Skirt", b[0], b[1], b[2], b[3], 0, 74, M["giftLid"], 2, 0, 1), 0))
+    P += [(rbox("RibbonX", -475, 475, -40, 40, 0, 76, M["ribbon"], 2, 0, 1), 0), (rbox("RibbonY", -40, 40, -375, 375, 0, 76, M["ribbon"], 2, 0, 1), 0)]
+    for s in (-1, 1):
+        lp = sweep("Loop", [(0, 0, 80), (s * 60, -20, 120), (s * 130, 0, 140), (s * 150, 20, 110), (s * 90, 10, 84), (0, 0, 80)], [(-30, -3), (30, -3), (30, 3), (-30, 3)], M["ribbon"])
+        P.append((lp, 0))
+    P.append((rbox("Knot", -26, 26, -30, 30, 74, 110, M["ribbon"], 10, 0, 3), 0))
+    return P
+
+SPECS.update({   # batch 11
+    "SM_K_FruitBowl": dict(build=fruitbowl, hulls=lambda n: hulls_dish(n, (176, 184, 30), ((180, 10), (186, 32), (450, 200), (436, 206))) + [H.hull("UCX_%s_09" % n, boxp(-240, 240, -180, 180, 30, 260))],
+                           lods=(0.45, 0.2), cls="ceramic", breaks=lambda o, n: shatter(o, n, lambda p, g: p == 0, [], [lambda p, g: p == 1], n=8, seed=71, jag=0.0008, chips=6, chip_mat_glass=False)),
+    "SM_K_KnifeBlock": dict(build=knifeblock, hulls=lambda n: [H.hull("UCX_%s_00" % n, [(x * K, y * K, z * K) for x in (-160, 160) for y, z in ((-300, 0), (300, 0), (300, 760), (-300, 480))])],
+                            lods=(0.45, 0.2), cls="wood", breaks=lambda o, n: cut_groups(o, n, [], [lambda p, g: p == 0, lambda p, g: p == 1], [])),
+    "SM_K_DishRack": dict(build=dishrack, hulls=_box_hulls((-600, 600, -450, 450, 0, 32), (-575, 575, -425, -380, 32, 300), (-575, 575, 380, 425, 32, 300)), lods=(0.5, 0.25), cls="metal", breaks=None),
+    "SM_L_BiscuitPlate": dict(build=biscuitplate, hulls=lambda n: hulls_round(n, 200, 33), lods=(0.45, 0.2), cls="ceramic",
+                              breaks=lambda o, n: shatter(o, n, lambda p, g: p == 0, [], [lambda p, g: p == 1], n=6, seed=73, jag=0.0006, chips=5, chip_mat_glass=False)),
+    "SM_L_SnackBowl": dict(build=snackbowl, hulls=lambda n: hulls_dish(n, (164, 168, 26), ((166, 8), (168, 28), (332, 186), (318, 192))), lods=(0.45, 0.2), cls="ceramic",
+                           breaks=lambda o, n: shatter(o, n, lambda p, g: p == 0, [], [lambda p, g: p == 1], n=8, seed=79, jag=0.0008, chips=6, chip_mat_glass=False)),
+    "SM_V3_Glasses": dict(build=glasses, hulls=_box_hulls((-132, 132, -6, 2, -18, 78), (-132, -122, -2, 80, 20, 50), (122, 132, -2, 80, 20, 50)), lods=(0.5, 0.25), cls="glass", glass=0.08, glassmat="lens",
+                          breaks=lambda o, n: cut_groups(o, n, [], [lambda p, g: g == 0, lambda p, g: g == 1], [])),
+    "SM_L_Coin": dict(build=coin, hulls=lambda n: hulls_round(n, 140, 17), lods=(0.5, 0.25), cls="metal", breaks=None),
+    "SM_V3_KnitNeedle": dict(build=knitneedle, hulls=lambda n: [H.hull("UCX_%s_00" % n, [(x * K, y * K, z * K) for x in (-316, 330) for y in (-12, 12) for z in (-12, 12)])], lods=(0.5, 0.25), cls="metal", breaks=None),
+    "SM_L_Sock": dict(build=sock, hulls=lambda n: [H.hull("UCX_%s_00" % n, boxp(-527, 140, -340, -160, 0, 180)), H.hull("UCX_%s_01" % n, boxp(140, 430, -340, 330, 0, 180))], lods=(0.5, 0.25), cls="cloth", breaks=None),
+    "SM_L_YarnBall": dict(build=yarnball, hulls=lambda n: hulls_round(n, 220, 440), lods=(0.45, 0.2), cls="cloth", breaks=None),
+    "SM_K_CarTrack": dict(build=cartrack, hulls=lambda n: [H.hull("UCX_%s_%02d" % (n, i), [(x * K, y * K, z * K) for x, z in seg for y in (-118, 118)]) for i, seg in
+                                                           enumerate((((-1700, 1440), (-1300, 1440), (-1300, 1474), (-1700, 1474)), ((-1300, 1440), (-500, 980), (-500, 1014), (-1300, 1474)),
+                                                                      ((-500, 980), (300, 330), (300, 364), (-500, 1014)), ((300, 330), (1100, 18), (1100, 52), (300, 364)), ((1100, 18), (1700, 12), (1700, 46), (1100, 52))))],
+                          lods=(0.5, 0.25), cls="plastic", breaks=None),
+    "SM_L_TrainTrack": dict(build=traintrack, hulls=_box_hulls((-1250, 1250, -990, -910, 0, 22), (-1250, 1250, 910, 990, 0, 22), (-1890, -1810, -350, 350, 0, 22), (1810, 1890, -350, 350, 0, 22)), lods=(0.5, 0.25), cls="wood", breaks=None),
+    "SM_V3_Balloon": dict(build=balloon, hulls=lambda n: [H.hull("UCX_%s_00" % n, ring(18, 0, 8) + ring(160, 180, 12) + ring(232, 420, 16) + ring(130, 620, 12) + ring(10, 640, 6))], lods=(0.45, 0.2), cls="plastic", breaks=None),
+    "SM_V3_BalloonWeight": dict(build=balloonweight, hulls=lambda n: [H.hull("UCX_%s_00" % n, [(p[0], p[1] * 0.73, p[2]) for p in ring(75, 0, 12) + ring(30, 70, 8) + ring(10, 92, 6)])], lods=(0.5, 0.25), cls="plastic", breaks=None),
+    "SM_V3_GiftBox": dict(build=giftbox, hulls=_box_hulls((-455, 455, -355, 355, 0, 523)), lods=(0.5, 0.25), cls="cardboard",
+                          breaks=lambda o, n: cut_groups(o, n, [lambda p, g: True], [], [((0, 0, 260), (0.1, 0.05, 1.0), 0.008, 157, 0)])),
+    "SM_V3_GiftBox_Lid": dict(build=giftlid, hulls=_box_hulls((-475, 475, -375, 375, 0, 76), (-150, 150, -30, 30, 76, 145)), lods=(0.5, 0.25), cls="cardboard", breaks=None),
 })
 
 # ------------------------------------------------------------------------------------------------ one asset (hero_lib.produce + the glass slot)
