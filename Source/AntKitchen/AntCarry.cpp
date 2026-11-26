@@ -833,7 +833,7 @@ void FAntCarrySolver::Yanks(AKitchenLoot* L, FAntCarryState& S, float Dt, const 
 			continue;
 		}
 		const FVector Dir = M.Vrel.GetSafeNormal();
-		if (Y > K.TumbleV || (M.Over > 2.f && Y > K.YankV))
+		if ((Y > K.TumbleV || (M.Over > 2.f && Y > K.YankV)) && AntFood::LeashMul(L) < 2.f)   // (sticky food glues the jaws: no tearing out)
 		{
 			M.NextYank = Now + 1.5f;
 			Tumble.Add(A);
@@ -1722,6 +1722,7 @@ namespace
 		else if (Kind == TEXT("box")) { Def.Name = TEXT("Коробочка хлопьев"); Def.Value = 90; Def.Weight = 24; Def.Color = FLinearColor(0.95f, 0.45f, 0.1f); Def.Shape = EAntShape::Cube; Def.Scale = FVector(1.f, 0.3f, 0.42f); }
 		else if (Kind == TEXT("cheese")) { Def.Name = TEXT("Кусочек сыра"); Def.Value = 45; Def.Weight = 22; Def.Color = FLinearColor(1.f, 0.8f, 0.15f); Def.Shape = EAntShape::Cube; Def.Scale = FVector(0.4f, 0.3f, 0.2f); }
 		else if (Kind == TEXT("cake")) { bCake = true; Def.Name = TEXT("Кусок именинного торта"); Def.Value = 600; Def.Weight = FMath::RoundToInt(48.f * AntCarry::CakePlayerMul(Players)); Def.Color = FLinearColor(1.f, 0.55f, 0.7f); Def.Shape = EAntShape::Cube; Def.Scale = FVector(0.8f, 0.55f, 0.45f); }
+		else if (AntFood::TestDef(Kind, Def)) {}   // any food of AntFood's table by id (sponge, apple, grape...) or by kind (crumbly, elastic...)
 		else { Def.Name = TEXT("Хлебная крошка"); Def.Value = 5; Def.Weight = 2; Def.Color = FLinearColor(0.85f, 0.65f, 0.35f); Def.Shape = EAntShape::Cube; Def.Scale = FVector(0.2f); }
 		if (ForceWeight > 0) { Def.Weight = ForceWeight; }
 		const FTransform TM(At);
