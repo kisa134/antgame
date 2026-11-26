@@ -99,11 +99,82 @@ def fabric(name, col, dark=None, scale=900.0, sheen=0.6, slub=0.25, pores=0.9):
     bp = N(m, "ShaderNodeBump", -500, -300); bp.inputs["Strength"].default_value = 0.3; bp.inputs["Distance"].default_value = 0.0004
     L(m, hb.outputs[0], bp.inputs["Height"]); L(m, bp.outputs["Normal"], p.inputs["Normal"])
     p.inputs["Roughness"].default_value = 0.88; p.inputs["Sheen Weight"].default_value = sheen; p.inputs["Sheen Roughness"].default_value = 0.4
+    if scale < 600: fabric_wear(m)
     return H.tag(m, 0.0, pores)
+
+
+def scratches(m, col=(1, 1, 1), amount=0.6, scale=7.0, seed=0.0, dents=0.25):
+    """use marks: fine straight scratches in two directions (thin wave bands, each switched on in short random segments),
+    lighter and rougher; small dents in the bump. The thing has been lived with."""
+    p = m.node_tree.nodes["Principled BSDF"]
+    tc = N(m, "ShaderNodeTexCoord", -2400, 1900)
+    masks = []
+    for k, rz in enumerate((0.35 + seed, 1.9 + seed * 0.7)):
+        mp = N(m, "ShaderNodeMapping", -2200, 1900 - k * 300); mp.inputs["Rotation"].default_value = (0.2 * k, 0.15, rz)
+        L(m, tc.outputs["Object"], mp.inputs["Vector"])
+        wv = N(m, "ShaderNodeTexWave", -2000, 1900 - k * 300); wv.wave_type = "BANDS"; wv.bands_direction = "X"; wv.inputs["Scale"].default_value = scale * 5.0
+        wv.inputs["Distortion"].default_value = 0.0; L(m, mp.outputs["Vector"], wv.inputs["Vector"])
+        ln = N(m, "ShaderNodeMapRange", -1800, 1900 - k * 300); ln.inputs["From Min"].default_value = 0.985; ln.inputs["From Max"].default_value = 1.0; L(m, wv.outputs["Fac"], ln.inputs["Value"])
+        mp2 = N(m, "ShaderNodeMapping", -2200, 1750 - k * 300); mp2.inputs["Scale"].default_value = (scale * 9.0, scale * 0.35, scale * 0.35); L(m, mp.outputs["Vector"], mp2.inputs["Vector"])
+        sp = N(m, "ShaderNodeTexNoise", -2000, 1750 - k * 300); sp.noise_dimensions = "4D"; sp.inputs["Scale"].default_value = 1.0; sp.inputs["Detail"].default_value = 1
+        sp.inputs["W"].default_value = 3 + k + seed; L(m, mp2.outputs["Vector"], sp.inputs["Vector"])
+        sm = N(m, "ShaderNodeMapRange", -1800, 1750 - k * 300); sm.inputs["From Min"].default_value = 0.60; sm.inputs["From Max"].default_value = 0.66; L(m, sp.outputs["Fac"], sm.inputs["Value"])
+        mm = N(m, "ShaderNodeMath", -1350, 1850 - k * 300); mm.operation = "MULTIPLY"; L(m, ln.outputs["Result"], mm.inputs[0]); L(m, sm.outputs["Result"], mm.inputs[1])
+        masks.append(mm.outputs[0])
+    mx = N(m, "ShaderNodeMath", -1200, 1800); mx.operation = "MAXIMUM"; L(m, masks[0], mx.inputs[0]); L(m, masks[1], mx.inputs[1])
+    sc = N(m, "ShaderNodeMath", -1100, 1800); sc.operation = "MULTIPLY"; sc.inputs[1].default_value = amount; sc.use_clamp = True; L(m, mx.outputs[0], sc.inputs[0])
+    def fn(m, src):
+        c = N(m, "ShaderNodeMix", -500, 1800); c.data_type = "RGBA"; c.inputs[7].default_value = (*col, 1); L(m, sc.outputs[0], c.inputs[0]); L(m, src, c.inputs[6])
+        return c.outputs[2]
+    _wrap_base(m, p, fn)
+    # rougher in the scratch
+    rl = p.inputs["Roughness"].links
+    rsrc = rl[0].from_socket if rl else None
+    ra = N(m, "ShaderNodeMath", -400, 1600); ra.operation = "MULTIPLY_ADD"; ra.inputs[1].default_value = 0.35
+    L(m, sc.outputs[0], ra.inputs[0])
+    if rsrc: L(m, rsrc, ra.inputs[2])
+    else: ra.inputs[2].default_value = p.inputs["Roughness"].default_value
+    L(m, ra.outputs[0], p.inputs["Roughness"])
+    # dents: a few soft dimples in the bump
+    nl = p.inputs["Normal"].links
+    if dents and nl:
+        bp = nl[0].from_node
+        if bp.type == "BUMP":
+            vo = N(m, "ShaderNodeTexVoronoi", -900, 1400); vo.inputs["Scale"].default_value = scale * 3.0; L(m, tc.outputs["Object"], vo.inputs["Vector"])
+            dr = N(m, "ShaderNodeMapRange", -700, 1400); dr.inputs["From Min"].default_value = 0.0; dr.inputs["From Max"].default_value = 0.12; dr.inputs["To Min"].default_value = -dents; dr.inputs["To Max"].default_value = 0.0
+            L(m, vo.outputs["Distance"], dr.inputs["Value"])
+            hl = bp.inputs["Height"].links
+            if hl:
+                ad = N(m, "ShaderNodeMath", -500, 1400); ad.operation = "ADD"; L(m, hl[0].from_socket, ad.inputs[0]); L(m, dr.outputs["Result"], ad.inputs[1]); L(m, ad.outputs[0], bp.inputs["Height"])
+            sk = N(m, "ShaderNodeMath", -500, 1500); sk.operation = "MULTIPLY"; sk.inputs[1].default_value = -0.4; L(m, sc.outputs[0], sk.inputs[0])
+            ad2 = N(m, "ShaderNodeMath", -350, 1450); ad2.operation = "ADD"; L(m, sk.outputs[0], ad2.inputs[0]); L(m, (bp.inputs["Height"].links[0].from_socket), ad2.inputs[1]); L(m, ad2.outputs[0], bp.inputs["Height"])
+    return m
+
+def fabric_wear(m, amount=0.35):
+    """upholstery wear: pilled, lighter and flattened where hands and backs go (high curvature + noise), a few darker spots"""
+    p = m.node_tree.nodes["Principled BSDF"]
+    def fn(m, src):
+        g = N(m, "ShaderNodeNewGeometry", -1400, 2100); mr = N(m, "ShaderNodeMapRange", -1200, 2100); mr.inputs["From Min"].default_value = 0.53; mr.inputs["From Max"].default_value = 0.62
+        L(m, g.outputs["Pointiness"], mr.inputs["Value"])
+        tc = N(m, "ShaderNodeTexCoord", -1400, 2300); no = N(m, "ShaderNodeTexNoise", -1200, 2300); no.inputs["Scale"].default_value = 25; no.inputs["Detail"].default_value = 8
+        L(m, tc.outputs["Object"], no.inputs["Vector"])
+        mu = N(m, "ShaderNodeMath", -1000, 2200); mu.operation = "MULTIPLY"; L(m, mr.outputs["Result"], mu.inputs[0]); L(m, no.outputs["Fac"], mu.inputs[1])
+        mu2 = N(m, "ShaderNodeMath", -850, 2200); mu2.operation = "MULTIPLY"; mu2.inputs[1].default_value = amount * 2; mu2.use_clamp = True; L(m, mu.outputs[0], mu2.inputs[0])
+        sc = N(m, "ShaderNodeMix", -650, 2200); sc.data_type = "RGBA"; sc.blend_type = "SCREEN"; sc.inputs[7].default_value = (0.35, 0.33, 0.30, 1)
+        L(m, mu2.outputs[0], sc.inputs[0]); L(m, src, sc.inputs[6])
+        sp = N(m, "ShaderNodeTexVoronoi", -1200, 2500); sp.inputs["Scale"].default_value = 3.0; L(m, tc.outputs["Object"], sp.inputs["Vector"])
+        sm = N(m, "ShaderNodeMapRange", -1000, 2500); sm.inputs["From Min"].default_value = 0.06; sm.inputs["From Max"].default_value = 0.0; sm.inputs["To Max"].default_value = 0.25
+        L(m, sp.outputs["Distance"], sm.inputs["Value"])
+        dk = N(m, "ShaderNodeMix", -450, 2300); dk.data_type = "RGBA"; dk.blend_type = "MULTIPLY"; dk.inputs[7].default_value = (0.55, 0.5, 0.45, 1)
+        L(m, sm.outputs["Result"], dk.inputs[0]); L(m, sc.outputs[2], dk.inputs[6])
+        return dk.outputs[2]
+    _wrap_base(m, p, fn)
+    return m
 
 def wood(name, light=(0.62, 0.40, 0.19), dark=(0.30, 0.16, 0.07), axis="X", grain=24.0, varnish=0.35, pore=0.5, wear=0.35, rough=0.42):
     """sawn timber / veneer, the grain running along axis: rings (stretched noise), dark pores, varnish worn pale on the edges"""
     m, p = H.mat(name)
+    grain = grain * 0.38          # (the first pass read as bamboo: real boards have a wider figure)
     sc = {"X": (1.0, grain, grain), "Y": (grain, 1.0, grain), "Z": (grain, grain, 1.0)}[axis]
     tc = N(m, "ShaderNodeTexCoord", -1600); mp = N(m, "ShaderNodeMapping", -1400); mp.inputs["Scale"].default_value = sc
     L(m, tc.outputs["Object"], mp.inputs["Vector"])
@@ -126,12 +197,14 @@ def wood(name, light=(0.62, 0.40, 0.19), dark=(0.30, 0.16, 0.07), axis="X", grai
     L(m, hb.outputs[0], bp.inputs["Height"]); L(m, bp.outputs["Normal"], p.inputs["Normal"])
     p.inputs["Roughness"].default_value = rough; p.inputs["Coat Weight"].default_value = varnish; p.inputs["Coat Roughness"].default_value = 0.18
     if wear: edge_wear(m, tuple(min(1, c * 1.35 + 0.06) for c in light), wear)
+    if wear: scratches(m, tuple(min(1, c * 1.45 + 0.10) for c in light), 0.75, 7.0, len(name) * 0.37)
     return H.tag(m, 0.0, 0.45)
 
 def paint(name, col, rough=0.42, peel=0.04, wear=0.3, under=None, metal_under=False, porosity=0.12):
     """painted / lacquered surface: orange peel, scuffs, the edges rubbed through to what is under (wood, primer, steel)"""
     m = H.plastic(name, col, rough, peel, 0.22)
     if wear: edge_wear(m, under or tuple(min(1, c * 1.2 + 0.12) for c in col), wear)
+    if wear: scratches(m, under or tuple(min(1, c * 1.2 + 0.12) for c in col), 0.55, 9.0, len(name) * 0.29)
     return H.tag(m, 0.0, porosity)
 
 def glossy(name, col, rough=0.06, coat=0.0, emit=None):
@@ -262,6 +335,22 @@ def screws_at(name, pts, normal, m, r=0.0045):
             sl = H.cube("%s%dsl%d" % (name, i, k), sz, (x + off[0], y + off[1], z + off[2])); sl.data.materials.append(M("ScrewSlot", H.rubber, (0.04, 0.04, 0.04), 0.7))
             out.append(sl)
     return out
+
+
+def stitches(name, pts, m, pitch=0.009, dash=0.0055, r=0.0011, off=(0, 0, 0)):
+    """topstitching: a row of short thread dashes along a polyline (one curve object, cheap)"""
+    dashes = []
+    pts = [Vector(p) + Vector(off) for p in pts]
+    for a, b in zip(pts, pts[1:]):
+        d = b - a; ln = d.length
+        if ln < 1e-5: continue
+        u = d / ln; n = int(ln / pitch)
+        for k in range(n):
+            s = a + u * (k * pitch); dashes.append([tuple(s), tuple(s + u * dash * 0.5), tuple(s + u * dash)])
+    o = H.tubes(name, dashes, r, res_u=1, bevel_res=0, tip=1.0); o.data.materials.append(m)
+    return o
+
+def THREAD(): return M("Thread", lambda n: H.plastic(n, (0.80, 0.76, 0.66), 0.7, 0.0, 0.0))
 
 # ================================================================================================ budget, hulls, breaks
 def evaluated(o):
@@ -562,6 +651,14 @@ def build_sofa():
     # piping round the platform, the deck seam
     parts.append((pipe("BasePiping", [rect_loop(-ax + 0.004, ax - 0.004, -hd - 0.0, hd - 0.15, zb1 - 0.004, 0.03)], 0.0045, fab, True), 0))
     parts.append((pipe("FrontSeam", [[(-ax + 0.02, -hd - 0.001, zb0 + 0.06), (ax - 0.02, -hd - 0.001, zb0 + 0.06)]], 0.0035, fab), 0))
+    th = THREAD()
+    parts.append((stitches("BaseStitch", [(-ax + 0.03, -hd - 0.0015, zb1 - 0.022), (ax - 0.03, -hd - 0.0015, zb1 - 0.022)], th), 0))
+    for s in (-1, 1):
+        xc = s * (ax + hw) / 2
+        parts.append((stitches("ArmStitch", [(xc - r + 0.02, -hd - 0.0075, zb0 + 0.05), (xc - r + 0.02, -hd - 0.0075, za - r)], th), 2 + (s > 0)))
+        parts.append((stitches("ArmStitch", [(xc + r - 0.02, -hd - 0.0075, zb0 + 0.05), (xc + r - 0.02, -hd - 0.0075, za - r)], th), 2 + (s > 0)))
+        parts.append((stitches("RollStitch", [(xc, -hd + 0.01, za + 0.001), (xc, hd - 0.01, za + 0.001)], th), 2 + (s > 0)))
+    parts.append((stitches("BackStitch", [(-ax + 0.03, hd - 0.152, Hh - 0.03), (ax - 0.03, hd - 0.152, Hh - 0.03)], th), 4))
     # show-wood rails under the base, the dust cover
     for y in (-hd + 0.045, hd - 0.045):
         parts.append((box("Rail", -ax + 0.05, ax - 0.05, y - 0.016, y + 0.016, zb0 - 0.024, zb0 + 0.004, W_WALNUT("X"), 0.004, 3), 0))
@@ -631,6 +728,14 @@ def build_armchair():
     parts.append((pipe("CushPiping", [rect_loop(-(hw - at) + 0.018, hw - at - 0.018, -hd + 0.016, hd - at - 0.012, 800 / S - 0.012, 0.04, 6)], 0.0045, fab, True), 5))
     bc = soft("BackCushion", -(hw - at) + 0.03, hw - at - 0.03, hd - at - 0.05, hd - at + 0.01, 800 / S - 0.02, Hh - 0.07, fab, 0.03, 4, 0.22, 2); parts.append((bc, 6))
     hs.add(cu, bc)
+    th = THREAD()
+    for xb in (-0.2, 0.0, 0.2):
+        for zb_ in (0.65, 0.82):
+            parts.append((lathe("Button", [(0, 0.0), (0.014, 0.0), (0.016, 0.004), (0.012, 0.008), (0, 0.009)], fab, (xb, hd - at - 0.052, zb_), 20, 0, (math.pi / 2, 0, 0)), 6))
+    for s in (-1, 1):
+        x0, x1 = min(s * hw, s * (hw - at)), max(s * hw, s * (hw - at))
+        parts.append((stitches("ArmTop", [((x0 + x1) / 2, -hd + 0.01, 1200 / S + 0.001), ((x0 + x1) / 2, hd - 0.02, 1200 / S + 0.001)], th), 2 + (s > 0)))
+    parts.append((stitches("CushStitch", [(-(hw - at) + 0.03, -hd + 0.009, 800 / S - 0.025), (hw - at - 0.03, -hd + 0.009, 800 / S - 0.025)], th), 5))
     lc = M("Doily", lace)
     d1 = box("DoilyTop", -0.21, 0.21, hd - at, hd, Hh - 0.0005, Hh + 0.0015, lc, 0.0008, 1); d2 = box("DoilyFlap", -0.21, 0.21, hd - at - 0.0035, hd - at - 0.0015, Hh - 0.11, Hh, lc, 0.0008, 1)
     parts += [(d1, 4), (d2, 4)]
@@ -645,8 +750,10 @@ def build_coffee_table():
     top_m = M("OakTop", wood, (0.72, 0.49, 0.25), (0.44, 0.26, 0.11), "X", 18.0, 0.5, 0.5, 0.35)
     rings = top_m.node_tree; # (coffee rings are added below as a darker ring on the top: a separate thin decal)
     top = box("Top", -hw, hw, -hd, hd, zt, Hh, top_m, 0.008, 4); parts.append((top, 10)); hs.add(top)
-    for x in (-hw * 0.5, 0.0, hw * 0.5):   # board seams (the top is glued up of four boards)
-        pass
+    seam = M("Seam", H.rubber, (0.10, 0.06, 0.03), 0.8)
+    for y in (-hd * 0.5, 0.0, hd * 0.5):   # board seams (the top is glued up of four boards): thin dark glue lines, top and edges
+        parts.append((box("Seam", -hw + 0.004, hw - 0.004, y - 0.0006, y + 0.0006, Hh - 0.0004, Hh + 0.0002, seam, 0.0, 0), 10))
+        for s in (-1, 1): parts.append((box("SeamEnd", s * hw - 0.0004, s * hw + 0.0002, y - 0.0006, y + 0.0006, zt + 0.003, Hh - 0.003, seam, 0.0, 0), 10))
     for sx in (-1, 1):
         for sy in (-1, 1):
             x, y = sx * (hw - 100 / S), sy * (hd - 100 / S)
@@ -660,7 +767,8 @@ def build_coffee_table():
         parts.append((box("ApronY", x - 0.009, x + 0.009, -(hd - 0.07), hd - 0.07, zt - 0.06, zt, W_WALNUT("Y"), 0.002, 2), 15))
         # corner blocks with their screws
         for t in (-1, 1):
-            parts.append((box("Block", s * (hw - 0.12), s * (hw - 0.08), t * (hd - 0.12), t * (hd - 0.08), zt - 0.035, zt, W_WALNUT("Z"), 0.002, 1), 15))
+            parts.append((box("Block", min(s * (hw - 0.12), s * (hw - 0.08)), max(s * (hw - 0.12), s * (hw - 0.08)), min(t * (hd - 0.12), t * (hd - 0.08)), max(t * (hd - 0.12), t * (hd - 0.08)), zt - 0.035, zt, W_WALNUT("Z"), 0.002, 1), 15))
+            parts += [(o, 15) for o in screws_at("BlockScrew", [(s * (hw - 0.10), t * (hd - 0.10), zt - 0.0352, -1)], "Z", steel(), 0.004)]
     sh = box("Shelf", -(hw - 50 / S), hw - 50 / S, -(hd - 50 / S), hd - 50 / S, 300 / S, 340 / S, top_m, 0.005, 3); parts.append((sh, 16)); hs.add(sh)
     # coffee rings and a scorch from a hot mug: thin darker discs flush in the top (the ant reads them as stains)
     stain = M("Stain", lambda n: H.plastic(n, (0.30, 0.17, 0.07), 0.25, 0.02, 0.1))
@@ -693,6 +801,11 @@ def build_tvstand():
         # plastic grommet in the hole
         parts.append((lathe("Grommet", [(r - 0.004, -0.014), (r + 0.006, -0.014), (r + 0.006, -0.012), (r, -0.012), (r, 0.0), (r - 0.004, 0.0)], BLACKP(), (x, hd - 0.012, z), 32, 0, (-math.pi / 2, 0, 0)), 25))
     parts.append((back, 25)); hs.add(back)
+    nl = M("Nail", H.metal, (0.45, 0.45, 0.47), 0.4)
+    for k in range(18):     # the back panel's nails along the bottom, top and the divider
+        x = -hw + 0.03 + k * (2 * hw - 0.06) / 17
+        for z in (zb + 0.008, zt - 0.006):
+            parts.append((cyl("Nail", 0.0018, 0.0008, (x, hd + 0.0003, z), nl, "Y", 8), 25))
     parts.append((box("Shelf", t / 2 - 0.002, hw - t + 0.002, -hd + 0.06, hd - 0.012, 0.29, 0.31, oak, 0.003, 2), 26))
     for k, x in enumerate((t / 2 + 0.05, hw - t - 0.05)):    # shelf pins
         for y in (-hd + 0.10, hd - 0.06):
@@ -783,6 +896,15 @@ def build_bookshelf():
                 for y in (-hd + 0.05, hd - 0.07):
                     parts.append((cyl("Pin", 0.003, 0.010, (x, y, z - 0.004), BRASS(), "X", 8), 5 + k))
     top = box("Top", -hw, hw, -hd, hd, 4600 / S, Hh, oak, 0.006, 4); parts.append((top, 10)); hs.add(top)
+    nl = M("Nail", H.metal, (0.45, 0.45, 0.47), 0.4)
+    for k in range(5):
+        for j in range(14):
+            parts.append((cyl("Nail", 0.0018, 0.0008, (-hw + 0.03 + j * (2 * hw - 0.06) / 13, hd + 0.0003, k * 900 / S + 0.016), nl, "Y", 8), 3))
+    cap = M("CapBrown", lambda n: H.plastic(n, (0.22, 0.13, 0.07), 0.5, 0.02, 0.1))
+    for s in (-1, 1):
+        for k in range(1, 5):
+            for y in (-hd + 0.05, hd - 0.07):
+                parts.append((cyl("CamCap", 0.007, 0.0012, (s * (ihw - 0.0006), y, k * 900 / S + 0.016), cap, "X", 14), 1 + (s > 0)))
     # the anti-tip strap to the wall, two screws
     parts.append((box("Strap", -0.03, 0.03, hd - 0.001, hd + 0.0, 2.35, 2.40, steel(), 0.0005, 1), 3))
     # shelf wear: a pale rub where books slide, rings of a vase on the top
@@ -1419,6 +1541,267 @@ def build_floor_cushion():
     parts.append((pipe("Handle", [[(-0.05, -0.29, 0.10), (-0.04, -0.31, 0.11), (0.04, -0.31, 0.11), (0.05, -0.29, 0.10)]], 0.006, cord), 0))
     return parts, hs
 
+
+def build_cat_flap():
+    """cat flap liner in the wall 0.116 x 0.286 x 0.318 m (the wall's thickness along X): white plastic tunnel with a rim on
+    both faces, the hinge bosses at the top, a magnet strip at the bottom, four screw caps"""
+    hs = Hulls(); parts = []
+    wp = M("WhitePlastic", lambda n: H.plastic(n, (0.88, 0.87, 0.83), 0.35, 0.03, 0.2)); dk = M("Hole", H.rubber, (0.02, 0.015, 0.01), 0.9)
+    X, Y, Z = 0.0579, 0.1432, 0.3179; t = 0.0116
+    for (y0, y1, z0, z1) in ((-Y, Y, 0, t), (-Y, Y, Z - t, Z), (-Y, -Y + t, 0, Z), (Y - t, Y, 0, Z)):
+        o = box("Tunnel", -X + 0.006, X - 0.006, y0, y1, z0, z1, wp, 0.002, 2); parts.append((o, 0)); hs.add(o)
+    for s in (-1, 1):     # the rims (flanges) on both faces of the wall
+        for (y0, y1, z0, z1) in ((-Y, Y, 0, t * 1.6), (-Y, Y, Z - t * 1.6, Z), (-Y, -Y + t * 1.6, 0, Z), (Y - t * 1.6, Y, 0, Z)):
+            parts.append((box("Rim", min(s * X, s * (X - 0.006)), max(s * X, s * (X - 0.006)), y0, y1, z0, z1, wp, 0.0025, 3), 0))
+        for (y, z) in ((-Y + 0.009, 0.009), (Y - 0.009, 0.009), (-Y + 0.009, Z - 0.009), (Y - 0.009, Z - 0.009)):
+            parts.append((cyl("ScrewCap", 0.0045, 0.0012, (s * (X + 0.0004), y, z), wp, "X", 14), 0))
+    for y in (-0.128, 0.128):
+        parts.append((cyl("Boss", 0.006, 0.010, (0.0, y + (0.006 if y < 0 else -0.006), Z - t - 0.004), wp, "Y", 16), 0))
+    parts.append((box("Magnet", -0.004, 0.004, -0.06, 0.06, t, t + 0.003, M("MagnetGrey", H.metal, (0.35, 0.35, 0.37), 0.5), 0.0008, 1), 0))
+    parts.append((box("Shadow", -X + 0.0062, X - 0.0062, -Y + t, Y - t, t - 0.0003, t, dk, 0.0, 0), 0))
+    return parts, hs
+
+def build_cat_flap_leaf():
+    """the flap 0.017 x 0.257 x 0.288 m, pivot on its top edge: smoked clear plastic in a white frame, a weighted bottom bar
+    with the magnet, scratch marks of claws"""
+    hs = Hulls(); parts = []
+    wp = M("WhitePlastic", lambda n: H.plastic(n, (0.88, 0.87, 0.83), 0.35, 0.03, 0.2))
+    smoke = M("SmokedPlastic", lambda n: H.tag(glossy(n, (0.18, 0.17, 0.15), 0.12, 0.6), 0.0, 0.0))
+    W, Hh = 0.1284, 0.2884
+    pn = box("Pane", -0.0035, 0.0035, -W + 0.012, W - 0.012, -Hh + 0.024, -0.012, smoke, 0.0015, 2); parts.append((pn, 0))
+    for (y0, y1, z0, z1) in ((-W, W, -0.014, 0.0), (-W, -W + 0.012, -Hh, 0.0), (W - 0.012, W, -Hh, 0.0)):
+        parts.append((box("Frame", -0.0060, 0.0060, y0, y1, z0, z1, wp, 0.002, 2), 0))
+    parts.append((box("Weight", -0.0084, 0.0084, -W, W, -Hh, -Hh + 0.026, wp, 0.004, 3), 0))
+    parts.append((cyl("Pivot", 0.0035, 2 * W + 0.012, (0, 0, -0.006), M("Steel", H.metal, (0.66, 0.67, 0.69), 0.32), "Y", 12), 0))
+    for k in range(4):    # claw scratches on the pane
+        y = -0.03 + k * 0.012
+        parts.append((box("Claw", -0.0037, -0.0035, y - 0.0005, y + 0.0005, -Hh + 0.06, -Hh + 0.12, M("ClawMark", lambda n: H.plastic(n, (0.5, 0.5, 0.5), 0.8, 0.0, 0.0)), 0.0, 0), 0))
+    hs.box(-0.0084, 0.0084, -W, W, -Hh, 0.0)
+    return parts, hs
+
+def build_toy_box():
+    """wooden toy box 0.739 x 0.476 x 0.41 m (hinge side +Y): beech carcass with finger joints at the corners, painted panels
+    (red, blue, honey, green) with stencilled letters, rope handles, a lid stay; the lid is SM_V3_ToyBox_Lid"""
+    hs = Hulls(); parts = []
+    bz = M("BeechZ", wood, (0.74, 0.55, 0.34), (0.52, 0.36, 0.20), "Z", 26.0, 0.3, 0.3, 0.35)
+    bx_ = M("Beech", wood, (0.74, 0.55, 0.34), (0.52, 0.36, 0.20), "X", 26.0, 0.3, 0.3, 0.35)
+    X, Y, Z, t = 0.3695, 0.2381, 0.4105, 0.016
+    for s in (-1, 1):
+        o = box("Side", min(s * X, s * (X - t)), max(s * X, s * (X - t)), -Y, Y, 0.0, Z, bz, 0.003, 3); parts.append((o, 1 + (s > 0))); hs.add(o)
+        o = box("Front", -X + t, X - t, min(s * Y, s * (Y - t)), max(s * Y, s * (Y - t)), 0.0, Z, bx_, 0.003, 3); parts.append((o, 3 + (s > 0))); hs.add(o)
+    o = box("Bottom", -X + t, X - t, -Y + t, Y - t, 0.012, 0.012 + t, bx_, 0.002, 2); parts.append((o, 5)); hs.add(o)
+    for (x, y) in ((-X + 0.03, -Y + 0.03), (X - 0.03, -Y + 0.03), (-X + 0.03, Y - 0.03), (X - 0.03, Y - 0.03)):
+        parts.append((cyl("Foot", 0.014, 0.012, (x, y, 0.006), M("Felt", fabric, (0.30, 0.28, 0.25), None, 900.0, 0.2), "Z", 12), 5))
+    # finger joints: the end grain of the fingers shows on the corners
+    eg = M("EndGrain", wood, (0.62, 0.44, 0.26), (0.45, 0.30, 0.17), "X", 6.0, 0.0, 0.0, 0.0, 0.6)
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            for k in range(5):
+                z0 = k * Z / 5 + (Z / 10 if (sx * sy > 0) else 0)
+                parts.append((box("Finger", sx * X - (0.0003 if sx > 0 else -0.0003) - 0.0002, sx * X + 0.0002 - (0.0003 if sx > 0 else -0.0003), min(sy * Y, sy * (Y - t)), max(sy * Y, sy * (Y - t)), z0, z0 + Z / 10, eg, 0.0, 0), 1 + (sx > 0)))
+    # painted panels with letters on the front (-Y) and the sides
+    cols = [(0.62, 0.10, 0.07), (0.10, 0.24, 0.58), (0.80, 0.56, 0.14), (0.20, 0.46, 0.20)]
+    for i, c in enumerate(cols):
+        pm = M("ToyPaint%d" % i, paint, c, 0.38, 0.03, 0.45, (0.74, 0.55, 0.34))
+        x0 = -X + t + 0.02 + i * (2 * (X - t) - 0.04) / 4; x1 = x0 + (2 * (X - t) - 0.04) / 4 - 0.012
+        parts.append((box("Panel", x0, x1, -Y - 0.0012, -Y + 0.0002, 0.07, Z - 0.07, pm, 0.001, 1), 3))
+        # a letter block shape stencilled in white (A B C D: blocky strokes)
+        wh = M("StencilWhite", paint, (0.92, 0.90, 0.84), 0.4, 0.02, 0.3)
+        cx, cz = (x0 + x1) / 2, Z / 2
+        strokes = {0: [(-0.03, 0, 0.012, 0.12, 0.3), (0.03, 0, 0.012, 0.12, -0.3), (0, -0.01, 0.05, 0.012, 0)],
+                   1: [(-0.025, 0, 0.012, 0.12, 0), (0.0, 0.05, 0.05, 0.012, 0), (0.0, 0.0, 0.05, 0.012, 0), (0.0, -0.05, 0.05, 0.012, 0), (0.025, 0.025, 0.012, 0.05, 0), (0.025, -0.025, 0.012, 0.05, 0)],
+                   2: [(-0.025, 0, 0.012, 0.12, 0), (0.0, 0.05, 0.05, 0.012, 0), (0.0, -0.05, 0.05, 0.012, 0)],
+                   3: [(-0.025, 0, 0.012, 0.12, 0), (0.0, 0.05, 0.04, 0.012, 0), (0.0, -0.05, 0.04, 0.012, 0), (0.025, 0, 0.012, 0.09, 0)]}[i]
+        for (dx, dz, w, h, ang) in strokes:
+            o = box("Letter", cx + dx - w / 2, cx + dx + w / 2, -Y - 0.0016, -Y - 0.0010, cz + dz - h / 2, cz + dz + h / 2, wh, 0.0, 0,
+                    Matrix.Rotation(ang, 4, "Y"), (cx + dx, -Y, cz + dz))
+            parts.append((o, 3))
+    rope = M("Rope", fabric, (0.72, 0.62, 0.44), (0.52, 0.42, 0.28), 140.0, 0.2)
+    for s in (-1, 1):     # rope handles through the sides, knotted inside
+        pts = [(s * (X + 0.0005), -0.06, Z - 0.09)] + [(s * (X + 0.02 + 0.012 * math.sin(math.pi * k / 8)), -0.06 + 0.12 * k / 8, Z - 0.09 - 0.03 * math.sin(math.pi * k / 8)) for k in range(9)] + [(s * (X + 0.0005), 0.06, Z - 0.09)]
+        parts.append((pipe("Handle", [pts], 0.006, rope), 1 + (s > 0)))
+        for y in (-0.06, 0.06):
+            parts.append((lathe("Knot", [(0, 0), (0.010, 0.002), (0.011, 0.01), (0.006, 0.016), (0, 0.017)], rope, (s * (X - t - 0.0005), y, Z - 0.09), 12, 0, (0, -s * math.pi / 2, 0)), 1 + (s > 0)))
+    return parts, hs
+
+def build_toy_box_lid():
+    """the lid 0.758 x 0.492 x 0.032 m, origin on the hinge axis at the back edge (extends to -Y): beech boards with
+    breadboard ends, a painted star, a finger pull, two hinge leaves screwed on"""
+    hs = Hulls(); parts = []
+    bx_ = M("Beech", wood, (0.74, 0.55, 0.34), (0.52, 0.36, 0.20), "X", 26.0, 0.3, 0.3, 0.35); by = M("BeechY", wood, (0.74, 0.55, 0.34), (0.52, 0.36, 0.20), "Y", 26.0, 0.3, 0.3, 0.35)
+    X, D, T = 0.3789, 0.4921, 0.0316
+    top = box("Boards", -X + 0.05, X - 0.05, -D, 0.0, 0.0, T, by, 0.003, 3); parts.append((top, 0)); hs.add(top)
+    for s in (-1, 1):
+        parts.append((box("End", min(s * X, s * (X - 0.05)), max(s * X, s * (X - 0.05)), -D, 0.0, 0.0, T, bx_, 0.004, 3), 0))
+    seam = M("Seam", H.rubber, (0.10, 0.06, 0.03), 0.8)
+    for x in (-0.14, 0.0, 0.14):
+        parts.append((box("Seam", x - 0.0006, x + 0.0006, -D + 0.002, -0.002, T - 0.0003, T + 0.0002, seam, 0.0, 0), 0))
+    st = M("ToyPaint2", paint, (0.80, 0.56, 0.14), 0.38, 0.03, 0.45, (0.74, 0.55, 0.34))
+    star = [(0.09 * (1 if k % 2 == 0 else 0.42) * math.cos(math.pi / 2 + k * math.pi / 5), 0.09 * (1 if k % 2 == 0 else 0.42) * math.sin(math.pi / 2 + k * math.pi / 5)) for k in range(10)]
+    bm = bmesh.new(); vs = [bm.verts.new((x, -D / 2 + y, T + 0.0003)) for x, y in star]; bm.faces.new(vs)
+    me = bpy.data.meshes.new("Star"); bm.to_mesh(me); bm.free(); so = H.link(bpy.data.objects.new("Star", me)); so.data.materials.append(st)
+    sol = so.modifiers.new("sol", "SOLIDIFY"); sol.thickness = 0.0006; parts.append((so, 0))
+    parts.append((box("Pull", -0.05, 0.05, -D - 0.0005, -D + 0.012, T * 0.35, T * 0.75, M("Hole", H.rubber, (0.02, 0.015, 0.01), 0.9), 0.003, 2), 0))
+    br = BRASS()
+    for x in (-0.20, 0.20):
+        parts.append((box("HingeLeaf", x - 0.025, x + 0.025, -0.032, 0.0, -0.0016, 0.0, br, 0.0006, 1), 0))
+        parts += [(o, 0) for o in screws_at("HScrew", [(x + dx, -0.016, -0.0017, -1) for dx in (-0.015, 0.015)], "Z", br, 0.0028)]
+    return parts, hs
+
+def build_hinge():
+    """concealed cup hinge (the toy box lid's): 35 mm cup, arm, mounting plate with three screws, pivot on the axis"""
+    hs = Hulls(); parts = []; st = steel(); bk = BLACKP()
+    parts.append((lathe("Cup", [(0, -0.0100), (0.0120, -0.0100), (0.0125, -0.0005), (0.0145, 0.0), (0.0145, 0.0012), (0, 0.0012)], st, (0, -0.030, 0), 32, 0, (math.pi / 2, 0, 0)), 0))
+    arm = box("Arm", -0.012, 0.012, -0.040, -0.010, -0.006, 0.006, st, 0.002, 2); parts.append((arm, 0)); hs.add(arm)
+    pl = box("Plate", -0.0158, 0.0158, -0.006, 0.0, -0.0263, 0.0263, st, 0.0015, 2); parts.append((pl, 0)); hs.add(pl)
+    parts.append((cyl("CoverCap", 0.006, 0.026, (0, -0.040, 0), bk, "X", 14), 0))
+    parts += [(o, 0) for o in screws_at("PScrew", [(0, -0.0062, z, -1) for z in (-0.017, 0.0, 0.017)], "Y", st, 0.0032)]
+    return parts, hs
+
+
+# ================================================================================================ tiling cloth (AntCloth pieces)
+# AntCloth (curtains, the throw) simulates its own grid with UVs that repeat every 300 uu: these pieces get a seamless
+# 300 uu tile (0.158 m) of their fabric instead of an atlas, and the static mesh is mapped the same way.
+TILE = 300.0 / S
+
+def tile_fabric(name, base, dark, threads=48, stripes=None, sheen=0.5, slub=0.3):
+    """a seamless square of woven cloth on UV 0..1: plain weave of `threads` per tile, slub and heather from noise on a
+    torus (periodic in u and v), optional woven stripes / checks: stripes = [(pos0, pos1, colour, axis 'u'|'v'|'uv')]"""
+    m, p = H.mat(name)
+    tc = N(m, "ShaderNodeTexCoord", -2600); sp = N(m, "ShaderNodeSeparateXYZ", -2400); L(m, tc.outputs["UV"], sp.inputs[0])
+    def op(o, a, b=None, x=0, y=0):
+        n = N(m, "ShaderNodeMath", x, y); n.operation = o
+        for i, s in enumerate((a, b)):
+            if s is None: continue
+            if isinstance(s, (int, float)): n.inputs[i].default_value = s
+            else: L(m, s, n.inputs[i])
+        return n.outputs[0]
+    tau = 2 * math.pi
+    U_, V_ = sp.outputs["X"], sp.outputs["Y"]
+    def torus_noise(scale, detail, y, seed=0.0):
+        cu, su = op("COSINE", op("MULTIPLY", U_, tau, -2200, y), None, -2000, y), op("SINE", op("MULTIPLY", U_, tau, -2200, y - 40), None, -2000, y - 40)
+        cv, sv = op("COSINE", op("MULTIPLY", V_, tau, -2200, y - 80), None, -2000, y - 80), op("SINE", op("MULTIPLY", V_, tau, -2200, y - 120), None, -2000, y - 120)
+        cb = N(m, "ShaderNodeCombineXYZ", -1800, y); L(m, cu, cb.inputs[0]); L(m, su, cb.inputs[1]); L(m, cv, cb.inputs[2])
+        no = N(m, "ShaderNodeTexNoise", -1600, y); no.noise_dimensions = "4D"; no.inputs["Scale"].default_value = scale; no.inputs["Detail"].default_value = detail
+        L(m, cb.outputs[0], no.inputs["Vector"]); L(m, op("ADD", sv, seed, -1800, y - 120), no.inputs["W"])
+        return no.outputs["Fac"]
+    wu = op("SINE", op("MULTIPLY", U_, tau * threads, -2200, 600), None, -2000, 600)
+    wv = op("SINE", op("MULTIPLY", V_, tau * threads, -2200, 500), None, -2000, 500)
+    over = op("MULTIPLY", op("SINE", op("MULTIPLY", U_, tau * threads / 2, -2200, 400), None, -2000, 400), op("SINE", op("MULTIPLY", V_, tau * threads / 2, -2200, 300), None, -2000, 300), -1800, 350)
+    weave = op("ADD", op("MULTIPLY", op("ABSOLUTE", wu, None, -1800, 600), op("GREATER_THAN", over, 0.0, -1600, 350), -1600, 600),
+               op("MULTIPLY", op("ABSOLUTE", wv, None, -1800, 500), op("LESS_THAN", over, 0.0, -1600, 300), -1600, 500), -1400, 550)
+    hz = torus_noise(2.5, 6, 0); fl = torus_noise(14.0, 2, -300, 3.0)
+    mixn = N(m, "ShaderNodeMix", -1300, 0); mixn.data_type = "FLOAT"; mixn.inputs[0].default_value = 0.4; L(m, hz, mixn.inputs[2]); L(m, fl, mixn.inputs[3])
+    cr = N(m, "ShaderNodeValToRGB", -1100, 0); e = cr.color_ramp.elements; e[0].position = 0.5 - slub; e[0].color = (*dark, 1); e[1].position = 0.5 + slub; e[1].color = (*base, 1)
+    L(m, mixn.outputs[0], cr.inputs["Fac"]); col = cr.outputs["Color"]
+    for i, (a, b, c, ax) in enumerate(stripes or []):
+        msk = None
+        for coord in ((U_,) if ax == "u" else (V_,) if ax == "v" else (U_, V_)):
+            s_ = op("MULTIPLY", op("GREATER_THAN", coord, a, -1000, -400 - i * 90), op("LESS_THAN", coord, b, -1000, -440 - i * 90), -850, -420 - i * 90)
+            msk = s_ if msk is None else op("MAXIMUM", msk, s_, -700, -420 - i * 90)
+        mx = N(m, "ShaderNodeMix", -550, -200 - i * 90); mx.data_type = "RGBA"; mx.inputs[7].default_value = (*c, 1)
+        mm = op("MULTIPLY", msk, 0.85, -650, -420 - i * 90)
+        L(m, mm, mx.inputs[0]); L(m, col, mx.inputs[6]); col = mx.outputs[2]
+    sh = N(m, "ShaderNodeMix", -300, 0); sh.data_type = "RGBA"; sh.blend_type = "MULTIPLY"; sh.inputs[7].default_value = (0.82, 0.82, 0.82, 1)
+    L(m, op("SUBTRACT", 1.0, weave, -500, 200), sh.inputs[0]); L(m, col, sh.inputs[6]); L(m, sh.outputs[2], p.inputs["Base Color"])
+    bp = N(m, "ShaderNodeBump", -300, -500); bp.inputs["Strength"].default_value = 0.6; bp.inputs["Distance"].default_value = 0.0006
+    L(m, op("MULTIPLY_ADD", fl, 0.3, -600, -500) if False else weave, bp.inputs["Height"]); L(m, bp.outputs["Normal"], p.inputs["Normal"])
+    p.inputs["Roughness"].default_value = 0.9; p.inputs["Sheen Weight"].default_value = sheen; p.inputs["Sheen Roughness"].default_value = 0.45
+    return H.tag(m, 0.0, 1.0)
+
+def old_mesh(name):
+    obs = import_old(name)
+    o = H.join(obs, name + "_src") if len(obs) > 1 else obs[0]
+    for x in H.S().objects: x.select_set(False)
+    o.select_set(True); bpy.context.view_layer.objects.active = o
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    return o
+
+def tile_uv(o, mode="xz"):
+    """UV0 in tiles of 300 uu: xz = the curtain's face (u along X, v up), box = by the dominant normal"""
+    me = o.data
+    uv = me.uv_layers.get("UV0") or me.uv_layers.new(name="UV0")
+    while len(me.uv_layers) > 1:
+        me.uv_layers.remove([u for u in me.uv_layers if u.name != "UV0"][0])
+    for p in me.polygons:
+        n = p.normal
+        for li in p.loop_indices:
+            c = me.vertices[me.loops[li].vertex_index].co
+            if mode == "xz" or (abs(n.y) >= abs(n.x) and abs(n.y) >= abs(n.z)): a, b = c.x, c.z
+            elif abs(n.x) >= abs(n.z): a, b = c.y, c.z
+            else: a, b = c.x, c.y
+            uv.data[li].uv = (a / TILE, b / TILE)
+
+def produce_tile(name, mat, mode, extra=None, note="", lods=(0.4, 0.15)):
+    t0 = time.time()
+    out = os.path.join(OUT, name); os.makedirs(out, exist_ok=True); tdir = os.path.join(out, "tex")
+    # 1. the tile
+    bpy.ops.mesh.primitive_plane_add(size=1, location=(0, 0, -5)); pl = bpy.context.object; pl.name = name + "_tile"
+    pl.data.uv_layers[0].name = "UV0"; pl.data.materials.append(mat)
+    if NOBAKE and os.path.exists(os.path.join(tdir, "T_%s_C.png" % name)):
+        paths = {k: os.path.join(tdir, "T_%s_%s.png" % (name, k)) for k in "CNR"}
+    else:
+        paths = H.bake_set(pl, name, tdir, 1024, grime=0.0)
+    bpy.data.objects.remove(pl)
+    # 2. the mesh: the old cloth shape (AntCloth reads its bounds / samples it), hems added, mapped in tiles
+    o = old_mesh(name)
+    parts = [o] + (extra(o) if extra else [])
+    lod0 = H.join(parts, name) if len(parts) > 1 else o
+    lod0.name = name; lod0.data.name = name
+    H.set_part(lod0, 0)
+    tile_uv(lod0, mode)
+    H.game_material(lod0, name)
+    mn, mx = H.bounds([lod0])
+    hs = [H.hull("UCX_%s_00" % name, H.box_pts(mn.x, mx.x, mn.y, mx.y, mn.z, mx.z))]
+    l1 = H.lod(lod0, lods[0], name + "_LOD1"); l2 = H.lod(lod0, lods[1], name + "_LOD2")
+    H.export_fbx([lod0] + hs, os.path.join(out, name + ".fbx"))
+    H.export_fbx([l1], os.path.join(out, name + "_LOD1.fbx")); H.export_fbx([l2], os.path.join(out, name + "_LOD2.fbx"))
+    man = {"name": name, "file": name + ".fbx", "set": "hero_living", "break_class": "cloth", "tiling": True,
+           "textures": {k: os.path.relpath(v, OUT).replace("\\", "/") for k, v in paths.items()},
+           "collision_lod": 0, "movers": [], "breaks": [], "note": note, "kept_slots": []}
+    man.update(H.info(lod0)); man["lod_triangles"] = [H.tris(lod0), H.tris(l1), H.tris(l2)]; man["ucx"] = 1
+    for x in hs + [l1, l2]: bpy.data.objects.remove(x)
+    print("HERO %s (tiling cloth): LOD %s, %.0f s" % (name, man["lod_triangles"], time.time() - t0))
+    return man, lod0, [], paths
+
+def curtain_hems(o):
+    """a turned hem at the bottom and a heading tape with its pleat hooks at the top (the panel's own width)"""
+    mn, mx = H.bounds([o]); cm = M("CurtainHem", tile_fabric, (0.86, 0.80, 0.66), (0.74, 0.68, 0.54), 48)
+    tape = M("HeadingTape", lambda n: H.plastic(n, (0.90, 0.89, 0.84), 0.7, 0.02, 0.1))
+    out = []
+    w = mx.x - mn.x
+    out.append(box("Hem", mn.x + 0.002, mx.x - 0.002, (mn.y + mx.y) / 2 - 0.006, (mn.y + mx.y) / 2 + 0.006, mn.z, mn.z + 0.045, cm, 0.003, 2))
+    out.append(box("Tape", mn.x + 0.002, mx.x - 0.002, (mn.y + mx.y) / 2 - 0.005, (mn.y + mx.y) / 2 + 0.005, mx.z - 0.08, mx.z - 0.002, tape, 0.002, 2))
+    for k in range(6):
+        x = mn.x + 0.02 + k * (w - 0.04) / 5
+        out.append(pipe("Hook", [[(x, (mn.y + mx.y) / 2, mx.z - 0.02), (x, (mn.y + mx.y) / 2 - 0.008, mx.z + 0.0), (x, (mn.y + mx.y) / 2 - 0.004, mx.z + 0.006)]], 0.0012, steel()))
+    return out
+
+def throw_fringe(o):
+    """the throw's tasselled ends: little twisted tassels along the two short edges of the old drape (its lowest rows)"""
+    mn, mx = H.bounds([o]); out = []
+    ym = M("ThrowYarn", fabric, (0.30, 0.34, 0.48), (0.18, 0.21, 0.32), 300.0, 0.4)
+    vs = [o.matrix_world @ v.co for v in o.data.vertices]
+    for side in (-1, 1):
+        edge = [v for v in vs if (v.y - mn.y < 0.02 if side < 0 else mx.y - v.y < 0.02)]
+        edge.sort(key=lambda v: v.x)
+        R = random.Random(9 + side)
+        strands = []
+        for v in edge[::max(1, len(edge) // 24)]:
+            d = Vector((0, side * 1.0, -0.4)).normalized()
+            strands.append([tuple(v), tuple(v + d * 0.02 + Vector((R.uniform(-0.004, 0.004), 0, 0))), tuple(v + d * 0.045 + Vector((R.uniform(-0.006, 0.006), 0, -0.01)))])
+        if strands:
+            t = H.tubes("Tassels", strands, 0.0025, res_u=2, bevel_res=1, tip=0.6); t.data.materials.append(ym); out.append(t)
+    return out
+
+TILE_PIECES = {
+    "SM_V3_CurtainPanel": (lambda: M("CurtainLinen", tile_fabric, (0.88, 0.82, 0.68), (0.70, 0.64, 0.50), 40, None, 0.5, 0.42), "xz", curtain_hems,
+                           "linen curtain: a seamless 300 uu slub weave (AntCloth tiles it), turned hem, heading tape with hooks"),
+    "SM_V31_Throw": (lambda: M("ThrowTartan", tile_fabric, (0.30, 0.34, 0.48), (0.20, 0.23, 0.34), 36,
+                               [(0.10, 0.18, (0.74, 0.58, 0.30), "uv"), (0.55, 0.58, (0.80, 0.78, 0.70), "uv"), (0.80, 0.86, (0.14, 0.16, 0.22), "uv")], 0.7, 0.35), "box", throw_fringe,
+                     "wool tartan throw: a seamless 300 uu check (AntCloth tiles it), tasselled ends"),
+}
+
 # ================================================================================================ the table of pieces
 def T(x, y, z): return Matrix.Translation((x, y, z))
 SOFA_HD = 1700 / S / 2
@@ -1498,12 +1881,23 @@ PIECES.update({
     "SM_V3_FloorCushion": (build_floor_cushion, 2048, groups([[0]], [(0, (0.0, 0.05, 0.07), (1, 0.4, 0.0), 0.01, 29, 0.0)]), "cloth", "floor cushion: honey corduroy, piped, carry handle", None),
 })
 
+PIECES.update({
+    "SM_L_CatFlap": (build_cat_flap, 1024, groups([[0]]), "plastic", "cat flap liner: white tunnel with rims both faces, hinge bosses, magnet strip, screw caps", None),
+    "SM_L_CatFlap_Leaf": (build_cat_flap_leaf, 1024, groups([[0]], [(0, (0.0, 0.02, -0.15), (0, 1, 0.4), 0.006, 30, 0.0)]), "plastic", "cat flap leaf: smoked pane in a white frame, weighted bar, claw scratches", None),
+    "SM_V3_ToyBox": (build_toy_box, 2048, groups([[1], [2], [3], [4], [5]]), "wood", "beech toy box: finger joints, painted panels with stencilled letters, rope handles", None),
+    "SM_V3_ToyBox_Lid": (build_toy_box_lid, 2048, groups([[0]], [(0, (0.05, -0.25, 0.015), (1, 0.15, 0.0), 0.005, 31, 0.01)]), "wood", "toy box lid: beech boards with breadboard ends, painted star, finger pull, hinge leaves", None),
+    "SM_V3_Hinge": (build_hinge, 512, groups([[0]]), "metal", "concealed cup hinge: cup, arm, mounting plate, cover cap, screws", None),
+})
+
 ORDER = list(PIECES.keys())
 # review only: pieces that hang under the ceiling or sit round their origin are lifted off the studio floor
-LIFT = {"SM_V3_Cornice": 0.45, "SM_V3_CurtainRod": 0.25, "SM_V3_RodBracket": 0.25, "SM_V3_CurtainRing": 0.15, "SM_V3_Outlet": 0.25, "SM_K_Switch_Toggle": 0.1}
+LIFT = {"SM_V3_Cornice": 0.45, "SM_V3_CurtainRod": 0.25, "SM_V3_RodBracket": 0.25, "SM_V3_CurtainRing": 0.15, "SM_V3_Outlet": 0.25, "SM_K_Switch_Toggle": 0.1, "SM_L_CatFlap_Leaf": 0.35, "SM_V3_Hinge": 0.1}
 _HW, _DP = 800 / S, 280 / S
 VIEW = {
+    "SM_L_CatFlap": ({"wall_y": 3.0}, {"wide": ((-0.75, -0.35, 0.35), (0.0, 0.0, 0.16), 35), "ant": ((-0.30, -0.05, 0.014), (0.0, 0.0, 0.12), 22)}),
+    "SM_L_CatFlap_Leaf": ({"wall_y": 3.0}, {"wide": ((-0.75, -0.35, 0.45), (0.0, 0.0, 0.21), 35), "ant": ((-0.30, -0.05, 0.014), (0.0, 0.0, 0.2), 22)}),
     "SM_L_DoorFrame": ({"wall_y": 3.0}, {"wide": ((1.3, -2.4, 1.3), (0.0, 0.0, 1.0), 35), "ant": ((0.25, -0.75, 0.014), (-0.1, 0.0, 0.45), 22)}),
+    "SM_V3_CurtainPanel": ({"wall_y": 0.05}, {"wide": ((1.2, -3.2, 1.5), (0.0, 0.0, 1.35), 30), "ant": ((0.12, -0.32, 0.014), (0.0, 0.0, 0.35), 22)}),
     "SM_L_Door_Leaf": ({"wall_y": 3.0}, {"wide": ((1.7, -2.4, 1.3), (0.42, 0.0, 1.0), 35), "ant": ((0.65, -0.75, 0.014), (0.35, 0.0, 0.45), 22)}),
 }
 
@@ -1525,13 +1919,17 @@ def main():
     os.makedirs(OUT, exist_ok=True); os.makedirs(REV, exist_ok=True)
     mpath = os.path.join(OUT, "hero_living_manifest.json")
     doc = json.load(open(mpath, encoding="utf-8")) if os.path.exists(mpath) else {"pieces": []}
-    want = [n for n in ORDER if ONLY is None or n in ONLY]
+    want = [n for n in ORDER + list(TILE_PIECES.keys()) if ONLY is None or n in ONLY]
     done = {}
     for name in want:
-        builder, tex, brk, cls, note, extras = PIECES[name]
         try:
-            parts, hs = builder()
-            man, lod0, pieces, paths = produce(name, parts, hs, brk, tex=tex, note=note, break_class=cls)
+            if name in TILE_PIECES:
+                mf, mode, ext, note = TILE_PIECES[name]; extras = None
+                man, lod0, pieces, paths = produce_tile(name, mf(), mode, ext, note)
+            else:
+                builder, tex, brk, cls, note, extras = PIECES[name]
+                parts, hs = builder()
+                man, lod0, pieces, paths = produce(name, parts, hs, brk, tex=tex, note=note, break_class=cls)
             done[name] = (lod0, pieces, paths)
             save_manifest(mpath, man)
             # its look in the review = the baked set

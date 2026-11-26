@@ -1,0 +1,56 @@
+{
+ "name": "SM_L_CatFlap",
+ "file": "SM_L_CatFlap.fbx",
+ "set": "hero_living",
+ "break_class": "plastic",
+ "textures": {
+  "C": "SM_L_CatFlap/tex/T_SM_L_CatFlap_C.png",
+  "N": "SM_L_CatFlap/tex/T_SM_L_CatFlap_N.png",
+  "R": "SM_L_CatFlap/tex/T_SM_L_CatFlap_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_L_CatFlap_Brk0",
+   "file": "SM_L_CatFlap_Brk0.fbx",
+   "triangles": 2528,
+   "bbox_min_m": [
+    -0.0589,
+    -0.1432,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.0589,
+    0.1432,
+    0.3179
+   ],
+   "materials": [
+    "Hero_SM_L_CatFlap",
+    "Break"
+   ]
+  }
+ ],
+ "note": "cat flap liner: white tunnel with rims both faces, hinge bosses, magnet strip, screw caps",
+ "kept_slots": [],
+ "triangles": 2528,
+ "bbox_min_m": [
+  -0.0589,
+  -0.1432,
+  0.0
+ ],
+ "bbox_max_m": [
+  0.0589,
+  0.1432,
+  0.3179
+ ],
+ "materials": [
+  "Hero_SM_L_CatFlap"
+ ],
+ "lod_triangles": [
+  2528,
+  884,
+  302
+ ],
+ "ucx": 4
+}

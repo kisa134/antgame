@@ -14,14 +14,14 @@
   {
    "name": "SM_L_CoffeeTable_Brk0",
    "file": "SM_L_CoffeeTable_Brk0.fbx",
-   "triangles": 966,
+   "triangles": 1002,
    "bbox_min_m": [
-    -0.6579,
+    -0.6583,
     0.0129,
     0.4737
    ],
    "bbox_max_m": [
-    0.6579,
+    0.6581,
     0.4211,
     0.5162
    ],
@@ -33,7 +33,7 @@
   {
    "name": "SM_L_CoffeeTable_Brk1",
    "file": "SM_L_CoffeeTable_Brk1.fbx",
-   "triangles": 812,
+   "triangles": 1180,
    "bbox_min_m": [
     -0.6383,
     -0.4014,
@@ -109,14 +109,14 @@
   {
    "name": "SM_L_CoffeeTable_Brk5",
    "file": "SM_L_CoffeeTable_Brk5.fbx",
-   "triangles": 726,
+   "triangles": 798,
    "bbox_min_m": [
-    -0.6579,
+    -0.6583,
     -0.4211,
     0.4737
    ],
    "bbox_max_m": [
-    0.6579,
+    0.6581,
     0.0779,
     0.5162
    ],
@@ -128,14 +128,14 @@
  ],
  "note": "coffee table: solid oak top and shelf, turned walnut legs, aprons with corner blocks, coffee rings",
  "kept_slots": [],
- "triangles": 2920,
+ "triangles": 3396,
  "bbox_min_m": [
-  -0.6579,
+  -0.6583,
   -0.4211,
   0.0
  ],
  "bbox_max_m": [
-  0.6579,
+  0.6581,
   0.4211,
   0.5162
  ],
@@ -143,9 +143,9 @@
   "Hero_SM_L_CoffeeTable"
  ],
  "lod_triangles": [
-  2920,
-  1022,
-  349
+  3396,
+  1188,
+  407
  ],
  "ucx": 6
 }

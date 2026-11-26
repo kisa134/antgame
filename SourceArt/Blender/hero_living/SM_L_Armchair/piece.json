@@ -14,7 +14,7 @@
   {
    "name": "SM_L_Armchair_Brk0",
    "file": "SM_L_Armchair_Brk0.fbx",
-   "triangles": 2770,
+   "triangles": 2732,
    "bbox_min_m": [
     -0.5589,
     -0.4473,
@@ -23,7 +23,7 @@
    "bbox_max_m": [
     0.5589,
     0.4274,
-    0.3421
+    0.6337
    ],
    "materials": [
     "Hero_SM_L_Armchair",
@@ -33,14 +33,14 @@
   {
    "name": "SM_L_Armchair_Brk1",
    "file": "SM_L_Armchair_Brk1.fbx",
-   "triangles": 1518,
+   "triangles": 1754,
    "bbox_min_m": [
     -0.583,
     -0.4536,
     0.056
    ],
    "bbox_max_m": [
-    -0.4697,
+    0.5274,
     0.4513,
     0.6356
    ],
@@ -52,9 +52,9 @@
   {
    "name": "SM_L_Armchair_Brk2",
    "file": "SM_L_Armchair_Brk2.fbx",
-   "triangles": 1516,
+   "triangles": 1750,
    "bbox_min_m": [
-    0.4697,
+    -0.5274,
     -0.4536,
     0.056
    ],
@@ -71,10 +71,10 @@
   {
    "name": "SM_L_Armchair_Brk3",
    "file": "SM_L_Armchair_Brk3.fbx",
-   "triangles": 1496,
+   "triangles": 1398,
    "bbox_min_m": [
     -0.5819,
-    0.3386,
+    -0.4389,
     0.057
    ],
    "bbox_max_m": [
@@ -90,16 +90,16 @@
   {
    "name": "SM_L_Armchair_Brk4",
    "file": "SM_L_Armchair_Brk4.fbx",
-   "triangles": 4054,
+   "triangles": 3558,
    "bbox_min_m": [
-    -0.4724,
+    -0.5274,
     -0.4461,
     0.3193
    ],
    "bbox_max_m": [
-    0.4724,
-    0.3449,
-    0.4319
+    0.5274,
+    0.4231,
+    0.6337
    ],
    "materials": [
     "Hero_SM_L_Armchair",
@@ -109,15 +109,15 @@
   {
    "name": "SM_L_Armchair_Brk5",
    "file": "SM_L_Armchair_Brk5.fbx",
-   "triangles": 2856,
+   "triangles": 3018,
    "bbox_min_m": [
-    -0.4499,
-    0.2859,
+    -0.5274,
+    -0.4389,
     0.3948
    ],
    "bbox_max_m": [
-    0.4499,
-    0.3583,
+    0.5274,
+    0.4231,
     0.9362
    ],
    "materials": [

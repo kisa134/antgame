@@ -1,0 +1,37 @@
+{
+ "name": "SM_V3_CurtainPanel",
+ "file": "SM_V3_CurtainPanel.fbx",
+ "set": "hero_living",
+ "break_class": "cloth",
+ "tiling": true,
+ "textures": {
+  "C": "SM_V3_CurtainPanel/tex/T_SM_V3_CurtainPanel_C.png",
+  "N": "SM_V3_CurtainPanel/tex/T_SM_V3_CurtainPanel_N.png",
+  "R": "SM_V3_CurtainPanel/tex/T_SM_V3_CurtainPanel_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [],
+ "note": "linen curtain: a seamless 300 uu slub weave (AntCloth tiles it), turned hem, heading tape with hooks",
+ "kept_slots": [],
+ "triangles": 4800,
+ "bbox_min_m": [
+  -0.1474,
+  -0.0421,
+  0.0
+ ],
+ "bbox_max_m": [
+  0.1474,
+  0.0421,
+  2.7593
+ ],
+ "materials": [
+  "Hero_SM_V3_CurtainPanel"
+ ],
+ "lod_triangles": [
+  4800,
+  1920,
+  719
+ ],
+ "ucx": 1
+}

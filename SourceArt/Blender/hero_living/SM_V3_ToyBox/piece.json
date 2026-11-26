@@ -1,0 +1,132 @@
+{
+ "name": "SM_V3_ToyBox",
+ "file": "SM_V3_ToyBox.fbx",
+ "set": "hero_living",
+ "break_class": "wood",
+ "textures": {
+  "C": "SM_V3_ToyBox/tex/T_SM_V3_ToyBox_C.png",
+  "N": "SM_V3_ToyBox/tex/T_SM_V3_ToyBox_N.png",
+  "R": "SM_V3_ToyBox/tex/T_SM_V3_ToyBox_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_V3_ToyBox_Brk0",
+   "file": "SM_V3_ToyBox_Brk0.fbx",
+   "triangles": 528,
+   "bbox_min_m": [
+    -0.4073,
+    -0.2381,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.353,
+    0.2381,
+    0.4105
+   ],
+   "materials": [
+    "Hero_SM_V3_ToyBox",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_V3_ToyBox_Brk1",
+   "file": "SM_V3_ToyBox_Brk1.fbx",
+   "triangles": 528,
+   "bbox_min_m": [
+    -0.353,
+    -0.2381,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.4073,
+    0.2381,
+    0.4105
+   ],
+   "materials": [
+    "Hero_SM_V3_ToyBox",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_V3_ToyBox_Brk2",
+   "file": "SM_V3_ToyBox_Brk2.fbx",
+   "triangles": 556,
+   "bbox_min_m": [
+    -0.3535,
+    -0.2397,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.3535,
+    0.06,
+    0.4105
+   ],
+   "materials": [
+    "Hero_SM_V3_ToyBox",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_V3_ToyBox_Brk3",
+   "file": "SM_V3_ToyBox_Brk3.fbx",
+   "triangles": 188,
+   "bbox_min_m": [
+    -0.3535,
+    -0.06,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.3535,
+    0.2381,
+    0.4105
+   ],
+   "materials": [
+    "Hero_SM_V3_ToyBox",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_V3_ToyBox_Brk4",
+   "file": "SM_V3_ToyBox_Brk4.fbx",
+   "triangles": 284,
+   "bbox_min_m": [
+    -0.3535,
+    -0.2221,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.3535,
+    0.2221,
+    0.3205
+   ],
+   "materials": [
+    "Hero_SM_V3_ToyBox",
+    "Break"
+   ]
+  }
+ ],
+ "note": "beech toy box: finger joints, painted panels with stencilled letters, rope handles",
+ "kept_slots": [],
+ "triangles": 2084,
+ "bbox_min_m": [
+  -0.4073,
+  -0.2397,
+  0.0
+ ],
+ "bbox_max_m": [
+  0.4073,
+  0.2381,
+  0.4105
+ ],
+ "materials": [
+  "Hero_SM_V3_ToyBox"
+ ],
+ "lod_triangles": [
+  2084,
+  728,
+  250
+ ],
+ "ucx": 5
+}
