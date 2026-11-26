@@ -1411,7 +1411,8 @@ void AAntMatterNet::WriteRecords()
 		const float Cover = B.bBurning ? FMath::Clamp(B.FireR / (Size * 1.15f), 0.f, 1.f) : 0.f;
 		const float Vals[AntState::Count] =
 		{
-			B.Wet, B.Char, 0.f, B.Dmg, FMath::Clamp((B.T - 100.f) / 700.f, 0.f, 1.f), Cover >= 0.95f ? B.Flame : 0.f, B.Frost, B.Live > 0.f ? 1.f : B.Static,
+			// only metal (conductors) glows red/orange as a whole; wood, paper, cloth show their fire through the burn layer
+			B.Wet, B.Char, 0.f, B.Dmg, FMath::Clamp((B.T - 100.f) / 700.f, 0.f, B.M && B.M->Conduct >= 0.5f ? 1.f : 0.45f), Cover >= 0.95f ? B.Flame : 0.f, B.Frost, B.Live > 0.f ? 1.f : B.Static,
 			B.Soak[0], B.Soak[1], B.Soak[2], B.Soak[3], 0.f
 		};
 		for (int32 k = 0; k < AntState::Count; ++k) { R.S[k] = Q8(Vals[k]); }
@@ -1568,7 +1569,7 @@ void AAntMatterNet::MulticastFlash_Implementation(FVector_NetQuantize At, float 
 		UPointLightComponent* L = Lights.Last();
 		L->SetWorldLocation(FVector(At) + FVector(0.f, 0.f, 60.f));
 		L->SetAttenuationRadius(Radius * 3.f);
-		L->SetIntensity(Kind == 1 ? 3000.f : 1200.f);
+		L->SetIntensity(Kind == 1 ? 1200.f : 500.f);
 		L->SetVisibility(true);
 		FlashUntil = LocalClock + (Kind == 1 ? 0.5f : 0.3f);
 	}
@@ -1817,8 +1818,8 @@ void AAntMatterNet::DrawFires(float Dt)
 		const FLit& F = Lit[i];
 		const float Fl = 0.75f + 0.25f * FMath::Sin(LocalClock * 23.f + i * 1.7f) * FMath::Sin(LocalClock * 7.3f + i);
 		L->SetWorldLocation(F.At + FVector(0.f, 0.f, 30.f + F.Size * 0.4f));
-		L->SetAttenuationRadius(300.f + F.Size * 3.f);
-		L->SetIntensity((30.f + F.Size * 2.f) * Fl);   // candelas: a small kitchen fire, not a floodlight
+		L->SetAttenuationRadius(FMath::Min(300.f + F.Size * 2.f, 1400.f));
+		L->SetIntensity(FMath::Min(20.f + F.Size * 0.6f, 260.f) * Fl);   // candelas: a small kitchen fire, not a floodlight
 		if (!L->IsVisible()) { L->SetVisibility(true); }
 	}
 	if (Lights.Num() > 0 && Lights.Last() && Lights.Last()->IsVisible() && LocalClock > FlashUntil) { Lights.Last()->SetVisibility(false); }
@@ -2266,7 +2267,22 @@ bool DevCommand(AAntKitchenGameMode* GM, const TArray<FString>& A)
 				TArray<FString> Cmd = { TEXT("matter"), TEXT("thing"), TEXT("napkin"), FString::SanitizeFloat(Nap.X), FString::SanitizeFloat(Nap.Y), FString::SanitizeFloat(Nap.Z), TEXT("12") };
 				DevCommand(N->GetWorld()->GetAuthGameMode<AAntKitchenGameMode>(), Cmd);
 				UE_LOG(LogTemp, Display, TEXT("ANTMATTER test spark: pot %s box %s, napkin at %s"), *Pot->GetName(), *Ctr.ToCompactString(), *Nap.ToCompactString());
-				Cam(Ctr + FVector(250.f, -1700.f, 700.f), Ctr + FVector(200.f, 0.f, -120.f), 45.f);
+				{
+					// the first free view of pot + napkin (the counter and the hood block some of them)
+					const FVector To = Ctr + FVector(200.f, 0.f, -120.f);
+					const FVector Offs[] = { FVector(250.f, -1700.f, 700.f), FVector(300.f, -1100.f, 900.f), FVector(900.f, -900.f, 700.f),
+						FVector(-700.f, -900.f, 700.f), FVector(200.f, -800.f, 1300.f), FVector(1100.f, -400.f, 500.f), FVector(200.f, -600.f, 400.f) };
+					FVector Pick = To + Offs[0];
+					FCollisionQueryParams Q(SCENE_QUERY_STAT(AntMatterCam), false);
+					for (TActorIterator<APawn> It(N->GetWorld()); It; ++It) { Q.AddIgnoredActor(*It); }
+					for (const FVector& O : Offs)
+					{
+						FHitResult H;
+						const FVector From = To + O;
+						if (!N->GetWorld()->LineTraceSingleByChannel(H, To + O.GetSafeNormal() * 160.f, From, ECC_Visibility, Q)) { Pick = From; break; }
+					}
+					Cam(Pick, To, 45.f);
+				}
 				N->Later(1.f, [Shot]() { Shot(TEXT("spark_0_pot_napkin")); });
 				N->Later(1.5f, [WN, Ctr]() { if (AAntMatterNet* N2 = WN.Get()) { N2->Electrify(Ctr, 40.f, 5.f, TEXT("тест: кастрюля под током")); } });
 				N->Later(2.3f, [Shot]() { Shot(TEXT("spark_1_live_pot")); });
