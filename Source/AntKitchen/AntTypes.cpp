@@ -7,6 +7,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "AntGameState.h"
 #include "Map4Look.h"
+#include "AntFood.h"
 #include "Engine/World.h"
 #include "Engine/CollisionProfile.h"
 #include "Components/StaticMeshComponent.h"
@@ -206,6 +207,11 @@ static FAntFoodDef MakeFood(const TCHAR* Name, int32 Value, int32 Weight, const 
 
 FAntFoodDef RollFood(int32 Tier, FRandomStream& R)
 {
+	FAntFoodDef New;
+	if (AntFood::RollNew(Tier, R, New))
+	{
+		return New;   // -AntFoodV2 only: the new foods (sponge, gum, sausage, grape, jam, butter, ice, wafer, watermelon...) join the rolls
+	}
 	switch (FMath::Clamp(Tier, 0, 3))
 	{
 	case 0:
@@ -344,7 +350,14 @@ const FPart& Get(const TCHAR* Name)
 	const FString Short = N.StartsWith(TEXT("SM_")) ? N.Mid(3) : N;
 	FString MeshName = N, LookName;
 	if (N.Split(TEXT("@"), &MeshName, &LookName)) {}
-	if (N.StartsWith(TEXT("SM_M4_")))
+	if (N.StartsWith(TEXT("SM_FoodV2_")))
+	{
+		// -AntFoodV2: the Blender food (Tools/food/food_v2.py), /Game/FoodV2/<Name>/<Name> with MI_FoodV2_<Id>
+		const FString Id = N.Mid(10);
+		P.Mesh = LoadObject<UStaticMesh>(nullptr, *FString::Printf(TEXT("/Game/FoodV2/%s/%s.%s"), *N, *N, *N), nullptr, LOAD_NoWarn | LOAD_Quiet);
+		P.Material = LoadObject<UMaterialInterface>(nullptr, *FString::Printf(TEXT("/Game/FoodV2/%s/MI_FoodV2_%s.MI_FoodV2_%s"), *N, *Id, *Id), nullptr, LOAD_NoWarn | LOAD_Quiet);
+	}
+	else if (N.StartsWith(TEXT("SM_M4_")))
 	{
 		// map v4: a generated prop (/Game/Map4/Props) with its own material, or "SM_M4_<shape>@<look>": a base shape in a named look
 		P.Mesh = Map4Look::Prop(*MeshName);
@@ -520,6 +533,18 @@ UStaticMeshComponent* AddArt(AActor* Owner, USceneComponent* Parent, const FPart
 
 const TCHAR* FoodArtName(const FString& LootName)
 {
+	if (AntFood::V2())
+	{
+		// -AntFoodV2: the new Blender model of the food (AntFood's table), when it has been imported
+		static TArray<FString> Names;
+		const TConstArrayView<AntFood::FFood> T = AntFood::Table();
+		if (Names.Num() != T.Num()) { Names.Reset(); for (const AntFood::FFood& F : T) { Names.Add(FString::Printf(TEXT("SM_FoodV2_%s"), F.Id)); } }
+		if (const AntFood::FFood* F = AntFood::Find(LootName); F && F->bNew)   // (an old food keeps its old model)
+		{
+			const FString& N = Names[(int32)(F - T.GetData())];
+			if (Get(*N).IsValid()) { return *N; }
+		}
+	}
 	if (Map4Look::Enabled())
 	{
 		// map v4: every food has a model (generated props, Meshy food, or a base shape in a real food look)

@@ -408,13 +408,16 @@ void AAntReactNet::Short(const FVector& Where, const TCHAR* Why, AAntCharacter* 
 	// the live water: every wet ant near the short, and every ant in the liquid that reaches it
 	int32 N = 0;
 	const UAntFluidWorld* Fluid = UAntFluidWorld::Active(this);
+	// (water fix) the ants in the water joined to the short, not every ant over any wet cell (an ant on a shelf over the wet worktop)
+	FAntWaterBody Body;
+	const bool bBody = Fluid && Fluid->WaterBodyAt(Where + FVector(0.f, 0.f, 10.f), 0.5f, Body);
 	for (TActorIterator<AAntCharacter> It(W); It; ++It)
 	{
 		AAntCharacter* A = *It;
 		if (!A || A->bDead || A->Creature != 0) { continue; }
 		const FVector P = A->GetActorLocation();
 		const float D = FVector::Dist(P, Where);
-		const bool bInWater = Fluid && Fluid->DepthAt(P) > 0.5f && D < 4500.f;
+		const bool bInWater = bBody && D < 4500.f && Fluid->InWaterBody(Body, FBox(P - FVector(20.f), P + FVector(20.f)));
 		if (D < 260.f || (A->HasStatus(AntStatus::Wet) && D < 2600.f) || bInWater)
 		{
 			Zap(A, D < 260.f ? 35.f : 25.f, bInWater ? TEXT("поджарился током в луже") : TEXT("получил разряд током"));
@@ -489,7 +492,7 @@ void AAntReactNet::TickPower(float Dt)
 	if (!Strip) { return; }
 	const FVector P = Strip->GetActorLocation();
 	float Depth = 0.f;
-	if (const UAntFluidWorld* Fluid = UAntFluidWorld::Active(this)) { Depth = Fluid->DepthAt(P + FVector(0.f, 0.f, 20.f)); }
+	if (const UAntFluidWorld* Fluid = UAntFluidWorld::Active(this)) { Depth = Fluid->DepthIn(P + FVector(0.f, 0.f, 20.f), 15.f); }   // (in it, not under it)
 	const bool bSlick = AKitchenSlick::At(W, P, 60.f) != nullptr;
 	if (Depth > 0.6f || bSlick)
 	{
@@ -912,7 +915,7 @@ void AAntReactNet::TickWet(float Dt)
 		const FVector P = L->GetActorLocation();
 		const FAntMatProps* M = LootMat(L);
 		if (!M || (!M->bDissolves && M->Absorb <= 1.f)) { continue; }
-		if (Fluid->DepthAt(P) < 2.f) { LootWet.Remove(L); continue; }
+		if (Fluid->DepthIn(P, 80.f) < 2.f) { LootWet.Remove(L); continue; }   // (water fix: food on a shelf over a wet worktop is dry)
 		if (!M) { continue; }
 		float& T = LootWet.FindOrAdd(L);
 		T += Dt;

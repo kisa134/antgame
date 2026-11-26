@@ -34,6 +34,10 @@
 #include "Misc/Parse.h"
 #include "Net/UnrealNetwork.h"
 #include "AntFighter.h"
+#include "AntMovementComponent.h"
+#include "GameFramework/Character.h"
+#include "Materials/MaterialInterface.h"
+#include "UObject/UObjectIterator.h"
 
 float UAntInsideCamMod::Shake = 0.f;
 float UAntInsideCamMod::Blur = 0.f;
@@ -953,6 +957,75 @@ void AAntInsideNet::FlyingSlipper(const FVector& From, const FVector& Vel)
 	Flying.Add({ C, Vel, 0.f });
 }
 
+// ---- dev probe (-AntLocalDo "t:probe tag"): where the local ant and its camera are, and what is drawn at its feet (KAN-39) ----
+
+namespace
+{
+	FString DescribeComp(const UPrimitiveComponent* C)
+	{
+		if (!C) { return TEXT("-"); }
+		const UStaticMeshComponent* SM = Cast<UStaticMeshComponent>(C);
+		UMaterialInterface* M = C->GetNumMaterials() > 0 ? C->GetMaterial(0) : nullptr;
+		const UMaterialInterface* MB = M ? M->GetBaseMaterial() : nullptr;
+		return FString::Printf(TEXT("%s.%s [%s] mesh %s mat %s (%s) type %d"), *GetNameSafe(C->GetOwner()), *C->GetName(), *C->GetClass()->GetName(),
+			SM && SM->GetStaticMesh() ? *SM->GetStaticMesh()->GetName() : TEXT("-"), *GetNameSafe(M), *GetNameSafe(MB), (int32)C->GetCollisionObjectType());
+	}
+}
+
+void AAntInsideNet::DevProbe(UWorld* W, const FString& Tag)
+{
+	APlayerController* PC = W ? W->GetFirstPlayerController() : nullptr;
+	ACharacter* Ch = PC ? Cast<ACharacter>(PC->GetPawn()) : nullptr;
+	const TCHAR* Mode = W->GetNetMode() == NM_Client ? TEXT("client") : TEXT("host");
+	if (!Ch || !PC->PlayerCameraManager)
+	{
+		UE_LOG(LogTemp, Display, TEXT("ANTPROBE %s (%s): no pawn"), *Tag, Mode);
+		return;
+	}
+	const UAntMovementComponent* MC = Cast<UAntMovementComponent>(Ch->GetCharacterMovement());
+	const FVector P = Ch->GetActorLocation();
+	const FVector CL = PC->PlayerCameraManager->GetCameraLocation();
+	const FRotator CR = PC->PlayerCameraManager->GetCameraRotation();
+	UE_LOG(LogTemp, Display, TEXT("ANTPROBE %s (%s): %s role %d at %s vel %.0f mode %d/%d normal %s base %s | camera %s rot %s target %s"), *Tag, Mode, *Ch->GetName(), (int32)Ch->GetLocalRole(),
+		*P.ToCompactString(), Ch->GetVelocity().Size(), MC ? (int32)MC->MovementMode : -1, MC ? (int32)MC->CustomMovementMode : -1, MC ? *MC->GetSurfaceNormal().ToCompactString() : TEXT("-"),
+		*GetNameSafe(Ch->GetMovementBase()), *CL.ToCompactString(), *CR.ToCompactString(), *GetNameSafe(PC->GetViewTarget()));
+	FCollisionQueryParams Q(SCENE_QUERY_STAT(AntProbe), true, Ch);
+	FCollisionObjectQueryParams All(FCollisionObjectQueryParams::AllObjects);
+	auto Ray = [&](const TCHAR* What, const FVector& A, const FVector& B)
+	{
+		FHitResult H;
+		if (W->LineTraceSingleByObjectType(H, A, B, All, Q))
+		{
+			UE_LOG(LogTemp, Display, TEXT("ANTPROBE %s   %s: hit z %.1f (%.1f away) back %d %s"), *Tag, What, H.ImpactPoint.Z, H.Distance, H.bStartPenetrating ? 1 : 0, *DescribeComp(H.GetComponent()));
+		}
+		else
+		{
+			UE_LOG(LogTemp, Display, TEXT("ANTPROBE %s   %s: nothing"), *Tag, What);
+		}
+	};
+	Ray(TEXT("ant down"), P + FVector(0, 0, 300), P - FVector(0, 0, 300));
+	Ray(TEXT("cam down"), CL, CL - FVector(0, 0, 2000));
+	Ray(TEXT("cam up"), CL, CL + FVector(0, 0, 2000));
+	Ray(TEXT("cam to ant"), CL, P);
+	Ray(TEXT("cam ahead"), CL, CL + CR.Vector() * 3000.f);
+	// what is drawn on the floor just in front of the ant (visible primitives whose bounds hold that spot)
+	FVector Fwd = CR.Vector(); Fwd.Z = 0.f; Fwd = Fwd.GetSafeNormal();
+	int32 Count = 0;
+	for (const float Ahead : { 30.f, 120.f })
+	{
+		const FVector Spot = P + Fwd * Ahead;
+		for (TObjectIterator<UPrimitiveComponent> It; It; ++It)
+		{
+			const UPrimitiveComponent* C = *It;
+			if (!C || C->GetWorld() != W || !C->IsRegistered() || !C->IsVisible() || C->bHiddenInGame || (C->GetOwner() && C->GetOwner()->IsHidden())) { continue; }
+			const FBox B = C->Bounds.GetBox();
+			if (!B.ExpandBy(4.f).IsInside(Spot)) { continue; }
+			if (++Count > 40) { break; }
+			UE_LOG(LogTemp, Display, TEXT("ANTPROBE %s   drawn at +%.0f: %s box z %.1f..%.1f size %s"), *Tag, Ahead, *DescribeComp(C), B.Min.Z, B.Max.Z, *B.GetSize().ToCompactString());
+		}
+	}
+}
+
 // ---- the local view: the ants inside are hidden; the one we play looks at its little dark room -----------------------------
 
 void AAntInsideNet::LocalView(float Dt)
@@ -994,6 +1067,7 @@ void AAntInsideNet::LocalView(float Dt)
 			}
 			else if (A[0] == TEXT("cam")) { AntCloth::DevCam(W, FVector(Nm(1), Nm(2), Nm(3)), FVector(Nm(4), Nm(5), Nm(6)), A.IsValidIndex(7) ? Nm(7) : 70.f); }
 			else if (A[0] == TEXT("camoff")) { AntCloth::DevCam(W, FVector::ZeroVector, FVector::ZeroVector, 0.f); }
+			else if (A[0] == TEXT("probe")) { DevProbe(W, A.IsValidIndex(1) ? A[1] : FString(TEXT("-"))); }
 			else if (A[0] == TEXT("clothlog"))
 			{
 				for (TActorIterator<AAntCloth> It(W); It; ++It) { UE_LOG(LogTemp, Display, TEXT("ANTCLOTH local (%s) %s at %s"), W->GetNetMode() == NM_Client ? TEXT("client") : TEXT("host"), *It->Describe(), *It->Bounds().GetCenter().ToCompactString()); }

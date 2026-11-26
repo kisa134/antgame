@@ -4,6 +4,7 @@
 #include "GameFramework/Actor.h"
 #include "AntTypes.h"
 #include "AntCarry.h"
+#include "AntFood.h"
 #include "KitchenLoot.generated.h"
 
 class UStaticMeshComponent;
@@ -136,7 +137,13 @@ public:
 	UFUNCTION()
 	void OnRep_Visual();
 
+	/** What the food is made of and what happened to it (AntFood.h): kind, soaked, toasted, burnt, frozen, dirty, spoiled, melted, bitten. */
+	UPROPERTY(Replicated) FAntFoodNet FoodNet;
+	/** Server: AntFood's own per-piece state. */
+	TSharedPtr<struct FAntFoodServer> FoodSrv;
+
 private:
+	friend struct FAntFoodAccess;
 	void RefreshVisual();
 	UFUNCTION() void OnBodyHit(UPrimitiveComponent* HitComp, AActor* Other, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 	AKitchenLoot* SpawnPiece(const FString& Name, int32 PieceValue, int32 PieceWeight, const FVector& Where, const FVector& Fling, int32 ShardIndex = -1, int32 ShardCount = 0, int32 Seed = 0);
@@ -172,6 +179,7 @@ private:
 	FVector LastVelocity = FVector::ZeroVector;
 	float BreakableAfter = 0.f;
 	float NextThud = 0.f;
+	float NextFoodHit = 0.f;
 	float NextCrash = 0.f;
 	float LastKickTime = -100.f;   // kicked by a stomp / thrown by the Human: what comes down then is his own doing
 	bool bShatterPending = false;

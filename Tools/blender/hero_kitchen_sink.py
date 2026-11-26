@@ -146,7 +146,10 @@ def wirerack(M):
     for sx in (-1, 1):
         for sy in (-1, 1):
             parts.append((tube("Leg", [(sx * (W - 12), sy * (D - 12), 14), (sx * (W - 12), sy * (D - 12), Hh + 6)], 9, M["chrome"], 2, 5), 0))
-            parts.append((lathe("Foot", [(0, 0), (16, 0), (17, 4), (14, 16), (10, 18), (0, 18)], M["rubber"], 20, 0, (sx * (W - 12), sy * (D - 12), 0)), 0))   # (no subdivision: the foot stands on the floor)
+            # (pass 2: a closed cylinder, not a lathe: the lathe's merged axis vertices made the feet drop out in the import and
+            #  the rack stood 13 uu up on its legs' ends)
+            ft = H.cyl("Foot", 16.5 * K, 18 * K, u(sx * (W - 12), sy * (D - 12), 9), seg=20); ft.data.materials.append(M["rubber"])
+            parts.append((ft, 0))
     for sy in (-1, 1):
         parts.append((tube("Rail", [(-W + 12, sy * (D - 12), Hh + 6), (W - 12, sy * (D - 12), Hh + 6)], 7, M["chrome"], 2, 5), 0))
         parts.append((tube("Low", [(-W + 12, sy * (D - 12), 150), (W - 12, sy * (D - 12), 150)], 6, M["chrome"], 2, 5), 0))
