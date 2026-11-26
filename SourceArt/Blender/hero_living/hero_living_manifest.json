@@ -153,6 +153,11 @@
    ],
    "note": "kitchen chair: green seat and rails, turned walnut legs, stretchers, spindles, corner blocks",
    "kept_slots": [],
+   "textures_owner": {
+    "C": "SM_K_Chair/tex_owner/T_SM_K_Chair_C.png",
+    "N": "SM_K_Chair/tex_owner/T_SM_K_Chair_N.png",
+    "R": "SM_K_Chair/tex_owner/T_SM_K_Chair_R.png"
+   },
    "triangles": 5108,
    "bbox_min_m": [
     -0.2368,
@@ -173,119 +178,6 @@
     1040
    ],
    "ucx": 6
-  },
-  {
-   "name": "SM_K_HighChair",
-   "file": "SM_K_HighChair.fbx",
-   "set": "hero_living",
-   "break_class": "wood",
-   "textures": {
-    "C": "SM_K_HighChair/tex/T_SM_K_HighChair_C.png",
-    "N": "SM_K_HighChair/tex/T_SM_K_HighChair_N.png",
-    "R": "SM_K_HighChair/tex/T_SM_K_HighChair_R.png"
-   },
-   "collision_lod": 0,
-   "movers": [],
-   "breaks": [
-    {
-     "name": "SM_K_HighChair_Brk0",
-     "file": "SM_K_HighChair_Brk0.fbx",
-     "triangles": 3668,
-     "bbox_min_m": [
-      -0.1895,
-      -0.1899,
-      0.7579
-     ],
-     "bbox_max_m": [
-      0.1895,
-      0.1895,
-      0.9158
-     ],
-     "materials": [
-      "Hero_SM_K_HighChair",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_HighChair_Brk1",
-     "file": "SM_K_HighChair_Brk1.fbx",
-     "triangles": 780,
-     "bbox_min_m": [
-      -0.2458,
-      -0.2474,
-      -0.0018
-     ],
-     "bbox_max_m": [
-      0.2458,
-      0.2463,
-      0.7652
-     ],
-     "materials": [
-      "Hero_SM_K_HighChair",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_HighChair_Brk2",
-     "file": "SM_K_HighChair_Brk2.fbx",
-     "triangles": 5080,
-     "bbox_min_m": [
-      -0.1895,
-      0.1421,
-      0.7895
-     ],
-     "bbox_max_m": [
-      0.1895,
-      0.2053,
-      1.4211
-     ],
-     "materials": [
-      "Hero_SM_K_HighChair",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_HighChair_Brk3",
-     "file": "SM_K_HighChair_Brk3.fbx",
-     "triangles": 4972,
-     "bbox_min_m": [
-      -0.2316,
-      -0.3684,
-      0.9
-     ],
-     "bbox_max_m": [
-      0.2316,
-      -0.1789,
-      0.9421
-     ],
-     "materials": [
-      "Hero_SM_K_HighChair",
-      "Break"
-     ]
-    }
-   ],
-   "note": "high chair: beech, splayed legs, teal pads, footrest, white tray, strap",
-   "kept_slots": [],
-   "triangles": 14500,
-   "bbox_min_m": [
-    -0.2458,
-    -0.3684,
-    -0.0018
-   ],
-   "bbox_max_m": [
-    0.2458,
-    0.2463,
-    1.4211
-   ],
-   "materials": [
-    "Hero_SM_K_HighChair"
-   ],
-   "lod_triangles": [
-    14500,
-    5074,
-    1740
-   ],
-   "ucx": 7
   },
   {
    "name": "SM_K_Rug",
@@ -3292,6 +3184,43 @@
    "ucx": 1
   },
   {
+   "name": "SM_V31_Throw",
+   "file": "SM_V31_Throw.fbx",
+   "set": "hero_living",
+   "break_class": "cloth",
+   "tiling": true,
+   "textures": {
+    "C": "SM_V31_Throw/tex/T_SM_V31_Throw_C.png",
+    "N": "SM_V31_Throw/tex/T_SM_V31_Throw_N.png",
+    "R": "SM_V31_Throw/tex/T_SM_V31_Throw_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [],
+   "note": "wool tartan throw: a seamless 300 uu check (AntCloth tiles it), tasselled ends",
+   "kept_slots": [],
+   "triangles": 7676,
+   "bbox_min_m": [
+    -0.3713,
+    -0.6138,
+    -0.0278
+   ],
+   "bbox_max_m": [
+    0.3743,
+    0.6138,
+    0.5196
+   ],
+   "materials": [
+    "Hero_SM_V31_Throw"
+   ],
+   "lod_triangles": [
+    7676,
+    3069,
+    1151
+   ],
+   "ucx": 1
+  },
+  {
    "name": "SM_V3_Cornice",
    "file": "SM_V3_Cornice.fbx",
    "set": "hero_living",
@@ -4156,41 +4085,122 @@
    "ucx": 1
   },
   {
-   "name": "SM_V31_Throw",
-   "file": "SM_V31_Throw.fbx",
+   "name": "SM_K_HighChair",
+   "file": "SM_K_HighChair.fbx",
    "set": "hero_living",
-   "break_class": "cloth",
-   "tiling": true,
+   "break_class": "wood",
    "textures": {
-    "C": "SM_V31_Throw/tex/T_SM_V31_Throw_C.png",
-    "N": "SM_V31_Throw/tex/T_SM_V31_Throw_N.png",
-    "R": "SM_V31_Throw/tex/T_SM_V31_Throw_R.png"
+    "C": "SM_K_HighChair/tex/T_SM_K_HighChair_C.png",
+    "N": "SM_K_HighChair/tex/T_SM_K_HighChair_N.png",
+    "R": "SM_K_HighChair/tex/T_SM_K_HighChair_R.png"
    },
    "collision_lod": 0,
    "movers": [],
-   "breaks": [],
-   "note": "wool tartan throw: a seamless 300 uu check (AntCloth tiles it), tasselled ends",
+   "breaks": [
+    {
+     "name": "SM_K_HighChair_Brk0",
+     "file": "SM_K_HighChair_Brk0.fbx",
+     "triangles": 3668,
+     "bbox_min_m": [
+      -0.1895,
+      -0.1899,
+      0.7579
+     ],
+     "bbox_max_m": [
+      0.1895,
+      0.1895,
+      0.9158
+     ],
+     "materials": [
+      "Hero_SM_K_HighChair",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_HighChair_Brk1",
+     "file": "SM_K_HighChair_Brk1.fbx",
+     "triangles": 780,
+     "bbox_min_m": [
+      -0.2458,
+      -0.2474,
+      -0.0018
+     ],
+     "bbox_max_m": [
+      0.2458,
+      0.2463,
+      0.7652
+     ],
+     "materials": [
+      "Hero_SM_K_HighChair",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_HighChair_Brk2",
+     "file": "SM_K_HighChair_Brk2.fbx",
+     "triangles": 5080,
+     "bbox_min_m": [
+      -0.1895,
+      0.1421,
+      0.7895
+     ],
+     "bbox_max_m": [
+      0.1895,
+      0.2053,
+      1.4211
+     ],
+     "materials": [
+      "Hero_SM_K_HighChair",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_HighChair_Brk3",
+     "file": "SM_K_HighChair_Brk3.fbx",
+     "triangles": 4972,
+     "bbox_min_m": [
+      -0.2316,
+      -0.3684,
+      0.9
+     ],
+     "bbox_max_m": [
+      0.2316,
+      -0.1789,
+      0.9421
+     ],
+     "materials": [
+      "Hero_SM_K_HighChair",
+      "Break"
+     ]
+    }
+   ],
+   "note": "high chair: beech, splayed legs, teal pads, footrest, white tray, strap",
    "kept_slots": [],
-   "triangles": 7676,
+   "textures_owner": {
+    "C": "SM_K_HighChair/tex_owner/T_SM_K_HighChair_C.png",
+    "N": "SM_K_HighChair/tex_owner/T_SM_K_HighChair_N.png",
+    "R": "SM_K_HighChair/tex_owner/T_SM_K_HighChair_R.png"
+   },
+   "triangles": 14500,
    "bbox_min_m": [
-    -0.3713,
-    -0.6138,
-    -0.0278
+    -0.2458,
+    -0.3684,
+    -0.0018
    ],
    "bbox_max_m": [
-    0.3743,
-    0.6138,
-    0.5196
+    0.2458,
+    0.2463,
+    1.4211
    ],
    "materials": [
-    "Hero_SM_V31_Throw"
+    "Hero_SM_K_HighChair"
    ],
    "lod_triangles": [
-    7676,
-    3069,
-    1151
+    14500,
+    5074,
+    1740
    ],
-   "ucx": 1
+   "ucx": 7
   }
  ],
  "note": "Hero art, living room & furniture (Tools/blender/hero_living.py): LOD0 + UCX in <name>.fbx, _LOD1/_LOD2, _Brk<i> pieces; tex/T_<name>_{C,N,R}.png"

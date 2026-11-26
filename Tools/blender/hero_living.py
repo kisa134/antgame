@@ -11,6 +11,7 @@ from mathutils import Vector, Matrix
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import hero_lib as H
+import hero_owner as HO
 
 argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
@@ -473,6 +474,14 @@ def produce(name, parts, hulls, breaks=None, lods=(0.35, 0.12), tex=2048, collis
         paths = {k: os.path.join(tdir, "T_%s_%s.png" % (name, k)) for k in "CNR"}
     else:
         paths = H.bake_set(lod0, name, tdir, tex)
+    # fix14: the owner's palette (his map v4 looks of the old model's slots) -> tex_owner/, MI_<Name>_Owner in the game
+    paths_owner = None
+    if name in OWNER_SLOTS and os.environ.get("HERO_OWNER_PALETTE", "1") != "0":
+        odir = os.path.join(out, "tex_owner")
+        if NOBAKE and os.path.exists(os.path.join(odir, "T_%s_C.png" % name)):
+            paths_owner = {k: os.path.join(odir, "T_%s_%s.png" % (name, k)) for k in "CNR"}
+        else:
+            paths_owner = HO.bake_owner(lod0, name, out, tex, OWNER_SLOTS[name])
     # the Hero_ slot, then the driven slots kept by name
     face_mat = [lod0.data.materials[p.material_index].name.split(".")[0] if lod0.data.materials[p.material_index] else "" for p in lod0.data.polygons]
     kept = [k for k in KEEP if k in face_mat]
@@ -489,6 +498,8 @@ def produce(name, parts, hulls, breaks=None, lods=(0.35, 0.12), tex=2048, collis
     man = {"name": name, "file": name + ".fbx", "set": "hero_living", "break_class": break_class,
            "textures": {k: os.path.relpath(v, OUT).replace("\\", "/") for k, v in paths.items()},
            "collision_lod": collision_lod, "movers": [], "breaks": [], "note": note, "kept_slots": kept}
+    if paths_owner:
+        man["textures_owner"] = {k: os.path.relpath(v, OUT).replace("\\", "/") for k, v in paths_owner.items()}
     man.update(H.info(lod0)); man["lod_triangles"] = [H.tris(lod0), H.tris(l1), H.tris(l2)]; man["ucx"] = len(hs)
     pieces = breaks(lod0, name) if breaks else []
     for pc in pieces:
@@ -1888,6 +1899,15 @@ PIECES.update({
     "SM_V3_ToyBox_Lid": (build_toy_box_lid, 2048, groups([[0]], [(0, (0.05, -0.25, 0.015), (1, 0.15, 0.0), 0.005, 31, 0.01)]), "wood", "toy box lid: beech boards with breadboard ends, painted star, finger pull, hinge leaves", None),
     "SM_V3_Hinge": (build_hinge, 512, groups([[0]]), "metal", "concealed cup hinge: cup, arm, mounting plate, cover cap, screws", None),
 })
+
+# fix14: pieces of the kitchen that wear the owner's palette by default, as the kitchen block does (hero_kitchen_block.py
+# pass 5): {hero material: the old model's slot} - the slot's map v4 look (Map4Look.cpp) is baked into tex_owner/.
+# The old SM_K_Chair: Cabinet (seat, rails) + Walnut (legs); the old SM_K_HighChair: Butcher (frame), Teal (pads),
+# Enamel (tray), Plinth (feet). Materials not listed (felt pads, the strap) keep their hero look.
+OWNER_SLOTS = {
+    "SM_K_Chair": {"GreenLacquer": "Cabinet", "WalnutZ": "Walnut", "WalnutX": "Walnut"},
+    "SM_K_HighChair": {"Beech": "Butcher", "BeechZ": "Butcher", "TealVinyl": "Teal", "TrayWhite": "Enamel", "BlackPlastic": "Plinth"},
+}
 
 ORDER = list(PIECES.keys())
 # review only: pieces that hang under the ceiling or sit round their origin are lifted off the studio floor

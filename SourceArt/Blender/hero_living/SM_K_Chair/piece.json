@@ -90,6 +90,11 @@
  ],
  "note": "kitchen chair: green seat and rails, turned walnut legs, stretchers, spindles, corner blocks",
  "kept_slots": [],
+ "textures_owner": {
+  "C": "SM_K_Chair/tex_owner/T_SM_K_Chair_C.png",
+  "N": "SM_K_Chair/tex_owner/T_SM_K_Chair_N.png",
+  "R": "SM_K_Chair/tex_owner/T_SM_K_Chair_R.png"
+ },
  "triangles": 5108,
  "bbox_min_m": [
   -0.2368,
