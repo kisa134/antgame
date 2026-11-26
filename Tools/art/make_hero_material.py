@@ -106,11 +106,15 @@ return float3(0.71, 0.71, 0.0) * a * s * Amp + float3(-0.5, 0.6, 0.0) * sin(T * 
 """
 
 def build():
-    m = fresh("M_Hero", unreal.Material, unreal.MaterialFactoryNew())
+    # rebuilt in place (deleting it would orphan every MI_<Name> of the props)
+    m = unreal.load_asset(DIR + "/M_Hero")
+    if m: MEL.delete_all_material_expressions(m)
+    else: m = AT.create_asset("M_Hero", DIR, unreal.Material, unreal.MaterialFactoryNew())
     X = -1500
-    c = tex(m, "C", "/Engine/EngineResources/WhiteSquareTexture", unreal.MaterialSamplerType.SAMPLERTYPE_COLOR, X, -600)
-    n = tex(m, "N", "/Engine/EngineMaterials/FlatNormal", unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL, X, -300)
-    r = tex(m, "R", "/Engine/EngineResources/WhiteSquareTexture", unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_COLOR, X, 0)
+    c = tex(m, "C", "/Game/Kitchen/SM_K_Bucket/T_SM_K_Bucket_C", unreal.MaterialSamplerType.SAMPLERTYPE_COLOR, X, -600)
+    n = tex(m, "N", "/Game/Kitchen/SM_K_Bucket/T_SM_K_Bucket_N", unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL, X, -300)
+    # (the R sets are imported as masks: the sampler must say so, and so must its default, or the material does not compile)
+    r = tex(m, "R", "/Game/Kitchen/SM_K_Bucket/T_SM_K_Bucket_R", unreal.MaterialSamplerType.SAMPLERTYPE_MASKS, X, 0)
     wp = MEL.create_material_expression(m, unreal.MaterialExpressionWorldPosition, X, 300)
     tm = MEL.create_material_expression(m, unreal.MaterialExpressionTime, X, 400)
     vc = MEL.create_material_expression(m, unreal.MaterialExpressionVertexColor, X, 500)
@@ -148,7 +152,7 @@ def build():
     unreal.log_warning("ART: HERO M_Hero built")
 
 def break_mi(name, tint, rough):
-    mi = fresh(name, unreal.MaterialInstanceConstant, unreal.MaterialInstanceConstantFactoryNew())
+    mi = unreal.load_asset(DIR + "/" + name) or AT.create_asset(name, DIR, unreal.MaterialInstanceConstant, unreal.MaterialInstanceConstantFactoryNew())   # (kept: the break pieces point at it)
     MEL.set_material_instance_parent(mi, unreal.load_asset(DIR + "/M_Hero"))
     MEL.set_material_instance_scalar_parameter_value(mi, "UseTex", 0.0)
     MEL.set_material_instance_scalar_parameter_value(mi, "BreakRough", rough)
