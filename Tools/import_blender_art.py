@@ -174,8 +174,12 @@ def hero_collision(mesh, complex_as_simple=True, keep_convex=True):
     bs.set_editor_property("collision_trace_flag", unreal.CollisionTraceFlag.CTF_USE_COMPLEX_AS_SIMPLE if complex_as_simple else unreal.CollisionTraceFlag.CTF_USE_DEFAULT)
     return n
 
-def import_hero(only_names=None):
-    mpath = os.path.join(HERO_SRC, "hero_manifest.json")
+def hero_dir_new(name):
+    """the hero rebuilds that keep the old model: /Game/Hero/<Name> (KitchenArt::Mesh looks there first; -AntHeroArt=0 skips it)"""
+    return "/Game/Hero/" + name
+
+def import_hero(only_names=None, HERO_SRC=HERO_SRC, manifest="hero_manifest.json", hero_dir=hero_dir):
+    mpath = os.path.join(HERO_SRC, manifest)
     if not os.path.exists(mpath):
         log("hero: no manifest"); return
     doc = json.load(open(mpath, encoding="utf-8"))
@@ -219,7 +223,9 @@ def import_hero(only_names=None):
         lods = unreal.AntArtTools.lod_count(mesh)
         hull = unreal.AntArtTools.convex_count(mesh)
         tris = [mesh.get_num_triangles(i) for i in range(lods)]
-        cls = "plastic" if any(k in name for k in ("Bucket", "Pail", "Sprayer", "DishSoap")) else "wood"
+        cls = p.get("break_class") or ("plastic" if any(k in name for k in ("Bucket", "Pail", "Sprayer", "DishSoap")) else "wood")
+        if cls not in brk:   # (glass, ceramic, paper, metal...: MI_HeroBreak_<Class> if Tools/art/make_hero_material.py made it)
+            brk[cls] = unreal.load_asset(HERO_MAT + "/MI_HeroBreak_" + cls.capitalize()) or brk["plastic"]
         for mv in p.get("movers", []):
             m2 = hero_mesh(os.path.join(src, mv["file"]), dest, mv["name"])
             if m2:
@@ -242,6 +248,10 @@ only = [s.strip().lower() for s in os.environ.get("ANT_ART_SETS", "").split(",")
 report = {}
 if "hero" in only:
     import_hero([n for n in os.environ.get("ANT_HERO_NAMES", "").replace("+", ",").split(",") if n and n != "all"] or None)   # (names joined by + : cmd splits arguments at commas)
+if "hero_props" in only:
+    # the small props of the flat (hero_props.py): SourceArt/Blender/hero_props -> /Game/Hero/<Name>, the old model stays
+    import_hero([n for n in os.environ.get("ANT_HERO_NAMES", "").replace("+", ",").split(",") if n and n != "all"] or None,
+                os.path.join(PROJ, "SourceArt", "Blender", "hero_props"), "hero_props_manifest.json", hero_dir_new)
 for set_name, src, dst, manifest_name in SETS:
     if only and set_name not in only:
         continue
