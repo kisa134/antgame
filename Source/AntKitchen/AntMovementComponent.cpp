@@ -306,9 +306,10 @@ bool UAntMovementComponent::StepOverLip(const FHitResult& Hit, const FVector& N,
 		}
 		return false;
 	};
-	// Into the thing, along the floor; it must be pushing into it at all.
+	// Into the thing, along the floor; it must be pushing into it at all. (-AntNoStepLip: off, the A/B of the map test.)
+	static const bool bOff = FParse::Param(FCommandLine::Get(), TEXT("AntNoStepLip"));
 	const FVector Into = FVector::VectorPlaneProject(-HitN, N).GetSafeNormal();
-	if (Into.IsNearlyZero() || FVector::DotProduct(InDir, Into) < 0.05f)
+	if (bOff || Into.IsNearlyZero() || FVector::DotProduct(InDir, Into) < 0.05f)
 	{
 		return false;
 	}
@@ -424,7 +425,8 @@ void UAntMovementComponent::PhysCrawl(float DeltaTime)
 				// along as it is pushes the ant into its own floor, and it stood wedged in the crease for good (KAN-27: squads
 				// stuck at the pet mat and the bowls). Slide along it as if it stood square to our surface.
 				FVector SlideN = HN;
-				if (FVector::DotProduct(HN, N) < -0.05f)
+				static const bool bOldSlide = FParse::Param(FCommandLine::Get(), TEXT("AntNoStepLip"));
+				if (!bOldSlide && FVector::DotProduct(HN, N) < -0.05f)
 				{
 					const FVector Square = FVector::VectorPlaneProject(HN, N).GetSafeNormal();
 					if (!Square.IsNearlyZero()) { SlideN = Square; }
