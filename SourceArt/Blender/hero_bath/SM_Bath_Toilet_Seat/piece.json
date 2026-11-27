@@ -1,0 +1,95 @@
+{
+ "name": "SM_Bath_Toilet_Seat",
+ "file": "SM_Bath_Toilet_Seat.fbx",
+ "set": "hero_bath",
+ "break_class": "plastic",
+ "textures": {
+  "C": "SM_Bath_Toilet_Seat/tex/T_SM_Bath_Toilet_Seat_C.png",
+  "N": "SM_Bath_Toilet_Seat/tex/T_SM_Bath_Toilet_Seat_N.png",
+  "R": "SM_Bath_Toilet_Seat/tex/T_SM_Bath_Toilet_Seat_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_Bath_Toilet_Seat_Brk0",
+   "file": "SM_Bath_Toilet_Seat_Brk0.fbx",
+   "triangles": 620,
+   "bbox_min_m": [
+    -0.0486,
+    -0.4163,
+    -0.0125
+   ],
+   "bbox_max_m": [
+    0.192,
+    0.012,
+    0.009
+   ],
+   "materials": [
+    "Hero_SM_Bath_Toilet_Seat",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Toilet_Seat_Brk1",
+   "file": "SM_Bath_Toilet_Seat_Brk1.fbx",
+   "triangles": 654,
+   "bbox_min_m": [
+    -0.192,
+    -0.436,
+    -0.0125
+   ],
+   "bbox_max_m": [
+    0.079,
+    0.012,
+    0.009
+   ],
+   "materials": [
+    "Hero_SM_Bath_Toilet_Seat",
+    "Break"
+   ]
+  }
+ ],
+ "note": "toilet seat ring with rubber buffers and chrome hinge barrels",
+ "kept_slots": [],
+ "triangles": 852,
+ "bbox_min_m": [
+  -0.192,
+  -0.436,
+  -0.0125
+ ],
+ "bbox_max_m": [
+  0.192,
+  0.012,
+  0.009
+ ],
+ "materials": [
+  "Hero_SM_Bath_Toilet_Seat"
+ ],
+ "lod_triangles": [
+  852,
+  298,
+  102
+ ],
+ "ucx": 8,
+ "room": "bath",
+ "ru": "Сиденье унитаза",
+ "attach": {
+  "parent": "SM_Bath_Toilet",
+  "at_m": [
+   [
+    0.0,
+    0.1,
+    0.416
+   ]
+  ],
+  "move": "hinge",
+  "axis": "X",
+  "open_deg": -85
+ },
+ "size_uu": [
+  730,
+  851,
+  41
+ ]
+}

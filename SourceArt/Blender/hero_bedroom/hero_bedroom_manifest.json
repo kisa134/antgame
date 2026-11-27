@@ -1,0 +1,1338 @@
+{
+ "note": "Hero art of the flat, bedroom (Tools/blender/hero_flat.py, KAN-41): LOD0 + UCX in <name>.fbx, _LOD1/_LOD2, _Brk<i> pieces; tex/T_<name>_{C,N,R}.png; 'attach' = where a part sits on its parent and how it moves (metres, the parent's frame, front -Y)",
+ "pieces": [
+  {
+   "name": "SM_B_Bed",
+   "file": "SM_B_Bed.fbx",
+   "set": "hero_bedroom",
+   "break_class": "wood",
+   "textures": {
+    "C": "SM_B_Bed/tex/T_SM_B_Bed_C.png",
+    "N": "SM_B_Bed/tex/T_SM_B_Bed_N.png",
+    "R": "SM_B_Bed/tex/T_SM_B_Bed_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_B_Bed_Brk0",
+     "file": "SM_B_Bed_Brk0.fbx",
+     "triangles": 1536,
+     "bbox_min_m": [
+      -0.8018,
+      -1.01,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.8018,
+      0.965,
+      0.4
+     ],
+     "materials": [
+      "Hero_SM_B_Bed",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_B_Bed_Brk1",
+     "file": "SM_B_Bed_Brk1.fbx",
+     "triangles": 968,
+     "bbox_min_m": [
+      -0.8,
+      -0.992,
+      0.25
+     ],
+     "bbox_max_m": [
+      0.8,
+      0.945,
+      0.4
+     ],
+     "materials": [
+      "Hero_SM_B_Bed",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_B_Bed_Brk2",
+     "file": "SM_B_Bed_Brk2.fbx",
+     "triangles": 2776,
+     "bbox_min_m": [
+      -0.774,
+      -0.967,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.774,
+      0.92,
+      0.349
+     ],
+     "materials": [
+      "Hero_SM_B_Bed",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_B_Bed_Brk3",
+     "file": "SM_B_Bed_Brk3.fbx",
+     "triangles": 2632,
+     "bbox_min_m": [
+      -0.7919,
+      -0.9909,
+      0.3381
+     ],
+     "bbox_max_m": [
+      0.7919,
+      0.9059,
+      0.5489
+     ],
+     "materials": [
+      "Hero_SM_B_Bed",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_B_Bed_Brk4",
+     "file": "SM_B_Bed_Brk4.fbx",
+     "triangles": 6588,
+     "bbox_min_m": [
+      -0.8,
+      0.889,
+      0.2
+     ],
+     "bbox_max_m": [
+      0.8,
+      1.01,
+      1.1
+     ],
+     "materials": [
+      "Hero_SM_B_Bed",
+      "Break"
+     ]
+    }
+   ],
+   "note": "double bed: oak frame bolted to square legs, beech slats in caps on ledgers and a centre beam, piped mattress with handles, oak headboard with a tufted teal pad",
+   "kept_slots": [],
+   "triangles": 14500,
+   "bbox_min_m": [
+    -0.8018,
+    -1.01,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.8018,
+    1.01,
+    1.1
+   ],
+   "materials": [
+    "Hero_SM_B_Bed"
+   ],
+   "lod_triangles": [
+    14500,
+    5074,
+    1740
+   ],
+   "ucx": 13,
+   "room": "bedroom",
+   "ru": "Кровать двуспальная",
+   "children": [
+    "SM_B_Duvet",
+    "SM_B_Pillow"
+   ],
+   "size_uu": [
+    3047,
+    3838,
+    2090
+   ]
+  },
+  {
+   "name": "SM_B_Dresser",
+   "file": "SM_B_Dresser.fbx",
+   "set": "hero_bedroom",
+   "break_class": "wood",
+   "textures": {
+    "C": "SM_B_Dresser/tex/T_SM_B_Dresser_C.png",
+    "N": "SM_B_Dresser/tex/T_SM_B_Dresser_N.png",
+    "R": "SM_B_Dresser/tex/T_SM_B_Dresser_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_B_Dresser_Brk0",
+     "file": "SM_B_Dresser_Brk0.fbx",
+     "triangles": 1776,
+     "bbox_min_m": [
+      -0.424,
+      -0.199,
+      0.002
+     ],
+     "bbox_max_m": [
+      0.424,
+      0.199,
+      0.104
+     ],
+     "materials": [
+      "Hero_SM_B_Dresser",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_B_Dresser_Brk1",
+     "file": "SM_B_Dresser_Brk1.fbx",
+     "triangles": 240,
+     "bbox_min_m": [
+      -0.45,
+      -0.225,
+      0.1
+     ],
+     "bbox_max_m": [
+      -0.42,
+      0.225,
+      0.828
+     ],
+     "materials": [
+      "Hero_SM_B_Dresser",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_B_Dresser_Brk2",
+     "file": "SM_B_Dresser_Brk2.fbx",
+     "triangles": 240,
+     "bbox_min_m": [
+      0.42,
+      -0.225,
+      0.1
+     ],
+     "bbox_max_m": [
+      0.45,
+      0.225,
+      0.828
+     ],
+     "materials": [
+      "Hero_SM_B_Dresser",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_B_Dresser_Brk3",
+     "file": "SM_B_Dresser_Brk3.fbx",
+     "triangles": 432,
+     "bbox_min_m": [
+      -0.433,
+      -0.223,
+      0.1
+     ],
+     "bbox_max_m": [
+      0.433,
+      0.225,
+      0.664
+     ],
+     "materials": [
+      "Hero_SM_B_Dresser",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_B_Dresser_Brk4",
+     "file": "SM_B_Dresser_Brk4.fbx",
+     "triangles": 344,
+     "bbox_min_m": [
+      -0.46,
+      -0.239,
+      0.828
+     ],
+     "bbox_max_m": [
+      0.46,
+      0.225,
+      0.852
+     ],
+     "materials": [
+      "Hero_SM_B_Dresser",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_B_Dresser_Brk5",
+     "file": "SM_B_Dresser_Brk5.fbx",
+     "triangles": 852,
+     "bbox_min_m": [
+      -0.446,
+      0.219,
+      0.102
+     ],
+     "bbox_max_m": [
+      0.446,
+      0.2257,
+      0.828
+     ],
+     "materials": [
+      "Hero_SM_B_Dresser",
+      "Break"
+     ]
+    }
+   ],
+   "note": "chest of drawers: walnut carcass on turned legs, oak top with a crocheted runner, rails and runners for four drawers",
+   "kept_slots": [],
+   "triangles": 3884,
+   "bbox_min_m": [
+    -0.46,
+    -0.239,
+    0.002
+   ],
+   "bbox_max_m": [
+    0.46,
+    0.2257,
+    0.852
+   ],
+   "materials": [
+    "Hero_SM_B_Dresser"
+   ],
+   "lod_triangles": [
+    3884,
+    1358,
+    466
+   ],
+   "ucx": 12,
+   "room": "bedroom",
+   "ru": "Комод",
+   "children": [
+    "SM_B_Dresser_Drawer"
+   ],
+   "size_uu": [
+    1748,
+    883,
+    1615
+   ]
+  },
+  {
+   "name": "SM_B_Dresser_Drawer",
+   "file": "SM_B_Dresser_Drawer.fbx",
+   "set": "hero_bedroom",
+   "break_class": "wood",
+   "textures": {
+    "C": "SM_B_Dresser_Drawer/tex/T_SM_B_Dresser_Drawer_C.png",
+    "N": "SM_B_Dresser_Drawer/tex/T_SM_B_Dresser_Drawer_N.png",
+    "R": "SM_B_Dresser_Drawer/tex/T_SM_B_Dresser_Drawer_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_B_Dresser_Drawer_Brk0",
+     "file": "SM_B_Dresser_Drawer_Brk0.fbx",
+     "triangles": 532,
+     "bbox_min_m": [
+      -0.43,
+      -0.032,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.43,
+      0.018,
+      0.162
+     ],
+     "materials": [
+      "Hero_SM_B_Dresser_Drawer",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_B_Dresser_Drawer_Brk1",
+     "file": "SM_B_Dresser_Drawer_Brk1.fbx",
+     "triangles": 372,
+     "bbox_min_m": [
+      -0.4166,
+      -0.032,
+      0.012
+     ],
+     "bbox_max_m": [
+      0.4166,
+      0.39,
+      0.142
+     ],
+     "materials": [
+      "Hero_SM_B_Dresser_Drawer",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_B_Dresser_Drawer_Brk2",
+     "file": "SM_B_Dresser_Drawer_Brk2.fbx",
+     "triangles": 2632,
+     "bbox_min_m": [
+      -0.3656,
+      -0.032,
+      0.03
+     ],
+     "bbox_max_m": [
+      0.3656,
+      0.36,
+      0.09
+     ],
+     "materials": [
+      "Hero_SM_B_Dresser_Drawer",
+      "Break"
+     ]
+    }
+   ],
+   "note": "dresser drawer: walnut front, two brass knobs, beech box; rolled socks and folded things inside",
+   "kept_slots": [],
+   "triangles": 3536,
+   "bbox_min_m": [
+    -0.43,
+    -0.032,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.43,
+    0.39,
+    0.162
+   ],
+   "materials": [
+    "Hero_SM_B_Dresser_Drawer"
+   ],
+   "lod_triangles": [
+    3536,
+    1236,
+    424
+   ],
+   "ucx": 5,
+   "room": "bedroom",
+   "ru": "Ящик комода (4 шт.)",
+   "attach": {
+    "parent": "SM_B_Dresser",
+    "at_m": [
+     [
+      0.0,
+      -0.225,
+      0.11900000000000001
+     ],
+     [
+      0.0,
+      -0.225,
+      0.301
+     ],
+     [
+      0.0,
+      -0.225,
+      0.483
+     ],
+     [
+      0.0,
+      -0.225,
+      0.665
+     ]
+    ],
+    "move": "slide",
+    "slide_m": [
+     0,
+     -0.3,
+     0
+    ]
+   },
+   "size_uu": [
+    1634,
+    802,
+    308
+   ]
+  },
+  {
+   "name": "SM_B_Duvet",
+   "file": "SM_B_Duvet.fbx",
+   "set": "hero_bedroom",
+   "break_class": "cloth",
+   "textures": {
+    "C": "SM_B_Duvet/tex/T_SM_B_Duvet_C.png",
+    "N": "SM_B_Duvet/tex/T_SM_B_Duvet_N.png",
+    "R": "SM_B_Duvet/tex/T_SM_B_Duvet_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_B_Duvet_Brk0",
+     "file": "SM_B_Duvet_Brk0.fbx",
+     "triangles": 4260,
+     "bbox_min_m": [
+      -0.0777,
+      -1.2428,
+      0.005
+     ],
+     "bbox_max_m": [
+      0.8669,
+      0.4236,
+      0.6113
+     ],
+     "materials": [
+      "Hero_SM_B_Duvet",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_B_Duvet_Brk1",
+     "file": "SM_B_Duvet_Brk1.fbx",
+     "triangles": 5656,
+     "bbox_min_m": [
+      -0.8655,
+      -1.2474,
+      0.005
+     ],
+     "bbox_max_m": [
+      0.3376,
+      0.4229,
+      0.6045
+     ],
+     "materials": [
+      "Hero_SM_B_Duvet",
+      "Break"
+     ]
+    }
+   ],
+   "note": "quilted duvet on the bed, over the foot end and down to the floor (the ants climb it)",
+   "kept_slots": [],
+   "triangles": 8428,
+   "bbox_min_m": [
+    -0.8655,
+    -1.2474,
+    0.005
+   ],
+   "bbox_max_m": [
+    0.8669,
+    0.4236,
+    0.6113
+   ],
+   "materials": [
+    "Hero_SM_B_Duvet"
+   ],
+   "lod_triangles": [
+    8428,
+    2948,
+    1010
+   ],
+   "ucx": 3,
+   "room": "bedroom",
+   "ru": "Одеяло (свисает до пола)",
+   "attach": {
+    "parent": "SM_B_Bed",
+    "at_m": [
+     [
+      0,
+      0,
+      0
+     ]
+    ],
+    "move": "rest"
+   },
+   "size_uu": [
+    3292,
+    3175,
+    1152
+   ]
+  },
+  {
+   "name": "SM_B_Nightstand",
+   "file": "SM_B_Nightstand.fbx",
+   "set": "hero_bedroom",
+   "break_class": "wood",
+   "textures": {
+    "C": "SM_B_Nightstand/tex/T_SM_B_Nightstand_C.png",
+    "N": "SM_B_Nightstand/tex/T_SM_B_Nightstand_N.png",
+    "R": "SM_B_Nightstand/tex/T_SM_B_Nightstand_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_B_Nightstand_Brk0",
+     "file": "SM_B_Nightstand_Brk0.fbx",
+     "triangles": 1776,
+     "bbox_min_m": [
+      -0.205,
+      -0.18,
+      0.002
+     ],
+     "bbox_max_m": [
+      0.205,
+      0.18,
+      0.124
+     ],
+     "materials": [
+      "Hero_SM_B_Nightstand",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_B_Nightstand_Brk1",
+     "file": "SM_B_Nightstand_Brk1.fbx",
+     "triangles": 152,
+     "bbox_min_m": [
+      -0.225,
+      -0.2,
+      0.12
+     ],
+     "bbox_max_m": [
+      -0.195,
+      0.2,
+      0.53
+     ],
+     "materials": [
+      "Hero_SM_B_Nightstand",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_B_Nightstand_Brk2",
+     "file": "SM_B_Nightstand_Brk2.fbx",
+     "triangles": 152,
+     "bbox_min_m": [
+      0.195,
+      -0.2,
+      0.12
+     ],
+     "bbox_max_m": [
+      0.225,
+      0.2,
+      0.53
+     ],
+     "materials": [
+      "Hero_SM_B_Nightstand",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_B_Nightstand_Brk3",
+     "file": "SM_B_Nightstand_Brk3.fbx",
+     "triangles": 644,
+     "bbox_min_m": [
+      -0.208,
+      -0.198,
+      0.12
+     ],
+     "bbox_max_m": [
+      0.208,
+      0.2,
+      0.38
+     ],
+     "materials": [
+      "Hero_SM_B_Nightstand",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_B_Nightstand_Brk4",
+     "file": "SM_B_Nightstand_Brk4.fbx",
+     "triangles": 588,
+     "bbox_min_m": [
+      -0.233,
+      -0.212,
+      0.53
+     ],
+     "bbox_max_m": [
+      0.233,
+      0.2,
+      0.5505
+     ],
+     "materials": [
+      "Hero_SM_B_Nightstand",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_B_Nightstand_Brk5",
+     "file": "SM_B_Nightstand_Brk5.fbx",
+     "triangles": 516,
+     "bbox_min_m": [
+      -0.221,
+      0.194,
+      0.122
+     ],
+     "bbox_max_m": [
+      0.221,
+      0.2007,
+      0.53
+     ],
+     "materials": [
+      "Hero_SM_B_Nightstand",
+      "Break"
+     ]
+    }
+   ],
+   "note": "bedside table: walnut carcass on turned legs in brass cups, oak top with a glass ring, open niche with magazines and tissues",
+   "kept_slots": [],
+   "triangles": 3828,
+   "bbox_min_m": [
+    -0.233,
+    -0.212,
+    0.002
+   ],
+   "bbox_max_m": [
+    0.233,
+    0.2007,
+    0.5505
+   ],
+   "materials": [
+    "Hero_SM_B_Nightstand"
+   ],
+   "lod_triangles": [
+    3828,
+    1339,
+    459
+   ],
+   "ucx": 10,
+   "room": "bedroom",
+   "ru": "Тумба прикроватная",
+   "children": [
+    "SM_B_Nightstand_Drawer"
+   ],
+   "size_uu": [
+    885,
+    784,
+    1042
+   ]
+  },
+  {
+   "name": "SM_B_Nightstand_Drawer",
+   "file": "SM_B_Nightstand_Drawer.fbx",
+   "set": "hero_bedroom",
+   "break_class": "wood",
+   "textures": {
+    "C": "SM_B_Nightstand_Drawer/tex/T_SM_B_Nightstand_Drawer_C.png",
+    "N": "SM_B_Nightstand_Drawer/tex/T_SM_B_Nightstand_Drawer_N.png",
+    "R": "SM_B_Nightstand_Drawer/tex/T_SM_B_Nightstand_Drawer_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_B_Nightstand_Drawer_Brk0",
+     "file": "SM_B_Nightstand_Drawer_Brk0.fbx",
+     "triangles": 360,
+     "bbox_min_m": [
+      -0.205,
+      -0.032,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.205,
+      0.018,
+      0.168
+     ],
+     "materials": [
+      "Hero_SM_B_Nightstand_Drawer",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_B_Nightstand_Drawer_Brk1",
+     "file": "SM_B_Nightstand_Drawer_Brk1.fbx",
+     "triangles": 372,
+     "bbox_min_m": [
+      -0.1916,
+      -0.032,
+      0.012
+     ],
+     "bbox_max_m": [
+      0.1916,
+      0.34,
+      0.148
+     ],
+     "materials": [
+      "Hero_SM_B_Nightstand_Drawer",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_B_Nightstand_Drawer_Brk2",
+     "file": "SM_B_Nightstand_Drawer_Brk2.fbx",
+     "triangles": 640,
+     "bbox_min_m": [
+      -0.13,
+      -0.032,
+      0.024
+     ],
+     "bbox_max_m": [
+      0.145,
+      0.28,
+      0.084
+     ],
+     "materials": [
+      "Hero_SM_B_Nightstand_Drawer",
+      "Break"
+     ]
+    }
+   ],
+   "note": "bedside drawer: walnut front, brass knob, beech box with a paper liner; a book, a tin, a charger inside",
+   "kept_slots": [],
+   "triangles": 1372,
+   "bbox_min_m": [
+    -0.205,
+    -0.032,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.205,
+    0.34,
+    0.168
+   ],
+   "materials": [
+    "Hero_SM_B_Nightstand_Drawer"
+   ],
+   "lod_triangles": [
+    1372,
+    480,
+    164
+   ],
+   "ucx": 5,
+   "room": "bedroom",
+   "ru": "Ящик тумбы",
+   "attach": {
+    "parent": "SM_B_Nightstand",
+    "at_m": [
+     [
+      0.0,
+      -0.2,
+      0.36
+     ]
+    ],
+    "move": "slide",
+    "slide_m": [
+     0,
+     -0.26,
+     0
+    ]
+   },
+   "size_uu": [
+    779,
+    707,
+    319
+   ]
+  },
+  {
+   "name": "SM_B_Pillow",
+   "file": "SM_B_Pillow.fbx",
+   "set": "hero_bedroom",
+   "break_class": "cloth",
+   "textures": {
+    "C": "SM_B_Pillow/tex/T_SM_B_Pillow_C.png",
+    "N": "SM_B_Pillow/tex/T_SM_B_Pillow_N.png",
+    "R": "SM_B_Pillow/tex/T_SM_B_Pillow_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_B_Pillow_Brk0",
+     "file": "SM_B_Pillow_Brk0.fbx",
+     "triangles": 3772,
+     "bbox_min_m": [
+      -0.0495,
+      -0.25,
+      0.0022
+     ],
+     "bbox_max_m": [
+      0.35,
+      0.25,
+      0.1578
+     ],
+     "materials": [
+      "Hero_SM_B_Pillow",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_B_Pillow_Brk1",
+     "file": "SM_B_Pillow_Brk1.fbx",
+     "triangles": 3734,
+     "bbox_min_m": [
+      -0.35,
+      -0.25,
+      0.0021
+     ],
+     "bbox_max_m": [
+      0.0515,
+      0.25,
+      0.1579
+     ],
+     "materials": [
+      "Hero_SM_B_Pillow",
+      "Break"
+     ]
+    }
+   ],
+   "note": "sleeping pillow in a linen case with an oxford hem",
+   "kept_slots": [],
+   "triangles": 5404,
+   "bbox_min_m": [
+    -0.35,
+    -0.25,
+    0.0021
+   ],
+   "bbox_max_m": [
+    0.35,
+    0.25,
+    0.1579
+   ],
+   "materials": [
+    "Hero_SM_B_Pillow"
+   ],
+   "lod_triangles": [
+    5404,
+    1890,
+    648
+   ],
+   "ucx": 1,
+   "room": "bedroom",
+   "ru": "Подушка",
+   "attach": {
+    "parent": "SM_B_Bed",
+    "at_m": [
+     [
+      -0.37,
+      0.62,
+      0.552
+     ],
+     [
+      0.37,
+      0.63,
+      0.552
+     ]
+    ],
+    "move": "rest"
+   },
+   "size_uu": [
+    1330,
+    950,
+    296
+   ]
+  },
+  {
+   "name": "SM_B_Wardrobe",
+   "file": "SM_B_Wardrobe.fbx",
+   "set": "hero_bedroom",
+   "break_class": "wood",
+   "textures": {
+    "C": "SM_B_Wardrobe/tex/T_SM_B_Wardrobe_C.png",
+    "N": "SM_B_Wardrobe/tex/T_SM_B_Wardrobe_N.png",
+    "R": "SM_B_Wardrobe/tex/T_SM_B_Wardrobe_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_B_Wardrobe_Brk0",
+     "file": "SM_B_Wardrobe_Brk0.fbx",
+     "triangles": 1788,
+     "bbox_min_m": [
+      -0.6,
+      -0.278,
+      0.0
+     ],
+     "bbox_max_m": [
+      -0.5785,
+      0.3,
+      2.178
+     ],
+     "materials": [
+      "Hero_SM_B_Wardrobe",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_B_Wardrobe_Brk1",
+     "file": "SM_B_Wardrobe_Brk1.fbx",
+     "triangles": 1788,
+     "bbox_min_m": [
+      0.5785,
+      -0.278,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.6,
+      0.3,
+      2.178
+     ],
+     "materials": [
+      "Hero_SM_B_Wardrobe",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_B_Wardrobe_Brk2",
+     "file": "SM_B_Wardrobe_Brk2.fbx",
+     "triangles": 152,
+     "bbox_min_m": [
+      -0.581,
+      -0.278,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.581,
+      0.3,
+      0.1
+     ],
+     "materials": [
+      "Hero_SM_B_Wardrobe",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_B_Wardrobe_Brk3",
+     "file": "SM_B_Wardrobe_Brk3.fbx",
+     "triangles": 408,
+     "bbox_min_m": [
+      -0.612,
+      -0.312,
+      2.158
+     ],
+     "bbox_max_m": [
+      0.612,
+      0.3,
+      2.2
+     ],
+     "materials": [
+      "Hero_SM_B_Wardrobe",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_B_Wardrobe_Brk4.001",
+     "file": "SM_B_Wardrobe_Brk4.001.fbx",
+     "triangles": 108,
+     "bbox_min_m": [
+      0.191,
+      -0.274,
+      0.1
+     ],
+     "bbox_max_m": [
+      0.209,
+      0.294,
+      2.158
+     ],
+     "materials": [
+      "Hero_SM_B_Wardrobe",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_B_Wardrobe_Brk5",
+     "file": "SM_B_Wardrobe_Brk5.fbx",
+     "triangles": 3040,
+     "bbox_min_m": [
+      -0.581,
+      -0.258,
+      0.535
+     ],
+     "bbox_max_m": [
+      0.192,
+      0.294,
+      2.032
+     ],
+     "materials": [
+      "Hero_SM_B_Wardrobe",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_B_Wardrobe_Brk6",
+     "file": "SM_B_Wardrobe_Brk6.fbx",
+     "triangles": 264,
+     "bbox_min_m": [
+      -0.5797,
+      -0.1372,
+      0.1
+     ],
+     "bbox_max_m": [
+      0.0981,
+      0.0972,
+      0.31
+     ],
+     "materials": [
+      "Hero_SM_B_Wardrobe",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_B_Wardrobe_Brk7",
+     "file": "SM_B_Wardrobe_Brk7.fbx",
+     "triangles": 1100,
+     "bbox_min_m": [
+      0.208,
+      -0.258,
+      0.443
+     ],
+     "bbox_max_m": [
+      0.581,
+      0.294,
+      1.868
+     ],
+     "materials": [
+      "Hero_SM_B_Wardrobe",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_B_Wardrobe_Brk8",
+     "file": "SM_B_Wardrobe_Brk8.fbx",
+     "triangles": 3384,
+     "bbox_min_m": [
+      0.23,
+      -0.2,
+      0.1
+     ],
+     "bbox_max_m": [
+      0.55,
+      0.18,
+      1.606
+     ],
+     "materials": [
+      "Hero_SM_B_Wardrobe",
+      "Break"
+     ]
+    }
+   ],
+   "note": "wardrobe: walnut carcass on a plinth, oak crown; inside a chrome rail with hangers and clothes under a hat shelf, shelves on brass pins with folded linen, shoe boxes",
+   "kept_slots": [],
+   "triangles": 12044,
+   "bbox_min_m": [
+    -0.612,
+    -0.312,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.612,
+    0.3,
+    2.2
+   ],
+   "materials": [
+    "Hero_SM_B_Wardrobe"
+   ],
+   "lod_triangles": [
+    12044,
+    4215,
+    1444
+   ],
+   "ucx": 14,
+   "room": "bedroom",
+   "ru": "Шкаф платяной",
+   "children": [
+    "SM_B_Wardrobe_DoorL",
+    "SM_B_Wardrobe_DoorR"
+   ],
+   "size_uu": [
+    2326,
+    1163,
+    4180
+   ]
+  },
+  {
+   "name": "SM_B_Wardrobe_DoorL",
+   "file": "SM_B_Wardrobe_DoorL.fbx",
+   "set": "hero_bedroom",
+   "break_class": "wood",
+   "textures": {
+    "C": "SM_B_Wardrobe_DoorL/tex/T_SM_B_Wardrobe_DoorL_C.png",
+    "N": "SM_B_Wardrobe_DoorL/tex/T_SM_B_Wardrobe_DoorL_N.png",
+    "R": "SM_B_Wardrobe_DoorL/tex/T_SM_B_Wardrobe_DoorL_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_B_Wardrobe_DoorL_Brk0",
+     "file": "SM_B_Wardrobe_DoorL_Brk0.fbx",
+     "triangles": 1976,
+     "bbox_min_m": [
+      0.0,
+      -0.052,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.597,
+      0.012,
+      2.074
+     ],
+     "materials": [
+      "Hero_SM_B_Wardrobe_DoorL",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_B_Wardrobe_DoorL_Brk1",
+     "file": "SM_B_Wardrobe_DoorL_Brk1.fbx",
+     "triangles": 592,
+     "bbox_min_m": [
+      0.075,
+      -0.052,
+      0.085
+     ],
+     "bbox_max_m": [
+      0.56,
+      -0.005,
+      1.989
+     ],
+     "materials": [
+      "Hero_SM_B_Wardrobe_DoorL",
+      "Break"
+     ]
+    }
+   ],
+   "note": "wardrobe door, hinged on the left: green frame, two fielded panels with beads, brass knob, four cup hinges",
+   "kept_slots": [],
+   "triangles": 2568,
+   "bbox_min_m": [
+    0.0,
+    -0.052,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.597,
+    0.012,
+    2.074
+   ],
+   "materials": [
+    "Hero_SM_B_Wardrobe_DoorL"
+   ],
+   "lod_triangles": [
+    2568,
+    898,
+    308
+   ],
+   "ucx": 1,
+   "room": "bedroom",
+   "ru": "Дверца шкафа левая",
+   "attach": {
+    "parent": "SM_B_Wardrobe",
+    "at_m": [
+     [
+      -0.5985,
+      -0.278,
+      0.084
+     ]
+    ],
+    "move": "hinge",
+    "axis": "Z",
+    "open_deg": -105
+   },
+   "size_uu": [
+    1134,
+    122,
+    3941
+   ]
+  },
+  {
+   "name": "SM_B_Wardrobe_DoorR",
+   "file": "SM_B_Wardrobe_DoorR.fbx",
+   "set": "hero_bedroom",
+   "break_class": "wood",
+   "textures": {
+    "C": "SM_B_Wardrobe_DoorR/tex/T_SM_B_Wardrobe_DoorR_C.png",
+    "N": "SM_B_Wardrobe_DoorR/tex/T_SM_B_Wardrobe_DoorR_N.png",
+    "R": "SM_B_Wardrobe_DoorR/tex/T_SM_B_Wardrobe_DoorR_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_B_Wardrobe_DoorR_Brk0",
+     "file": "SM_B_Wardrobe_DoorR_Brk0.fbx",
+     "triangles": 1976,
+     "bbox_min_m": [
+      -0.597,
+      -0.052,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.0,
+      0.012,
+      2.074
+     ],
+     "materials": [
+      "Hero_SM_B_Wardrobe_DoorR",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_B_Wardrobe_DoorR_Brk1",
+     "file": "SM_B_Wardrobe_DoorR_Brk1.fbx",
+     "triangles": 592,
+     "bbox_min_m": [
+      -0.56,
+      -0.052,
+      0.085
+     ],
+     "bbox_max_m": [
+      -0.075,
+      -0.005,
+      1.989
+     ],
+     "materials": [
+      "Hero_SM_B_Wardrobe_DoorR",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_B_Wardrobe_DoorR_Brk2",
+     "file": "SM_B_Wardrobe_DoorR_Brk2.fbx",
+     "triangles": 488,
+     "bbox_min_m": [
+      -0.56,
+      -0.052,
+      0.392
+     ],
+     "bbox_max_m": [
+      -0.124,
+      0.009,
+      1.758
+     ],
+     "materials": [
+      "Hero_SM_B_Wardrobe_DoorR",
+      "Break"
+     ]
+    }
+   ],
+   "note": "wardrobe door, hinged on the right: as the left one, with a dressing mirror on its inside",
+   "kept_slots": [],
+   "triangles": 3056,
+   "bbox_min_m": [
+    -0.597,
+    -0.052,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.0,
+    0.012,
+    2.074
+   ],
+   "materials": [
+    "Hero_SM_B_Wardrobe_DoorR"
+   ],
+   "lod_triangles": [
+    3056,
+    1068,
+    366
+   ],
+   "ucx": 1,
+   "room": "bedroom",
+   "ru": "Дверца шкафа правая (с зеркалом внутри)",
+   "attach": {
+    "parent": "SM_B_Wardrobe",
+    "at_m": [
+     [
+      0.5985,
+      -0.278,
+      0.084
+     ]
+    ],
+    "move": "hinge",
+    "axis": "Z",
+    "open_deg": 105
+   },
+   "size_uu": [
+    1134,
+    122,
+    3941
+   ]
+  }
+ ]
+}

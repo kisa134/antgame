@@ -879,6 +879,10 @@ NEW = {}
 _more = os.path.join(HERE, "food_hero_more.py")
 if os.path.exists(_more):
     exec(compile(open(_more, encoding="utf-8").read(), _more, "exec"))
+# pass 3 (KAN-36, 27.11): the raw foods put right - food_fix.py (only the foods it lists; the others are made as before)
+_fix = os.path.join(HERE, "food_fix.py")
+if os.path.exists(_fix):
+    exec(compile(open(_fix, encoding="utf-8").read(), _fix, "exec"))
 
 def run(fid):
     if fid in OWN: return run_own(fid)

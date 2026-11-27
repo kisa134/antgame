@@ -1,0 +1,161 @@
+{
+ "name": "SM_B_Dresser",
+ "file": "SM_B_Dresser.fbx",
+ "set": "hero_bedroom",
+ "break_class": "wood",
+ "textures": {
+  "C": "SM_B_Dresser/tex/T_SM_B_Dresser_C.png",
+  "N": "SM_B_Dresser/tex/T_SM_B_Dresser_N.png",
+  "R": "SM_B_Dresser/tex/T_SM_B_Dresser_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_B_Dresser_Brk0",
+   "file": "SM_B_Dresser_Brk0.fbx",
+   "triangles": 1776,
+   "bbox_min_m": [
+    -0.424,
+    -0.199,
+    0.002
+   ],
+   "bbox_max_m": [
+    0.424,
+    0.199,
+    0.104
+   ],
+   "materials": [
+    "Hero_SM_B_Dresser",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_B_Dresser_Brk1",
+   "file": "SM_B_Dresser_Brk1.fbx",
+   "triangles": 240,
+   "bbox_min_m": [
+    -0.45,
+    -0.225,
+    0.1
+   ],
+   "bbox_max_m": [
+    -0.42,
+    0.225,
+    0.828
+   ],
+   "materials": [
+    "Hero_SM_B_Dresser",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_B_Dresser_Brk2",
+   "file": "SM_B_Dresser_Brk2.fbx",
+   "triangles": 240,
+   "bbox_min_m": [
+    0.42,
+    -0.225,
+    0.1
+   ],
+   "bbox_max_m": [
+    0.45,
+    0.225,
+    0.828
+   ],
+   "materials": [
+    "Hero_SM_B_Dresser",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_B_Dresser_Brk3",
+   "file": "SM_B_Dresser_Brk3.fbx",
+   "triangles": 432,
+   "bbox_min_m": [
+    -0.433,
+    -0.223,
+    0.1
+   ],
+   "bbox_max_m": [
+    0.433,
+    0.225,
+    0.664
+   ],
+   "materials": [
+    "Hero_SM_B_Dresser",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_B_Dresser_Brk4",
+   "file": "SM_B_Dresser_Brk4.fbx",
+   "triangles": 344,
+   "bbox_min_m": [
+    -0.46,
+    -0.239,
+    0.828
+   ],
+   "bbox_max_m": [
+    0.46,
+    0.225,
+    0.852
+   ],
+   "materials": [
+    "Hero_SM_B_Dresser",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_B_Dresser_Brk5",
+   "file": "SM_B_Dresser_Brk5.fbx",
+   "triangles": 852,
+   "bbox_min_m": [
+    -0.446,
+    0.219,
+    0.102
+   ],
+   "bbox_max_m": [
+    0.446,
+    0.2257,
+    0.828
+   ],
+   "materials": [
+    "Hero_SM_B_Dresser",
+    "Break"
+   ]
+  }
+ ],
+ "note": "chest of drawers: walnut carcass on turned legs, oak top with a crocheted runner, rails and runners for four drawers",
+ "kept_slots": [],
+ "triangles": 3884,
+ "bbox_min_m": [
+  -0.46,
+  -0.239,
+  0.002
+ ],
+ "bbox_max_m": [
+  0.46,
+  0.2257,
+  0.852
+ ],
+ "materials": [
+  "Hero_SM_B_Dresser"
+ ],
+ "lod_triangles": [
+  3884,
+  1358,
+  466
+ ],
+ "ucx": 12,
+ "room": "bedroom",
+ "ru": "Комод",
+ "children": [
+  "SM_B_Dresser_Drawer"
+ ],
+ "size_uu": [
+  1748,
+  883,
+  1615
+ ]
+}

@@ -1,0 +1,117 @@
+{
+ "name": "SM_B_Nightstand_Drawer",
+ "file": "SM_B_Nightstand_Drawer.fbx",
+ "set": "hero_bedroom",
+ "break_class": "wood",
+ "textures": {
+  "C": "SM_B_Nightstand_Drawer/tex/T_SM_B_Nightstand_Drawer_C.png",
+  "N": "SM_B_Nightstand_Drawer/tex/T_SM_B_Nightstand_Drawer_N.png",
+  "R": "SM_B_Nightstand_Drawer/tex/T_SM_B_Nightstand_Drawer_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_B_Nightstand_Drawer_Brk0",
+   "file": "SM_B_Nightstand_Drawer_Brk0.fbx",
+   "triangles": 360,
+   "bbox_min_m": [
+    -0.205,
+    -0.032,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.205,
+    0.018,
+    0.168
+   ],
+   "materials": [
+    "Hero_SM_B_Nightstand_Drawer",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_B_Nightstand_Drawer_Brk1",
+   "file": "SM_B_Nightstand_Drawer_Brk1.fbx",
+   "triangles": 372,
+   "bbox_min_m": [
+    -0.1916,
+    -0.032,
+    0.012
+   ],
+   "bbox_max_m": [
+    0.1916,
+    0.34,
+    0.148
+   ],
+   "materials": [
+    "Hero_SM_B_Nightstand_Drawer",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_B_Nightstand_Drawer_Brk2",
+   "file": "SM_B_Nightstand_Drawer_Brk2.fbx",
+   "triangles": 640,
+   "bbox_min_m": [
+    -0.13,
+    -0.032,
+    0.024
+   ],
+   "bbox_max_m": [
+    0.145,
+    0.28,
+    0.084
+   ],
+   "materials": [
+    "Hero_SM_B_Nightstand_Drawer",
+    "Break"
+   ]
+  }
+ ],
+ "note": "bedside drawer: walnut front, brass knob, beech box with a paper liner; a book, a tin, a charger inside",
+ "kept_slots": [],
+ "triangles": 1372,
+ "bbox_min_m": [
+  -0.205,
+  -0.032,
+  0.0
+ ],
+ "bbox_max_m": [
+  0.205,
+  0.34,
+  0.168
+ ],
+ "materials": [
+  "Hero_SM_B_Nightstand_Drawer"
+ ],
+ "lod_triangles": [
+  1372,
+  480,
+  164
+ ],
+ "ucx": 5,
+ "room": "bedroom",
+ "ru": "Ящик тумбы",
+ "attach": {
+  "parent": "SM_B_Nightstand",
+  "at_m": [
+   [
+    0.0,
+    -0.2,
+    0.36
+   ]
+  ],
+  "move": "slide",
+  "slide_m": [
+   0,
+   -0.26,
+   0
+  ]
+ },
+ "size_uu": [
+  779,
+  707,
+  319
+ ]
+}

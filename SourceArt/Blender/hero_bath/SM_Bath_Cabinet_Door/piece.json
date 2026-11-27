@@ -1,0 +1,114 @@
+{
+ "name": "SM_Bath_Cabinet_Door",
+ "file": "SM_Bath_Cabinet_Door.fbx",
+ "set": "hero_bath",
+ "break_class": "glass",
+ "textures": {
+  "C": "SM_Bath_Cabinet_Door/tex/T_SM_Bath_Cabinet_Door_C.png",
+  "N": "SM_Bath_Cabinet_Door/tex/T_SM_Bath_Cabinet_Door_N.png",
+  "R": "SM_Bath_Cabinet_Door/tex/T_SM_Bath_Cabinet_Door_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_Bath_Cabinet_Door_Brk0",
+   "file": "SM_Bath_Cabinet_Door_Brk0.fbx",
+   "triangles": 584,
+   "bbox_min_m": [
+    0.0,
+    -0.014,
+    -0.006
+   ],
+   "bbox_max_m": [
+    0.596,
+    0.012,
+    0.696
+   ],
+   "materials": [
+    "Hero_SM_Bath_Cabinet_Door",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Cabinet_Door_Brk1",
+   "file": "SM_Bath_Cabinet_Door_Brk1.fbx",
+   "triangles": 216,
+   "bbox_min_m": [
+    0.1274,
+    -0.018,
+    0.004
+   ],
+   "bbox_max_m": [
+    0.592,
+    -0.014,
+    0.692
+   ],
+   "materials": [
+    "Hero_SM_Bath_Cabinet_Door",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Cabinet_Door_Brk2",
+   "file": "SM_Bath_Cabinet_Door_Brk2.fbx",
+   "triangles": 216,
+   "bbox_min_m": [
+    0.004,
+    -0.018,
+    0.004
+   ],
+   "bbox_max_m": [
+    0.4743,
+    -0.014,
+    0.692
+   ],
+   "materials": [
+    "Hero_SM_Bath_Cabinet_Door",
+    "Break"
+   ]
+  }
+ ],
+ "note": "mirror door of the bathroom cabinet",
+ "kept_slots": [],
+ "triangles": 628,
+ "bbox_min_m": [
+  0.0,
+  -0.018,
+  -0.006
+ ],
+ "bbox_max_m": [
+  0.596,
+  0.012,
+  0.696
+ ],
+ "materials": [
+  "Hero_SM_Bath_Cabinet_Door"
+ ],
+ "lod_triangles": [
+  628,
+  218,
+  74
+ ],
+ "ucx": 1,
+ "room": "bath",
+ "ru": "Дверца шкафчика с зеркалом",
+ "attach": {
+  "parent": "SM_Bath_Cabinet",
+  "at_m": [
+   [
+    -0.298,
+    -0.122,
+    1.152
+   ]
+  ],
+  "move": "hinge",
+  "axis": "Z",
+  "open_deg": -110
+ },
+ "size_uu": [
+  1132,
+  57,
+  1334
+ ]
+}

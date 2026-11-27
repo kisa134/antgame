@@ -152,7 +152,9 @@ return float4(c, saturate(r));
 
 INNER_UV = r"""
 float hh = Axis < 0.5 ? (LP.z - HMin) / max(HMax - HMin, 0.01) : length(LP.xy) / max(HMax, 0.01);
-float u = (LP.x + LP.y * 0.7) / max(USize, 0.01);
+// (UYWeight 0.7, UOffset 0: every food as before. A food whose inner strip is a real cross-section - the tomato: its core must
+//  come out in the middle of the cut - sets UYWeight 0 and UOffset so that U = 0.5 at the whole food's centre: import_food_v2.py)
+float u = (LP.x + LP.y * UYWeight) / max(USize, 0.01) + UOffset;
 return float2(u, 1.0 - saturate(hh));
 """
 
@@ -195,9 +197,33 @@ def wpo(m, X, Y):
     except Exception as e:
         unreal.log_warning("FOODMAT no max WPO displacement: %s" % e)
 
-def build_outer():
-    m = fresh("M_FoodV2")
-    m.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_SUBSURFACE)
+# glass (the ice cube): what is not clear is the blue of _R (the white heart of trapped air, frost, cracks, bubbles); the states
+# cloud it (frozen: frosted over; burnt, dirty, spoiled: a film); at a glancing angle it mirrors rather than shows through
+GLASS_OPACITY = r"""
+float o = lerp(Clear, 1.0, saturate(R.b));
+o = max(o, saturate(Frozen) * 0.85);
+o = max(o, saturate(Char / 0.35) * 0.35 + saturate((Char - 0.35) / 0.65) * 0.55);
+o = max(o, saturate(Spoil) * 0.45);
+o = max(o, saturate(Dirt) * 0.5);
+return saturate(o + Fr * 0.45);
+"""
+
+def build_outer(name="M_FoodV2", glass=False):
+    m = fresh(name)
+    if glass:
+        # M_FoodV2 is an opaque subsurface material: its Opacity (1 - Jelly) is how far light scatters in it, never transparency -
+        # the ice came out as milk glass. This copy is translucent, lit per pixel, and bends what is seen through it.
+        m.set_editor_property("blend_mode", unreal.BlendMode.BLEND_TRANSLUCENT)
+        m.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_DEFAULT_LIT)
+        tl = getattr(unreal.TranslucencyLightingMode, "TLM_SURFACE_PER_PIXEL_LIGHTING", None) or getattr(unreal.TranslucencyLightingMode, "TLM_SURFACE", None)
+        for k, v in (("translucency_lighting_mode", tl), ("refraction_method", getattr(getattr(unreal, "RefractionMode", None), "RM_INDEX_OF_REFRACTION", None)),
+                     ("screen_space_reflections", True), ("cast_dynamic_shadow_as_masked", True)):
+            try:
+                if v is not None: m.set_editor_property(k, v)
+            except Exception as e:
+                unreal.log_warning("FOODMAT glass: no %s (%s)" % (k, e))
+    else:
+        m.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_SUBSURFACE)
     X = -1600
     c = tex(m, "C", "/Engine/EngineResources/WhiteSquareTexture", X, -700)
     n = tex(m, "N", "/Engine/EngineMaterials/FlatNormal", X, -450, "normal")
@@ -221,27 +247,41 @@ def build_outer():
     MEL.connect_material_property(rough, "", unreal.MaterialProperty.MP_ROUGHNESS)
     MEL.connect_material_property(n, "RGB", unreal.MaterialProperty.MP_NORMAL)
     MEL.connect_material_property(r, "R", unreal.MaterialProperty.MP_AMBIENT_OCCLUSION)
-    # jelly (gummies, marshmallow, honey, ice): light goes in - subsurface in its own colour; the rest stays opaque
-    jelly = sp(m, "Jelly", 0.0, X + 300, 1700)
-    ssc = MEL.create_material_expression(m, unreal.MaterialExpressionMultiply, -500, 300)
-    MEL.connect_material_expressions(rgb, "", ssc, "A"); MEL.connect_material_expressions(jelly, "", ssc, "B")
-    MEL.connect_material_property(ssc, "", unreal.MaterialProperty.MP_SUBSURFACE_COLOR)
-    op = MEL.create_material_expression(m, unreal.MaterialExpressionOneMinus, -500, 450)
-    MEL.connect_material_expressions(jelly, "", op, "")
-    MEL.connect_material_property(op, "", unreal.MaterialProperty.MP_OPACITY)
+    if glass:
+        fr = MEL.create_material_expression(m, unreal.MaterialExpressionFresnel, -900, 500)
+        for k, v in (("exponent", 4.0), ("base_reflect_fraction", 0.02)):
+            try: fr.set_editor_property(k, v)
+            except Exception as e: unreal.log_warning("FOODMAT glass fresnel %s: %s" % (k, e))
+        op = custom(m, GLASS_OPACITY, ["R", "Clear", "Frozen", "Char", "Spoil", "Dirt", "Fr"], -500, 450, "glass opacity", unreal.CustomMaterialOutputType.CMOT_FLOAT1)
+        MEL.connect_material_expressions(r, "RGB", op, "R"); MEL.connect_material_expressions(sp(m, "OpacityClear", 0.10, X + 300, 1700), "", op, "Clear")
+        for i, k in enumerate(("Frozen", "Char", "Spoil", "Dirt")):
+            MEL.connect_material_expressions(cpd(m, k, X + 600, 1200 + i * 70), "", op, k)
+        MEL.connect_material_expressions(fr, "", op, "Fr")
+        MEL.connect_material_property(op, "", unreal.MaterialProperty.MP_OPACITY)
+        MEL.connect_material_property(sp(m, "IOR", 1.31, X + 300, 1780), "", unreal.MaterialProperty.MP_REFRACTION)
+        MEL.connect_material_property(sp(m, "Specular", 0.5, X + 300, 1860), "", unreal.MaterialProperty.MP_SPECULAR)
+    else:
+        # jelly (gummies, marshmallow, honey): light goes in - subsurface in its own colour; the rest stays opaque
+        jelly = sp(m, "Jelly", 0.0, X + 300, 1700)
+        ssc = MEL.create_material_expression(m, unreal.MaterialExpressionMultiply, -500, 300)
+        MEL.connect_material_expressions(rgb, "", ssc, "A"); MEL.connect_material_expressions(jelly, "", ssc, "B")
+        MEL.connect_material_property(ssc, "", unreal.MaterialProperty.MP_SUBSURFACE_COLOR)
+        op = MEL.create_material_expression(m, unreal.MaterialExpressionOneMinus, -500, 450)
+        MEL.connect_material_expressions(jelly, "", op, "")
+        MEL.connect_material_property(op, "", unreal.MaterialProperty.MP_OPACITY)
     wpo(m, -1600, 1900)
     MEL.recompile_material(m)
-    EAL.save_asset(DIR + "/M_FoodV2")
-    unreal.log("FOODMAT M_FoodV2")
+    EAL.save_asset(DIR + "/" + name)
+    unreal.log("FOODMAT " + name)
 
 def build_inner():
     m = fresh("M_FoodV2_Inner")
     m.set_editor_property("two_sided", True)
     X = -1600
     lp = MEL.create_material_expression(m, unreal.MaterialExpressionLocalPosition, X, -600)
-    uvc = custom(m, INNER_UV, ["LP", "HMin", "HMax", "Axis", "USize"], X + 400, -600, "inner strip uv", unreal.CustomMaterialOutputType.CMOT_FLOAT2)
+    uvc = custom(m, INNER_UV, ["LP", "HMin", "HMax", "Axis", "USize", "UYWeight", "UOffset"], X + 400, -600, "inner strip uv", unreal.CustomMaterialOutputType.CMOT_FLOAT2)
     MEL.connect_material_expressions(lp, "", uvc, "LP")
-    for i, (k, v) in enumerate((("HMin", -50.0), ("HMax", 50.0), ("Axis", 0.0), ("USize", 100.0))):
+    for i, (k, v) in enumerate((("HMin", -50.0), ("HMax", 50.0), ("Axis", 0.0), ("USize", 100.0), ("UYWeight", 0.7), ("UOffset", 0.0))):
         MEL.connect_material_expressions(sp(m, k, v, X, -450 + i * 80), "", uvc, k)
     c = tex(m, "InC", "/Engine/EngineResources/WhiteSquareTexture", X + 800, -600, "color", uvc)
     col = custom(m, INNER_COLOR, ["C", "Char", "Spoil", "Frozen", "Wet"], -500, -300, "inner colour + states", unreal.CustomMaterialOutputType.CMOT_FLOAT4)
@@ -347,10 +387,17 @@ def build_old():
     ns["build_uv"]("M_M4_UV_Food")
     build_meshy_food(ns)
 
-if ONLY != "old":
-    if not EAL.does_directory_exist(DIR): EAL.make_directory(DIR)
-    build_outer()
+if ONLY == "glass":
+    # pass 3 (KAN-36, 27.11): only what the ice and the tomato need - the glass master (new) and the inner master (two new
+    # parameters whose defaults give every other food the very same picture); M_FoodV2 and the old models' masters are not touched
+    build_outer("M_FoodV2_Glass", True)
     build_inner()
-if ONLY != "v2":
-    build_old()
+else:
+    if ONLY != "old":
+        if not EAL.does_directory_exist(DIR): EAL.make_directory(DIR)
+        build_outer()
+        build_outer("M_FoodV2_Glass", True)
+        build_inner()
+    if ONLY != "v2":
+        build_old()
 unreal.log("FOODMAT_DONE")

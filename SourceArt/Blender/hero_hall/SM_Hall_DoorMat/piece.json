@@ -1,0 +1,101 @@
+{
+ "name": "SM_Hall_DoorMat",
+ "file": "SM_Hall_DoorMat.fbx",
+ "set": "hero_hall",
+ "break_class": "cloth",
+ "textures": {
+  "C": "SM_Hall_DoorMat/tex/T_SM_Hall_DoorMat_C.png",
+  "N": "SM_Hall_DoorMat/tex/T_SM_Hall_DoorMat_N.png",
+  "R": "SM_Hall_DoorMat/tex/T_SM_Hall_DoorMat_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_Hall_DoorMat_Brk0",
+   "file": "SM_Hall_DoorMat_Brk0.fbx",
+   "triangles": 1220,
+   "bbox_min_m": [
+    -0.3,
+    -0.2,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.3,
+    0.2,
+    0.014
+   ],
+   "materials": [
+    "Hero_SM_Hall_DoorMat",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Hall_DoorMat_Brk1",
+   "file": "SM_Hall_DoorMat_Brk1.fbx",
+   "triangles": 316,
+   "bbox_min_m": [
+    -0.0059,
+    -0.183,
+    0.006
+   ],
+   "bbox_max_m": [
+    0.283,
+    0.183,
+    0.0186
+   ],
+   "materials": [
+    "Hero_SM_Hall_DoorMat",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Hall_DoorMat_Brk2",
+   "file": "SM_Hall_DoorMat_Brk2.fbx",
+   "triangles": 316,
+   "bbox_min_m": [
+    -0.283,
+    -0.183,
+    0.006
+   ],
+   "bbox_max_m": [
+    0.1048,
+    0.183,
+    0.0186
+   ],
+   "materials": [
+    "Hero_SM_Hall_DoorMat",
+    "Break"
+   ]
+  }
+ ],
+ "note": "coir door mat in a ribbed rubber tray",
+ "kept_slots": [],
+ "triangles": 1352,
+ "bbox_min_m": [
+  -0.3,
+  -0.2,
+  0.0
+ ],
+ "bbox_max_m": [
+  0.3,
+  0.2,
+  0.0186
+ ],
+ "materials": [
+  "Hero_SM_Hall_DoorMat"
+ ],
+ "lod_triangles": [
+  1352,
+  472,
+  162
+ ],
+ "ucx": 2,
+ "room": "hall",
+ "ru": "Коврик придверный",
+ "size_uu": [
+  1140,
+  760,
+  35
+ ]
+}

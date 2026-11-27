@@ -1,0 +1,93 @@
+{
+ "name": "SM_Bath_Towel",
+ "file": "SM_Bath_Towel.fbx",
+ "set": "hero_bath",
+ "break_class": "cloth",
+ "textures": {
+  "C": "SM_Bath_Towel/tex/T_SM_Bath_Towel_C.png",
+  "N": "SM_Bath_Towel/tex/T_SM_Bath_Towel_N.png",
+  "R": "SM_Bath_Towel/tex/T_SM_Bath_Towel_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_Bath_Towel_Brk0",
+   "file": "SM_Bath_Towel_Brk0.fbx",
+   "triangles": 2146,
+   "bbox_min_m": [
+    -0.1612,
+    -0.1414,
+    0.7834
+   ],
+   "bbox_max_m": [
+    0.161,
+    -0.0438,
+    1.621
+   ],
+   "materials": [
+    "Hero_SM_Bath_Towel",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Towel_Brk1",
+   "file": "SM_Bath_Towel_Brk1.fbx",
+   "triangles": 1650,
+   "bbox_min_m": [
+    -0.161,
+    -0.3102,
+    0.0009
+   ],
+   "bbox_max_m": [
+    0.1612,
+    -0.1042,
+    0.8123
+   ],
+   "materials": [
+    "Hero_SM_Bath_Towel",
+    "Break"
+   ]
+  }
+ ],
+ "note": "terry towel over the top rung, down to the floor (the ants climb it)",
+ "kept_slots": [],
+ "triangles": 3560,
+ "bbox_min_m": [
+  -0.1612,
+  -0.3102,
+  0.0009
+ ],
+ "bbox_max_m": [
+  0.1612,
+  -0.0438,
+  1.621
+ ],
+ "materials": [
+  "Hero_SM_Bath_Towel"
+ ],
+ "lod_triangles": [
+  3560,
+  1246,
+  426
+ ],
+ "ucx": 2,
+ "room": "bath",
+ "ru": "Полотенце на сушителе (свисает до пола)",
+ "attach": {
+  "parent": "SM_Bath_TowelRail",
+  "at_m": [
+   [
+    0,
+    0,
+    0
+   ]
+  ],
+  "move": "rest"
+ },
+ "size_uu": [
+  613,
+  506,
+  3078
+ ]
+}

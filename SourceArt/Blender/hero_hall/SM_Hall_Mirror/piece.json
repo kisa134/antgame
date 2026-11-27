@@ -1,0 +1,120 @@
+{
+ "name": "SM_Hall_Mirror",
+ "file": "SM_Hall_Mirror.fbx",
+ "set": "hero_hall",
+ "break_class": "glass",
+ "textures": {
+  "C": "SM_Hall_Mirror/tex/T_SM_Hall_Mirror_C.png",
+  "N": "SM_Hall_Mirror/tex/T_SM_Hall_Mirror_N.png",
+  "R": "SM_Hall_Mirror/tex/T_SM_Hall_Mirror_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_Hall_Mirror_Brk0",
+   "file": "SM_Hall_Mirror_Brk0.fbx",
+   "triangles": 828,
+   "bbox_min_m": [
+    -0.25,
+    -0.033,
+    0.45
+   ],
+   "bbox_max_m": [
+    0.25,
+    0.0,
+    1.75
+   ],
+   "materials": [
+    "Hero_SM_Hall_Mirror",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Hall_Mirror_Brk1",
+   "file": "SM_Hall_Mirror_Brk1.fbx",
+   "triangles": 68,
+   "bbox_min_m": [
+    -0.209,
+    -0.014,
+    1.0598
+   ],
+   "bbox_max_m": [
+    0.209,
+    -0.01,
+    1.709
+   ],
+   "materials": [
+    "Hero_SM_Hall_Mirror",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Hall_Mirror_Brk2",
+   "file": "SM_Hall_Mirror_Brk2.fbx",
+   "triangles": 1328,
+   "bbox_min_m": [
+    -0.25,
+    -0.115,
+    0.279
+   ],
+   "bbox_max_m": [
+    0.25,
+    0.005,
+    0.454
+   ],
+   "materials": [
+    "Hero_SM_Hall_Mirror",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Hall_Mirror_Brk3",
+   "file": "SM_Hall_Mirror_Brk3.fbx",
+   "triangles": 68,
+   "bbox_min_m": [
+    -0.209,
+    -0.014,
+    0.491
+   ],
+   "bbox_max_m": [
+    0.209,
+    -0.01,
+    1.1437
+   ],
+   "materials": [
+    "Hero_SM_Hall_Mirror",
+    "Break"
+   ]
+  }
+ ],
+ "note": "wall mirror in an oak frame, key shelf with brass hooks, keys and a coin dish",
+ "kept_slots": [],
+ "triangles": 2168,
+ "bbox_min_m": [
+  -0.25,
+  -0.115,
+  0.279
+ ],
+ "bbox_max_m": [
+  0.25,
+  0.005,
+  1.75
+ ],
+ "materials": [
+  "Hero_SM_Hall_Mirror"
+ ],
+ "lod_triangles": [
+  2168,
+  758,
+  260
+ ],
+ "ucx": 2,
+ "room": "hall",
+ "ru": "Зеркало с ключницей",
+ "size_uu": [
+  950,
+  228,
+  2795
+ ]
+}

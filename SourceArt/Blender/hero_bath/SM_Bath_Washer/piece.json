@@ -1,0 +1,180 @@
+{
+ "name": "SM_Bath_Washer",
+ "file": "SM_Bath_Washer.fbx",
+ "set": "hero_bath",
+ "break_class": "metal",
+ "textures": {
+  "C": "SM_Bath_Washer/tex/T_SM_Bath_Washer_C.png",
+  "N": "SM_Bath_Washer/tex/T_SM_Bath_Washer_N.png",
+  "R": "SM_Bath_Washer/tex/T_SM_Bath_Washer_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_Bath_Washer_Brk0",
+   "file": "SM_Bath_Washer_Brk0.fbx",
+   "triangles": 108,
+   "bbox_min_m": [
+    -0.3,
+    -0.288,
+    0.014
+   ],
+   "bbox_max_m": [
+    0.25,
+    0.3,
+    0.82
+   ],
+   "materials": [
+    "Hero_SM_Bath_Washer",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Washer_Brk1",
+   "file": "SM_Bath_Washer_Brk1.fbx",
+   "triangles": 108,
+   "bbox_min_m": [
+    -0.25,
+    -0.288,
+    0.014
+   ],
+   "bbox_max_m": [
+    0.3,
+    0.3,
+    0.82
+   ],
+   "materials": [
+    "Hero_SM_Bath_Washer",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Washer_Brk2",
+   "file": "SM_Bath_Washer_Brk2.fbx",
+   "triangles": 836,
+   "bbox_min_m": [
+    -0.2955,
+    -0.288,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.288,
+    0.345,
+    0.82
+   ],
+   "materials": [
+    "Hero_SM_Bath_Washer",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Washer_Brk3",
+   "file": "SM_Bath_Washer_Brk3.fbx",
+   "triangles": 300,
+   "bbox_min_m": [
+    -0.3,
+    -0.3,
+    0.014
+   ],
+   "bbox_max_m": [
+    0.3,
+    0.3,
+    0.85
+   ],
+   "materials": [
+    "Hero_SM_Bath_Washer",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Washer_Brk4",
+   "file": "SM_Bath_Washer_Brk4.fbx",
+   "triangles": 2304,
+   "bbox_min_m": [
+    -0.3,
+    -0.3345,
+    0.014
+   ],
+   "bbox_max_m": [
+    0.3,
+    0.25,
+    0.82
+   ],
+   "materials": [
+    "Hero_SM_Bath_Washer",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Washer_Brk5",
+   "file": "SM_Bath_Washer_Brk5.fbx",
+   "triangles": 2292,
+   "bbox_min_m": [
+    -0.25,
+    -0.3,
+    0.014
+   ],
+   "bbox_max_m": [
+    0.25,
+    0.25,
+    0.635
+   ],
+   "materials": [
+    "Hero_SM_Bath_Washer",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Washer_Brk6",
+   "file": "SM_Bath_Washer_Brk6.fbx",
+   "triangles": 188,
+   "bbox_min_m": [
+    -0.25,
+    -0.25,
+    0.014
+   ],
+   "bbox_max_m": [
+    0.25,
+    0.25,
+    0.3
+   ],
+   "materials": [
+    "Hero_SM_Bath_Washer",
+    "Break"
+   ]
+  }
+ ],
+ "note": "front-loading washing machine: enamelled cabinet, laminate top, control strip, kick plate with filter flap, gasket, perforated drum with lifters and a towel, hoses and cord behind",
+ "kept_slots": [],
+ "triangles": 6136,
+ "bbox_min_m": [
+  -0.3,
+  -0.3345,
+  0.0
+ ],
+ "bbox_max_m": [
+  0.3,
+  0.345,
+  0.85
+ ],
+ "materials": [
+  "Hero_SM_Bath_Washer"
+ ],
+ "lod_triangles": [
+  6136,
+  2147,
+  736
+ ],
+ "ucx": 14,
+ "room": "bath",
+ "ru": "Стиральная машина",
+ "children": [
+  "SM_Bath_Washer_Door"
+ ],
+ "size_uu": [
+  1140,
+  1291,
+  1615
+ ]
+}

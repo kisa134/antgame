@@ -295,6 +295,12 @@ if "hero_kitchen" in only:
     # SourceArt/Blender/hero_kitchen -> /Game/Hero/<Name>, the old model stays (-AntHeroArt=0)
     import_hero([n for n in os.environ.get("ANT_HERO_NAMES", "").replace("+", ",").split(",") if n and n != "all"] or None,
                 os.path.join(PROJ, "SourceArt", "Blender", "hero_kitchen"), "hero_kitchen_manifest.json", hero_dir_new)
+for flat_set in ("hero_bedroom", "hero_bath", "hero_hall"):
+    if flat_set in only:
+        # the rooms of the new flat (hero_flat.py, KAN-41): SourceArt/Blender/hero_<room> -> /Game/Hero/<Name>; what opens
+        # (doors, drawers, lids) is a piece of its own, its place on the parent is in the manifest ("attach")
+        import_hero([n for n in os.environ.get("ANT_HERO_NAMES", "").replace("+", ",").split(",") if n and n != "all"] or None,
+                    os.path.join(PROJ, "SourceArt", "Blender", flat_set), flat_set + "_manifest.json", hero_dir_new)
 for set_name, src, dst, manifest_name in SETS:
     if only and set_name not in only:
         continue

@@ -1,0 +1,114 @@
+{
+ "name": "SM_Bath_Washer_Door",
+ "file": "SM_Bath_Washer_Door.fbx",
+ "set": "hero_bath",
+ "break_class": "plastic",
+ "textures": {
+  "C": "SM_Bath_Washer_Door/tex/T_SM_Bath_Washer_Door_C.png",
+  "N": "SM_Bath_Washer_Door/tex/T_SM_Bath_Washer_Door_N.png",
+  "R": "SM_Bath_Washer_Door/tex/T_SM_Bath_Washer_Door_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_Bath_Washer_Door_Brk0",
+   "file": "SM_Bath_Washer_Door_Brk0.fbx",
+   "triangles": 916,
+   "bbox_min_m": [
+    -0.012,
+    -0.036,
+    -0.214
+   ],
+   "bbox_max_m": [
+    0.429,
+    0.004,
+    0.214
+   ],
+   "materials": [
+    "Hero_SM_Bath_Washer_Door",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Washer_Door_Brk1",
+   "file": "SM_Bath_Washer_Door_Brk1.fbx",
+   "triangles": 748,
+   "bbox_min_m": [
+    0.1701,
+    -0.024,
+    -0.1441
+   ],
+   "bbox_max_m": [
+    0.365,
+    0.066,
+    0.15
+   ],
+   "materials": [
+    "Hero_SM_Bath_Washer_Door",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Washer_Door_Brk2",
+   "file": "SM_Bath_Washer_Door_Brk2.fbx",
+   "triangles": 744,
+   "bbox_min_m": [
+    0.065,
+    -0.024,
+    -0.15
+   ],
+   "bbox_max_m": [
+    0.2554,
+    0.0658,
+    0.143
+   ],
+   "materials": [
+    "Hero_SM_Bath_Washer_Door",
+    "Break"
+   ]
+  }
+ ],
+ "note": "porthole door: plastic ring, smoked glass bowl, grip, steel hinge",
+ "kept_slots": [],
+ "triangles": 1316,
+ "bbox_min_m": [
+  -0.012,
+  -0.036,
+  -0.214
+ ],
+ "bbox_max_m": [
+  0.429,
+  0.066,
+  0.214
+ ],
+ "materials": [
+  "Hero_SM_Bath_Washer_Door"
+ ],
+ "lod_triangles": [
+  1316,
+  459,
+  157
+ ],
+ "ucx": 1,
+ "room": "bath",
+ "ru": "Люк стиральной машины",
+ "attach": {
+  "parent": "SM_Bath_Washer",
+  "at_m": [
+   [
+    -0.215,
+    -0.307,
+    0.43
+   ]
+  ],
+  "move": "hinge",
+  "axis": "Z",
+  "open_deg": -110
+ },
+ "size_uu": [
+  838,
+  194,
+  813
+ ]
+}

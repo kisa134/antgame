@@ -1,0 +1,114 @@
+{
+ "name": "SM_B_Wardrobe_DoorR",
+ "file": "SM_B_Wardrobe_DoorR.fbx",
+ "set": "hero_bedroom",
+ "break_class": "wood",
+ "textures": {
+  "C": "SM_B_Wardrobe_DoorR/tex/T_SM_B_Wardrobe_DoorR_C.png",
+  "N": "SM_B_Wardrobe_DoorR/tex/T_SM_B_Wardrobe_DoorR_N.png",
+  "R": "SM_B_Wardrobe_DoorR/tex/T_SM_B_Wardrobe_DoorR_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_B_Wardrobe_DoorR_Brk0",
+   "file": "SM_B_Wardrobe_DoorR_Brk0.fbx",
+   "triangles": 1976,
+   "bbox_min_m": [
+    -0.597,
+    -0.052,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.0,
+    0.012,
+    2.074
+   ],
+   "materials": [
+    "Hero_SM_B_Wardrobe_DoorR",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_B_Wardrobe_DoorR_Brk1",
+   "file": "SM_B_Wardrobe_DoorR_Brk1.fbx",
+   "triangles": 592,
+   "bbox_min_m": [
+    -0.56,
+    -0.052,
+    0.085
+   ],
+   "bbox_max_m": [
+    -0.075,
+    -0.005,
+    1.989
+   ],
+   "materials": [
+    "Hero_SM_B_Wardrobe_DoorR",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_B_Wardrobe_DoorR_Brk2",
+   "file": "SM_B_Wardrobe_DoorR_Brk2.fbx",
+   "triangles": 488,
+   "bbox_min_m": [
+    -0.56,
+    -0.052,
+    0.392
+   ],
+   "bbox_max_m": [
+    -0.124,
+    0.009,
+    1.758
+   ],
+   "materials": [
+    "Hero_SM_B_Wardrobe_DoorR",
+    "Break"
+   ]
+  }
+ ],
+ "note": "wardrobe door, hinged on the right: as the left one, with a dressing mirror on its inside",
+ "kept_slots": [],
+ "triangles": 3056,
+ "bbox_min_m": [
+  -0.597,
+  -0.052,
+  0.0
+ ],
+ "bbox_max_m": [
+  0.0,
+  0.012,
+  2.074
+ ],
+ "materials": [
+  "Hero_SM_B_Wardrobe_DoorR"
+ ],
+ "lod_triangles": [
+  3056,
+  1068,
+  366
+ ],
+ "ucx": 1,
+ "room": "bedroom",
+ "ru": "Дверца шкафа правая (с зеркалом внутри)",
+ "attach": {
+  "parent": "SM_B_Wardrobe",
+  "at_m": [
+   [
+    0.5985,
+    -0.278,
+    0.084
+   ]
+  ],
+  "move": "hinge",
+  "axis": "Z",
+  "open_deg": 105
+ },
+ "size_uu": [
+  1134,
+  122,
+  3941
+ ]
+}
