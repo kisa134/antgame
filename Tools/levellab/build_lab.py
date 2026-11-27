@@ -12,7 +12,7 @@ Z up, floor at 0). This script turns that into:
 Run:  python Tools/levellab/build_lab.py [A]      (no argument: every variant that has a layout function)
 Only A exists for now (the owner picked «Двушка», 26.11.2026); the loader takes more variants without code changes.
 """
-import json, math, os, sys, heapq, itertools
+import json, math, os, re, sys, heapq, itertools
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 UU = 1900.0                 # uu per metre (KitchenBuilder.h)
@@ -20,6 +20,59 @@ SPRINT = 456.0 / UU         # m/s: the ant's sprint
 CLIMB_MUL = 1.3             # a metre up a curtain costs 1.3 metres of floor
 CEIL = 2.6
 FIRST_FOOD_LIMIT = 25.0     # s, nest -> the first food of every room
+
+# ---------------------------------------------------------------------------------------------------------- the kitchen's art
+# KAN-40: the flat is furnished with the game's own models (the kitchen and living-room sets, /Game/Hero). A piece keeps its
+# parts (doors, drawers, knobs, burners) by taking a GROUP of rows of the kitchen's own table (LevelV3Art.inl) and mapping the
+# box they stand in there onto a box of the flat: turned by a multiple of 90 degrees and scaled per axis. The gadget code is
+# written in the kitchen's coordinates; the same mapping (a "home" per group) takes it to the flat.
+
+_NUM = r'(-?[\d.]+)f?'
+_V3 = r'\{\s*%s,\s*%s,\s*%s\s*\}' % (_NUM, _NUM, _NUM)
+_ROW = re.compile(r'\{\s*TEXT\("(\w+)"\),\s*(-?\d+),\s*(-?\d+),\s*(-?\d+),\s*' + r',\s*'.join([_V3] * 5) + r'\s*\},?\s*//\s*(\d+)')
+_MOV = re.compile(r'\{\s*(\d+),\s*(\d+),\s*' + _V3 + r',\s*' + _NUM + r',\s*' + _V3 + r',\s*(\d+),\s*' + _NUM + r',\s*TEXT\("([^"]*)"\),\s*TEXT\("([^"]*)"\)\s*\}')
+_KART = None
+_BBOX = None
+
+def kitchen_art():
+    """(rows, movers) of the kitchen's base table: rows[k] = name, index, role, parent, loc, axes, scale; movers refer to rows."""
+    global _KART
+    if _KART is None:
+        t = open(os.path.join(ROOT, 'Source', 'AntKitchen', 'LevelV3Art.inl'), encoding='utf-8-sig').read()
+        rows = {}
+        for m in _ROW.finditer(t):
+            g = m.groups()
+            f = [float(x) for x in g[4:19]]
+            rows[int(g[19])] = dict(n=g[0], i=int(g[1]), role=int(g[2]), par=int(g[3]), loc=f[0:3], ax=f[3:6], ay=f[6:9], az=f[9:12], sc=f[12:15])
+        movers = []
+        for m in _MOV.finditer(t[t.index('GKitchenMoversV3'):]):
+            g = m.groups()
+            movers.append(dict(inst=int(g[0]), type=int(g[1]), axis=[float(x) for x in g[2:5]], angle=float(g[5]), slide=[float(x) for x in g[6:9]],
+                               flags=int(g[9]), auto=float(g[10]), open=g[11], close=g[12]))
+        _KART = (rows, movers)
+    return _KART
+
+def mesh_bbox(name):
+    """(min, max) of a hero mesh in its own frame, metres (the art manifests)."""
+    global _BBOX
+    if _BBOX is None:
+        _BBOX = {}
+        for s in ('hero', 'hero_kitchen', 'hero_living', 'hero_props'):
+            f = os.path.join(ROOT, 'SourceArt', 'Blender', s, s + '_manifest.json')
+            if not os.path.isfile(f):
+                continue
+            for pc in json.load(open(f, encoding='utf-8'))['pieces']:
+                _BBOX[pc['name']] = (pc['bbox_min_m'], pc['bbox_max_m'])
+                for mv in pc.get('movers', []):
+                    _BBOX[mv['name']] = (mv['bbox_min_m'], mv['bbox_max_m'])
+    return _BBOX[name]
+
+def rot_z(yaw, v):
+    c, s = {0: (1, 0), 90: (0, 1), 180: (-1, 0), 270: (0, -1)}[int(yaw) % 360]
+    return [c * v[0] - s * v[1], s * v[0] + c * v[1], v[2]]
+
+def r3(v, n=3):
+    return [round(float(x), n) for x in v]
 
 # ---------------------------------------------------------------------------------------------------------- geometry
 
@@ -29,6 +82,8 @@ class Flat:
         self.rooms, self.boxes, self.zones, self.hatches = [], [], [], []
         self.nodes, self.edges, self.food, self.cover = {}, [], [], []
         self.nest, self.cake, self.human = None, None, None
+        self.art, self.movers, self.homes, self.slots, self.basins = [], [], [], [], []
+        self.climb_art = []
         self.notes = []
         self._n = itertools.count()
 
@@ -47,7 +102,7 @@ class Flat:
         return ''
 
     # -- boxes
-    def box(self, bid, mn, mx, kind, col, climb=False, collide=True, room=None, rot=None, tag=''):
+    def box(self, bid, mn, mx, kind, col, climb=False, collide=True, room=None, rot=None, tag='', art=''):
         mn, mx = [float(v) for v in mn], [float(v) for v in mx]
         for i in range(3):
             if mx[i] < mn[i]:
@@ -66,6 +121,8 @@ class Flat:
             b['r'] = [round(v, 3) for v in rot]
         if tag:
             b['tag'] = tag
+        if art:
+            b['art'] = art      # the grey box stands in for this art group: not built where the group's models are there
         self.boxes.append(b)
 
     def beam(self, bid, a, b, w, t, kind, col, climb=True):
@@ -117,6 +174,67 @@ class Flat:
             self.slab(bid + k + 'i', i0, i1, hs, 'shell_in', col_in, climb=True, axis=1 if k in 'SN' else 0)
         if top:
             self.box(bid + 'lid', (x0, y0, z1 - t), (x1, y1, z1), 'shell', col_out)
+
+    # -- art (KAN-40)
+    def group(self, gid, rows, kmin, kmax, lmin, lmax, yaw=0, index=None):
+        """Rows of the kitchen's table (numbers), the box they stand in there (uu) -> a box of the flat (metres), turned by yaw."""
+        K, M = kitchen_art()
+        yaw = int(yaw) % 360
+        kc = [(kmin[0] + kmax[0]) / 2.0, (kmin[1] + kmax[1]) / 2.0, float(kmin[2])]
+        kd = [float(kmax[i] - kmin[i]) for i in range(3)]
+        lc = [(lmin[0] + lmax[0]) / 2.0 * UU, (lmin[1] + lmax[1]) / 2.0 * UU, lmin[2] * UU]
+        ld = [(lmax[i] - lmin[i]) * UU for i in range(3)]
+        S = [ld[1] / kd[0], ld[0] / kd[1], ld[2] / kd[2]] if yaw in (90, 270) else [ld[0] / kd[0], ld[1] / kd[1], ld[2] / kd[2]]
+        def P(p):
+            r = rot_z(yaw, [S[i] * (p[i] - kc[i]) for i in range(3)])
+            return [lc[i] + r[i] for i in range(3)]
+        kmap = {}
+        for k in rows:
+            r = K[k]
+            f = [math.sqrt(sum((S[j] * a[j]) ** 2 for j in range(3))) for a in (r['ax'], r['ay'], r['az'])]
+            kmap[k] = len(self.art)
+            self.art.append(dict(n=r['n'], i=(index or {}).get(r['n'], r['i']), role=r['role'] if r['role'] != 3 else 0, par=-1, loc=r3(P(r['loc']), 1),
+                                 ax=r3(rot_z(yaw, r['ax']), 4), ay=r3(rot_z(yaw, r['ay']), 4), az=r3(rot_z(yaw, r['az']), 4),
+                                 sc=r3([r['sc'][i] * f[i] for i in range(3)], 4), g=gid))
+        for m in M:
+            if m['inst'] in kmap:
+                self.movers.append(dict(inst=kmap[m['inst']], type=m['type'], axis=r3(rot_z(yaw, m['axis']), 4), angle=m['angle'],
+                                        slide=r3(rot_z(yaw, [S[i] * m['slide'][i] for i in range(3)]), 1), flags=m['flags'], auto=m['auto'],
+                                        open=m['open'], close=m['close'], g=gid))
+        self.homes.append(dict(id=gid, k=r3(kc, 1), l=r3(lc, 1), yaw=yaw, s=r3(S, 5)))
+
+    def fit(self, gid, name, mn, mx, yaw=0, index=0):
+        """One model, scaled per axis so that its own box fills the box mn..mx (metres), turned by yaw."""
+        yaw = int(yaw) % 360
+        b0, b1 = mesh_bbox(name)
+        bd = [(b1[i] - b0[i]) * UU for i in range(3)]
+        bc = [(b0[i] + b1[i]) / 2.0 * UU for i in range(3)]
+        ld = [(mx[i] - mn[i]) * UU for i in range(3)]
+        want = [ld[1], ld[0], ld[2]] if yaw in (90, 270) else ld
+        s = [want[i] / bd[i] if bd[i] > 1.0 else 1.0 for i in range(3)]
+        o = rot_z(yaw, [s[0] * bc[0], s[1] * bc[1], 0.0])
+        loc = [(mn[0] + mx[0]) / 2.0 * UU - o[0], (mn[1] + mx[1]) / 2.0 * UU - o[1], mn[2] * UU - s[2] * b0[2] * UU]
+        self.art.append(dict(n=name, i=index, role=0, par=-1, loc=r3(loc, 1), ax=r3(rot_z(yaw, [1, 0, 0]), 4), ay=r3(rot_z(yaw, [0, 1, 0]), 4),
+                             az=[0.0, 0.0, 1.0], sc=r3(s, 4), g=gid))
+
+    def place(self, gid, name, at, yaw=0, scale=1.0, index=0):
+        """One model at a point (metres: its own origin), turned by any yaw, one scale."""
+        c, s = math.cos(math.radians(yaw)), math.sin(math.radians(yaw))
+        self.art.append(dict(n=name, i=index, role=0, par=-1, loc=r3([at[0] * UU, at[1] * UU, at[2] * UU], 1), ax=r3([c, s, 0], 4), ay=r3([-s, c, 0], 4),
+                             az=[0.0, 0.0, 1.0], sc=[scale, scale, scale], g=gid))
+
+    def slot(self, gid, names, mn, mx, yaw=0, note=''):
+        """A place kept for a model that is not made yet (the bedroom, bath and hall sets): the first of `names` the game finds
+        is fitted into the box mn..mx by its own bounds, and the grey boxes of this group step aside."""
+        self.slots.append(dict(g=gid, names=list(names), min=list(mn), max=list(mx), yaw=int(yaw) % 360, note=note))
+
+    def basin(self, name, mn, mx, z, ref, up, down, dx, fill=None, sub=1):
+        """A basin of the liquid simulation: a rectangle (metres), the level z of its bed, the point where that level is measured,
+        how far above / below the level the bed is looked for (uu), the cell size (uu). fill: a water level to start with (metres)."""
+        b = dict(name=name, min=list(mn), max=list(mx), z=z, ref=list(ref), up=up, down=down, dx=dx, sub=sub)
+        if fill is not None:
+            b['fill'] = fill
+        self.basins.append(b)
 
     # -- the rest
     def zone(self, kind, mn, mx, note, temp=None, rate=None):
@@ -188,13 +306,13 @@ def variant_A():
     F.wall('outN', (-O, 6.9, 0), (8.42 + O, 6.9 + O, CEIL), [(6.0, 7.2, 0.85, 2.3)], OUTW)          # the bedroom window
     F.box('glassN', (6.0, 7.02, 0.85), (7.2, 7.06, 2.3), 'glass', GLASS)
     F.box('sillN', (6.0, 6.7, 0.82), (7.2, 6.9, 0.85), 'top', TOP)
-    F.box('frontdoor', (3.2, 6.88, 0.0), (4.1, 6.9, 2.05), 'furn', '#6d5a48')                          # the front door, shut
+    F.box('frontdoor', (3.2, 6.88, 0.0), (4.1, 6.9, 2.05), 'furn', '#6d5a48', art='frontdoor')                          # the front door, shut
     F.wall('outW', (-O, -1.5, 0), (0.0, 6.9, CEIL), [], OUTW)
     F.wall('outE', (8.42, -1.5, 0), (8.42 + O, 6.9, CEIL), [], OUTW)
     # the wall between the rooms and the loggia: two windows, two balcony doors
     F.wall('outS', (0.0, -0.3, 0), (8.42, 0.0, CEIL), [(0.8, 1.8, 0.88, 2.4), (2.0, 2.8, 0.0, 2.1), (4.5, 5.6, 0.88, 2.4), (6.0, 6.8, 0.0, 2.1)], OUTW)
-    F.box('glassK', (0.8, -0.17, 0.88), (1.8, -0.13, 2.4), 'glass', GLASS)
-    F.box('glassL', (4.5, -0.17, 0.88), (5.6, -0.13, 2.4), 'glass', GLASS)
+    F.box('glassK', (0.8, -0.17, 0.88), (1.8, -0.13, 2.4), 'glass', GLASS, art='kwin')
+    F.box('glassL', (4.5, -0.17, 0.88), (5.6, -0.13, 2.4), 'glass', GLASS, art='lwin')
     F.box('thrK', (2.0, -0.3, 0.0), (2.8, 0.0, 0.02), 'climb', CLIMB, climb=True)
     F.box('thrL', (6.0, -0.3, 0.0), (6.8, 0.0, 0.02), 'climb', CLIMB, climb=True)
     # loggia front: a concrete parapet, glazing above (one pane is an open transom: the wind and the rain come in there)
@@ -232,58 +350,58 @@ def variant_A():
     F.cover.append(dict(min=[0.62, 3.42, 0.0], max=[0.82, 5.34, 2.4], name='в стояке'))
 
     # ---- kitchen
-    F.box('kCabW', (0.0, 1.2, 0.0), (0.6, 3.0, 0.81), 'furn', FURN)                     # the west run
-    F.box('kTopW', (0.0, 1.2, 0.81), (0.62, 3.0, 0.85), 'top', TOP)
-    F.box('kettle', (0.1, 2.1, 0.85), (0.32, 2.32, 1.1), 'furn', FURN2)
+    F.box('kCabW', (0.0, 1.2, 0.0), (0.6, 3.0, 0.81), 'furn', FURN, art='drawers')                     # the west run
+    F.box('kTopW', (0.0, 1.2, 0.81), (0.62, 3.0, 0.85), 'top', TOP, art='ktopw')
+    F.box('kettle', (0.1, 2.1, 0.85), (0.32, 2.32, 1.1), 'furn', FURN2, art='kettle')
     F.box('kCable', (0.62, 2.2, 0.0), (0.64, 2.24, 0.85), 'climb', CLIMB, climb=True)    # the kettle's cable down to the socket
-    F.box('fridge', (0.0, 0.45, 0.0), (0.62, 1.15, 1.85), 'furn', '#d9dcdf')            # enamel: not climbable
-    F.box('sinkL', (0.84, 3.0, 0.0), (0.86, 3.4, 0.81), 'furn', FURN)                   # the sink cabinet: hollow, the back corner open for the pipes
-    F.box('sinkR', (1.42, 3.0, 0.0), (1.44, 3.6, 0.81), 'furn', FURN)
-    F.box('sinkD', (0.86, 3.0, 0.03), (1.42, 3.02, 0.81), 'furn', FURN2)                 # its door: a 3 cm gap under it
-    F.box('sinkT', (0.84, 3.0, 0.81), (1.44, 3.6, 0.85), 'top', TOP)
+    F.box('fridge', (0.0, 0.45, 0.0), (0.62, 1.15, 1.85), 'furn', '#d9dcdf', art='fridge')            # enamel: not climbable
+    F.box('sinkL', (0.84, 3.0, 0.0), (0.86, 3.4, 0.81), 'furn', FURN, art='sink')                   # the sink cabinet: hollow, the back corner open for the pipes
+    F.box('sinkR', (1.42, 3.0, 0.0), (1.44, 3.6, 0.81), 'furn', FURN, art='sink')
+    F.box('sinkD', (0.86, 3.0, 0.03), (1.42, 3.02, 0.81), 'furn', FURN2, art='sink')                 # its door: a 3 cm gap under it
+    F.slab('sinkT', (0.84, 3.0, 0.81), (1.44, 3.6, 0.85), [(0.884, 1.396, 3.094, 3.544)], 'top', TOP, axis=2)   # (KAN-40: a hole for the bowl)
     F.cover.append(dict(min=[0.86, 3.02, 0.0], max=[1.42, 3.6, 0.81], name='под мойкой'))
-    F.box('stove', (1.44, 3.0, 0.0), (2.04, 3.6, 0.85), 'furn', '#7d8186')
+    F.box('stove', (1.44, 3.0, 0.0), (2.04, 3.6, 0.85), 'furn', '#7d8186', art='range')
     F.box('towel', (1.6, 2.97, 0.0), (1.88, 3.0, 0.85), 'climb', CLIMB, climb=True)      # the tea towel on the oven handle
-    F.box('wcabN', (0.84, 3.28, 1.45), (2.04, 3.6, 2.15), 'furn', FURN)
-    F.box('wcabW', (0.0, 1.2, 1.45), (0.33, 3.0, 2.15), 'furn', FURN)
+    F.box('wcabN', (0.84, 3.28, 1.45), (2.04, 3.6, 2.15), 'furn', FURN, art='wcabn0')
+    F.box('wcabW', (0.0, 1.2, 1.45), (0.33, 3.0, 2.15), 'furn', FURN, art='wcabw0')
     F.box('hoodCable', (2.04, 3.55, 0.85), (2.06, 3.6, 2.15), 'climb', CLIMB, climb=True) # the hood's cable up to the cabinet tops
-    F.box('kTable', (1.4, 1.0, 0.72), (2.4, 1.8, 0.75), 'top', TOP)
+    F.box('kTable', (1.4, 1.0, 0.72), (2.4, 1.8, 0.75), 'top', TOP, art='ktable')
     for (lx, ly) in ((1.43, 1.03), (2.33, 1.03), (1.43, 1.73), (2.33, 1.73)):
-        F.box('kLeg', (lx, ly, 0.0), (lx + 0.04, ly + 0.04, 0.72), 'furn', FURN)
+        F.box('kLeg', (lx, ly, 0.0), (lx + 0.04, ly + 0.04, 0.72), 'furn', FURN, art='ktable')
     F.box('kCloth', (1.6, 0.98, 0.0), (2.2, 1.0, 0.75), 'climb', CLIMB, climb=True)      # the oilcloth hangs down to the floor on one side
     for cy in (0.55, 1.85):
-        F.box('kChair', (1.62, cy, 0.42), (2.02, cy + 0.4, 0.45), 'furn', FURN2)
+        F.box('kChair', (1.62, cy, 0.42), (2.02, cy + 0.4, 0.45), 'furn', FURN2, art='kchair0' if cy < 1.0 else 'kchair1')
         for (lx, ly) in ((1.63, cy + 0.01), (1.98, cy + 0.01), (1.63, cy + 0.36), (1.98, cy + 0.36)):
-            F.box('kChairLeg', (lx, ly, 0.0), (lx + 0.03, ly + 0.03, 0.42), 'furn', FURN)
-    F.box('kSill', (0.8, 0.0, 0.85), (1.8, 0.25, 0.88), 'top', TOP)
+            F.box('kChairLeg', (lx, ly, 0.0), (lx + 0.03, ly + 0.03, 0.42), 'furn', FURN, art='kchair0' if cy < 1.0 else 'kchair1')
+    F.box('kSill', (0.8, 0.0, 0.85), (1.8, 0.25, 0.88), 'top', TOP, art='ksill')
     F.box('kCurt1', (0.8, 0.25, 0.0), (1.0, 0.27, 0.88), 'climb', CLIMB, climb=True)      # the curtain: floor -> sill
     F.box('kCurt2', (0.8, 0.10, 0.88), (1.0, 0.12, 2.43), 'climb', CLIMB, climb=True)     # its upper part: sill -> rod
     F.box('kRod', (0.7, 0.12, 2.40), (1.9, 0.16, 2.43), 'climb', CLIMB, climb=True)
-    F.box('radiator', (0.9, 0.04, 0.12), (1.7, 0.12, 0.7), 'climb', '#c9c9c9', climb=True)
+    F.box('radiator', (0.9, 0.04, 0.12), (1.7, 0.12, 0.7), 'climb', '#c9c9c9', climb=True, art='kradiator')
     F.zone('hot', (1.48, 3.04, 0.85), (2.0, 3.56, 0.95), 'конфорки (включены): горячо', temp=75, rate=14)
     F.zone('hot', (0.88, 0.0, 0.1), (1.72, 0.2, 0.75), 'батарея', temp=48, rate=6)
     F.zone('cold', (0.8, 0.0, 0.88), (1.8, 0.25, 1.0), 'подоконник: из окна дует', temp=6, rate=5)
-    F.box('hotplate', (1.52, 3.08, 0.85), (1.96, 3.52, 0.852), 'decal', HOT, collide=False)
+    F.box('hotplate', (1.52, 3.08, 0.85), (1.96, 3.52, 0.852), 'decal', HOT, collide=False, art='range')
 
     # ---- living room
-    F.box('tvStand', (3.12, 1.0, 0.0), (3.6, 2.6, 0.5), 'furn', FURN)
-    F.box('tv', (3.15, 1.3, 0.5), (3.25, 2.3, 1.2), 'furn', '#2a2c30')
+    F.box('tvStand', (3.12, 1.0, 0.0), (3.6, 2.6, 0.5), 'furn', FURN, art='tvstand')
+    F.box('tv', (3.15, 1.3, 0.5), (3.25, 2.3, 1.2), 'furn', '#2a2c30', art='tv')
     F.box('tvCable', (3.6, 1.75, 0.0), (3.62, 1.79, 0.5), 'climb', CLIMB, climb=True)
-    F.box('shelf', (5.0, 3.25, 0.0), (6.6, 3.6, 2.0), 'furn', FURN)
-    F.box('fTable', (5.0, 1.2, 0.72), (6.6, 2.4, 0.75), 'top', TOP)                     # the birthday table
+    F.box('shelf', (5.0, 3.25, 0.0), (6.6, 3.6, 2.0), 'furn', FURN, art='bookshelf')
+    F.box('fTable', (5.0, 1.2, 0.72), (6.6, 2.4, 0.75), 'top', TOP, art='ftable')                     # the birthday table
     for (lx, ly) in ((5.03, 1.23), (6.53, 1.23), (5.03, 2.33), (6.53, 2.33)):
-        F.box('fLeg', (lx, ly, 0.0), (lx + 0.04, ly + 0.04, 0.72), 'furn', FURN)
+        F.box('fLeg', (lx, ly, 0.0), (lx + 0.04, ly + 0.04, 0.72), 'furn', FURN, art='ftable')
     F.box('fCloth', (5.0, 1.18, 0.0), (6.6, 1.2, 0.75), 'climb', CLIMB, climb=True)      # the festive tablecloth, down to the floor
-    F.box('lSill', (4.5, 0.0, 0.85), (5.6, 0.25, 0.88), 'top', TOP)
+    F.box('lSill', (4.5, 0.0, 0.85), (5.6, 0.25, 0.88), 'top', TOP, art='lsill')
     F.box('lCurt1', (4.5, 0.25, 0.0), (4.7, 0.27, 0.88), 'climb', CLIMB, climb=True)
     F.box('lCurt2', (4.5, 0.10, 0.88), (4.7, 0.12, 2.48), 'climb', CLIMB, climb=True)
     F.box('lRod', (4.3, 0.12, 2.45), (7.0, 0.16, 2.48), 'climb', CLIMB, climb=True)
     F.beam('garland1', (6.4, 3.27, 2.0), (6.2, 2.39, 0.75), 0.03, 0.01, 'climb', CLIMB)  # the garland: shelf top -> table
     F.beam('garland2', (5.8, 0.15, 2.48), (5.8, 1.21, 0.75), 0.03, 0.01, 'climb', CLIMB) # and rod -> table
-    F.box('sofaBase', (7.5, 0.8, 0.12), (8.42, 2.9, 0.45), 'furn', FURN2)
-    F.box('sofaBack', (8.2, 0.8, 0.45), (8.42, 2.9, 0.85), 'furn', FURN2)
+    F.box('sofaBase', (7.5, 0.8, 0.12), (8.42, 2.9, 0.45), 'furn', FURN2, art='sofa')
+    F.box('sofaBack', (8.2, 0.8, 0.45), (8.42, 2.9, 0.85), 'furn', FURN2, art='sofa')
     for (lx, ly) in ((7.52, 0.82), (8.36, 0.82), (7.52, 2.84), (8.36, 2.84)):
-        F.box('sofaLeg', (lx, ly, 0.0), (lx + 0.04, ly + 0.04, 0.12), 'furn', FURN)
+        F.box('sofaLeg', (lx, ly, 0.0), (lx + 0.04, ly + 0.04, 0.12), 'furn', FURN, art='sofa')
     F.box('blanket', (7.48, 1.5, 0.0), (7.5, 2.0, 0.45), 'climb', CLIMB, climb=True)
     F.cover.append(dict(min=[7.5, 0.8, 0.0], max=[8.42, 2.9, 0.12], name='под диваном'))
     # the cable channel: from the vent block's top hole along the corridor, through the wall, along the living room to the shelf
@@ -296,31 +414,31 @@ def variant_A():
     F.box('ductN', (0.62, 5.32, 2.28), (0.82, 5.34, 2.38), 'shell_in', SHELL_IN, climb=True)
 
     # ---- bedroom
-    F.box('bed', (6.4, 4.2, 0.25), (8.42, 5.8, 0.55), 'furn', FURN2)
+    F.box('bed', (6.4, 4.2, 0.25), (8.42, 5.8, 0.55), 'furn', FURN2, art='bed')
     for (lx, ly) in ((6.42, 4.22), (8.36, 4.22), (6.42, 5.74), (8.36, 5.74)):
-        F.box('bedLeg', (lx, ly, 0.0), (lx + 0.04, ly + 0.04, 0.25), 'furn', FURN)
+        F.box('bedLeg', (lx, ly, 0.0), (lx + 0.04, ly + 0.04, 0.25), 'furn', FURN, art='bed')
     F.box('duvet', (6.38, 4.3, 0.0), (6.4, 5.7, 0.55), 'climb', CLIMB, climb=True)       # the duvet slipped down to the floor
-    F.box('headboard', (8.3, 4.2, 0.55), (8.42, 5.8, 1.1), 'climb', CLIMB, climb=True)   # padded headboard
+    F.box('headboard', (8.3, 4.2, 0.55), (8.42, 5.8, 1.1), 'climb', CLIMB, climb=True, art='bed')   # padded headboard
     F.cover.append(dict(min=[6.4, 4.2, 0.0], max=[8.42, 5.8, 0.25], name='под кроватью'))
-    F.box('wardrobe', (4.6, 6.3, 0.0), (5.8, 6.9, 2.2), 'furn', FURN)
-    F.box('toybox', (5.0, 3.9, 0.0), (5.6, 4.35, 0.4), 'furn', '#9a8fb0')
+    F.box('wardrobe', (4.6, 6.3, 0.0), (5.8, 6.9, 2.2), 'furn', FURN, art='wardrobe')
+    F.box('toybox', (5.0, 3.9, 0.0), (5.6, 4.35, 0.4), 'furn', '#9a8fb0', art='toybox')
     for i, h in enumerate((0.13, 0.26, 0.4)):                                            # the kid's blocks, a staircase up to the toy box
         F.box('block', (5.6, 3.95 + 0.1 * i, 0.0), (5.7, 4.05 + 0.1 * i, h), 'climb', CLIMB, climb=True)
-    F.box('bear', (7.0, 6.3, 0.0), (7.3, 6.6, 0.3), 'climb', CLIMB, climb=True)          # a plush bear
+    F.box('bear', (7.0, 6.3, 0.0), (7.3, 6.6, 0.3), 'climb', CLIMB, climb=True, art='bear')          # a plush bear
     F.zone('soft', (6.4, 4.2, 0.55), (8.3, 5.8, 0.7), 'мягкое: на одеяле не слышно шагов (пока только в данных)')
     F.box('skirtB', (4.6, 3.72, 0.05), (8.42, 3.74, 0.08), 'furn', '#7b6a58')            # the bedroom's skirting board
 
     # ---- bath
-    F.box('washer', (0.0, 5.5, 0.0), (0.6, 6.1, 0.85), 'furn', '#dcdfe2')
+    F.box('washer', (0.0, 5.5, 0.0), (0.6, 6.1, 0.85), 'furn', '#dcdfe2', art='washer')
     F.box('hose', (0.6, 5.7, 0.0), (0.62, 5.74, 0.85), 'climb', CLIMB, climb=True)
-    F.box('bSink', (1.1, 5.12, 0.0), (1.6, 5.45, 0.85), 'furn', '#dcdfe2')
+    F.box('bSink', (1.1, 5.12, 0.0), (1.6, 5.45, 0.85), 'furn', '#dcdfe2', art='bsink')
     F.box('bTowel', (0.15, 5.12, 0.4), (0.45, 5.15, 2.0), 'climb', CLIMB, climb=True)    # a towel on a hook under the grille
     F.box('bTowelLow', (0.15, 5.15, 0.0), (0.45, 5.17, 0.42), 'climb', CLIMB, climb=True) # its end on the floor
-    F.box('tubFloor', (0.0, 6.2, 0.0), (1.74, 6.9, 0.1), 'furn', '#e3e6e8')
-    F.box('tubS', (0.0, 6.2, 0.1), (1.74, 6.26, 0.55), 'furn', '#e3e6e8')
-    F.box('tubW', (0.0, 6.26, 0.1), (0.06, 6.9, 0.55), 'furn', '#e3e6e8')
-    F.box('tubE', (1.68, 6.26, 0.1), (1.74, 6.9, 0.55), 'furn', '#e3e6e8')
-    F.box('water', (0.06, 6.26, 0.38), (1.68, 6.9, 0.384), 'decal', WATER, collide=False)
+    F.box('tubFloor', (0.0, 6.2, 0.0), (1.74, 6.9, 0.1), 'furn', '#e3e6e8', art='tub')
+    F.box('tubS', (0.0, 6.2, 0.1), (1.74, 6.26, 0.55), 'furn', '#e3e6e8', art='tub')
+    F.box('tubW', (0.0, 6.26, 0.1), (0.06, 6.9, 0.55), 'furn', '#e3e6e8', art='tub')
+    F.box('tubE', (1.68, 6.26, 0.1), (1.74, 6.9, 0.55), 'furn', '#e3e6e8', art='tub')
+    F.box('water', (0.06, 6.26, 0.38), (1.68, 6.9, 0.384), 'decal', WATER, collide=False, tag='fluid')   # (stands in for the real water: the tub basin below)
     F.box('mat', (0.6, 6.18, 0.0), (1.0, 6.2, 0.55), 'climb', CLIMB, climb=True)        # the bath mat hung over the side
     F.zone('wet', (0.06, 6.26, 0.1), (1.68, 6.9, 0.42), 'вода в ванне')
     F.zone('steam', (0.0, 6.2, 0.55), (1.74, 6.9, 1.6), 'пар над ванной: тепло и влажно', temp=36, rate=3)
@@ -328,15 +446,15 @@ def variant_A():
     F.box('puddle', (0.9, 5.7, 0.0), (1.6, 6.18, 0.005), 'decal', WATER, collide=False)
 
     # ---- wc
-    F.box('toilet', (2.1, 6.3, 0.0), (2.6, 6.9, 0.42), 'furn', '#e3e6e8')
-    F.box('tank', (2.1, 6.72, 0.42), (2.6, 6.9, 0.8), 'furn', '#e3e6e8')
+    F.box('toilet', (2.1, 6.3, 0.0), (2.6, 6.9, 0.42), 'furn', '#e3e6e8', art='toilet')
+    F.box('tank', (2.1, 6.72, 0.42), (2.6, 6.9, 0.8), 'furn', '#e3e6e8', art='toilet')
     F.box('paperShelf', (1.86, 5.95, 0.70), (1.98, 6.15, 0.72), 'top', TOP)
     F.box('paper', (1.98, 6.0, 0.0), (2.0, 6.1, 0.72), 'climb', CLIMB, climb=True)       # the unrolled paper down to the floor
 
     # ---- hall
-    F.box('shoeRack', (3.0, 6.45, 0.0), (3.9, 6.88, 0.45), 'furn', FURN)
+    F.box('shoeRack', (3.0, 6.45, 0.0), (3.9, 6.88, 0.45), 'furn', FURN, art='shoerack')
     F.box('boot', (3.3, 6.15, 0.0), (3.42, 6.45, 0.45), 'climb', CLIMB, climb=True)       # a tall boot leans on the rack
-    F.box('hatShelf', (4.2, 5.3, 1.75), (4.48, 6.4, 1.78), 'top', TOP)
+    F.box('hatShelf', (4.2, 5.3, 1.75), (4.48, 6.4, 1.78), 'top', TOP, art='hatshelf')
     F.box('coat', (4.17, 5.45, 0.05), (4.2, 5.75, 1.78), 'climb', CLIMB, climb=True)     # a long coat on the hook
     F.box('coat2', (4.17, 5.9, 0.6), (4.2, 6.2, 1.78), 'climb', CLIMB, climb=True)       # a short jacket (does not reach the floor)
 
@@ -354,6 +472,66 @@ def variant_A():
     F.zone('wet', (3.0, -1.4, 0.0), (3.6, -1.0, 0.03), 'лужа под форточкой')
     F.box('gPuddle', (3.0, -1.4, 0.0), (3.6, -1.0, 0.005), 'decal', WATER, collide=False)
     F.zone('wind', (3.0, -1.4, 1.0), (3.6, -0.8, CEIL), 'форточка: сквозняк (пока только в данных)')
+
+    # ---- KAN-40: the game's own models instead of the grey boxes. Kitchen and living room: the kitchen's and the living room's
+    #      sets, group by group (rows of the kitchen's table, the box they stand in there in uu -> the box of the flat in metres).
+    G = F.group
+    G('sink', [13, 14, 15, 16, 22, 23, 24, 25, 176, 177], (-4203, 3036, 0), (-2797, 4850, 1710), (0.84, 3.0, 0.0), (1.44, 3.6, 0.85))
+    G('range', list(range(52, 65)) + [157], (-1491, 2880, 0), (-9, 5008, 1740), (1.44, 3.0, 0.0), (2.04, 3.6, 0.85))
+    G('wcabn0', [27, 31, 35], (-7002, 4300, 3000), (-5748, 5000, 4406), (0.84, 3.28, 1.45), (1.44, 3.6, 2.15))
+    G('wcabn1', [28, 32, 36], (-5752, 4300, 3000), (-4498, 5000, 4406), (1.44, 3.28, 1.45), (2.04, 3.6, 2.15))
+    # the west run faces east: from its north end the cabinet, the drawers, the dishwasher; the worktop over them
+    G('base1400', [0, 1, 2], (-7003, 3036, 0), (-5597, 4750, 1710), (0.0, 2.4, 0.0), (0.6, 3.0, 0.85), yaw=90)
+    G('drawers', [3, 4, 5, 6], (-5603, 3036, 0), (-4197, 4750, 1710), (0.0, 1.8, 0.0), (0.6, 2.4, 0.85), yaw=90)
+    G('dishwasher', [66, 67, 68, 69], (4, 3036, 0), (1296, 4750, 1710), (0.0, 1.2, 0.0), (0.6, 1.8, 0.85), yaw=90)
+    F.fit('ktopw', 'SM_K_WorktopB', (0.0, 1.2, 0.81), (0.62, 3.0, 0.85), yaw=90)
+    G('wcabw0', [29, 33, 37], (-4502, 4300, 3000), (-3248, 5000, 4406), (0.0, 2.4, 1.45), (0.33, 3.0, 2.15), yaw=90)
+    G('wcabw1', [30, 34, 38], (-3252, 4300, 3000), (-1998, 5000, 4406), (0.0, 1.8, 1.45), (0.33, 2.4, 2.15), yaw=90)
+    G('wcabw2', [39, 40, 41], (1009, 4300, 3000), (2491, 5000, 4406), (0.0, 1.2, 1.45), (0.33, 1.8, 2.15), yaw=90)
+    G('toaster', [73, 74, 75, 76], (-6600, 3870, 1710), (-5880, 4500, 2150), (0.15, 2.5, 0.85), (0.41, 2.8, 1.035), yaw=90)
+    G('microwave', [70, 71, 72], (1299, 3984, 1710), (2401, 4896, 2356), (0.04, 1.22, 0.85), (0.44, 1.68, 1.15), yaw=90)
+    F.place('kettle', 'SM_K_Kettle', (0.21, 2.21, 0.85), yaw=20, scale=0.8)
+    G('fridge', [42, 43, 44, 45], (2693, 3099, 0), (4707, 4771, 3705), (0.0, 0.45, 0.0), (0.62, 1.15, 1.85), yaw=90)
+    G('ktable', [77], (-1704, -1792, 0), (2704, 792, 1406), (1.4, 1.0, 0.0), (2.4, 1.8, 0.75))
+    G('kchair0', [78], (-456, -3206, 0), (456, -2218, 2109), (1.60, 0.53, 0.0), (2.04, 0.99, 1.0))
+    G('kchair1', [79], (744, 718, 0), (1656, 1706, 2109), (1.60, 1.81, 0.0), (2.04, 2.27, 1.0))
+    G('bin', [81, 82, 83], (5335, -2390, 0), (6665, -800, 1640), (2.52, 2.40, 0.0), (2.98, 2.78, 0.48), yaw=270)
+    G('switch', [87, 88], (-7000, 1820, 2190), (-6950, 1980, 2420), (2.974, 3.158, 1.10), (3.0, 3.242, 1.221), yaw=180)
+    G('kwin', [89], (-1650, -5150, 2200), (1650, -5026, 4309), (0.8, -0.2, 0.88), (1.8, -0.08, 2.4))
+    G('ksill', [91], (-1650, -5005, 2120), (1650, -4815, 2196), (0.8, 0.0, 0.85), (1.8, 0.25, 0.88))
+    G('kradiator', [299], (-692, -4995, -4), (692, -4767, 1402), (0.9, 0.02, 0.12), (1.7, 0.14, 0.70))
+    F.place('klamp', 'SM_K_CeilingLamp', (1.5, 1.8, CEIL - 0.1316))
+    # living room
+    G('tvstand', [194, 195, 196], (10395, -8996, 0), (15905, -7704, 1102), (3.12, 1.0, 0.0), (3.6, 2.6, 0.5), yaw=270)
+    G('tv', [197], (11193, -8909, 1099), (15107, -8491, 3303), (3.14, 1.3, 0.5), (3.26, 2.3, 1.2), yaw=270)
+    KR = kitchen_art()[0]
+    G('bookshelf', sorted(k for k, r in KR.items() if r['n'].startswith('SM_L_Book') and 19100 <= r['loc'][0] <= 20250 and -7150 <= r['loc'][1] <= -1850),
+      (19206, -7103, 0), (20194, -1897, 4655), (5.0, 3.25, 0.0), (6.6, 3.6, 2.0), yaw=90)
+    G('ftable', [77], (-1704, -1792, 0), (2704, 792, 1406), (5.0, 1.2, 0.0), (6.6, 2.4, 0.75), index={'SM_K_Table': 1})
+    G('sofa', list(range(178, 187)), (9776, -324, 0), (17224, 1424, 2109), (7.5, 0.8, 0.0), (8.42, 2.9, 0.85), yaw=270)
+    G('lwin', [90], (16635, -9150, 2200), (19935, -9026, 4309), (4.5, -0.2, 0.88), (5.6, -0.08, 2.4))
+    G('lsill', [93], (16635, -9005, 2120), (19935, -8815, 2196), (4.5, 0.0, 0.85), (5.6, 0.25, 0.88))
+    F.fit('carpet', 'SM_L_Carpet', (4.2, 0.9, 0.0), (6.6, 2.7, 0.012))
+    F.place('llamp', 'SM_L_CeilingLamp', (5.77, 1.8, CEIL - 0.1316))
+    F.climb_art = ['kradiator', 'bed', 'bear', 'sofa', 'carpet']     # what ants climb like the box it replaces; the rest is smooth furniture
+    # ---- places kept for the sets that are being modelled (bedroom, bath, hall): a model with one of these names is fitted
+    #      into the box by its own bounds as soon as the game has it; until then the grey boxes stand there.
+    S = F.slot
+    S('bed', ['SM_B_Bed'], (6.4, 4.2, 0.0), (8.42, 5.8, 1.1), yaw=270, note='кровать с изголовьем у восточной стены; изголовье к +X')
+    S('wardrobe', ['SM_B_Wardrobe'], (4.6, 6.3, 0.0), (5.8, 6.9, 2.2), yaw=0, note='шкаф у северной стены, фасад на юг')
+    S('toybox', ['SM_B_ToyBox', 'SM_V3_ToyBox'], (5.0, 3.9, 0.0), (5.6, 4.35, 0.4), yaw=180, note='ящик с игрушками у южной стены')
+    S('bear', ['SM_B_Bear'], (7.0, 6.3, 0.0), (7.3, 6.6, 0.3), yaw=0, note='плюшевый мишка на полу')
+    S('tub', ['SM_T_Bathtub'], (0.0, 6.2, 0.0), (1.74, 6.9, 0.55), yaw=0, note='ванна вдоль северной стены (внутри вода: чаша должна быть полой)')
+    S('washer', ['SM_T_Washer'], (0.0, 5.5, 0.0), (0.6, 6.1, 0.85), yaw=90, note='стиральная машина у западной стены, фасад на восток')
+    S('bsink', ['SM_T_Sink'], (1.1, 5.12, 0.0), (1.6, 5.45, 0.85), yaw=180, note='раковина с тумбой у южной стены ванной')
+    S('toilet', ['SM_T_Toilet'], (2.1, 6.3, 0.0), (2.6, 6.9, 0.8), yaw=0, note='унитаз с бачком у северной стены')
+    S('shoerack', ['SM_H_ShoeRack'], (3.0, 6.45, 0.0), (3.9, 6.88, 0.45), yaw=0, note='обувница у входной двери')
+    S('hatshelf', ['SM_H_HatShelf'], (4.2, 5.3, 1.75), (4.48, 6.4, 1.78), yaw=270, note='полка для шапок на восточной стене прихожей')
+    S('frontdoor', ['SM_H_FrontDoor'], (3.2, 6.88, 0.0), (4.1, 6.9, 2.05), yaw=0, note='входная дверь (закрыта)')
+    # ---- water (the liquid simulation's basins; the order matters: the worktop with the sink, the floor, the tub)
+    F.basin('worktop', (0.80, 2.90), (2.14, 3.62), 0.85, (1.14, 3.04), 70, 640, 20)
+    F.basin('floor', (-0.02, -1.42), (8.44, 6.92), 0.0, (1.5, 2.3), 45, 40, 30)
+    F.basin('tub', (-0.02, 6.08), (1.76, 6.92), 0.55, (0.87, 6.23), 70, 900, 20, fill=0.38)
 
     # ---- hatches: three shortcuts in the walls, shut at the start of a raid (pull with [E])
     F.hatch('vent', 'Решётка вентиляции в ванной', (0.19, 5.12, 1.99), (0.41, 5.14, 2.15), 2,
@@ -532,10 +710,11 @@ VARIANTS = {'A': variant_A}
 def export(F):
     xs = [r['rect'][0] for r in F.rooms] + [r['rect'][2] for r in F.rooms]
     ys = [r['rect'][1] for r in F.rooms] + [r['rect'][3] for r in F.rooms]
-    return dict(id=F.vid, name=F.name, note=F.area_note, version=1, uu_per_m=UU, sprint_mps=round(SPRINT, 4),
+    return dict(id=F.vid, name=F.name, note=F.area_note, version=2, uu_per_m=UU, sprint_mps=round(SPRINT, 4),
                 origin_uu=[60000.0, 0.0, 0.0], bounds=[min(xs), min(ys), max(xs), max(ys)], ceiling=CEIL,
                 rooms=F.rooms, boxes=F.boxes, zones=F.zones, hatches=F.hatches, cover=F.cover, nest=F.nest,
-                food=F.food, cake=F.cake, human=F.human, nodes=list(F.nodes.values()), edges=F.edges)
+                food=F.food, cake=F.cake, human=F.human, nodes=list(F.nodes.values()), edges=F.edges,
+                art=F.art, movers=F.movers, homes=F.homes, slots=F.slots, climb_art=F.climb_art, water=dict(basins=F.basins))
 
 # ---------------------------------------------------------------------------------------------------------- the check
 

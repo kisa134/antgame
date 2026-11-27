@@ -9,6 +9,7 @@
 #include "AntMess.h"
 #include "NpcRoutine.h"
 #include "LevelV3.h"
+#include "AntLab.h"
 #include "Net/UnrealNetwork.h"
 #include "ProceduralMeshComponent.h"
 #include "Engine/Texture2D.h"
@@ -47,15 +48,31 @@ namespace
 	const float StepDt = 1.f / 60.f;
 	const int32 Tile = 64;
 
-	struct FBasinDef { const TCHAR* Name; float X0, Y0, X1, Y1; float Dx; float RefX, RefY, ZGuess; float Up, Down; int32 Sub; };
+	struct FBasinDef { const TCHAR* Name; float X0, Y0, X1, Y1; float Dx; float RefX, RefY, ZGuess; float Up, Down; int32 Sub; float Fill = -1.e9f; };
 	// The bed of each basin is whatever the level's collision is under it: nothing here knows where a chair stands.
-	const FBasinDef BasinDefs[] =
+	const FBasinDef KitchenBasins[] =
 	{
 		// the worktop with the sink sunk into it: one height field, so the sink fills and slops over its own rim
 		{ TEXT("worktop"), -7600.f, 1900.f, 2600.f, 5200.f, 20.f, -5200.f, 3700.f, 1710.f, 70.f, 640.f, 1 },   // v3: west run, the sink, the stove, the east run to the fridge
 		// the kitchen floor, through the doorway and a little into the living room
 		{ TEXT("floor"), -7050.f, -5150.f, 7700.f, 5000.f, 25.f, 2500.f, 1500.f, 0.f, 45.f, 40.f, 1 },
 	};
+
+	// KAN-40: a flat (AntLab) brings its own basins in its data (the worktop with the sink, the floor of the whole flat, the tub);
+	// the order is the kitchen's: 0 the worktop with the sink, 1 the floor.
+	void BasinDefsNow(TArray<FBasinDef>& Out)
+	{
+		if (const FAntLabVariant* Lab = AntLab::Get())
+		{
+			for (const FAntLabBasin& B : Lab->Basins)
+			{
+				FBasinDef D{ *B.Name, (float)B.Min.X, (float)B.Min.Y, (float)B.Max.X, (float)B.Max.Y, B.Dx, (float)B.Ref.X, (float)B.Ref.Y, B.Z, B.Up, B.Down, B.Sub, B.Fill };
+				Out.Add(D);
+			}
+			return;
+		}
+		Out.Append(KitchenBasins, UE_ARRAY_COUNT(KitchenBasins));
+	}
 
 	bool LogOn()
 	{
@@ -98,7 +115,19 @@ void UAntFluidWorld::Tick(float DeltaTime)
 		// The kitchen is built from code after the map starts: wait until there is a floor to stand on.
 		if (W->GetTimeSeconds() < 2.f) { return; }
 		FHitResult Hit;
-		if (!W->LineTraceSingleByObjectType(Hit, FVector(2500.f, 1500.f, 400.f), FVector(2500.f, 1500.f, -200.f), FCollisionObjectQueryParams(ECC_WorldStatic))) { return; }
+		FVector Probe(2500.f, 1500.f, 0.f);
+		{
+			TArray<FBasinDef> Defs;
+			BasinDefsNow(Defs);
+			if (Defs.Num() == 0) { return; }
+			if (AntLab::Get())
+			{
+				// (a flat: the floor is where its data says; a guest knows the variant a moment after the map starts)
+				const FBasinDef& Fl = Defs[FMath::Min(1, Defs.Num() - 1)];
+				Probe = FVector(Fl.RefX, Fl.RefY, Fl.ZGuess);
+			}
+		}
+		if (!W->LineTraceSingleByObjectType(Hit, Probe + FVector(0.f, 0.f, 400.f), Probe - FVector(0.f, 0.f, 200.f), FCollisionObjectQueryParams(ECC_WorldStatic))) { return; }
 		BuildBasins();
 		if (W->GetNetMode() != NM_DedicatedServer) { BuildViews(); }
 		FParse::Value(FCommandLine::Get(), TEXT("AntFluidDemo="), Demo);
@@ -162,6 +191,8 @@ void UAntFluidWorld::BuildBasins()
 	const double T0 = FPlatformTime::Seconds();
 	float Scale = 1.f;
 	FParse::Value(FCommandLine::Get(), TEXT("AntFluidCell="), Scale);   // dev: -AntFluidCell=2 doubles every cell size (the resolution test)
+	TArray<FBasinDef> BasinDefs;
+	BasinDefsNow(BasinDefs);
 	for (const FBasinDef& D : BasinDefs)
 	{
 		// the nominal level: what a trace finds at the reference point
@@ -182,6 +213,24 @@ void UAntFluidWorld::BuildBasins()
 		const double R0 = FPlatformTime::Seconds();
 		Rasterise(*B, D.Up, D.Down);
 		B->Finish();
+		if (D.Fill > -1.e8f)
+		{
+			// A basin that starts with water in it (the bath tub of a flat): level D.Fill in everything that lies well below the rim.
+			FLayer& Ly = B->Layers[LWater];
+			double Vol = 0.;
+			for (int32 c = 0; c < B->Kind.Num(); ++c)
+			{
+				const float Depth = D.Fill - (B->Z0 + B->Bed[c]);
+				if (B->Kind[c] == Open && B->Bed[c] < -50.f && Depth > 0.f) { Ly.H[c] = Depth; Vol += (double)Depth * Dx * Dx; }
+			}
+			Ly.X0 = 0; Ly.Y0 = 0; Ly.X1 = B->Nx; Ly.Y1 = B->Ny;
+			Ly.Volume = Vol;
+			B->WakeAll();
+			B->Params[LWater].Evaporation = 0.f;   // it keeps its water
+			B->Params[LWater].Soak = 0.f;
+			Filled.Add(Basins.Num(), D.Fill);
+			UE_LOG(LogTemp, Display, TEXT("ANTFLUID basin %s starts with %.1f l of water (level %.0f)"), *B->Name, Vol / (1900. * 1900. * 1900. * 1.e-3), D.Fill);
+		}
 		int32 NWall = 0, NVoid = 0;
 		for (uint8 K : B->Kind) { NWall += K == Wall; NVoid += K == Void; }
 		UE_LOG(LogTemp, Display, TEXT("ANTFLUID basin %s: %d x %d cells of %.0f uu (%.2f x %.2f m), level %.1f, walls %d, void %d, rasterised in %.0f ms"),
@@ -2418,6 +2467,22 @@ float UAntFluidWorld::LitresIn(int32 b) const
 void UAntFluidWorld::Dry()
 {
 	for (TUniquePtr<FBasin>& B : Basins) { B->Clear(); }
+	for (const TPair<int32, float>& F : Filled)
+	{
+		// (a tub that starts full is full again)
+		if (!Basins.IsValidIndex(F.Key)) { continue; }
+		FBasin& B = *Basins[F.Key];
+		FLayer& Ly = B.Layers[LWater];
+		double Vol = 0.;
+		for (int32 c = 0; c < B.Kind.Num(); ++c)
+		{
+			const float Depth = F.Value - (B.Z0 + B.Bed[c]);
+			if (B.Kind[c] == Open && B.Bed[c] < -50.f && Depth > 0.f) { Ly.H[c] = Depth; Vol += (double)Depth * B.Dx * B.Dx; }
+		}
+		Ly.X0 = 0; Ly.Y0 = 0; Ly.X1 = B.Nx; Ly.Y1 = B.Ny;
+		Ly.Volume = Vol;
+		B.WakeAll();
+	}
 	Falls.Reset(); Pending.Reset(); LandCache.Reset(); Drops.Reset(); Columns.Reset(); Geysers.Reset(); StainWet.Reset();
 	if (Sources.Num() > 1) { Sources.SetNum(1); }
 	FloodLeft = 0.f;
