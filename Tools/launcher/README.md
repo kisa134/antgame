@@ -5,6 +5,10 @@ It detects the platform, finds the newest `AntKitchen-playtest-*.zip` among the 
 (prereleases included, newest by `created_at`), downloads it with pause/resume (HTTP Range + `.part`), verifies size and
 SHA-256 (`.sha256` asset or the GitHub asset digest), extracts to `<root>\builds\<tag>\`, migrates `Windows\AntKitchen\Saved`
 to the new build, keeps one previous build for rollback, installs the VC++ prerequisites once, checks Steam and launches the game.
+A build over GitHub's 2 GiB asset limit is released as `AntKitchen-playtest-*.zip.001`, `.002` ... (see `Tools/release/release.ps1`): launcher 1.0.3+
+downloads every part with the same progress and resume, checks each SHA-256 from `version.json` (or the asset digest), joins them into the zip,
+checks the SHA-256 of the whole and installs as usual. A split build is always fetched whole (no delta update). Launchers up to 1.0.2 do not see
+a split build; they only offer the launcher update.
 Tabs: Play, News (release notes), How to play, Co-op, Links, Bug report (collects `Saved\Logs|Crashes|Playtest` to the Desktop), Settings.
 The launcher updates itself from the release asset `AntKitchenLauncher.exe` (+ `launcher-version.txt`).
 
@@ -14,7 +18,7 @@ Bump `VERSION` in `src/launcher.py` for every launcher release.
 
 ## Release
     powershell -File Tools\release\release.ps1 -Tag playtest-YYYY-MM-DD-vNN -Dist <DistDir> -Notes <notes.md>
-uploads zip, `.sha256`, `version.json`, `AntKitchenLauncher.exe`, `launcher-version.txt` (creates the prerelease or `--clobber`-uploads to an existing one).
+uploads zip (or its parts when it is over 1.9 GB), `.sha256`, `version.json`, `AntKitchenLauncher.exe`, `launcher-version.txt` (creates the prerelease or `--clobber`-uploads to an existing one).
 
 ## Dev / test
 - `src/web/index.html?mock=installed|update|download|notinstalled|mac|nosteam|selfupd` renders the UI in any browser with fake state.
