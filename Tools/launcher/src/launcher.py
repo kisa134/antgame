@@ -7,10 +7,12 @@ try:
 except Exception:  # pragma: no cover
     requests = None
 
-VERSION = "1.0.2"
+VERSION = "1.0.3"
 REPO = "kisa134/antgame"
 API_URL = os.environ.get("AK_API") or "https://api.github.com/repos/%s/releases?per_page=30" % REPO
 ZIP_RE = re.compile(r"^AntKitchen-playtest-.*\.zip$")
+# a build over GitHub's 2 GiB per-asset limit is released in pieces: <zip>.001, <zip>.002 ... (see Tools/release/release.ps1)
+PART_RE = re.compile(r"^(AntKitchen-playtest-.*\.zip)\.(\d{3})$")
 IS_WIN = os.name == "nt"
 IS_MAC = sys.platform == "darwin"
 UA = {"User-Agent": "AntKitchenLauncher/" + VERSION}
@@ -327,6 +329,16 @@ class Core:
                     sha = assets.get(zipa["name"] + ".sha256")
                     item["zip"] = {"name": zipa["name"], "size": zipa["size"], "url": zipa["browser_download_url"],
                                    "digest": (zipa.get("digest") or "").replace("sha256:", ""), "sha_url": sha["browser_download_url"] if sha else ""}
+                else:
+                    pa = sorted((a for a in x.get("assets", []) if PART_RE.match(a["name"])), key=lambda a: a["name"])
+                    base = PART_RE.match(pa[0]["name"]).group(1) if pa else ""
+                    if pa and [(PART_RE.match(a["name"]).group(1), int(PART_RE.match(a["name"]).group(2))) for a in pa] == [(base, n + 1) for n in range(len(pa))]:
+                        sha = assets.get(base + ".sha256")
+                        vj = assets.get("version.json")
+                        item["zip"] = {"name": base, "size": sum(a["size"] for a in pa), "url": "", "digest": "",
+                                       "sha_url": sha["browser_download_url"] if sha else "", "vj_url": vj["browser_download_url"] if vj else "",
+                                       "parts": [{"name": a["name"], "size": a["size"], "url": a["browser_download_url"],
+                                                  "digest": (a.get("digest") or "").replace("sha256:", "")} for a in pa]}
                 if "AntKitchenLauncher.exe" in assets:
                     item["launcher"] = assets["AntKitchenLauncher.exe"]["browser_download_url"]
                 if "launcher-version.txt" in assets:
@@ -545,7 +557,9 @@ class Core:
         try:
             rel = next((r for r in self.releases if r["tag"] == tag), None)
             if rel and rel["zip"]:
-                for p in self._part_paths(rel):
+                part, final = self._part_paths(rel)
+                d = os.path.dirname(final)
+                for p in [part, final, final + ".join"] + [os.path.join(d, q["name"] + s) for q in rel["zip"].get("parts") or [] for s in ("", ".part")]:
                     if os.path.exists(p):
                         os.remove(p)
         except Exception:
@@ -559,7 +573,7 @@ class Core:
             have = os.path.getsize(part) if os.path.exists(part) else 0
             old = self.cfg.get("installed")
             if old and old != tag and not have and not os.path.exists(final) and os.path.exists(os.path.join(self.build_dir(old), ".complete")) \
-                    and not os.environ.get("AK_NODELTA"):
+                    and not os.environ.get("AK_NODELTA") and not z.get("parts"):  # delta reads one remote zip by Range; a split build is fetched whole
                 try:
                     if self._delta(rel, old):
                         self._activate(tag)
@@ -573,6 +587,18 @@ class Core:
                     shutil.rmtree(lp(self.build_dir(tag) + ".partial"), ignore_errors=True)
                 self.stop_flag = None
                 self._set_task(phase="download", pct=0, msg="Скачиваем полную сборку…")
+            if not os.path.exists(final) and z.get("parts"):
+                free = shutil.disk_usage(self.root()).free
+                if free < int(z["size"] * 3.2):
+                    raise RuntimeError("Мало места на диске: нужно ~%.1f ГБ, свободно %.1f ГБ. Освободи место или выбери другую папку в Настройках." % (z["size"] * 3.2 / 1e9, free / 1e9))
+                r = self._fetch_parts(rel, final)
+                if r != "ok":
+                    if r == "cancel":
+                        self._cleanup_part(tag)
+                        self.task = None
+                    else:
+                        self._set_task(phase="paused", msg="Пауза")
+                    return
             if not os.path.exists(final):
                 need = int(z["size"] * 3.2) - have
                 free = shutil.disk_usage(self.root()).free
@@ -621,8 +647,93 @@ class Core:
         except Exception as e:
             self._set_task(phase="error", error=str(e), msg=str(e))
 
-    def _download(self, url, dest, total):
+    def _fetch_parts(self, rel, final):
+        """Split build: download every <zip>.NNN (resumable, shared progress), check each SHA-256, join into the zip, check the whole.
+        Returns 'ok', or the stop flag ('pause' / 'cancel'). Finished parts stay on disk, so a retry only fetches what is missing."""
+        z = rel["zip"]
+        d = os.path.dirname(final)
+        total = z["size"]
+        meta, whole = {}, ""
+        if z.get("vj_url"):
+            try:
+                vj = requests.get(z["vj_url"], headers=UA, timeout=15).json()
+                whole = (vj.get("sha256") or "").lower()
+                meta = {p["name"]: p for p in vj.get("parts") or []}
+            except Exception:
+                meta, whole = {}, ""
+        if meta and (set(meta) != set(p["name"] for p in z["parts"]) or any(int(meta[p["name"]]["size"]) != p["size"] for p in z["parts"])):
+            raise RuntimeError("Сборка ещё выкладывается: на сервере не все части. Попробуй через несколько минут.")
+
+        def sha_of(path, base):
+            h = hashlib.sha256()
+            done = 0
+            with open(path, "rb") as f:
+                while True:
+                    b = f.read(8 << 20)
+                    if not b:
+                        break
+                    h.update(b)
+                    done += len(b)
+                    self._set_task(pct=100.0 * (base + done) / total, msg="Проверяем SHA-256…")
+            return h.hexdigest().lower()
+
+        base = 0
+        for k, p in enumerate(z["parts"]):
+            ready = os.path.join(d, p["name"])
+            part = ready + ".part"
+            if os.path.exists(ready) and os.path.getsize(ready) != p["size"]:
+                os.remove(ready)
+            if not os.path.exists(ready):
+                r = self._download(p["url"], part, p["size"], base, total, "Скачиваем (часть %d из %d)" % (k + 1, len(z["parts"])))
+                if r != "ok":
+                    return r
+                self._set_task(phase="verify", msg="Проверяем целостность…", speed=0, eta=0)
+                if os.path.getsize(part) != p["size"]:
+                    os.remove(part)
+                    raise RuntimeError("Размер файла не совпал, попробуй ещё раз")
+                expected = ((meta.get(p["name"]) or {}).get("sha256") or p.get("digest") or "").lower()
+                if expected and sha_of(part, base) != expected:
+                    os.remove(part)
+                    raise RuntimeError("Контрольная сумма не совпала — файл скачан с ошибкой. Нажми «Повторить»: эта часть скачается заново.")
+                os.replace(part, ready)
+            base += p["size"]
+        if not whole and z.get("sha_url"):
+            try:
+                whole = requests.get(z["sha_url"], headers=UA, timeout=15).text.split()[0].lower()
+            except Exception:
+                whole = ""
+        joined = final + ".join"
+        h = hashlib.sha256()
+        done = 0
+        with open(joined, "wb") as out:
+            for p in z["parts"]:
+                with open(os.path.join(d, p["name"]), "rb") as f:
+                    while True:
+                        if self.stop_flag == "cancel":
+                            return "cancel"
+                        b = f.read(8 << 20)
+                        if not b:
+                            break
+                        out.write(b)
+                        h.update(b)
+                        done += len(b)
+                        self._set_task(phase="verify", pct=100.0 * done / total, msg="Собираем архив из частей…", speed=0, eta=0)
+        bad = os.path.getsize(joined) != total or (whole and h.hexdigest().lower() != whole)
+        if bad:
+            os.remove(joined)
+        for p in z["parts"]:  # each part was verified above, so a bad whole means a bad join or a bad release: start clean either way
+            try:
+                os.remove(os.path.join(d, p["name"]))
+            except OSError:
+                pass
+        if bad:
+            raise RuntimeError("Контрольная сумма не совпала — архив собран с ошибкой. Нажми «Повторить»: он скачается заново.")
+        os.replace(joined, final)
+        return "ok"
+
+    def _download(self, url, dest, total, base=0, grand=0, label="Скачиваем"):
         attempt = 0
+        grand = grand or total
         samples = collections.deque(maxlen=40)
         while True:
             have = os.path.getsize(dest) if os.path.exists(dest) else 0
@@ -656,8 +767,8 @@ class Core:
                             if len(samples) > 3:
                                 dt = samples[-1][0] - samples[0][0]
                                 sp = (samples[-1][1] - samples[0][1]) / dt if dt > 0 else 0
-                            self._set_task(phase="download", bytes=have, pct=100.0 * have / total, speed=sp,
-                                           eta=(total - have) / sp if sp > 1 else 0, msg="Скачиваем")
+                            self._set_task(phase="download", bytes=base + have, pct=100.0 * (base + have) / grand, speed=sp,
+                                           eta=(grand - base - have) / sp if sp > 1 else 0, msg=label)
                 attempt = 0
             except (requests.RequestException, IOError) as e:
                 attempt += 1
@@ -1023,7 +1134,11 @@ class Core:
             with open(bat, "w", encoding="ascii") as f:
                 f.write('@echo off\r\nset n=0\r\n:retry\r\nping 127.0.0.1 -n 3 >nul\r\nmove /y "%s" "%s" >nul 2>&1\r\n'
                         'if errorlevel 1 (set /a n+=1 & if %%n%% LSS 20 goto retry)\r\nstart "" "%s"\r\ndel "%%~f0"\r\n' % (new, cur, cur))
-            subprocess.Popen(["cmd", "/c", bat], creationflags=CREATE_NO_WINDOW | 0x00000008, close_fds=True)
+            # the restarted exe must not inherit this instance's PyInstaller onefile state (_PYI_* / _MEIPASS2): with it the
+            # new exe looks for our already deleted temp dir and dies with an "Error" box (seen on 1.0.2 -> 1.0.3)
+            env = {k: v for k, v in os.environ.items() if not k.upper().startswith(("_PYI_", "_MEIPASS"))}
+            env["PYINSTALLER_RESET_ENVIRONMENT"] = "1"
+            subprocess.Popen(["cmd", "/c", bat], creationflags=CREATE_NO_WINDOW | 0x00000008, close_fds=True, env=env)
             threading.Timer(0.5, lambda: os._exit(0)).start()
             return {"ok": True}
         except Exception as e:
