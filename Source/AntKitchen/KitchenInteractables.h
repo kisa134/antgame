@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "AntTypes.h"
+#include "KitchenArt.h"
 #include "KitchenInteractables.generated.h"
 
 class AAntCharacter;
@@ -169,10 +170,11 @@ public:
 
 	static constexpr float BasinFloor = 1150.f;
 	static constexpr float BasinTop = 1620.f;
-	static FBox Basin() { return FBox(FVector(-4100.f, 3300.f, BasinFloor), FVector(-2900.f, 4700.f, BasinTop)); }
-	static FVector Spout() { return FVector(-3500.f, 4400.f, 2060.f); }
-	static FVector HotValve() { return FVector(-3750.f, 4800.f, 1830.f); }
-	static FVector ColdValve() { return FVector(-3250.f, 4800.f, 1830.f); }
+	// (KAN-40: where the sink unit stands in this world; the numbers are the kitchen's)
+	static FBox Basin() { return KitchenArt::Home(TEXT("sink")).Box(FBox(FVector(-4100.f, 3300.f, BasinFloor), FVector(-2900.f, 4700.f, BasinTop))); }
+	static FVector Spout() { return KitchenArt::Home(TEXT("sink")).At(FVector(-3500.f, 4400.f, 2060.f)); }
+	static FVector HotValve() { return KitchenArt::Home(TEXT("sink")).At(FVector(-3750.f, 4800.f, 1830.f)); }
+	static FVector ColdValve() { return KitchenArt::Home(TEXT("sink")).At(FVector(-3250.f, 4800.f, 1830.f)); }
 
 private:
 	UPROPERTY() UStaticMeshComponent* Water = nullptr;
