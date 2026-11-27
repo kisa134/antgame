@@ -1,0 +1,123 @@
+{
+ "name": "SM_Hall_EntryDoor_Frame",
+ "file": "SM_Hall_EntryDoor_Frame.fbx",
+ "set": "hero_hall",
+ "break_class": "metal",
+ "textures": {
+  "C": "SM_Hall_EntryDoor_Frame/tex/T_SM_Hall_EntryDoor_Frame_C.png",
+  "N": "SM_Hall_EntryDoor_Frame/tex/T_SM_Hall_EntryDoor_Frame_N.png",
+  "R": "SM_Hall_EntryDoor_Frame/tex/T_SM_Hall_EntryDoor_Frame_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_Hall_EntryDoor_Frame_Brk0",
+   "file": "SM_Hall_EntryDoor_Frame_Brk0.fbx",
+   "triangles": 504,
+   "bbox_min_m": [
+    -0.5,
+    -0.009,
+    0.0
+   ],
+   "bbox_max_m": [
+    -0.425,
+    0.09,
+    2.11
+   ],
+   "materials": [
+    "Hero_SM_Hall_EntryDoor_Frame",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Hall_EntryDoor_Frame_Brk1",
+   "file": "SM_Hall_EntryDoor_Frame_Brk1.fbx",
+   "triangles": 412,
+   "bbox_min_m": [
+    0.425,
+    0.0,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.5,
+    0.09,
+    2.11
+   ],
+   "materials": [
+    "Hero_SM_Hall_EntryDoor_Frame",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Hall_EntryDoor_Frame_Brk2",
+   "file": "SM_Hall_EntryDoor_Frame_Brk2.fbx",
+   "triangles": 384,
+   "bbox_min_m": [
+    -0.44,
+    0.0,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.44,
+    0.09,
+    2.11
+   ],
+   "materials": [
+    "Hero_SM_Hall_EntryDoor_Frame",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Hall_EntryDoor_Frame_Brk3",
+   "file": "SM_Hall_EntryDoor_Frame_Brk3.fbx",
+   "triangles": 564,
+   "bbox_min_m": [
+    -0.57,
+    -0.014,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.57,
+    0.0,
+    2.18
+   ],
+   "materials": [
+    "Hero_SM_Hall_EntryDoor_Frame",
+    "Break"
+   ]
+  }
+ ],
+ "note": "steel entry door frame: box jambs and head with stops and seal, threshold, hinge knuckles, strike plate, walnut architrave",
+ "kept_slots": [],
+ "triangles": 1864,
+ "bbox_min_m": [
+  -0.57,
+  -0.014,
+  0.0
+ ],
+ "bbox_max_m": [
+  0.57,
+  0.09,
+  2.18
+ ],
+ "materials": [
+  "Hero_SM_Hall_EntryDoor_Frame"
+ ],
+ "lod_triangles": [
+  1864,
+  651,
+  223
+ ],
+ "ucx": 4,
+ "room": "hall",
+ "ru": "Входная дверь: коробка",
+ "children": [
+  "SM_Hall_EntryDoor_Leaf"
+ ],
+ "size_uu": [
+  2166,
+  198,
+  4142
+ ]
+}

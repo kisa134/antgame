@@ -1,0 +1,93 @@
+{
+ "name": "SM_Hall_Jacket",
+ "file": "SM_Hall_Jacket.fbx",
+ "set": "hero_hall",
+ "break_class": "cloth",
+ "textures": {
+  "C": "SM_Hall_Jacket/tex/T_SM_Hall_Jacket_C.png",
+  "N": "SM_Hall_Jacket/tex/T_SM_Hall_Jacket_N.png",
+  "R": "SM_Hall_Jacket/tex/T_SM_Hall_Jacket_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_Hall_Jacket_Brk0",
+   "file": "SM_Hall_Jacket_Brk0.fbx",
+   "triangles": 1924,
+   "bbox_min_m": [
+    0.028,
+    -0.152,
+    0.62
+   ],
+   "bbox_max_m": [
+    0.392,
+    -0.019,
+    1.6764
+   ],
+   "materials": [
+    "Hero_SM_Hall_Jacket",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Hall_Jacket_Brk1",
+   "file": "SM_Hall_Jacket_Brk1.fbx",
+   "triangles": 1448,
+   "bbox_min_m": [
+    -0.023,
+    -0.1515,
+    0.88
+   ],
+   "bbox_max_m": [
+    0.443,
+    -0.035,
+    1.57
+   ],
+   "materials": [
+    "Hero_SM_Hall_Jacket",
+    "Break"
+   ]
+  }
+ ],
+ "note": "short quilted jacket on the rack's fourth hook, hem 0.62 m up",
+ "kept_slots": [],
+ "triangles": 3372,
+ "bbox_min_m": [
+  -0.023,
+  -0.152,
+  0.62
+ ],
+ "bbox_max_m": [
+  0.443,
+  -0.019,
+  1.6764
+ ],
+ "materials": [
+  "Hero_SM_Hall_Jacket"
+ ],
+ "lod_triangles": [
+  3372,
+  1180,
+  403
+ ],
+ "ucx": 1,
+ "room": "hall",
+ "ru": "Куртка на вешалке",
+ "attach": {
+  "parent": "SM_Hall_CoatRack",
+  "at_m": [
+   [
+    0,
+    0,
+    0
+   ]
+  ],
+  "move": "rest"
+ },
+ "size_uu": [
+  885,
+  253,
+  2007
+ ]
+}

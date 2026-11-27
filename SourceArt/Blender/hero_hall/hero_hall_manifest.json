@@ -1,0 +1,773 @@
+{
+ "note": "Hero art of the flat, hall (Tools/blender/hero_flat.py, KAN-41): LOD0 + UCX in <name>.fbx, _LOD1/_LOD2, _Brk<i> pieces; tex/T_<name>_{C,N,R}.png; 'attach' = where a part sits on its parent and how it moves (metres, the parent's frame, front -Y)",
+ "pieces": [
+  {
+   "name": "SM_Hall_Coat",
+   "file": "SM_Hall_Coat.fbx",
+   "set": "hero_hall",
+   "break_class": "cloth",
+   "textures": {
+    "C": "SM_Hall_Coat/tex/T_SM_Hall_Coat_C.png",
+    "N": "SM_Hall_Coat/tex/T_SM_Hall_Coat_N.png",
+    "R": "SM_Hall_Coat/tex/T_SM_Hall_Coat_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_Hall_Coat_Brk0",
+     "file": "SM_Hall_Coat_Brk0.fbx",
+     "triangles": 2536,
+     "bbox_min_m": [
+      -0.432,
+      -0.163,
+      0.05
+     ],
+     "bbox_max_m": [
+      -0.068,
+      -0.012,
+      1.6764
+     ],
+     "materials": [
+      "Hero_SM_Hall_Coat",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Hall_Coat_Brk1",
+     "file": "SM_Hall_Coat_Brk1.fbx",
+     "triangles": 1448,
+     "bbox_min_m": [
+      -0.483,
+      -0.1515,
+      0.35
+     ],
+     "bbox_max_m": [
+      -0.017,
+      -0.035,
+      1.57
+     ],
+     "materials": [
+      "Hero_SM_Hall_Coat",
+      "Break"
+     ]
+    }
+   ],
+   "note": "long belted wool coat hung by its loop on the rack's second hook, hem 5 cm off the floor (the ants climb it)",
+   "kept_slots": [],
+   "triangles": 3984,
+   "bbox_min_m": [
+    -0.483,
+    -0.163,
+    0.05
+   ],
+   "bbox_max_m": [
+    -0.017,
+    -0.012,
+    1.6764
+   ],
+   "materials": [
+    "Hero_SM_Hall_Coat"
+   ],
+   "lod_triangles": [
+    3984,
+    1394,
+    478
+   ],
+   "ucx": 1,
+   "room": "hall",
+   "ru": "Пальто на вешалке (до пола)",
+   "attach": {
+    "parent": "SM_Hall_CoatRack",
+    "at_m": [
+     [
+      0,
+      0,
+      0
+     ]
+    ],
+    "move": "rest"
+   },
+   "size_uu": [
+    885,
+    287,
+    3090
+   ]
+  },
+  {
+   "name": "SM_Hall_CoatRack",
+   "file": "SM_Hall_CoatRack.fbx",
+   "set": "hero_hall",
+   "break_class": "wood",
+   "textures": {
+    "C": "SM_Hall_CoatRack/tex/T_SM_Hall_CoatRack_C.png",
+    "N": "SM_Hall_CoatRack/tex/T_SM_Hall_CoatRack_N.png",
+    "R": "SM_Hall_CoatRack/tex/T_SM_Hall_CoatRack_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_Hall_CoatRack_Brk0",
+     "file": "SM_Hall_CoatRack_Brk0.fbx",
+     "triangles": 1660,
+     "bbox_min_m": [
+      -0.55,
+      -0.0949,
+      1.55
+     ],
+     "bbox_max_m": [
+      0.55,
+      0.0,
+      1.69
+     ],
+     "materials": [
+      "Hero_SM_Hall_CoatRack",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Hall_CoatRack_Brk1",
+     "file": "SM_Hall_CoatRack_Brk1.fbx",
+     "triangles": 436,
+     "bbox_min_m": [
+      -0.55,
+      -0.28,
+      1.605
+     ],
+     "bbox_max_m": [
+      0.55,
+      0.0,
+      1.817
+     ],
+     "materials": [
+      "Hero_SM_Hall_CoatRack",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Hall_CoatRack_Brk2",
+     "file": "SM_Hall_CoatRack_Brk2.fbx",
+     "triangles": 756,
+     "bbox_min_m": [
+      -0.482,
+      -0.24,
+      1.57
+     ],
+     "bbox_max_m": [
+      0.512,
+      -0.02,
+      1.75
+     ],
+     "materials": [
+      "Hero_SM_Hall_CoatRack",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Hall_CoatRack_Brk3",
+     "file": "SM_Hall_CoatRack_Brk3.fbx",
+     "triangles": 1408,
+     "bbox_min_m": [
+      -0.46,
+      -0.275,
+      1.605
+     ],
+     "bbox_max_m": [
+      0.44,
+      -0.015,
+      1.893
+     ],
+     "materials": [
+      "Hero_SM_Hall_CoatRack",
+      "Break"
+     ]
+    }
+   ],
+   "note": "coat rack: oak board with five brass double hooks, hat shelf on black steel brackets with a brass gallery, a felt hat and gloves",
+   "kept_slots": [],
+   "triangles": 4260,
+   "bbox_min_m": [
+    -0.55,
+    -0.28,
+    1.55
+   ],
+   "bbox_max_m": [
+    0.55,
+    0.0,
+    1.893
+   ],
+   "materials": [
+    "Hero_SM_Hall_CoatRack"
+   ],
+   "lod_triangles": [
+    4260,
+    1490,
+    511
+   ],
+   "ucx": 2,
+   "room": "hall",
+   "ru": "Вешалка настенная с полкой",
+   "children": [
+    "SM_Hall_Coat",
+    "SM_Hall_Jacket"
+   ],
+   "size_uu": [
+    2090,
+    532,
+    652
+   ]
+  },
+  {
+   "name": "SM_Hall_DoorMat",
+   "file": "SM_Hall_DoorMat.fbx",
+   "set": "hero_hall",
+   "break_class": "cloth",
+   "textures": {
+    "C": "SM_Hall_DoorMat/tex/T_SM_Hall_DoorMat_C.png",
+    "N": "SM_Hall_DoorMat/tex/T_SM_Hall_DoorMat_N.png",
+    "R": "SM_Hall_DoorMat/tex/T_SM_Hall_DoorMat_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_Hall_DoorMat_Brk0",
+     "file": "SM_Hall_DoorMat_Brk0.fbx",
+     "triangles": 1220,
+     "bbox_min_m": [
+      -0.3,
+      -0.2,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.3,
+      0.2,
+      0.014
+     ],
+     "materials": [
+      "Hero_SM_Hall_DoorMat",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Hall_DoorMat_Brk1",
+     "file": "SM_Hall_DoorMat_Brk1.fbx",
+     "triangles": 316,
+     "bbox_min_m": [
+      -0.0059,
+      -0.183,
+      0.006
+     ],
+     "bbox_max_m": [
+      0.283,
+      0.183,
+      0.0186
+     ],
+     "materials": [
+      "Hero_SM_Hall_DoorMat",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Hall_DoorMat_Brk2",
+     "file": "SM_Hall_DoorMat_Brk2.fbx",
+     "triangles": 316,
+     "bbox_min_m": [
+      -0.283,
+      -0.183,
+      0.006
+     ],
+     "bbox_max_m": [
+      0.1048,
+      0.183,
+      0.0186
+     ],
+     "materials": [
+      "Hero_SM_Hall_DoorMat",
+      "Break"
+     ]
+    }
+   ],
+   "note": "coir door mat in a ribbed rubber tray",
+   "kept_slots": [],
+   "triangles": 1352,
+   "bbox_min_m": [
+    -0.3,
+    -0.2,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.3,
+    0.2,
+    0.0186
+   ],
+   "materials": [
+    "Hero_SM_Hall_DoorMat"
+   ],
+   "lod_triangles": [
+    1352,
+    472,
+    162
+   ],
+   "ucx": 2,
+   "room": "hall",
+   "ru": "Коврик придверный",
+   "size_uu": [
+    1140,
+    760,
+    35
+   ]
+  },
+  {
+   "name": "SM_Hall_EntryDoor_Frame",
+   "file": "SM_Hall_EntryDoor_Frame.fbx",
+   "set": "hero_hall",
+   "break_class": "metal",
+   "textures": {
+    "C": "SM_Hall_EntryDoor_Frame/tex/T_SM_Hall_EntryDoor_Frame_C.png",
+    "N": "SM_Hall_EntryDoor_Frame/tex/T_SM_Hall_EntryDoor_Frame_N.png",
+    "R": "SM_Hall_EntryDoor_Frame/tex/T_SM_Hall_EntryDoor_Frame_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_Hall_EntryDoor_Frame_Brk0",
+     "file": "SM_Hall_EntryDoor_Frame_Brk0.fbx",
+     "triangles": 504,
+     "bbox_min_m": [
+      -0.5,
+      -0.009,
+      0.0
+     ],
+     "bbox_max_m": [
+      -0.425,
+      0.09,
+      2.11
+     ],
+     "materials": [
+      "Hero_SM_Hall_EntryDoor_Frame",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Hall_EntryDoor_Frame_Brk1",
+     "file": "SM_Hall_EntryDoor_Frame_Brk1.fbx",
+     "triangles": 412,
+     "bbox_min_m": [
+      0.425,
+      0.0,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.5,
+      0.09,
+      2.11
+     ],
+     "materials": [
+      "Hero_SM_Hall_EntryDoor_Frame",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Hall_EntryDoor_Frame_Brk2",
+     "file": "SM_Hall_EntryDoor_Frame_Brk2.fbx",
+     "triangles": 384,
+     "bbox_min_m": [
+      -0.44,
+      0.0,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.44,
+      0.09,
+      2.11
+     ],
+     "materials": [
+      "Hero_SM_Hall_EntryDoor_Frame",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Hall_EntryDoor_Frame_Brk3",
+     "file": "SM_Hall_EntryDoor_Frame_Brk3.fbx",
+     "triangles": 564,
+     "bbox_min_m": [
+      -0.57,
+      -0.014,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.57,
+      0.0,
+      2.18
+     ],
+     "materials": [
+      "Hero_SM_Hall_EntryDoor_Frame",
+      "Break"
+     ]
+    }
+   ],
+   "note": "steel entry door frame: box jambs and head with stops and seal, threshold, hinge knuckles, strike plate, walnut architrave",
+   "kept_slots": [],
+   "triangles": 1864,
+   "bbox_min_m": [
+    -0.57,
+    -0.014,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.57,
+    0.09,
+    2.18
+   ],
+   "materials": [
+    "Hero_SM_Hall_EntryDoor_Frame"
+   ],
+   "lod_triangles": [
+    1864,
+    651,
+    223
+   ],
+   "ucx": 4,
+   "room": "hall",
+   "ru": "Входная дверь: коробка",
+   "children": [
+    "SM_Hall_EntryDoor_Leaf"
+   ],
+   "size_uu": [
+    2166,
+    198,
+    4142
+   ]
+  },
+  {
+   "name": "SM_Hall_EntryDoor_Leaf",
+   "file": "SM_Hall_EntryDoor_Leaf.fbx",
+   "set": "hero_hall",
+   "break_class": "metal",
+   "textures": {
+    "C": "SM_Hall_EntryDoor_Leaf/tex/T_SM_Hall_EntryDoor_Leaf_C.png",
+    "N": "SM_Hall_EntryDoor_Leaf/tex/T_SM_Hall_EntryDoor_Leaf_N.png",
+    "R": "SM_Hall_EntryDoor_Leaf/tex/T_SM_Hall_EntryDoor_Leaf_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_Hall_EntryDoor_Leaf_Brk0",
+     "file": "SM_Hall_EntryDoor_Leaf_Brk0.fbx",
+     "triangles": 1024,
+     "bbox_min_m": [
+      -0.0088,
+      -0.014,
+      0.022
+     ],
+     "bbox_max_m": [
+      0.87,
+      0.07,
+      2.04
+     ],
+     "materials": [
+      "Hero_SM_Hall_EntryDoor_Leaf",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Hall_EntryDoor_Leaf_Brk1",
+     "file": "SM_Hall_EntryDoor_Leaf_Brk1.fbx",
+     "triangles": 452,
+     "bbox_min_m": [
+      0.014,
+      -0.0145,
+      0.025
+     ],
+     "bbox_max_m": [
+      0.866,
+      0.07,
+      2.037
+     ],
+     "materials": [
+      "Hero_SM_Hall_EntryDoor_Leaf",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Hall_EntryDoor_Leaf_Brk2",
+     "file": "SM_Hall_EntryDoor_Leaf_Brk2.fbx",
+     "triangles": 1724,
+     "bbox_min_m": [
+      0.421,
+      -0.042,
+      0.85
+     ],
+     "bbox_max_m": [
+      0.878,
+      0.098,
+      1.514
+     ],
+     "materials": [
+      "Hero_SM_Hall_EntryDoor_Leaf",
+      "Break"
+     ]
+    }
+   ],
+   "note": "steel entry door leaf: pressed panels outside, walnut lining with beaded fields inside, lever handles, two locks, peephole, bolts, seal",
+   "kept_slots": [],
+   "triangles": 3200,
+   "bbox_min_m": [
+    -0.0088,
+    -0.042,
+    0.022
+   ],
+   "bbox_max_m": [
+    0.878,
+    0.098,
+    2.04
+   ],
+   "materials": [
+    "Hero_SM_Hall_EntryDoor_Leaf"
+   ],
+   "lod_triangles": [
+    3200,
+    1120,
+    384
+   ],
+   "ucx": 1,
+   "room": "hall",
+   "ru": "Входная дверь: полотно",
+   "attach": {
+    "parent": "SM_Hall_EntryDoor_Frame",
+    "at_m": [
+     [
+      -0.44,
+      0.0,
+      0.0
+     ]
+    ],
+    "move": "hinge",
+    "axis": "Z",
+    "open_deg": -95
+   },
+   "size_uu": [
+    1685,
+    266,
+    3834
+   ]
+  },
+  {
+   "name": "SM_Hall_Jacket",
+   "file": "SM_Hall_Jacket.fbx",
+   "set": "hero_hall",
+   "break_class": "cloth",
+   "textures": {
+    "C": "SM_Hall_Jacket/tex/T_SM_Hall_Jacket_C.png",
+    "N": "SM_Hall_Jacket/tex/T_SM_Hall_Jacket_N.png",
+    "R": "SM_Hall_Jacket/tex/T_SM_Hall_Jacket_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_Hall_Jacket_Brk0",
+     "file": "SM_Hall_Jacket_Brk0.fbx",
+     "triangles": 1924,
+     "bbox_min_m": [
+      0.028,
+      -0.152,
+      0.62
+     ],
+     "bbox_max_m": [
+      0.392,
+      -0.019,
+      1.6764
+     ],
+     "materials": [
+      "Hero_SM_Hall_Jacket",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Hall_Jacket_Brk1",
+     "file": "SM_Hall_Jacket_Brk1.fbx",
+     "triangles": 1448,
+     "bbox_min_m": [
+      -0.023,
+      -0.1515,
+      0.88
+     ],
+     "bbox_max_m": [
+      0.443,
+      -0.035,
+      1.57
+     ],
+     "materials": [
+      "Hero_SM_Hall_Jacket",
+      "Break"
+     ]
+    }
+   ],
+   "note": "short quilted jacket on the rack's fourth hook, hem 0.62 m up",
+   "kept_slots": [],
+   "triangles": 3372,
+   "bbox_min_m": [
+    -0.023,
+    -0.152,
+    0.62
+   ],
+   "bbox_max_m": [
+    0.443,
+    -0.019,
+    1.6764
+   ],
+   "materials": [
+    "Hero_SM_Hall_Jacket"
+   ],
+   "lod_triangles": [
+    3372,
+    1180,
+    403
+   ],
+   "ucx": 1,
+   "room": "hall",
+   "ru": "Куртка на вешалке",
+   "attach": {
+    "parent": "SM_Hall_CoatRack",
+    "at_m": [
+     [
+      0,
+      0,
+      0
+     ]
+    ],
+    "move": "rest"
+   },
+   "size_uu": [
+    885,
+    253,
+    2007
+   ]
+  },
+  {
+   "name": "SM_Hall_Mirror",
+   "file": "SM_Hall_Mirror.fbx",
+   "set": "hero_hall",
+   "break_class": "glass",
+   "textures": {
+    "C": "SM_Hall_Mirror/tex/T_SM_Hall_Mirror_C.png",
+    "N": "SM_Hall_Mirror/tex/T_SM_Hall_Mirror_N.png",
+    "R": "SM_Hall_Mirror/tex/T_SM_Hall_Mirror_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_Hall_Mirror_Brk0",
+     "file": "SM_Hall_Mirror_Brk0.fbx",
+     "triangles": 828,
+     "bbox_min_m": [
+      -0.25,
+      -0.033,
+      0.45
+     ],
+     "bbox_max_m": [
+      0.25,
+      0.0,
+      1.75
+     ],
+     "materials": [
+      "Hero_SM_Hall_Mirror",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Hall_Mirror_Brk1",
+     "file": "SM_Hall_Mirror_Brk1.fbx",
+     "triangles": 68,
+     "bbox_min_m": [
+      -0.209,
+      -0.014,
+      1.0598
+     ],
+     "bbox_max_m": [
+      0.209,
+      -0.01,
+      1.709
+     ],
+     "materials": [
+      "Hero_SM_Hall_Mirror",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Hall_Mirror_Brk2",
+     "file": "SM_Hall_Mirror_Brk2.fbx",
+     "triangles": 1328,
+     "bbox_min_m": [
+      -0.25,
+      -0.115,
+      0.279
+     ],
+     "bbox_max_m": [
+      0.25,
+      0.005,
+      0.454
+     ],
+     "materials": [
+      "Hero_SM_Hall_Mirror",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Hall_Mirror_Brk3",
+     "file": "SM_Hall_Mirror_Brk3.fbx",
+     "triangles": 68,
+     "bbox_min_m": [
+      -0.209,
+      -0.014,
+      0.491
+     ],
+     "bbox_max_m": [
+      0.209,
+      -0.01,
+      1.1437
+     ],
+     "materials": [
+      "Hero_SM_Hall_Mirror",
+      "Break"
+     ]
+    }
+   ],
+   "note": "wall mirror in an oak frame, key shelf with brass hooks, keys and a coin dish",
+   "kept_slots": [],
+   "triangles": 2168,
+   "bbox_min_m": [
+    -0.25,
+    -0.115,
+    0.279
+   ],
+   "bbox_max_m": [
+    0.25,
+    0.005,
+    1.75
+   ],
+   "materials": [
+    "Hero_SM_Hall_Mirror"
+   ],
+   "lod_triangles": [
+    2168,
+    758,
+    260
+   ],
+   "ucx": 2,
+   "room": "hall",
+   "ru": "Зеркало с ключницей",
+   "size_uu": [
+    950,
+    228,
+    2795
+   ]
+  }
+ ]
+}
