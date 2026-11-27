@@ -219,9 +219,22 @@ static bool HeroOn(const FString& Id)
 			for (const FString& X : P) { Only.Add(X.TrimStartAndEnd().ToLower()); }
 			Mode = Only.Contains(TEXT("all")) ? 1 : 2;
 		}
+		else if (FParse::Param(FCommandLine::Get(), TEXT("AntFoodHero")))
+		{
+			Mode = 1;
+		}
 		else
 		{
-			Mode = FParse::Param(FCommandLine::Get(), TEXT("AntFoodHero")) ? 1 : 0;
+			// the owner's yes (27.11, "запускай"): the hero foods that came out better, plus the new foods that are ready.
+			// Not by default: the rounded shared shapes (Cookie, Bread, Pea, Crisp, Nut), the near-same ones (Apple, Cheese,
+			// Chocolate, Honey, IceCream) and the unfinished new ones (Tomato, Sponge, Eggshell, Grape, Ice, Butter).
+			// -AntFoodHero=0 turns all of them off, -AntFoodHero turns all of them on.
+			static const TCHAR* Yes[] = {
+				TEXT("Cake"), TEXT("GummyBear"), TEXT("Gummy"), TEXT("Condensed"), TEXT("Sugar"), TEXT("Candy"), TEXT("Marshmallow"),
+				TEXT("Gum"), TEXT("Sausage"), TEXT("Noodle"), TEXT("Pancake"), TEXT("Bone"), TEXT("Olive"), TEXT("Jam"),
+				TEXT("Wafer"), TEXT("Watermelon"), TEXT("Cracker") };
+			for (const TCHAR* X : Yes) { Only.Add(FString(X).ToLower()); }
+			Mode = 2;
 		}
 		UE_LOG(LogTemp, Display, TEXT("ANTFOOD hero models: %s"), Mode == 1 ? TEXT("all (-AntFoodHero)") : Mode == 2 ? *FString::Join(Only.Array(), TEXT("+")) : TEXT("off (default: the owner's models)"));
 	}
