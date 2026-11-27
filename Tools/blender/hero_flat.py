@@ -1125,13 +1125,17 @@ def review(name, done, spec):
         if kn in done:
             c = done[kn][0].copy(); H.link(c); c.matrix_world = mc; kids.append((c, kn, mc, mo))
     back = []; at = spec["attach"]
-    if at and at["move"] == "rest" and at["parent"] in done:
+    if at and at["move"] == "rest" and at["parent"] in done and not any(abs(v) > 1e-6 for v in at["at_m"][0]):   # (a part in its parent's frame: shown on it)
         c = done[at["parent"]][0].copy(); H.link(c); back.append(c)
     shown = [lod0] + [k[0] for k in kids] + back
     for o in H.S().objects: o.hide_render = o not in shown
     _put(lod0, prev)
     before = set(H.S().objects)
     mn, mx = H.bounds([lod0] + [k[0] for k in kids]); wmn, wmx = H.bounds(shown)
+    lift = -mn.z if mn.z < -0.02 else 0.0          # (a part whose pivot is at its middle, the washer's door: stood on the studio floor)
+    if lift:
+        for o in [lod0] + list(pieces): o.matrix_world = Matrix.Translation((0, 0, lift)) @ o.matrix_world
+        mn, mx = H.bounds([lod0] + [k[0] for k in kids]); wmn, wmx = H.bounds(shown)
     H.stage(wall_y=wmx.y + 0.003)
     cams = auto_cams(mn, mx); c0 = (mn + mx) * 0.5; e = mx - mn; s2 = max(e.x, e.y, e.z * 1.9, 0.25)
     def cam(k):
@@ -1166,6 +1170,8 @@ def review(name, done, spec):
     H.sheet(shots, os.path.join(REV, name + ".jpg"), 3)
     for o in [o for o in H.S().objects if o not in before]: bpy.data.objects.remove(o)
     for c in [k[0] for k in kids] + back: bpy.data.objects.remove(c)
+    if lift:
+        for o in [lod0] + list(pieces): o.matrix_world = Matrix.Translation((0, 0, -lift)) @ o.matrix_world
 
 def main():
     t0 = time.time()
