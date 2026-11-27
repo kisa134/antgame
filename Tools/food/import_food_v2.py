@@ -123,7 +123,10 @@ for jf in sorted(glob.glob(os.path.join(SRC, "*", "food.json"))):
     for k in ("C", "N", "R", "Toast", "Burnt", "Spoil", "Frozen", "InC"):
         f = os.path.join(d, "T_%s_%s_%s.png" % (SET, fid, k))
         if os.path.exists(f): tx[k] = import_tex(f, dest, "N" if k == "N" else ("R" if k == "R" else "C"))
-    outer = mi(dest, "MI_%s_%s" % (SET, fid), "/Game/FoodV2/M_FoodV2", {"Jelly": float(man.get("jelly", 0.0))},
+    # ("glass" in food.json - the ice: the translucent master, the opacity mask in the blue of _R; make_food_materials.py)
+    glass = bool(man.get("glass")) and EAL.does_asset_exist("/Game/FoodV2/M_FoodV2_Glass")
+    if man.get("glass") and not glass: log("%s: M_FoodV2_Glass is missing (FOODMAT_ONLY=glass make_food_materials.py) - opaque for now" % fid)
+    outer = mi(dest, "MI_%s_%s" % (SET, fid), "/Game/FoodV2/M_FoodV2_Glass" if glass else "/Game/FoodV2/M_FoodV2", {} if glass else {"Jelly": float(man.get("jelly", 0.0))},
                {"C": tx.get("C"), "N": tx.get("N"), "R": tx.get("R"), "TToast": tx.get("Toast"), "TBurnt": tx.get("Burnt"), "TSpoil": tx.get("Spoil"), "TFrozen": tx.get("Frozen")})
     hr = man.get("h_range_m", [-0.02, 0.02])
     axis = 1.0 if man.get("inner_axis") == "r" else 0.0
@@ -136,9 +139,14 @@ for jf in sorted(glob.glob(os.path.join(SRC, "*", "food.json"))):
         bb = whole.get_bounding_box(); ext = max(bb.max.x - bb.min.x, bb.max.y - bb.min.y, bb.max.z - bb.min.z)
         upm = ext / max(1e-6, max(man["size_m"])); log("%s: %.1f units per metre in the mesh" % (fid, upm))
     usize = max(man["size_m"][0], man["size_m"][1]) * upm
-    def inner_mi(name, dz):
-        return mi(dest, name, "/Game/FoodV2/M_FoodV2_Inner", {"HMin": (hr[0] - dz) * upm, "HMax": (hr[1] - dz) * upm if axis < 0.5 else hr[1] * upm,
-                                                            "Axis": axis, "USize": usize}, {"InC": tx.get("InC")})
+    # ("inner_align" in food.json - the tomato: its inner strip is a real cross-section, so U runs along X alone and is 0.5 at the
+    #  whole food's centre whatever piece the face belongs to: the core lands in the middle of the cut)
+    align = bool(man.get("inner_align"))
+    def inner_mi(name, dz, dx=0.0):
+        sc = {"HMin": (hr[0] - dz) * upm, "HMax": (hr[1] - dz) * upm if axis < 0.5 else hr[1] * upm, "Axis": axis, "USize": usize}
+        if align:
+            sc.update({"USize": man["size_m"][0] * upm, "UYWeight": 0.0, "UOffset": 0.5 + dx / max(1e-6, man["size_m"][0])})
+        return mi(dest, name, "/Game/FoodV2/M_FoodV2_Inner", sc, {"InC": tx.get("InC")})
     inner = inner_mi("MI_%s_%s_Inner" % (SET, fid), 0.0)
     slots = set_slots(whole, outer, inner)
     if HERO:
@@ -164,7 +172,7 @@ for jf in sorted(glob.glob(os.path.join(SRC, "*", "food.json"))):
         pm = import_mesh(f, dest, pc["name"])
         if not pm: continue
         # (a piece's own origin is its centre: its height range moves by its offset from the whole)
-        pin = inner_mi("MI_%s_%s_Inner_P%d" % (SET, fid, k), pc["centre_m"][2])
+        pin = inner_mi("MI_%s_%s_Inner_P%d" % (SET, fid, k), pc["centre_m"][2], pc["centre_m"][0])
         slots = set_slots(pm, outer, pin)
         log("%s piece %d tris %d slots %s" % (fid, k, pm.get_num_triangles(0), ",".join(slots)))
     n_ok += 1
