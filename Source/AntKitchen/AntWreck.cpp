@@ -98,7 +98,9 @@ namespace
 			return -1;
 		}
 		if (Has(N, { TEXT("bookshelf"), TEXT("tvstand"), TEXT("shoerack"), TEXT("wallshelf"), TEXT("spiceshelf") })) { return Board; }
-		if (Has(N, { TEXT("_base"), TEXT("dishwasher"), TEXT("_range"), TEXT("_sink"), TEXT("radiator") })) { bFixed = true; return N.Contains(TEXT("radiator")) ? Metal : Board; }
+		// (the sink bowl SM_K_Sink is stainless steel, not chipboard: as ДСП it had 33 hp and any blow of 33 broke it into chunks.
+		//  Metal: ~12 kg, ~185 hp, dents and sags but never falls apart. Its cabinet SM_K_BaseSink stays ДСП.)
+		if (Has(N, { TEXT("_base"), TEXT("dishwasher"), TEXT("_range"), TEXT("_sink"), TEXT("radiator") })) { bFixed = true; return Has(N, { TEXT("radiator"), TEXT("_sink") }) ? Metal : Board; }
 		if (Has(N, { TEXT("wallcab") })) { WakeMul = 3.f; return Board; }
 		if (Has(N, { TEXT("fridge") })) { return Appliance; }
 		if (Has(N, { TEXT("microwave"), TEXT("toaster"), TEXT("_tv"), TEXT("gameconsole") })) { return Appliance; }
@@ -1081,6 +1083,14 @@ void AAntWreckBody::RebuildLook()
 	}
 	if (Stage == 0 && Dents.Num() == 0)
 	{
+		Mesh->SetVisibility(true);
+		Chunks->SetVisibility(false);
+		return;
+	}
+	if (bFixed && !AntWreck::Class(Mat).bBreaks)
+	{
+		// A built-in piece that never comes apart (the steel sink bowl, the radiator): the drawn model stays, the damage shows through
+		// the state layer above. (The assembled cut of the sink's thin open shell drew torn: black gaps and slanted seams across the bowl.)
 		Mesh->SetVisibility(true);
 		Chunks->SetVisibility(false);
 		return;
