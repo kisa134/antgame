@@ -1,0 +1,219 @@
+{
+ "name": "SM_B_Wardrobe",
+ "file": "SM_B_Wardrobe.fbx",
+ "set": "hero_bedroom",
+ "break_class": "wood",
+ "textures": {
+  "C": "SM_B_Wardrobe/tex/T_SM_B_Wardrobe_C.png",
+  "N": "SM_B_Wardrobe/tex/T_SM_B_Wardrobe_N.png",
+  "R": "SM_B_Wardrobe/tex/T_SM_B_Wardrobe_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_B_Wardrobe_Brk0",
+   "file": "SM_B_Wardrobe_Brk0.fbx",
+   "triangles": 1788,
+   "bbox_min_m": [
+    -0.6,
+    -0.278,
+    0.0
+   ],
+   "bbox_max_m": [
+    -0.5785,
+    0.3,
+    2.178
+   ],
+   "materials": [
+    "Hero_SM_B_Wardrobe",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_B_Wardrobe_Brk1",
+   "file": "SM_B_Wardrobe_Brk1.fbx",
+   "triangles": 1788,
+   "bbox_min_m": [
+    0.5785,
+    -0.278,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.6,
+    0.3,
+    2.178
+   ],
+   "materials": [
+    "Hero_SM_B_Wardrobe",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_B_Wardrobe_Brk2",
+   "file": "SM_B_Wardrobe_Brk2.fbx",
+   "triangles": 152,
+   "bbox_min_m": [
+    -0.581,
+    -0.278,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.581,
+    0.3,
+    0.1
+   ],
+   "materials": [
+    "Hero_SM_B_Wardrobe",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_B_Wardrobe_Brk3",
+   "file": "SM_B_Wardrobe_Brk3.fbx",
+   "triangles": 408,
+   "bbox_min_m": [
+    -0.612,
+    -0.312,
+    2.158
+   ],
+   "bbox_max_m": [
+    0.612,
+    0.3,
+    2.2
+   ],
+   "materials": [
+    "Hero_SM_B_Wardrobe",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_B_Wardrobe_Brk4.001",
+   "file": "SM_B_Wardrobe_Brk4.001.fbx",
+   "triangles": 108,
+   "bbox_min_m": [
+    0.191,
+    -0.274,
+    0.1
+   ],
+   "bbox_max_m": [
+    0.209,
+    0.294,
+    2.158
+   ],
+   "materials": [
+    "Hero_SM_B_Wardrobe",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_B_Wardrobe_Brk5",
+   "file": "SM_B_Wardrobe_Brk5.fbx",
+   "triangles": 3040,
+   "bbox_min_m": [
+    -0.581,
+    -0.258,
+    0.535
+   ],
+   "bbox_max_m": [
+    0.192,
+    0.294,
+    2.032
+   ],
+   "materials": [
+    "Hero_SM_B_Wardrobe",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_B_Wardrobe_Brk6",
+   "file": "SM_B_Wardrobe_Brk6.fbx",
+   "triangles": 264,
+   "bbox_min_m": [
+    -0.5797,
+    -0.1372,
+    0.1
+   ],
+   "bbox_max_m": [
+    0.0981,
+    0.0972,
+    0.31
+   ],
+   "materials": [
+    "Hero_SM_B_Wardrobe",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_B_Wardrobe_Brk7",
+   "file": "SM_B_Wardrobe_Brk7.fbx",
+   "triangles": 1100,
+   "bbox_min_m": [
+    0.208,
+    -0.258,
+    0.443
+   ],
+   "bbox_max_m": [
+    0.581,
+    0.294,
+    1.868
+   ],
+   "materials": [
+    "Hero_SM_B_Wardrobe",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_B_Wardrobe_Brk8",
+   "file": "SM_B_Wardrobe_Brk8.fbx",
+   "triangles": 3384,
+   "bbox_min_m": [
+    0.23,
+    -0.2,
+    0.1
+   ],
+   "bbox_max_m": [
+    0.55,
+    0.18,
+    1.606
+   ],
+   "materials": [
+    "Hero_SM_B_Wardrobe",
+    "Break"
+   ]
+  }
+ ],
+ "note": "wardrobe: walnut carcass on a plinth, oak crown; inside a chrome rail with hangers and clothes under a hat shelf, shelves on brass pins with folded linen, shoe boxes",
+ "kept_slots": [],
+ "triangles": 12044,
+ "bbox_min_m": [
+  -0.612,
+  -0.312,
+  0.0
+ ],
+ "bbox_max_m": [
+  0.612,
+  0.3,
+  2.2
+ ],
+ "materials": [
+  "Hero_SM_B_Wardrobe"
+ ],
+ "lod_triangles": [
+  12044,
+  4215,
+  1444
+ ],
+ "ucx": 14,
+ "room": "bedroom",
+ "ru": "Шкаф платяной",
+ "children": [
+  "SM_B_Wardrobe_DoorL",
+  "SM_B_Wardrobe_DoorR"
+ ],
+ "size_uu": [
+  2326,
+  1163,
+  4180
+ ]
+}

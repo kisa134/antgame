@@ -1,0 +1,93 @@
+{
+ "name": "SM_B_Duvet",
+ "file": "SM_B_Duvet.fbx",
+ "set": "hero_bedroom",
+ "break_class": "cloth",
+ "textures": {
+  "C": "SM_B_Duvet/tex/T_SM_B_Duvet_C.png",
+  "N": "SM_B_Duvet/tex/T_SM_B_Duvet_N.png",
+  "R": "SM_B_Duvet/tex/T_SM_B_Duvet_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_B_Duvet_Brk0",
+   "file": "SM_B_Duvet_Brk0.fbx",
+   "triangles": 4260,
+   "bbox_min_m": [
+    -0.0777,
+    -1.2428,
+    0.005
+   ],
+   "bbox_max_m": [
+    0.8669,
+    0.4236,
+    0.6113
+   ],
+   "materials": [
+    "Hero_SM_B_Duvet",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_B_Duvet_Brk1",
+   "file": "SM_B_Duvet_Brk1.fbx",
+   "triangles": 5656,
+   "bbox_min_m": [
+    -0.8655,
+    -1.2474,
+    0.005
+   ],
+   "bbox_max_m": [
+    0.3376,
+    0.4229,
+    0.6045
+   ],
+   "materials": [
+    "Hero_SM_B_Duvet",
+    "Break"
+   ]
+  }
+ ],
+ "note": "quilted duvet on the bed, over the foot end and down to the floor (the ants climb it)",
+ "kept_slots": [],
+ "triangles": 8428,
+ "bbox_min_m": [
+  -0.8655,
+  -1.2474,
+  0.005
+ ],
+ "bbox_max_m": [
+  0.8669,
+  0.4236,
+  0.6113
+ ],
+ "materials": [
+  "Hero_SM_B_Duvet"
+ ],
+ "lod_triangles": [
+  8428,
+  2948,
+  1010
+ ],
+ "ucx": 3,
+ "room": "bedroom",
+ "ru": "Одеяло (свисает до пола)",
+ "attach": {
+  "parent": "SM_B_Bed",
+  "at_m": [
+   [
+    0,
+    0,
+    0
+   ]
+  ],
+  "move": "rest"
+ },
+ "size_uu": [
+  3292,
+  3175,
+  1152
+ ]
+}

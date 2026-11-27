@@ -140,7 +140,15 @@ void AAntPlayerController::BeginPlay()
 		if (JoinArg.IsEmpty() && FParse::Value(FCommandLine::Get(), TEXT("AntListenPort="), ListenPort) && ListenPort > 0 && GetWorld()->GetNetMode() == NM_Standalone)
 		{
 			FTimerHandle LH;
-			GetWorldTimerManager().SetTimer(LH, FTimerDelegate::CreateWeakLambda(this, [this, ListenPort]() { UGameplayStatics::OpenLevel(this, FName(TEXT("/Engine/Maps/Entry")), true, FString::Printf(TEXT("listen?Port=%d"), ListenPort)); }), 1.f, false);
+			GetWorldTimerManager().SetTimer(LH, FTimerDelegate::CreateWeakLambda(this, [this, ListenPort]()
+			{
+				// (the engine takes the listen port from -Port= only: a travel URL gets it from the last URL and from FURL's default,
+				//  "?Port=" in the options is ignored - so without -Port the server sat on 7777. The flag sets both itself.)
+				FURL::UrlConfig.DefaultPort = ListenPort;
+				if (FWorldContext* Ctx = GEngine ? GEngine->GetWorldContextFromWorld(GetWorld()) : nullptr) { Ctx->LastURL.Port = ListenPort; }
+				UE_LOG(LogTemp, Display, TEXT("ANTNET -AntListenPort: the listen server takes port %d"), ListenPort);
+				UGameplayStatics::OpenLevel(this, FName(TEXT("/Engine/Maps/Entry")), true, FString::Printf(TEXT("listen?Port=%d"), ListenPort));
+			}), 1.f, false);
 		}
 		// Dev/test switches.
 		FString TpArg;

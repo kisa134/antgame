@@ -1,0 +1,98 @@
+{
+ "name": "SM_B_Pillow",
+ "file": "SM_B_Pillow.fbx",
+ "set": "hero_bedroom",
+ "break_class": "cloth",
+ "textures": {
+  "C": "SM_B_Pillow/tex/T_SM_B_Pillow_C.png",
+  "N": "SM_B_Pillow/tex/T_SM_B_Pillow_N.png",
+  "R": "SM_B_Pillow/tex/T_SM_B_Pillow_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_B_Pillow_Brk0",
+   "file": "SM_B_Pillow_Brk0.fbx",
+   "triangles": 3772,
+   "bbox_min_m": [
+    -0.0495,
+    -0.25,
+    0.0022
+   ],
+   "bbox_max_m": [
+    0.35,
+    0.25,
+    0.1578
+   ],
+   "materials": [
+    "Hero_SM_B_Pillow",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_B_Pillow_Brk1",
+   "file": "SM_B_Pillow_Brk1.fbx",
+   "triangles": 3734,
+   "bbox_min_m": [
+    -0.35,
+    -0.25,
+    0.0021
+   ],
+   "bbox_max_m": [
+    0.0515,
+    0.25,
+    0.1579
+   ],
+   "materials": [
+    "Hero_SM_B_Pillow",
+    "Break"
+   ]
+  }
+ ],
+ "note": "sleeping pillow in a linen case with an oxford hem",
+ "kept_slots": [],
+ "triangles": 5404,
+ "bbox_min_m": [
+  -0.35,
+  -0.25,
+  0.0021
+ ],
+ "bbox_max_m": [
+  0.35,
+  0.25,
+  0.1579
+ ],
+ "materials": [
+  "Hero_SM_B_Pillow"
+ ],
+ "lod_triangles": [
+  5404,
+  1890,
+  648
+ ],
+ "ucx": 1,
+ "room": "bedroom",
+ "ru": "Подушка",
+ "attach": {
+  "parent": "SM_B_Bed",
+  "at_m": [
+   [
+    -0.37,
+    0.62,
+    0.552
+   ],
+   [
+    0.37,
+    0.63,
+    0.552
+   ]
+  ],
+  "move": "rest"
+ },
+ "size_uu": [
+  1330,
+  950,
+  296
+ ]
+}

@@ -210,6 +210,7 @@ private:
 	float SpillStatAt = 0.f;
 	int32 MaxSteps = 3;
 	bool bReady = false, bFrozen = false, bTriedBuild = false;
+	TMap<int32, float> Filled;   // KAN-40: basins that start with water (index -> its level): a tub
 	float SimMs = 0.f, ViewMs = 0.f, CoupleMs = 0.f, DropMs = 0.f, PropsMs = 0.f, AntsMs = 0.f;
 	double LostVolume = 0.;
 	float StatAt = 0.f;
