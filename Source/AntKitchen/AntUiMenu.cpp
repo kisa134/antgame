@@ -834,6 +834,16 @@ void SAntUiMenu::PaintMain(FUiDraw& D) const
 		MenuButton(DC, TEXT("m.tut"), AntTut::Tx(TEXT("Учебка Сержанта Жвалова"), TEXT("Sergeant Zhvalov's Training")), BX, Slide(Y), [S]() { AntTut::SetWanted(AntTut::Training, 0); if (S) { S->PlaySolo(); } }); Y += Step;
 	}
 	MenuButton(DC, TEXT("m.play"), bTutDone ? FString(AntTut::Tx(TEXT("Настоящий рейд"), TEXT("The Real Raid"))) : L(TEXT("main.play")), BX, Slide(Y), [S]() { AntTut::SetWanted(AntTut::Off); AntVersus::Wanted() = false; if (S) { S->PlaySolo(); } }); Y += Step;
+	if (!AntTut::IsDemo())
+	{
+		// KAN-40: the map of the next game, one click to change it (the co-op screen has the same choice as two buttons).
+		const TCHAR Lab = AntLab::Wanted();
+		MenuButton(DC, TEXT("m.map"), Lab ? FString(AntTut::Tx(TEXT("Карта: новая квартира «Двушка»"), TEXT("Map: the new flat"))) : FString(AntTut::Tx(TEXT("Карта: кухня"), TEXT("Map: the kitchen"))), BX, Slide(Y), []()
+		{
+			const FString All = AntLab::Available();
+			AntLab::SetWanted(AntLab::Wanted() == 0 && All.Len() > 0 ? All[0] : (TCHAR)0);
+		}); Y += Step;
+	}
 	MenuButton(DC, TEXT("m.coop"), L(TEXT("main.coop")), BX, Slide(Y), [Self]() { AntTut::SetWanted(AntTut::Off); Self->Go(AntUiScreen::Coop); }); Y += Step;
 	MenuButton(DC, TEXT("m.colony"), L(TEXT("main.colony")), BX, Slide(Y), [Self]() { Self->Go(AntUiScreen::Colony); }); Y += Step;
 	if (bTutDone && AntTut::IsDemo())
@@ -917,18 +927,16 @@ void SAntUiMenu::PaintCoop(FUiDraw& D) const
 		const bool bVs = AntVersus::Wanted();
 		Button(DC, TEXT("c.mode"), bVs ? L(TEXT("coop.mode.versus")) : L(TEXT("coop.mode.raid")), X0 + 28.f, Y0 + CH - 176.f, CW - 56.f, 64.f, []() { AntVersus::Wanted() = !AntVersus::Wanted(); }, false, true, bVs ? TEXT("Human") : TEXT("Squad"));
 	}
-	// KAN-37: the level lab. Off -> A -> ... -> off: the next game (hosted, listen or solo) is that grey-box flat for everybody.
+	// KAN-40: the map of the next game (hosted, by address or solo), for everybody in it: the kitchen, or the new flat («Двушка»,
+	// AntLab variant A). Two buttons side by side, the chosen one is lit. (It was one hidden button, «Лаборатория уровней: выкл».)
 	{
 		const TCHAR Lab = AntLab::Wanted();
-		const FString Label = Lab ? FString::Printf(TEXT("Лаборатория: %c «%s»"), Lab, *AntLab::VariantName(Lab)) : FString(TEXT("Лаборатория уровней: выкл"));
-		Button(DC, TEXT("c.lab"), Label, X0 + 28.f, Y0 + CH - 256.f, CW - 56.f, 64.f, []()
-		{
-			const FString All = AntLab::Available();
-			const TCHAR Now = AntLab::Wanted();
-			int32 At = INDEX_NONE;
-			All.FindChar(Now, At);
-			AntLab::SetWanted(Now == 0 ? (All.Len() > 0 ? All[0] : (TCHAR)0) : (All.IsValidIndex(At + 1) ? All[At + 1] : (TCHAR)0));
-		}, false, true, TEXT("Lens"));
+		const FString All = AntLab::Available();
+		const float BW = (CW - 56.f - 12.f) * 0.5f, BY = Y0 + CH - 256.f;
+		DC.Text(AntTut::Tx(TEXT("Карта"), TEXT("Map")), X0 + 28.f, BY - 30.f, EFont::Body, 18.f, WithA(C::Sugar, 0.75f));
+		Button(DC, TEXT("c.map.kitchen"), AntTut::Tx(TEXT("Кухня"), TEXT("Kitchen")), X0 + 28.f, BY, BW, 64.f, []() { AntLab::SetWanted(0); }, Lab == 0, true);
+		Button(DC, TEXT("c.map.flat"), AntTut::Tx(TEXT("Новая квартира"), TEXT("New flat")), X0 + 28.f + BW + 12.f, BY, BW, 64.f,
+			[All]() { AntLab::SetWanted(All.Len() > 0 ? All[0] : (TCHAR)0); }, Lab != 0, All.Len() > 0);
 	}
 	// 1: host over Steam.
 	Button(DC, TEXT("c.host"), L(TEXT("coop.host.btn")), X0 + 28.f, Y0 + CH - 96.f, CW - 56.f, 64.f, [S]() { if (S) { S->Host(); } }, true, bSteam, TEXT("Ready"));
