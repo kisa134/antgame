@@ -10,7 +10,7 @@
 #   SM_K_Mug        cobalt glazed mug "ÐŸÐÐŸÐ", coffee dregs inside                       china: handle off + 2 shards
 #   SM_K_PastaBox   printed carton of penne                                            cardboard: torn in two
 #   SM_K_JarJam     glass jar of strawberry jam, red painted lid, label               glass: 3 pieces
-# Run: blender --background --factory-startup --python hero_props.py -- <SourceArt/Blender/hero_props> <Saved/art_review/props> [names] [nobake]
+# Run: blender --background --factory-startup --python hero_props.py -- <SourceArt/Blender/hero_props> <Saved/art_review/props> [names] [nobake | shape]
 import bpy, bmesh, sys, os, math, random, json, time
 from mathutils import Vector, Matrix
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -22,6 +22,7 @@ OUT = argv[0] if argv else os.path.join(HERE, "..", "..", "SourceArt", "Blender"
 REV = argv[1] if len(argv) > 1 else os.path.join(HERE, "..", "..", "Saved", "art_review", "props")
 ONLY = argv[2].replace("+", ",").split(",") if len(argv) > 2 and argv[2] not in ("all", "") else None
 NOBAKE = len(argv) > 3 and argv[3] == "nobake"
+SHAPE = len(argv) > 3 and argv[3] == "shape"
 LAB = os.path.join(OUT, "labels")
 K = H.K
 
@@ -241,7 +242,7 @@ def mats():
     M["jam"] = jam_mat("Jam")
     M["lidRed"] = H.plastic("LidRedPaint", (0.55, 0.03, 0.03), 0.22, peel=0.02, scuff=0.18)
     M["jamLabel"] = label_cyl("LabelJam", "jam.png", 120, 50, 190)
-    return mats11(mats10(mats9(mats8(mats7(mats6(mats5(mats4(mats2(M)))))))))
+    return mats12(mats11(mats10(mats9(mats8(mats7(mats6(mats5(mats4(mats2(M))))))))))
 
 # ------------------------------------------------------------------------------------------------ the pieces (frames and boxes of the old ones)
 def plate(M):
@@ -1491,14 +1492,26 @@ def mats9(M):
     return M
 
 def cookietin(M):
+    """the open biscuit tin: a paper sheet over the lower layers, a ring of fluted butter biscuits fanned on it and a stack in the
+    middle; the lid stands on the floor on its edge and leans on the rim, its printed side out (KAN-22 fix: it was print-to-the-
+    tin and 94 uu under the floor, and the biscuits lay under the tin's own bottom)"""
     body = [(0, 3), (330, 3), (342, 0), (349, 6), (350, 16), (350, 286), (353, 292), (351, 297), (346, 296), (345, 290), (345, 16), (338, 9), (0, 8)]
-    P = [(lathe("Tin", body, M["tinPaint"], 96), 0), (wrap_label("Print", 350.2, 20, 290, 180, M["cookieLabel"], 0.3, 96), 0)]
+    P = [(lathe("Tin", body, M["tinPaint"], 64), 0), (wrap_label("Print", 350.2, 20, 290, 180, M["cookieLabel"], 0.3, 64), 0)]
+    P.append((outward(lathe("Sheet", [(0, 150), (340, 150), (343.5, 153), (343.5, 172), (342, 172), (341.5, 155), (0, 153)], M["teaPaper"], 32)), 1))
     R = random.Random(41)
-    for k in range(9):   # biscuits, some stacked, some leaning
-        a, r = R.uniform(0, 6.28), R.uniform(0, 230); c = lathe_s("Biscuit%d" % k, [(0, 0), (62, 0), (68, 4), (68, 14), (62, 18), (0, 18)], M["biscuit"], 32)
-        c.location = u(r * math.cos(a), r * math.sin(a), 9 + (k % 3) * 18); c.rotation_euler = (R.uniform(-0.15, 0.15), R.uniform(-0.15, 0.15), 0); P.append((c, 1))
-    lid = lathe("Lid", [(0, 60), (340, 60), (352, 56), (356, 46), (356, 0), (351, 0), (350, 44), (342, 54), (0, 55)], M["cookieTop"], 96)
-    lid.rotation_euler = (0, math.radians(-75), 0); lid.location = u(452, 0, 250); P.append((lid, 2))     # leaning on the tin, as before
+    for k in range(10):   # the ring: each leans on the next
+        a = 2 * math.pi * k / 10 + 0.1; tilt = 0.36 + R.uniform(-0.04, 0.04)
+        c = _biscuit("Biscuit%d" % k, M["biscuitB"]); c.rotation_euler = (tilt, 0, a)
+        c.location = u(218 * math.cos(a), 218 * math.sin(a), 154 + 66 * math.sin(tilt)); P.append((c, 1))
+    for k in range(3):    # the stack in the middle, a little askew
+        c = _biscuit("BiscuitMid%d" % k, M["biscuitB"]); c.rotation_euler = (R.uniform(-0.05, 0.05), R.uniform(-0.05, 0.05), R.uniform(0, 3))
+        c.location = u(R.uniform(-14, 14), R.uniform(-14, 14), 154 + k * 24); P.append((c, 1))
+    lid = outward(lathe("Lid", [(0, 60), (340, 60), (352, 56), (356, 46), (356, 0), (351, 0), (350, 44), (342, 54), (0, 55)], M["cookieLid"], 64))
+    for k in ("lid_u", "lid_v", "lid_top"): lid.data.attributes.new(k, "FLOAT", "POINT")
+    au, av, at = [lid.data.attributes[k] for k in ("lid_u", "lid_v", "lid_top")]
+    for i, v in enumerate(lid.data.vertices):   # the print reads upright from the side the lid is turned to: up the lid is its -X
+        au.data[i].value = (v.co.y / K + 350.0) / 700.0; av.data[i].value = (350.0 - v.co.x / K) / 700.0; at.data[i].value = 1.0 if v.co.z > 57.5 * K else 0.0
+    lid.rotation_euler = (0, TIN_PHI, 0); lid.location = u(TIN_LX, 0, TIN_LZ); P.append((lid, 2))
     return P
 
 def teabag(M):
@@ -1553,14 +1566,38 @@ def colacap(M):
     return [(lathe_s("Cap", [(0, 38), (24, 38), (28, 34), (28.5, 4), (27, 0), (24, 0), (24, 32), (0, 33)], M["capRed"], 40), 0)]
 
 def grocerybag(M):
-    """a paper bag lying on its side, its mouth to -Y, a baguette and apples spilling out"""
-    P = [(rbox(n, *b, M["grocery"], 2, 0, 1), 0) for n, b in (("Floor", (-550, 550, -700, 600, 0, 5)), ("Roof", (-540, 540, -690, 600, 640, 646)),
-                                                                ("SideL", (-550, -544, -700, 600, 0, 646)), ("SideR", (544, 550, -700, 600, 0, 646)), ("Back", (-550, 550, 594, 600, 0, 646)))]
-    P.append((rbox("Lip", -550, 550, -730, -700, 0, 4, M["grocery"], 1, 0, 1), 0))
-    b = lathe("Baguette", [(0, 0), (30, 6), (52, 30), (58, 120), (58, 700), (50, 760), (28, 790), (0, 796)], M["bread"], 24); b.rotation_euler = (math.pi / 2, 0, 0.2); b.location = u(-120, 400, 60)
-    P.append((b, 1))
-    for x, y in ((180, -560), (300, -420)):
-        P.append((lathe_s("Apple", [(r * 1.0, z) for r, z in sphere_prof(70, 14)], M["apple"], 32, 0, (x, y, 5)), 1))
+    """a paper bag on its side, the mouth to -Y: the upper side sags into the mouth, the side gussets fold in, the paper is
+    creased; twisted paper handles, a baguette and apples spilling out. Inside it is a cave (the ants' way in).
+    (KAN-22 fix: it was a rigid box of six flat boards.)"""
+    W, HH, Y0, Y1, NJ, nf, nw, nr = 550.0, 640.0, -700.0, 600.0, 26, 10, 8, 14
+    def sect(tau):   # 0 the mouth .. 1 the bag's own bottom: the roof's sag, the gusset's depth, how far the roof has slid to +X
+        op = (1 - tau) ** 1.5; return 190.0 * op, 125.0 * op ** 0.6 * min(1.0, (1 - tau) * 6.0), 45.0 * op
+    def dent(x, y):  # two long creases across the upper side
+        d = 0.0
+        for (ax, ay, bx, by), dep, wd in (((-200, -700, 350, 200), 24.0, 42.0), ((-520, -80, 520, 170), 17.0, 38.0)):
+            ln = math.hypot(bx - ax, by - ay); d += dep * math.exp(-(((x - ax) * (by - ay) - (y - ay) * (bx - ax)) / ln / wd) ** 2)
+        return d
+    rings = []
+    for j in range(NJ + 1):
+        tau = (j / NJ) ** 1.2; y = Y0 + (Y1 - Y0) * tau; sag, gus, skew = sect(tau); zt = HH - 0.3 * sag; r = []
+        for i in range(nf): r.append((-W + 2 * W * i / nf, 0.0))
+        for i in range(nw): t = i / nw; r.append((W - gus * (1 - abs(2 * t - 1)) + skew * t, zt * t))
+        for i in range(nr): t = i / nr; x = W - 2 * W * t + skew; r.append((x, zt - 0.7 * sag * math.sin(math.pi * t) ** 1.3 - dent(x, y)))
+        for i in range(nw): t = 1 - i / nw; r.append((-W + gus * (1 - abs(2 * t - 1)) + skew * t, zt * t))
+        edge = 28.0 * (1 - tau) ** 6     # the mouth's edge is not a straight cut
+        rings.append([(x, y + edge * _nz(x / 260.0, z / 260.0, 5.0), z) for x, z in r])
+    bag = skin("Bag", rings, M["bagPaper"], close_u=True, cap_end=True)
+    crumple(bag, 13.0, 190.0, 3.0, lambda p: 0.0 if p.z < 1.0 else (0.35 if p.y > Y1 - 2 else min(1.0, p.z / 60.0)))
+    for v in bag.data.vertices: v.co.z = max(v.co.z, 0.0)
+    so = bag.modifiers.new("solid", "SOLIDIFY"); so.thickness = 5 * K; so.offset = -1.0
+    P = [(bag, 0)]
+    for pts in (((170, -650, 452), (176, -702, 432), (122, -724, 335), (0, -728, 292), (-122, -724, 335), (-176, -702, 432), (-170, -650, 452)),   # hangs from the upper edge
+                ((-170, -664, 10), (-150, -612, 11), (0, -586, 11), (150, -612, 11), (170, -664, 10))):                                                # the lower one lies on the paper inside
+        tw = H.tubes("Handle", [[Vector(u(*p)) for p in pts]], 7 * K, res_u=6, bevel_res=1, tip=1.0); tw.data.materials.append(M["twine"]); P.append((tw, 2))
+    b = lathe("Baguette", [(0, 0), (22, 4), (44, 22), (56, 70), (60, 160), (60, 640), (54, 730), (40, 776), (20, 794), (0, 798)], M["crust"], 20)
+    b.rotation_euler = (math.pi / 2, 0, -0.12); b.location = u(-200, 70, 67); P.append((b, 1))
+    for k, (x, y, r, rz) in enumerate(((205, -520, 72, 0.4), (335, -648, 68, 2.1), (40, -320, 70, 4.0))):
+        for o in _fruit("Apple%d" % k, _apple_prof(r), M["apple"], (x, y, 5.5), (0.12 * math.cos(rz), 0.12 * math.sin(rz), rz), 16, M["stem"], 1.6 * r): P.append((o, 1))
     return P
 
 def _hinge(o):
@@ -1782,6 +1819,226 @@ SPECS.update({   # batch 10
 
 # ---- batch 11: the rest of the flat's small things (fruit bowl, knife block, dish rack, biscuit plate, snack bowl, glasses, coin,
 #      knitting needle, sock, yarn ball, car track, train track, balloon and its weight, gift box and its lid)
+# ---- KAN-22 fix (27.11): the six weak pieces redone (sock, grocery bag, cookie tin, fruit bowl, glasses, knife block).
+#      Soft cloth and creased paper are skinned surfaces (rings of points), not boxes and straight sweeps; fruit and biscuits
+#      are turned profiles of their own.
+from mathutils import noise as mnoise
+
+def _nz(x, y, z=0.0):
+    """smooth noise, -1..1"""
+    return mnoise.noise(Vector((x, y, z)))
+
+def _keys(keys, s):
+    """smooth interpolation between rows (s, v0, v1, ...)"""
+    if s <= keys[0][0]: return keys[0][1:]
+    for a, b in zip(keys, keys[1:]):
+        if s <= b[0]:
+            t = (s - a[0]) / (b[0] - a[0]); t = t * t * (3 - 2 * t)
+            return tuple(x + (y - x) * t for x, y in zip(a[1:], b[1:]))
+    return keys[-1][1:]
+
+def skin(name, rings, mat, close_u=True, cap_end=False, attrs=None):
+    """a surface through rings of points (uu): quads ring to ring. close_u joins each ring's last point to its first; cap_end
+    closes the last ring with a fan. attrs {name: [[value per point] per ring]} -> float point attributes (for the shader)."""
+    me = bpy.data.meshes.new(name); bm = bmesh.new(); n = len(rings[0])
+    V = [[bm.verts.new(u(*p)) for p in r] for r in rings]
+    for a, b in zip(V, V[1:]):
+        for j in range(n if close_u else n - 1): bm.faces.new((a[j], a[(j + 1) % n], b[(j + 1) % n], b[j]))
+    if cap_end:
+        c = bm.verts.new(sum((v.co for v in V[-1]), Vector((0, 0, 0))) / n)
+        for j in range(n if close_u else n - 1): bm.faces.new((V[-1][j], V[-1][(j + 1) % n], c))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:]); bm.to_mesh(me); bm.free()
+    for k, vals in (attrs or {}).items():
+        a = me.attributes.new(k, "FLOAT", "POINT"); flat = [x for r in vals for x in r]
+        for i, x in enumerate(flat): a.data[i].value = x
+        if cap_end: a.data[len(flat)].value = flat[-1]
+    o = H.link(bpy.data.objects.new(name, me)); o.data.materials.append(mat)
+    for p in o.data.polygons: p.use_smooth = True
+    return o
+
+def crumple(o, amp, cell, seed, weight):
+    """creased paper: every vertex moved along its normal by ridged noise (amp, cell in uu); weight(co in uu) -> 0..1"""
+    for v in o.data.vertices:
+        p = v.co / K; w = weight(p)
+        if w <= 0: continue
+        n1 = 1 - abs(_nz(p.x / cell + seed, p.y / cell, p.z / cell)) * 2
+        n2 = _nz(p.x / (cell * 0.37) + seed, p.y / (cell * 0.37) + 7.0, p.z / (cell * 0.37))
+        v.co += v.normal * (amp * K * w * (0.75 * n1 + 0.35 * n2))
+    return o
+
+def outward(o):
+    """a turned thin part with its modifiers applied and its normals made to point out: the screw's own normal calculation turns
+    some profiles inside out (a face seen from behind is culled in the game, and bakes black). The test: a ray along a face's
+    normal that hits the part's own other side within 12 uu started inside the wall. Call it before the part is moved."""
+    from mathutils.bvhtree import BVHTree
+    m = H.bake_mesh(o) if (o.type != "MESH" or o.modifiers) else o; me = m.data
+    bv = BVHTree.FromPolygons([v.co[:] for v in me.vertices], [p.vertices[:] for p in me.polygons])
+    bad = sum(p.area for p in me.polygons if bv.ray_cast(p.center + p.normal * 1e-5, p.normal, 12 * K)[0] is not None)
+    if bad > 0.5 * sum(p.area for p in me.polygons): me.flip_normals(); print("HERO %s: normals turned out" % m.name)
+    return m
+
+def _xf(pts, rot_y, loc_uu):
+    """points (metres) turned about Y and moved: the frame of a part placed with rotation_euler (0, rot_y, 0) and location"""
+    m = Matrix.Translation(Vector(u(*loc_uu))) @ Matrix.Rotation(rot_y, 4, "Y")
+    return [tuple(m @ Vector(p)) for p in pts]
+
+def _attr(m, name, x=-1900, y=0):
+    n = N(m, "ShaderNodeAttribute", x, y); n.attribute_name = name; return n.outputs["Fac"]
+
+def _fmix(m, fac, a, b, x=0, y=0):
+    n = N(m, "ShaderNodeMix", x, y); n.data_type = "FLOAT"; L(m, fac, n.inputs[0]); L(m, a, n.inputs[2]); L(m, b, n.inputs[3]); return n.outputs[0]
+
+def _curve(pts, n=4):
+    """a smooth path through the points (Catmull-Rom, n steps per span)"""
+    P = [Vector(p) for p in pts]; out = []
+    for i in range(len(P) - 1):
+        p0, p1, p2, p3 = P[max(i - 1, 0)], P[i], P[i + 1], P[min(i + 2, len(P) - 1)]
+        for k in range(n):
+            t = k / n; t2, t3 = t * t, t * t * t
+            out.append(tuple(0.5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 + (-p0 + 3 * p1 - 3 * p2 + p3) * t3)))
+    out.append(tuple(P[-1])); return out
+
+def ring_tube(name, pts_uu, r_uu, mat, nsec=8):
+    """a round tube along a closed flat loop in the XZ plane (a spectacle rim): the section stays square to the loop all the
+    way round (sweep()'s frame flips where the path runs straight up, and the rim got a notch there)"""
+    n = len(pts_uu); rings = []
+    for i in range(n + 1):
+        p = Vector(pts_uu[i % n]); t = (Vector(pts_uu[(i + 1) % n]) - Vector(pts_uu[(i - 1) % n])).normalized(); out = Vector((t.z, 0, -t.x))
+        rings.append([tuple(p + out * (r_uu * math.cos(b)) + Vector((0, r_uu * math.sin(b), 0))) for b in [2 * math.pi * k / nsec for k in range(nsec)]])
+    return skin(name, rings, mat)
+
+def _biscuit(name, mat, r=66.0, lobes=10):
+    """a butter biscuit: a fluted round, domed (attribute bk_r for the shader: 0 the middle .. 1 the edge, baked darker)"""
+    n = lobes * 2; rows = ((0.03, 0.0, 0.9), (0.90, 0.0, 1.0), (1.0, 6.0, 1.0), (0.97, 13.0, 0.9), (0.72, 19.0, 0.55), (0.38, 22.0, 0.25), (0.03, 23.0, 0.0))
+    fl = lambda f, j: r * f * (0.89 if (j % 2 and f > 0.6) else 1.0)
+    rings = [[(fl(f, j) * math.cos(2 * math.pi * j / n), fl(f, j) * math.sin(2 * math.pi * j / n), z) for j in range(n)] for f, z, e in rows]
+    return skin(name, rings, mat, attrs={"bk_r": [[e] * n for f, z, e in rows]})
+
+def biscuit_mat(name):
+    m, p = H.mat(name); tc = N(m, "ShaderNodeTexCoord", -1300)
+    cr = N(m, "ShaderNodeValToRGB", -700); e = cr.color_ramp.elements; e[0].position = 0.15; e[0].color = (0.66, 0.40, 0.14, 1); e[1].position = 1.0; e[1].color = (0.34, 0.14, 0.035, 1)
+    md = cr.color_ramp.elements.new(0.7); md.color = (0.58, 0.32, 0.10, 1)
+    L(m, _attr(m, "bk_r", -1000, 0), cr.inputs["Fac"])
+    no = N(m, "ShaderNodeTexNoise", -1000, -300); no.inputs["Scale"].default_value = 160; no.inputs["Detail"].default_value = 6; L(m, tc.outputs["Object"], no.inputs["Vector"])
+    mx = N(m, "ShaderNodeMix", -400, 0); mx.data_type = "RGBA"; mx.blend_type = "MULTIPLY"; mx.inputs[0].default_value = 0.35; L(m, cr.outputs["Color"], mx.inputs[6]); L(m, no.outputs["Color"], mx.inputs[7])
+    L(m, mx.outputs[2], p.inputs["Base Color"]); p.inputs["Roughness"].default_value = 0.78
+    gr = N(m, "ShaderNodeTexNoise", -1000, -600); gr.inputs["Scale"].default_value = 1100; L(m, tc.outputs["Object"], gr.inputs["Vector"])
+    bp = N(m, "ShaderNodeBump", -300, -500); bp.inputs["Strength"].default_value = 0.35; bp.inputs["Distance"].default_value = 0.0005
+    L(m, gr.outputs["Fac"], bp.inputs["Height"]); L(m, bp.outputs["Normal"], p.inputs["Normal"])
+    return H.tag(m, 0.0, 0.7)
+
+def lid_print(name, img, base, rough=0.2, coat=0.3):
+    """a lid's print by the lid's own coordinates (attributes lid_u, lid_v, lid_top, set before the lid is leaned on the tin):
+    the print stays on its top however it stands (top_print() projects along the world's Z after the parts are joined)"""
+    m, p = H.mat(name)
+    t = _img(m, os.path.join(LAB, img), _attr(m, "lid_u", -1000, -1000), _attr(m, "lid_v", -1000, -1100), -700, -1000)
+    a = _math(m, "MULTIPLY", t.outputs["Alpha"], _math(m, "GREATER_THAN", _attr(m, "lid_top", -1000, -1200), 0.5, -800, -1200), -500, -1000)
+    L(m, _over(m, base, t.outputs["Color"], a, -200, -900), p.inputs["Base Color"])
+    p.inputs["Roughness"].default_value = rough; p.inputs["Coat Weight"].default_value = coat
+    return H.tag(m, 0.0, 0.05)
+
+def crust(name):
+    """a baguette's crust: baked gold in patches, pale floury slashes across the loaf (it lies along Y) on its upper side"""
+    m, p = H.mat(name); tc = N(m, "ShaderNodeTexCoord", -1500)
+    no = N(m, "ShaderNodeTexNoise", -1100); no.inputs["Scale"].default_value = 40; no.inputs["Detail"].default_value = 5; L(m, tc.outputs["Object"], no.inputs["Vector"])
+    cr = N(m, "ShaderNodeValToRGB", -900); e = cr.color_ramp.elements; e[0].position = 0.35; e[0].color = (0.40, 0.17, 0.04, 1); e[1].position = 0.7; e[1].color = (0.62, 0.34, 0.09, 1)
+    L(m, no.outputs["Fac"], cr.inputs["Fac"])
+    mp = N(m, "ShaderNodeMapping", -1300, -500); mp.inputs["Rotation"].default_value = (0, 0, math.radians(38)); L(m, tc.outputs["Object"], mp.inputs["Vector"])
+    wv = N(m, "ShaderNodeTexWave", -1100, -500); wv.bands_direction = "Y"; wv.wave_profile = "SIN"; wv.inputs["Scale"].default_value = 0.314 / (150 * K); wv.inputs["Distortion"].default_value = 1.2
+    wv.inputs["Detail"].default_value = 1.0; wv.inputs["Detail Scale"].default_value = 0.4; L(m, mp.outputs["Vector"], wv.inputs["Vector"])
+    nrm = N(m, "ShaderNodeSeparateXYZ", -1100, -800); L(m, tc.outputs["Normal"], nrm.inputs["Vector"])
+    sl = _math(m, "MULTIPLY", _maprange(m, wv.outputs["Fac"], 0.86, 0.95, 0.0, 1.0, True, -900, -500), _maprange(m, nrm.outputs["Z"], 0.25, 0.55, 0.0, 1.0, True, -900, -800), -700, -600)
+    mx = N(m, "ShaderNodeMix", -400, 0); mx.data_type = "RGBA"; L(m, cr.outputs["Color"], mx.inputs[6]); mx.inputs[7].default_value = (0.80, 0.62, 0.36, 1); L(m, sl, mx.inputs[0])
+    L(m, mx.outputs[2], p.inputs["Base Color"]); p.inputs["Roughness"].default_value = 0.6
+    bp = N(m, "ShaderNodeBump", -300, -500); bp.invert = True; bp.inputs["Strength"].default_value = 0.6; bp.inputs["Distance"].default_value = 0.002
+    L(m, sl, bp.inputs["Height"]); L(m, bp.outputs["Normal"], p.inputs["Normal"])
+    return H.tag(m, 0.0, 0.7)
+
+def _orange_prof(r):
+    return [(0, 0.05 * r)] + [(r * math.sin(math.pi * k / 10), r * (1 - math.cos(math.pi * k / 10))) for k in range(1, 10)] + [(0, 1.96 * r)]
+
+SOCK_L2 = 120.0 * math.pi / 2     # the heel turn's length along the centre line
+
+SOCK_R, SOCK_L1, SOCK_L3 = 120.0, 742.0, 370.0     # the heel turn's radius, the leg's and the foot's length along the centre line (uu)
+SOCK_LEN = SOCK_L1 + SOCK_R * math.pi / 2 + SOCK_L3; SOCK_HEEL = SOCK_L1 + SOCK_R * math.pi / 4
+
+def sock_knit(name, red, cream):
+    """knitted cotton: rings of colour along the leg and the foot (attribute sk_t: the distance from the cuff's edge, uu), red
+    cuff, heel and toe; the wales of the knit and the cuff's ribs as bump (sk_v: round the tube, 0..1, 0.25 = the outside of the turn)"""
+    m = felt(name, cream, 0.35, 0.7); p = m.node_tree.nodes["Principled BSDF"]
+    base = p.inputs["Base Color"].links[0].from_socket; fz = p.inputs["Normal"].links[0].from_socket
+    t = _attr(m, "sk_t", -1900, -900); v = _attr(m, "sk_v", -1900, -1100)
+    sq = lambda s, y: _math(m, "MULTIPLY", s, s, -1400, y)
+    span = lambda a, b, y: _math(m, "MULTIPLY", _math(m, "GREATER_THAN", t, a, -1550, y), _math(m, "LESS_THAN", t, b, -1550, y - 60), -1400, y)
+    fr = _math(m, "FRACT", _math(m, "DIVIDE", t, 72.0, -1700, -900), None, -1550, -900)
+    ring = _math(m, "MULTIPLY", _math(m, "LESS_THAN", fr, 0.40, -1400, -900),
+                 _math(m, "MAXIMUM", span(120.0, SOCK_L1 - 60.0, -1000), span(SOCK_L1 + SOCK_L2 + 62.0, SOCK_LEN - 150.0, -1150), -1250, -1000), -1100, -900)
+    cuff = _math(m, "LESS_THAN", t, 66.0, -1400, -1300); toe = _math(m, "GREATER_THAN", t, SOCK_LEN - 118.0, -1400, -1360)
+    hs = sq(_math(m, "DIVIDE", _math(m, "SUBTRACT", t, SOCK_HEEL, -1700, -1450), 112.0, -1550, -1450), -1450)
+    hv = sq(_math(m, "DIVIDE", _math(m, "SUBTRACT", v, 0.25, -1700, -1550), 0.21, -1550, -1550), -1550)
+    heel = _math(m, "LESS_THAN", _math(m, "ADD", hs, hv, -1250, -1450), 1.0, -1100, -1450)
+    mask = ring
+    for k, z in enumerate((cuff, toe, heel)): mask = _math(m, "MAXIMUM", mask, z, -950 + k * 120, -1000)
+    mx = N(m, "ShaderNodeMix", -500, -900); mx.data_type = "RGBA"; L(m, base, mx.inputs[6]); mx.inputs[7].default_value = (*red, 1); L(m, mask, mx.inputs[0])
+    L(m, mx.outputs[2], p.inputs["Base Color"])
+    wale = _math(m, "SINE", _math(m, "MULTIPLY", v, 2 * math.pi * 54, -1700, -1700), None, -1550, -1700)
+    rib = _math(m, "SINE", _math(m, "MULTIPLY", v, 2 * math.pi * 22, -1700, -1800), None, -1550, -1800)
+    course = _math(m, "SINE", _math(m, "MULTIPLY", t, 2 * math.pi / 9.0, -1700, -1900), None, -1550, -1900)
+    knit = _math(m, "ADD", _math(m, "MULTIPLY", wale, 0.5, -1400, -1700), _math(m, "MULTIPLY", course, 0.25, -1400, -1900), -1250, -1700)
+    h = _fmix(m, _math(m, "LESS_THAN", t, 150.0, -1400, -2000), knit, _math(m, "MULTIPLY", rib, 1.7, -1400, -1800), -1050, -1700)
+    bp = N(m, "ShaderNodeBump", -300, -1700); bp.inputs["Strength"].default_value = 0.6; bp.inputs["Distance"].default_value = 0.0008
+    L(m, h, bp.inputs["Height"]); L(m, fz, bp.inputs["Normal"]); L(m, bp.outputs["Normal"], p.inputs["Normal"])
+    return m
+
+def bag_paper(name, img, x0, x1, y0, y1, zmin, col=(0.46, 0.29, 0.14), ink=(0.012, 0.12, 0.03)):
+    """creased kraft paper with a print on its upper side: the label's dark ink only (the label's own flat ground would show as
+    a patch), projected from above on what faces up over zmin; the creases of crumpled paper - long straight folds crossing each
+    other (stretched cell edges, two directions) and fine ones - as bump, a little paler where the fibres broke"""
+    m = kraft(name, col); p = m.node_tree.nodes["Principled BSDF"]
+    base = p.inputs["Base Color"].links[0].from_socket; nb = p.inputs["Normal"].links[0].from_socket
+    tc, sp = _sep(m)
+    nrm = N(m, "ShaderNodeSeparateXYZ", -1400, -900); L(m, tc.outputs["Normal"], nrm.inputs["Vector"])
+    top = _math(m, "MULTIPLY", _math(m, "GREATER_THAN", nrm.outputs["Z"], 0.35, -1200, -900), _math(m, "GREATER_THAN", sp.outputs["Z"], zmin * K, -1200, -800), -1050, -900)
+    uu = _maprange(m, sp.outputs["X"], x0 * K, x1 * K, 0.0, 1.0, False, -1000, -1000)
+    vv = _maprange(m, sp.outputs["Y"], y0 * K, y1 * K, 0.0, 1.0, False, -1000, -1100)
+    t = _img(m, os.path.join(LAB, img), uu, vv, -700, -1000)
+    sc = N(m, "ShaderNodeSeparateColor", -500, -1000); L(m, t.outputs["Color"], sc.inputs["Color"])
+    inkm = _math(m, "MULTIPLY", _maprange(m, sc.outputs["Red"], 0.30, 0.10, 0.0, 1.0, True, -350, -1000), t.outputs["Alpha"], -200, -1000)
+    inkm = _math(m, "MULTIPLY", inkm, top, -50, -1000)
+    def creases(rot, stretch, scale, wdt, y):
+        mp = N(m, "ShaderNodeMapping", -1150, y); mp.inputs["Rotation"].default_value = tuple(math.radians(a) for a in rot); mp.inputs["Scale"].default_value = stretch
+        L(m, tc.outputs["Object"], mp.inputs["Vector"])
+        vo = N(m, "ShaderNodeTexVoronoi", -900, y); vo.feature = "DISTANCE_TO_EDGE"; vo.inputs["Scale"].default_value = scale
+        L(m, mp.outputs["Vector"], vo.inputs["Vector"]); return _maprange(m, vo.outputs["Distance"], 0.0, wdt, 1.0, 0.0, True, -700, y)
+    cr = _math(m, "MAXIMUM", creases((10, 20, 24), (1.0, 0.26, 0.5), 8.0, 0.030, -1500), creases((-15, 5, -52), (0.28, 1.0, 0.5), 9.5, 0.030, -1700), -500, -1500)
+    cr = _math(m, "MAXIMUM", cr, _math(m, "MULTIPLY", creases((40, 30, 75), (1.0, 1.0, 1.0), 27.0, 0.05, -1900), 0.3, -500, -1900), -350, -1500)
+    bp = N(m, "ShaderNodeBump", -150, -1500); bp.invert = True; bp.inputs["Strength"].default_value = 0.75; bp.inputs["Distance"].default_value = 0.0016
+    L(m, cr, bp.inputs["Height"]); L(m, nb, bp.inputs["Normal"]); L(m, bp.outputs["Normal"], p.inputs["Normal"])
+    worn = N(m, "ShaderNodeMix", 100, -900); worn.data_type = "RGBA"; L(m, base, worn.inputs[6]); worn.inputs[7].default_value = (min(1.0, col[0] * 1.35), min(1.0, col[1] * 1.4), min(1.0, col[2] * 1.5), 1)
+    L(m, _math(m, "MULTIPLY", cr, 0.3, -100, -1300), worn.inputs[0])
+    pr = N(m, "ShaderNodeMix", 300, -900); pr.data_type = "RGBA"; L(m, worn.outputs[2], pr.inputs[6]); pr.inputs[7].default_value = (*ink, 1); L(m, inkm, pr.inputs[0])
+    L(m, pr.outputs[2], p.inputs["Base Color"])
+    return m
+
+def _apple_prof(r):
+    return [(a * r, b * r) for a, b in ((0, 0.14), (0.20, 0.05), (0.45, 0.0), (0.72, 0.08), (0.93, 0.36), (1.0, 0.78), (0.96, 1.16), (0.80, 1.50), (0.52, 1.70), (0.26, 1.74), (0.09, 1.66), (0, 1.58))]
+
+def _pear_prof(r):
+    return [(a * r, b * r) for a, b in ((0, 0.10), (0.25, 0.02), (0.55, 0.0), (0.85, 0.18), (1.0, 0.55), (0.95, 0.95), (0.70, 1.35), (0.48, 1.70), (0.40, 2.05), (0.30, 2.30), (0.12, 2.42), (0, 2.44))]
+
+def _lemon_prof(r):
+    return [(a * r, b * r) for a, b in ((0, 0.0), (0.12, 0.03), (0.20, 0.12), (0.55, 0.38), (0.90, 0.80), (1.0, 1.20), (0.90, 1.60), (0.55, 2.02), (0.20, 2.28), (0.12, 2.37), (0, 2.40))]
+
+def _fruit(name, prof, mat, at, rot=(0, 0, 0), steps=24, stem=None, top=0.0):
+    """a turned fruit standing on 'at' (uu), turned by rot; stem: the stalk's material, set in the dimple at 'top' (uu up the axis)"""
+    o = lathe_s(name, prof, mat, steps); o.rotation_euler = rot; o.location = u(*at); P = [o]
+    if stem:
+        s = lathe_s(name + "Stem", [(0, top - 6), (3.5, top - 6), (3.0, top + 22), (4.5, top + 30), (0, top + 31)], stem, 6); s.rotation_euler = rot; s.location = u(*at); P.append(s)
+    return P
+
+TIN_PHI = math.radians(72.0); TIN_LZ = 356.0 * math.sin(TIN_PHI) + 1.0     # the cookie tin's lid: its lean, its centre over the floor (its edge stands on it)
+TIN_LX = 354.0 - (55.0 * math.cos(TIN_PHI) + TIN_LZ - 298.0) / math.tan(TIN_PHI) - 55.0 * math.sin(TIN_PHI)   # ... and so that its inside rests on the tin's rim
+
 def sweep(name, pts_uu, sec_uu, mat, closed=False, caps=True, scale=None):
     """a cross-section (a closed loop of (side, up) points, uu) swept along a 3D path (uu); scale(i) -> section scale"""
     me = bpy.data.meshes.new(name); bm = bmesh.new(); P = [Vector(u(*p)) for p in pts_uu]; n = len(P); rings = []
@@ -1843,29 +2100,73 @@ def mats11(M):
     M["ribbon"] = H.plastic("Ribbon", (0.72, 0.05, 0.06), 0.15, peel=0.02, scuff=0.05)
     return M
 
+def fruit_skin(name, a, b, rough=0.3, scale=14.0):
+    """fruit peel: two colours in soft patches (the blush of an apple, the green end of a lemon), fine pores"""
+    m, p = H.mat(name); tc = N(m, "ShaderNodeTexCoord", -1100)
+    no = N(m, "ShaderNodeTexNoise", -900); no.inputs["Scale"].default_value = scale; no.inputs["Detail"].default_value = 3; L(m, tc.outputs["Object"], no.inputs["Vector"])
+    cr = N(m, "ShaderNodeValToRGB", -700); e = cr.color_ramp.elements; e[0].position = 0.40; e[0].color = (*a, 1); e[1].position = 0.64; e[1].color = (*b, 1)
+    L(m, no.outputs["Fac"], cr.inputs["Fac"]); L(m, cr.outputs["Color"], p.inputs["Base Color"]); p.inputs["Roughness"].default_value = rough
+    po = N(m, "ShaderNodeTexNoise", -900, -300); po.inputs["Scale"].default_value = 900; L(m, tc.outputs["Object"], po.inputs["Vector"])
+    bp = N(m, "ShaderNodeBump", -300, -300); bp.inputs["Strength"].default_value = 0.12; bp.inputs["Distance"].default_value = 0.0003
+    L(m, po.outputs["Fac"], bp.inputs["Height"]); L(m, bp.outputs["Normal"], p.inputs["Normal"])
+    return H.tag(m, 0.0, 0.3)
+
+def mats12(M):
+    """the six redone pieces (KAN-22 fix)"""
+    M["sock"] = sock_knit("SockKnit", (0.70, 0.10, 0.08), (0.92, 0.90, 0.84))
+    M["bagPaper"] = bag_paper("GroceryPaper", "grocery.png", -620, 620, -770, 640, 300)
+    M["crust"] = crust("BaguetteCrust")
+    M["apple"] = fruit_skin("AppleRed", (0.62, 0.05, 0.04), (0.78, 0.36, 0.08), 0.24)
+    M["appleGreen"] = fruit_skin("AppleGreen", (0.42, 0.60, 0.10), (0.66, 0.70, 0.16), 0.26)
+    M["appleGold"] = fruit_skin("AppleGold", (0.86, 0.66, 0.10), (0.80, 0.34, 0.08), 0.26)
+    M["pear"] = fruit_skin("PearSkin", (0.56, 0.62, 0.16), (0.74, 0.62, 0.20), 0.4)
+    M["orange"] = fruit_skin("OrangePeel", (0.90, 0.36, 0.02), (0.95, 0.48, 0.04), 0.42, 20.0)
+    M["biscuitB"] = biscuit_mat("ButterBiscuit")
+    M["cookieLid"] = lid_print("CookieTinLidPrint", "cookietin_top.png", (0.12, 0.24, 0.55))
+    M["fruitBowl"] = ceramic("FruitBowlGlazeDeep", (0.10, 0.20, 0.52), 0.06, [(437, 452, (0.92, 0.90, 0.84))], 460.0, 4.0)
+    return M
+
 def _ball(name, r, at, mat, sx=1.0, sy=1.0, sz=1.0, n=24):
     o = lathe_s(name, sphere_prof(r, 12), mat, n); o.scale = (sx, sy, sz); o.location = u(*at); return o
 
 def fruitbowl(M):
-    prof = [(0, 6), (150, 6), (158, 2), (166, 0), (176, 0), (182, 6), (186, 18), (300, 70), (400, 140), (440, 190), (450, 200), (446, 204), (438, 202), (430, 194),
-            (392, 146), (294, 80), (184, 36), (150, 30), (0, 28)]
-    P = [(lathe("Bowl", prof, M["fruitBowl"], 72), 0)]
-    for k, (x, y, z, m) in enumerate(((-120, -60, 110, "apple"), (90, -110, 105, "apple"), (20, 140, 115, "lemon"), (-150, 130, 150, "apple"), (160, 80, 150, "pear"))):
-        r = 82 if m != "lemon" else 70
-        P.append((_ball("Fruit%d" % k, r, (x, y, z - r), M[m], 1.0, 1.0 if m != "lemon" else 1.3, 1.0 if m != "pear" else 1.35), 1))
-        P.append((rbox("Stem%d" % k, x - 4, x + 4, y - 4, y + 4, z + r * (0.95 if m != "pear" else 1.3), z + r * (0.95 if m != "pear" else 1.3) + 26, M["stem"], 2, 0, 1), 1))
-    ban = sweep("Banana", [(-260, -40, 200), (-160, -120, 240), (-20, -150, 260), (120, -110, 245), (200, -30, 215)], circ(30, 10), M["banana"], scale=lambda i: (0.5, 0.95, 1.0, 0.95, 0.5)[i])
-    P.append((ban, 1))
-    return P
+    """a deep glazed bowl heaped with fruit: six round the bowl (apples, a pear, an orange) resting on its wall, one under them
+    in the middle, three on top, a banana across the top. (KAN-22 fix: the old bowl's size back - 900 across, 452 to the top of
+    the heap; it had come out a 289 uu dish.)"""
+    prof = [(0, 10), (150, 10), (156, 4), (164, 0), (178, 0), (184, 6), (186, 20), (230, 34), (300, 70), (360, 125), (405, 195), (432, 265), (446, 318), (450, 330),
+            (446, 336), (438, 334), (424, 270), (396, 200), (352, 134), (294, 82), (226, 48), (170, 38), (0, 36)]
+    P = [(lathe("Bowl", prof, M["fruitBowl"], 56), 0)]; F = []; R = random.Random(71)
+    def put(k, kind, mat, r, ang, dist, z, lean=0.0):
+        a = math.radians(ang); rot = (-lean * math.sin(a) + R.uniform(-0.07, 0.07), lean * math.cos(a) + R.uniform(-0.07, 0.07), R.uniform(0, 6))
+        prof_, top = {"apple": (_apple_prof(r), 1.58 * r), "pear": (_pear_prof(r), 2.42 * r), "orange": (_orange_prof(r), None)}[kind]
+        return _fruit("Fruit%d" % k, prof_, M[mat], (dist * math.cos(a), dist * math.sin(a), z), rot, 18, M["stem"] if top else None, top or 0.0)
+    # (the heights: where each fruit's flank meets the bowl's inner wall at its distance from the axis - lower, it would come out through the china)
+    for k, (kind, mat, r, z, lean) in enumerate((("apple", "apple", 96, 70, 0.0), ("orange", "orange", 90, 56, 0.0), ("pear", "pear", 82, 72, 0.22),
+                                                 ("apple", "appleGreen", 95, 70, 0.0), ("apple", "apple", 97, 71, 0.0), ("apple", "appleGold", 94, 69, 0.0))):
+        F += put(k, kind, mat, r, 60 * k, 215, z, lean)
+    F += put(9, "apple", "appleGold", 90, 0, 0, 38)
+    for k, (kind, mat, r, z) in enumerate((("apple", "apple", 92, 215), ("orange", "orange", 90, 196), ("apple", "appleGreen", 92, 215))):
+        F += put(6 + k, kind, mat, r, 30 + 120 * k, 125, z)
+    ridged = [(31 * (1 + 0.07 * math.cos(5 * a)) * math.cos(a), 31 * (1 + 0.07 * math.cos(5 * a)) * math.sin(a)) for a in [2 * math.pi * k / 15 for k in range(15)]]
+    path = _curve([(-238, 82, 362), (-150, 66, 404), (-50, 60, 421), (50, 60, 421), (150, 66, 404), (238, 82, 362)], 3); n = len(path)
+    F.append(sweep("Banana", path, ridged, M["banana"], scale=lambda i: min(1.0, 0.42 + 0.3 * i, 0.42 + 0.3 * (n - 1 - i))))
+    F.append(sweep("BananaStalk", [(238, 82, 362), (262, 88, 346), (280, 92, 336)], circ(9, 6), M["stem"], scale=lambda i: (1.3, 0.95, 1.0)[i]))
+    F.append(sweep("BananaTip", [(-238, 82, 362), (-248, 84, 355)], circ(9, 6), M["stem"], scale=lambda i: (1.35, 0.5)[i]))
+    return P + [(o, 1) for o in F]
 
 def knifeblock(M):
+    """the block and its five knives, their handles leaning back with it; two brass rivets through each handle, a head on either
+    side. (KAN-22 fix: the rivets were set off along Y with the wrong sign - a handle turned by -ang about X carries a point
+    at height zz to +zz*sin(ang), not to -zz*sin(ang) - and hung in the air beside the handles.)"""
     blk = sweep("Block", [(-160, 0, 0), (160, 0, 0)], [(300, 0), (-300, 0), (-300, 760), (300, 480)], M["walnutHandle"])
     P = [(blk, 0)]
     ang = math.atan2(280, 600)
     for k, (x, y) in enumerate(((-95, 120), (-30, 150), (35, 90), (100, 140), (-60, -20))):
         z = 480 + (y + 300) * 280 / 600
         h = _hinge(rbox("Handle%d" % k, -16, 16, -26, 26, 0, 300 if k < 4 else 220, M["padDark"], 8, 0, 3)); h.rotation_euler = (-ang, 0, 0); h.location = u(x, y, z - 10); P.append((h, 1))
-        for zz in (90, 190): P.append((_tilt(lathe_s("Rivet", [(0, 0), (6, 0), (5, 2), (0, 3)], M["brass"], 10), (0, math.pi / 2, 0), (x + 16, y - zz * math.sin(ang), z - 10 + zz * math.cos(ang))), 1))
+        for zz in (90, 190):
+            for s in (-1, 1):
+                P.append((_tilt(lathe_s("Rivet", [(0, 0), (6, 0), (5, 2), (0, 3)], M["brass"], 10), (0, s * math.pi / 2, 0), (x + s * 16, y + zz * math.sin(ang), z - 10 + zz * math.cos(ang))), 1))
     return P
 
 def _wire(name, pts, M, r=5.0): return sweep(name, pts, circ(r, 6), M["chromeWire"])
@@ -1901,13 +2202,15 @@ def snackbowl(M):
     return P
 
 def glasses(M):
-    P = []
+    """granny's glasses standing on a shelf: on the rims and on the tips of the temples.
+    (KAN-22 fix: the rims went 18 uu under the surface the piece stands on; the frame's bottom is now at 0.)"""
+    P = []; zc = 50.0; n = 40
     for s in (-1, 1):
-        cx = s * 66; ell = [(cx + 56 * math.cos(2 * math.pi * k / 24), 30 + 44 * math.sin(2 * math.pi * k / 24)) for k in range(24)]
+        cx = s * 66; ell = [(cx + 56 * math.cos(2 * math.pi * k / n), zc + 44 * math.sin(2 * math.pi * k / n)) for k in range(n)]
         P.append((glass(slab("Lens", ell, [], "y", -3.5, 3, M["lens"], 0.5)), 0))
-        P.append((sweep("Rim", [(x, -2, z) for x, z in [(cx + 58 * math.cos(2 * math.pi * k / 24), 30 + 46 * math.sin(2 * math.pi * k / 24)) for k in range(24)]], circ(3.5, 6), M["frame"], closed=True), 0))
-        P.append((sweep("Temple", [(s * 124, -2, 44), (s * 128, 10, 44), (s * 129, 60, 40), (s * 127, 78, 28)], circ(3, 6), M["frame"]), 0))
-    P.append((sweep("Bridge", [(-10, -2, 46), (0, -4, 52), (10, -2, 46)], circ(3, 6), M["frame"]), 0))
+        P.append((ring_tube("Rim", [(cx + 58 * math.cos(2 * math.pi * k / n), -2, zc + 46 * math.sin(2 * math.pi * k / n)) for k in range(n)], 3.5, M["frame"]), 0))
+        P.append((sweep("Temple", _curve([(s * 122, -2, zc + 12), (s * 128, 7, zc + 14), (s * 129, 34, zc + 13), (s * 129, 56, zc), (s * 128, 71, 24), (s * 127, 78, 4)], 3), circ(3, 8), M["frame"]), 0))
+    P.append((sweep("Bridge", _curve([(-11, -2, zc + 15), (-4, -4, zc + 21), (4, -4, zc + 21), (11, -2, zc + 15)], 3), circ(3, 8), M["frame"]), 0))
     return P
 
 def coin(M):
@@ -1920,11 +2223,39 @@ def knitneedle(M):
     return [(n, 0), (b, 0)]
 
 def sock(M):
-    pts = [(-527, -250, 90), (-300, -250, 90), (-60, -250, 90), (140, -238, 90), (270, -175, 90), (335, -40, 88), (342, 100, 86), (330, 200, 84), (318, 240, 80)]
-    sc = (1.0, 1.0, 1.0, 1.0, 0.98, 0.95, 0.9, 0.6, 0.1)
-    s = sweep("Sock", pts, circ(90, 16, 0.92), M["sock"], caps=False, scale=lambda i: sc[i])
-    so = s.modifiers.new("solid", "SOLIDIFY"); so.thickness = 6 * K; so.offset = -1.0     # the leg is open: a tunnel
-    return [(s, 0)]
+    """a dropped tube sock, L-shaped on the floor: a ribbed cuff (open: the tunnel), the leg, the heel pocket, the foot, a round
+    toe. Soft: the empty tube lies flat on the floor - flat on top, round at the sides - held open by the cuff's elastic, with
+    folds across the leg and wrinkles on the inside of the turn. (KAN-22 fix: it was a faceted pipe of nine sections with no
+    heel and no toe.)"""
+    R, L1, L2, L3, LT = SOCK_R, SOCK_L1, SOCK_L2, SOCK_L3, SOCK_LEN; cx, cy = -527.0 + L1, -250.0 + R
+    def centre(s):
+        if s <= L1: return Vector((-527.0 + s, -250.0, 0)), Vector((1, 0, 0))
+        if s <= L1 + L2:
+            a = (s - L1) / R; return Vector((cx + R * math.sin(a), cy - R * math.cos(a), 0)), Vector((math.cos(a), math.sin(a), 0))
+        return Vector((cx + R, cy + s - L1 - L2, 0)), Vector((0, 1, 0))
+    size = [(0, 100, 158), (120, 100, 150), (330, 117, 92), (L1 - 80, 113, 98), (SOCK_HEEL, 108, 116), (L1 + L2 + 90, 110, 88), (LT, 104, 84)]   # half width, height
+    tl = 85.0; rows = [(0.0, 1.0), (7.0, 1.0), (16.0, 1.0)]; s = 40.0
+    while s < LT - tl - 1: rows.append((s, 1.0)); s += 30.0
+    rows += [(LT - tl + tl * math.sin(math.radians(d)), math.cos(math.radians(d))) for d in (0, 16, 32, 46, 58, 68, 76, 82)]   # the toe: a round cap
+    nv = 24; rings = []; at_t = []; at_v = []
+    for s, f in rows:
+        c, t = centre(s); side = Vector((t.y, -t.x, 0)); w, h = _keys(size, s)
+        c = c + side * 9.0 * _nz(s / 260.0, 3.1)
+        welt = 1.0 + 0.03 * max(0.0, min(1.0, (150.0 - s) / 30.0)) + (0.03 if s < 10 else 0.0)
+        bend = math.exp(-((s - SOCK_HEEL) / 125.0) ** 2); ring_ = []
+        fold = sum(d * math.exp(-((s - s0) / 32.0) ** 2) for s0, d in ((285.0, 0.20), (505.0, 0.26), (L1 + L2 + 170.0, 0.16)))   # where the leg has given way
+        for j in range(nv + 1):
+            v = j / nv; a = -math.pi / 2 + 2 * math.pi * v; cs, sn = math.cos(a), math.sin(a)
+            sd = w * math.copysign(abs(cs) ** 0.62, cs); up = h * (0.5 + 0.5 * math.copysign(abs(sn) ** 0.62, sn))
+            up *= (1 + 0.15 * _nz(s / 110.0, cs * 0.9, sn * 0.9) * max(sn + 0.3, 0.0)) * (1 - fold * max(sn, 0.0))
+            wr = 0.11 * math.sin((s - L1) / 16.0) * bend * (0.35 + 0.65 * max(-cs, 0.0))       # wrinkles on the inside of the turn
+            sd *= welt * (1 + wr); up *= 1 + 0.7 * wr
+            sd += 44.0 * math.exp(-((s - SOCK_HEEL) / 75.0) ** 2) * max(cs, 0.0) ** 1.5         # the heel pocket
+            p = c + side * (sd * f) + Vector((0, 0, up * f ** 0.55 + 0.5)); ring_.append((p.x, p.y, p.z))
+        rings.append(ring_); at_t.append([s] * (nv + 1)); at_v.append([j / nv for j in range(nv + 1)])
+    o = skin("Sock", rings, M["sock"], close_u=False, cap_end=True, attrs={"sk_t": at_t, "sk_v": at_v})
+    so = o.modifiers.new("solid", "SOLIDIFY"); so.thickness = 6 * K; so.offset = -1.0     # the leg is open: a tunnel
+    return [(o, 0)]
 
 def yarnball(M):
     P = [(lathe("Ball", sphere_prof(220, 20), M["yarn"], 48), 0)]
@@ -2002,6 +2333,68 @@ SPECS.update({   # batch 11
                           breaks=lambda o, n: cut_groups(o, n, [lambda p, g: True], [], [((0, 0, 260), (0.1, 0.05, 1.0), 0.008, 157, 0)])),
     "SM_V3_GiftBox_Lid": dict(build=giftlid, hulls=_box_hulls((-475, 475, -375, 375, 0, 76), (-150, 150, -30, 30, 76, 145)), lods=(0.5, 0.25), cls="cardboard", breaks=None),
 })
+
+# the six redone pieces (KAN-22 fix): collision by their new shapes
+def _hulls_bag(n):
+    pts = lambda rows: [(x * K, y * K, z * K) for x, y, z in rows]
+    front = [(s * x, -700, z) for s, x, z in ((1, 595, 570), (1, 595, 592), (-1, 505, 570), (-1, 505, 592))] + [(45, -700, 440), (45, -700, 462)]
+    mid = [(s * 566, -50, z) for s in (-1, 1) for z in (606, 626)] + [(16, -50, 562), (16, -50, 584)]
+    back = [(s * 550, 600, z) for s in (-1, 1) for z in (632, 646)]
+    hs = [boxp(-550, 550, -700, 600, 0, 6), pts(front + mid), pts(mid + back), boxp(-550, 550, 594, 600, 0, 646)]
+    hs.append(pts([(540, -700, 0), (566, -700, 0), (425, -700, 290), (455, -700, 290), (600, -700, 585), (578, -700, 585), (540, 600, 0), (552, 600, 0), (540, 600, 640), (552, 600, 640)]))
+    hs.append(pts([(-540, -700, 0), (-566, -700, 0), (-425, -700, 290), (-455, -700, 290), (-505, -700, 585), (-527, -700, 585), (-540, 600, 0), (-552, 600, 0), (-540, 600, 640), (-552, 600, 640)]))
+    return [H.hull("UCX_%s_%02d" % (n, i), p) for i, p in enumerate(hs)]
+
+def _hulls_fruitbowl(n):
+    hs = hulls_dish(n, (178, 186, 36), ((182, 10), (190, 38), (360, 125), (350, 136)))
+    for k in range(8):   # the upper half of the wall (the bowl is deep: one straight segment would cut through it)
+        pts = []
+        for a in (2 * math.pi * k / 8, 2 * math.pi * (k + 1) / 8):
+            for r, z in ((360, 125), (350, 136), (450, 330), (436, 338)): pts.append((r * K * math.cos(a), r * K * math.sin(a), z * K))
+        hs.append(H.hull("UCX_%s_%02d" % (n, k + 9), pts))
+    return hs + [H.hull("UCX_%s_17" % n, ring(215, 50, 12) + ring(335, 150, 12) + ring(345, 300, 12) + ring(250, 420, 12) + ring(110, 450, 8))]   # the heap of fruit
+
+SPECS["SM_K_CookieTin"]["hulls"] = lambda n: hulls_round(n, 352, 297) + [H.hull("UCX_%s_01" % n, _xf(ring(356, 0, 12) + ring(356, 60, 12), TIN_PHI, (TIN_LX, 0, TIN_LZ)))]
+SPECS["SM_K_GroceryBag"]["hulls"] = _hulls_bag
+SPECS["SM_K_FruitBowl"]["hulls"] = _hulls_fruitbowl
+SPECS["SM_V3_Glasses"]["hulls"] = _box_hulls((-132, 132, -6, 2, 0, 100), (-133, -122, -2, 80, 0, 68), (122, 133, -2, 80, 0, 68))
+SPECS["SM_L_Sock"]["hulls"] = lambda n: [H.hull("UCX_%s_00" % n, boxp(-527, 215, -358, -142, 0, 172)), H.hull("UCX_%s_01" % n, boxp(215, 440, -345, -100, 0, 140)),
+                                         H.hull("UCX_%s_02" % n, boxp(232, 438, -100, 244, 0, 118))]
+
+def breaks_bag(o, n):
+    """torn, not cut: the bag's paper parted along a ragged line down its length - its faces by the side of the line they lie
+    on (the boolean cutter made nothing of a thin creased shell with the handles through it); the handles stay on the first
+    half, the groceries are a piece of their own"""
+    tear = lambda c: (c.x / K + 55.0 * _nz(c.y / K / 170.0, c.z / K / 170.0, 9.0) + 35.0 * math.sin(c.y / K / 50.0)) > 30.0
+    out = []
+    for i in (0, 1):
+        x = _copy(o, "%s_Brk%d" % (n, i)); bm = bmesh.new(); bm.from_mesh(x.data); lp = bm.faces.layers.int.get("part")
+        bmesh.ops.delete(bm, geom=[f for f in bm.faces if not ((f[lp] == 0 and tear(f.calc_center_median()) == bool(i)) or (f[lp] == 2 and i == 0))], context="FACES")
+        bm.to_mesh(x.data); bm.free()
+        a = x.data.attributes.get("surf") or x.data.attributes.new("surf", "INT", "FACE")
+        for k in range(len(x.data.polygons)): a.data[k].value = 1
+        out.append(x)
+    return out + [keep_faces(o, lambda p, g: p == 1, "%s_Brk2" % n)]
+
+SPECS["SM_K_GroceryBag"]["breaks"] = breaks_bag
+
+def shape_preview(name, sp, M):
+    """argv 'shape': the piece joined with its own procedural materials (no UVs, no bake, no export) and three quick frames -
+    the shape checked in a minute before the full run"""
+    bpy.context.view_layer.update(); objs = []
+    for o, part in sp["build"](M):
+        m = H.bake_mesh(o) if (o.type != "MESH" or o.modifiers) else o
+        objs.append(m)
+    o = H.join(objs, name); mn, mx = H.bounds([o]); c = (mn + mx) * 0.5
+    print("SHAPE %s: uu min (%.0f %.0f %.0f) max (%.0f %.0f %.0f), %d triangles" % (name, *(mn / K), *(mx / K), H.tris(o)))
+    H.stage(wall_y=mx.y + 0.03 + 0.15 * (mx.x - mn.x)); shots = []
+    for tag, d in (("a", Vector((math.sin(math.radians(35)), -math.cos(math.radians(35)), 0.55))), ("b", Vector((-0.75, -0.55, 0.42))), ("c", Vector((0.05, -0.35, 1.0)))):
+        d = d.normalized(); loc, look = fit_camera([o], lambda dd: c + d * dd, c, 50, 0.86); H.camera(loc, look, 50, 11)
+        p = os.path.join(REV, "_shape_%s_%s.jpg" % (name, tag)); H.render(p, 1120, 630, 40); shots.append(p)
+    zc = 15 * K; look = Vector((c.x, c.y, max(zc, mn.z + 0.45 * (mx.z - mn.z)))); dh = Vector((-0.25, -1.0, 0.0)).normalized()
+    loc, look = fit_camera([o], lambda dd: (look.x + dh.x * dd, look.y + dh.y * dd, zc), look, 24, 0.92); H.camera(loc, look, 24, 5.6)
+    p = os.path.join(REV, "_shape_%s_ant.jpg" % name); H.render(p, 1120, 630, 40); shots.append(p)
+    H.sheet(shots, os.path.join(REV, "shape_%s.jpg" % name), 2)
 
 # ------------------------------------------------------------------------------------------------ one asset (hero_lib.produce + the glass slot)
 def glass_faces(o):
@@ -2245,6 +2638,7 @@ def main():
         if ONLY and name not in ONLY: continue
         for x in list(H.S().objects): bpy.data.objects.remove(x)
         M = mats()
+        if SHAPE: shape_preview(name, sp, M); continue
         man, lod0, pieces, paths = produce(name, sp, M)
         doc["pieces"] = [p for p in doc["pieces"] if p["name"] != name] + [man]
         json.dump(doc, open(mpath, "w", encoding="utf-8"), indent=1, ensure_ascii=False)
