@@ -1,0 +1,98 @@
+{
+ "name": "SM_Bath_Toilet_TankLid",
+ "file": "SM_Bath_Toilet_TankLid.fbx",
+ "set": "hero_bath",
+ "break_class": "ceramic",
+ "textures": {
+  "C": "SM_Bath_Toilet_TankLid/tex/T_SM_Bath_Toilet_TankLid_C.png",
+  "N": "SM_Bath_Toilet_TankLid/tex/T_SM_Bath_Toilet_TankLid_N.png",
+  "R": "SM_Bath_Toilet_TankLid/tex/T_SM_Bath_Toilet_TankLid_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_Bath_Toilet_TankLid_Brk0",
+   "file": "SM_Bath_Toilet_TankLid_Brk0.fbx",
+   "triangles": 614,
+   "bbox_min_m": [
+    0.0318,
+    -0.09,
+    -0.01
+   ],
+   "bbox_max_m": [
+    0.2,
+    0.09,
+    0.028
+   ],
+   "materials": [
+    "Hero_SM_Bath_Toilet_TankLid",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Toilet_TankLid_Brk1",
+   "file": "SM_Bath_Toilet_TankLid_Brk1.fbx",
+   "triangles": 794,
+   "bbox_min_m": [
+    -0.2,
+    -0.09,
+    -0.01
+   ],
+   "bbox_max_m": [
+    0.0683,
+    0.09,
+    0.0353
+   ],
+   "materials": [
+    "Hero_SM_Bath_Toilet_TankLid",
+    "Break"
+   ]
+  }
+ ],
+ "note": "cistern lid with the dual flush button",
+ "kept_slots": [],
+ "triangles": 524,
+ "bbox_min_m": [
+  -0.2,
+  -0.09,
+  -0.01
+ ],
+ "bbox_max_m": [
+  0.2,
+  0.09,
+  0.0353
+ ],
+ "materials": [
+  "Hero_SM_Bath_Toilet_TankLid"
+ ],
+ "lod_triangles": [
+  524,
+  182,
+  62
+ ],
+ "ucx": 1,
+ "room": "bath",
+ "ru": "Крышка бачка",
+ "attach": {
+  "parent": "SM_Bath_Toilet",
+  "at_m": [
+   [
+    0.0,
+    0.22,
+    0.76
+   ]
+  ],
+  "move": "lift",
+  "slide_m": [
+   0,
+   0,
+   0.17
+  ]
+ },
+ "size_uu": [
+  760,
+  342,
+  86
+ ]
+}

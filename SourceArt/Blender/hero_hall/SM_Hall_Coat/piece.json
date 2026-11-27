@@ -1,0 +1,93 @@
+{
+ "name": "SM_Hall_Coat",
+ "file": "SM_Hall_Coat.fbx",
+ "set": "hero_hall",
+ "break_class": "cloth",
+ "textures": {
+  "C": "SM_Hall_Coat/tex/T_SM_Hall_Coat_C.png",
+  "N": "SM_Hall_Coat/tex/T_SM_Hall_Coat_N.png",
+  "R": "SM_Hall_Coat/tex/T_SM_Hall_Coat_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_Hall_Coat_Brk0",
+   "file": "SM_Hall_Coat_Brk0.fbx",
+   "triangles": 2536,
+   "bbox_min_m": [
+    -0.432,
+    -0.163,
+    0.05
+   ],
+   "bbox_max_m": [
+    -0.068,
+    -0.012,
+    1.6764
+   ],
+   "materials": [
+    "Hero_SM_Hall_Coat",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Hall_Coat_Brk1",
+   "file": "SM_Hall_Coat_Brk1.fbx",
+   "triangles": 1448,
+   "bbox_min_m": [
+    -0.483,
+    -0.1515,
+    0.35
+   ],
+   "bbox_max_m": [
+    -0.017,
+    -0.035,
+    1.57
+   ],
+   "materials": [
+    "Hero_SM_Hall_Coat",
+    "Break"
+   ]
+  }
+ ],
+ "note": "long belted wool coat hung by its loop on the rack's second hook, hem 5 cm off the floor (the ants climb it)",
+ "kept_slots": [],
+ "triangles": 3984,
+ "bbox_min_m": [
+  -0.483,
+  -0.163,
+  0.05
+ ],
+ "bbox_max_m": [
+  -0.017,
+  -0.012,
+  1.6764
+ ],
+ "materials": [
+  "Hero_SM_Hall_Coat"
+ ],
+ "lod_triangles": [
+  3984,
+  1394,
+  478
+ ],
+ "ucx": 1,
+ "room": "hall",
+ "ru": "Пальто на вешалке (до пола)",
+ "attach": {
+  "parent": "SM_Hall_CoatRack",
+  "at_m": [
+   [
+    0,
+    0,
+    0
+   ]
+  ],
+  "move": "rest"
+ },
+ "size_uu": [
+  885,
+  287,
+  3090
+ ]
+}

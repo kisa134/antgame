@@ -1,0 +1,162 @@
+{
+ "name": "SM_Bath_Tub",
+ "file": "SM_Bath_Tub.fbx",
+ "set": "hero_bath",
+ "break_class": "ceramic",
+ "textures": {
+  "C": "SM_Bath_Tub/tex/T_SM_Bath_Tub_C.png",
+  "N": "SM_Bath_Tub/tex/T_SM_Bath_Tub_N.png",
+  "R": "SM_Bath_Tub/tex/T_SM_Bath_Tub_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_Bath_Tub_Brk0",
+   "file": "SM_Bath_Tub_Brk0.fbx",
+   "triangles": 730,
+   "bbox_min_m": [
+    0.0463,
+    -0.35,
+    0.1
+   ],
+   "bbox_max_m": [
+    0.87,
+    0.35,
+    0.55
+   ],
+   "materials": [
+    "Hero_SM_Bath_Tub",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Tub_Brk1",
+   "file": "SM_Bath_Tub_Brk1.fbx",
+   "triangles": 1168,
+   "bbox_min_m": [
+    -0.87,
+    -0.35,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.87,
+    0.35,
+    0.52
+   ],
+   "materials": [
+    "Hero_SM_Bath_Tub",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Tub_Brk2",
+   "file": "SM_Bath_Tub_Brk2.fbx",
+   "triangles": 3144,
+   "bbox_min_m": [
+    0.258,
+    -0.034,
+    0.1215
+   ],
+   "bbox_max_m": [
+    0.792,
+    0.35,
+    1.1218
+   ],
+   "materials": [
+    "Hero_SM_Bath_Tub",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Tub_Brk3",
+   "file": "SM_Bath_Tub_Brk3.fbx",
+   "triangles": 948,
+   "bbox_min_m": [
+    -0.578,
+    -0.21,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.862,
+    0.21,
+    0.4204
+   ],
+   "materials": [
+    "Hero_SM_Bath_Tub",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Tub_Brk4",
+   "file": "SM_Bath_Tub_Brk4.fbx",
+   "triangles": 620,
+   "bbox_min_m": [
+    -0.87,
+    -0.35,
+    0.1
+   ],
+   "bbox_max_m": [
+    0.1588,
+    0.35,
+    0.55
+   ],
+   "materials": [
+    "Hero_SM_Bath_Tub",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Tub_Brk5",
+   "file": "SM_Bath_Tub_Brk5.fbx",
+   "triangles": 338,
+   "bbox_min_m": [
+    0.1189,
+    -0.35,
+    0.1
+   ],
+   "bbox_max_m": [
+    0.7853,
+    -0.1062,
+    0.55
+   ],
+   "materials": [
+    "Hero_SM_Bath_Tub",
+    "Break"
+   ]
+  }
+ ],
+ "note": "bathtub: enamelled shell with a rolled rim, screen on aluminium rails, end panels, cradles on feet, trap and overflow under it, waste, plug on a chain, wall mixer with shower",
+ "kept_slots": [],
+ "triangles": 5984,
+ "bbox_min_m": [
+  -0.87,
+  -0.35,
+  0.0
+ ],
+ "bbox_max_m": [
+  0.87,
+  0.35,
+  1.1218
+ ],
+ "materials": [
+  "Hero_SM_Bath_Tub"
+ ],
+ "lod_triangles": [
+  5984,
+  2093,
+  718
+ ],
+ "ucx": 10,
+ "room": "bath",
+ "ru": "Ванна с экраном и смесителем",
+ "children": [
+  "SM_Bath_Mat",
+  "SM_Bath_Tub_Panel"
+ ],
+ "size_uu": [
+  3306,
+  1330,
+  2131
+ ]
+}

@@ -1,0 +1,93 @@
+{
+ "name": "SM_Bath_Mat",
+ "file": "SM_Bath_Mat.fbx",
+ "set": "hero_bath",
+ "break_class": "cloth",
+ "textures": {
+  "C": "SM_Bath_Mat/tex/T_SM_Bath_Mat_C.png",
+  "N": "SM_Bath_Mat/tex/T_SM_Bath_Mat_N.png",
+  "R": "SM_Bath_Mat/tex/T_SM_Bath_Mat_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_Bath_Mat_Brk0",
+   "file": "SM_Bath_Mat_Brk0.fbx",
+   "triangles": 1064,
+   "bbox_min_m": [
+    -0.2704,
+    -0.377,
+    0.2773
+   ],
+   "bbox_max_m": [
+    0.1305,
+    -0.2291,
+    0.5669
+   ],
+   "materials": [
+    "Hero_SM_Bath_Mat",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Mat_Brk1",
+   "file": "SM_Bath_Mat_Brk1.fbx",
+   "triangles": 1032,
+   "bbox_min_m": [
+    -0.2704,
+    -0.5502,
+    0.002
+   ],
+   "bbox_max_m": [
+    0.1304,
+    -0.3486,
+    0.3229
+   ],
+   "materials": [
+    "Hero_SM_Bath_Mat",
+    "Break"
+   ]
+  }
+ ],
+ "note": "chenille bath mat hung over the tub's side down to the floor (the ants climb it)",
+ "kept_slots": [],
+ "triangles": 1668,
+ "bbox_min_m": [
+  -0.2704,
+  -0.5502,
+  0.002
+ ],
+ "bbox_max_m": [
+  0.1305,
+  -0.2291,
+  0.5669
+ ],
+ "materials": [
+  "Hero_SM_Bath_Mat"
+ ],
+ "lod_triangles": [
+  1668,
+  582,
+  200
+ ],
+ "ucx": 2,
+ "room": "bath",
+ "ru": "Коврик на борту ванны (свисает до пола)",
+ "attach": {
+  "parent": "SM_Bath_Tub",
+  "at_m": [
+   [
+    0,
+    0,
+    0
+   ]
+  ],
+  "move": "rest"
+ },
+ "size_uu": [
+  762,
+  610,
+  1073
+ ]
+}

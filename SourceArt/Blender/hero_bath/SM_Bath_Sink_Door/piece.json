@@ -1,0 +1,95 @@
+{
+ "name": "SM_Bath_Sink_Door",
+ "file": "SM_Bath_Sink_Door.fbx",
+ "set": "hero_bath",
+ "break_class": "wood",
+ "textures": {
+  "C": "SM_Bath_Sink_Door/tex/T_SM_Bath_Sink_Door_C.png",
+  "N": "SM_Bath_Sink_Door/tex/T_SM_Bath_Sink_Door_N.png",
+  "R": "SM_Bath_Sink_Door/tex/T_SM_Bath_Sink_Door_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_Bath_Sink_Door_Brk0",
+   "file": "SM_Bath_Sink_Door_Brk0.fbx",
+   "triangles": 648,
+   "bbox_min_m": [
+    0.1244,
+    -0.0435,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.496,
+    0.002,
+    0.652
+   ],
+   "materials": [
+    "Hero_SM_Bath_Sink_Door",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Sink_Door_Brk1",
+   "file": "SM_Bath_Sink_Door_Brk1.fbx",
+   "triangles": 884,
+   "bbox_min_m": [
+    0.0,
+    -0.016,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.385,
+    0.012,
+    0.652
+   ],
+   "materials": [
+    "Hero_SM_Bath_Sink_Door",
+    "Break"
+   ]
+  }
+ ],
+ "note": "vanity door: white lacquer, chrome bar pull, cup hinges",
+ "kept_slots": [],
+ "triangles": 688,
+ "bbox_min_m": [
+  0.0,
+  -0.0435,
+  0.0
+ ],
+ "bbox_max_m": [
+  0.496,
+  0.012,
+  0.652
+ ],
+ "materials": [
+  "Hero_SM_Bath_Sink_Door"
+ ],
+ "lod_triangles": [
+  688,
+  239,
+  82
+ ],
+ "ucx": 1,
+ "room": "bath",
+ "ru": "Дверца тумбы раковины",
+ "attach": {
+  "parent": "SM_Bath_Sink",
+  "at_m": [
+   [
+    -0.248,
+    -0.147,
+    0.064
+   ]
+  ],
+  "move": "hinge",
+  "axis": "Z",
+  "open_deg": -100
+ },
+ "size_uu": [
+  942,
+  105,
+  1239
+ ]
+}

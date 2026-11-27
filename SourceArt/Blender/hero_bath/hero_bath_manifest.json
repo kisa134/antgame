@@ -1,0 +1,1932 @@
+{
+ "note": "Hero art of the flat, bath (Tools/blender/hero_flat.py, KAN-41): LOD0 + UCX in <name>.fbx, _LOD1/_LOD2, _Brk<i> pieces; tex/T_<name>_{C,N,R}.png; 'attach' = where a part sits on its parent and how it moves (metres, the parent's frame, front -Y)",
+ "pieces": [
+  {
+   "name": "SM_Bath_Cabinet",
+   "file": "SM_Bath_Cabinet.fbx",
+   "set": "hero_bath",
+   "break_class": "wood",
+   "textures": {
+    "C": "SM_Bath_Cabinet/tex/T_SM_Bath_Cabinet_C.png",
+    "N": "SM_Bath_Cabinet/tex/T_SM_Bath_Cabinet_N.png",
+    "R": "SM_Bath_Cabinet/tex/T_SM_Bath_Cabinet_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_Bath_Cabinet_Brk0",
+     "file": "SM_Bath_Cabinet_Brk0.fbx",
+     "triangles": 108,
+     "bbox_min_m": [
+      -0.3,
+      -0.122,
+      1.15
+     ],
+     "bbox_max_m": [
+      -0.285,
+      0.0,
+      1.85
+     ],
+     "materials": [
+      "Hero_SM_Bath_Cabinet",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Cabinet_Brk1",
+     "file": "SM_Bath_Cabinet_Brk1.fbx",
+     "triangles": 108,
+     "bbox_min_m": [
+      0.285,
+      -0.122,
+      1.15
+     ],
+     "bbox_max_m": [
+      0.3,
+      0.0,
+      1.85
+     ],
+     "materials": [
+      "Hero_SM_Bath_Cabinet",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Cabinet_Brk2",
+     "file": "SM_Bath_Cabinet_Brk2.fbx",
+     "triangles": 216,
+     "bbox_min_m": [
+      -0.286,
+      -0.122,
+      1.15
+     ],
+     "bbox_max_m": [
+      0.286,
+      0.0,
+      1.85
+     ],
+     "materials": [
+      "Hero_SM_Bath_Cabinet",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Cabinet_Brk3.001",
+     "file": "SM_Bath_Cabinet_Brk3.001.fbx",
+     "triangles": 312,
+     "bbox_min_m": [
+      -0.286,
+      -0.11,
+      1.384
+     ],
+     "bbox_max_m": [
+      0.286,
+      -0.005,
+      1.626
+     ],
+     "materials": [
+      "Hero_SM_Bath_Cabinet",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Cabinet_Brk4",
+     "file": "SM_Bath_Cabinet_Brk4.fbx",
+     "triangles": 1868,
+     "bbox_min_m": [
+      -0.224,
+      -0.0956,
+      1.165
+     ],
+     "bbox_max_m": [
+      0.2,
+      -0.025,
+      1.786
+     ],
+     "materials": [
+      "Hero_SM_Bath_Cabinet",
+      "Break"
+     ]
+    }
+   ],
+   "note": "mirror cabinet on the wall: white carcass, glass shelves on pins; tumbler with toothbrushes, toothpaste, jars, a spray, plasters inside",
+   "kept_slots": [],
+   "triangles": 2624,
+   "bbox_min_m": [
+    -0.3,
+    -0.122,
+    1.15
+   ],
+   "bbox_max_m": [
+    0.3,
+    0.0,
+    1.85
+   ],
+   "materials": [
+    "Hero_SM_Bath_Cabinet"
+   ],
+   "lod_triangles": [
+    2624,
+    917,
+    314
+   ],
+   "ucx": 7,
+   "room": "bath",
+   "ru": "Шкафчик зеркальный настенный",
+   "children": [
+    "SM_Bath_Cabinet_Door"
+   ],
+   "size_uu": [
+    1140,
+    232,
+    1330
+   ]
+  },
+  {
+   "name": "SM_Bath_Cabinet_Door",
+   "file": "SM_Bath_Cabinet_Door.fbx",
+   "set": "hero_bath",
+   "break_class": "glass",
+   "textures": {
+    "C": "SM_Bath_Cabinet_Door/tex/T_SM_Bath_Cabinet_Door_C.png",
+    "N": "SM_Bath_Cabinet_Door/tex/T_SM_Bath_Cabinet_Door_N.png",
+    "R": "SM_Bath_Cabinet_Door/tex/T_SM_Bath_Cabinet_Door_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_Bath_Cabinet_Door_Brk0",
+     "file": "SM_Bath_Cabinet_Door_Brk0.fbx",
+     "triangles": 584,
+     "bbox_min_m": [
+      0.0,
+      -0.014,
+      -0.006
+     ],
+     "bbox_max_m": [
+      0.596,
+      0.012,
+      0.696
+     ],
+     "materials": [
+      "Hero_SM_Bath_Cabinet_Door",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Cabinet_Door_Brk1",
+     "file": "SM_Bath_Cabinet_Door_Brk1.fbx",
+     "triangles": 216,
+     "bbox_min_m": [
+      0.1274,
+      -0.018,
+      0.004
+     ],
+     "bbox_max_m": [
+      0.592,
+      -0.014,
+      0.692
+     ],
+     "materials": [
+      "Hero_SM_Bath_Cabinet_Door",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Cabinet_Door_Brk2",
+     "file": "SM_Bath_Cabinet_Door_Brk2.fbx",
+     "triangles": 216,
+     "bbox_min_m": [
+      0.004,
+      -0.018,
+      0.004
+     ],
+     "bbox_max_m": [
+      0.4743,
+      -0.014,
+      0.692
+     ],
+     "materials": [
+      "Hero_SM_Bath_Cabinet_Door",
+      "Break"
+     ]
+    }
+   ],
+   "note": "mirror door of the bathroom cabinet",
+   "kept_slots": [],
+   "triangles": 628,
+   "bbox_min_m": [
+    0.0,
+    -0.018,
+    -0.006
+   ],
+   "bbox_max_m": [
+    0.596,
+    0.012,
+    0.696
+   ],
+   "materials": [
+    "Hero_SM_Bath_Cabinet_Door"
+   ],
+   "lod_triangles": [
+    628,
+    218,
+    74
+   ],
+   "ucx": 1,
+   "room": "bath",
+   "ru": "Дверца шкафчика с зеркалом",
+   "attach": {
+    "parent": "SM_Bath_Cabinet",
+    "at_m": [
+     [
+      -0.298,
+      -0.122,
+      1.152
+     ]
+    ],
+    "move": "hinge",
+    "axis": "Z",
+    "open_deg": -110
+   },
+   "size_uu": [
+    1132,
+    57,
+    1334
+   ]
+  },
+  {
+   "name": "SM_Bath_Mat",
+   "file": "SM_Bath_Mat.fbx",
+   "set": "hero_bath",
+   "break_class": "cloth",
+   "textures": {
+    "C": "SM_Bath_Mat/tex/T_SM_Bath_Mat_C.png",
+    "N": "SM_Bath_Mat/tex/T_SM_Bath_Mat_N.png",
+    "R": "SM_Bath_Mat/tex/T_SM_Bath_Mat_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_Bath_Mat_Brk0",
+     "file": "SM_Bath_Mat_Brk0.fbx",
+     "triangles": 1064,
+     "bbox_min_m": [
+      -0.2704,
+      -0.377,
+      0.2773
+     ],
+     "bbox_max_m": [
+      0.1305,
+      -0.2291,
+      0.5669
+     ],
+     "materials": [
+      "Hero_SM_Bath_Mat",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Mat_Brk1",
+     "file": "SM_Bath_Mat_Brk1.fbx",
+     "triangles": 1032,
+     "bbox_min_m": [
+      -0.2704,
+      -0.5502,
+      0.002
+     ],
+     "bbox_max_m": [
+      0.1304,
+      -0.3486,
+      0.3229
+     ],
+     "materials": [
+      "Hero_SM_Bath_Mat",
+      "Break"
+     ]
+    }
+   ],
+   "note": "chenille bath mat hung over the tub's side down to the floor (the ants climb it)",
+   "kept_slots": [],
+   "triangles": 1668,
+   "bbox_min_m": [
+    -0.2704,
+    -0.5502,
+    0.002
+   ],
+   "bbox_max_m": [
+    0.1305,
+    -0.2291,
+    0.5669
+   ],
+   "materials": [
+    "Hero_SM_Bath_Mat"
+   ],
+   "lod_triangles": [
+    1668,
+    582,
+    200
+   ],
+   "ucx": 2,
+   "room": "bath",
+   "ru": "Коврик на борту ванны (свисает до пола)",
+   "attach": {
+    "parent": "SM_Bath_Tub",
+    "at_m": [
+     [
+      0,
+      0,
+      0
+     ]
+    ],
+    "move": "rest"
+   },
+   "size_uu": [
+    762,
+    610,
+    1073
+   ]
+  },
+  {
+   "name": "SM_Bath_PaperHolder",
+   "file": "SM_Bath_PaperHolder.fbx",
+   "set": "hero_bath",
+   "break_class": "paper",
+   "textures": {
+    "C": "SM_Bath_PaperHolder/tex/T_SM_Bath_PaperHolder_C.png",
+    "N": "SM_Bath_PaperHolder/tex/T_SM_Bath_PaperHolder_N.png",
+    "R": "SM_Bath_PaperHolder/tex/T_SM_Bath_PaperHolder_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_Bath_PaperHolder_Brk0",
+     "file": "SM_Bath_PaperHolder_Brk0.fbx",
+     "triangles": 304,
+     "bbox_min_m": [
+      -0.1,
+      -0.121,
+      0.6953
+     ],
+     "bbox_max_m": [
+      0.1,
+      0.0,
+      0.793
+     ],
+     "materials": [
+      "Hero_SM_Bath_PaperHolder",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_PaperHolder_Brk1",
+     "file": "SM_Bath_PaperHolder_Brk1.fbx",
+     "triangles": 544,
+     "bbox_min_m": [
+      -0.05,
+      -0.122,
+      0.643
+     ],
+     "bbox_max_m": [
+      0.05,
+      -0.008,
+      0.757
+     ],
+     "materials": [
+      "Hero_SM_Bath_PaperHolder",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_PaperHolder_Brk2",
+     "file": "SM_Bath_PaperHolder_Brk2.fbx",
+     "triangles": 696,
+     "bbox_min_m": [
+      -0.0502,
+      -0.2503,
+      0.0088
+     ],
+     "bbox_max_m": [
+      0.0502,
+      -0.0646,
+      0.7645
+     ],
+     "materials": [
+      "Hero_SM_Bath_PaperHolder",
+      "Break"
+     ]
+    }
+   ],
+   "note": "paper holder with a phone shelf: chrome plate and arm, the roll on its core, the tail unrolled to the floor (the ants climb it)",
+   "kept_slots": [],
+   "triangles": 1544,
+   "bbox_min_m": [
+    -0.1,
+    -0.2503,
+    0.0088
+   ],
+   "bbox_max_m": [
+    0.1,
+    0.0,
+    0.793
+   ],
+   "materials": [
+    "Hero_SM_Bath_PaperHolder"
+   ],
+   "lod_triangles": [
+    1544,
+    539,
+    184
+   ],
+   "ucx": 4,
+   "room": "bath",
+   "ru": "Держатель туалетной бумаги с полкой",
+   "size_uu": [
+    380,
+    476,
+    1490
+   ]
+  },
+  {
+   "name": "SM_Bath_Sink",
+   "file": "SM_Bath_Sink.fbx",
+   "set": "hero_bath",
+   "break_class": "ceramic",
+   "textures": {
+    "C": "SM_Bath_Sink/tex/T_SM_Bath_Sink_C.png",
+    "N": "SM_Bath_Sink/tex/T_SM_Bath_Sink_N.png",
+    "R": "SM_Bath_Sink/tex/T_SM_Bath_Sink_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_Bath_Sink_Brk0",
+     "file": "SM_Bath_Sink_Brk0.fbx",
+     "triangles": 860,
+     "bbox_min_m": [
+      -0.25,
+      -0.147,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.234,
+      0.165,
+      0.7475
+     ],
+     "materials": [
+      "Hero_SM_Bath_Sink",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Sink_Brk1",
+     "file": "SM_Bath_Sink_Brk1.fbx",
+     "triangles": 108,
+     "bbox_min_m": [
+      0.0,
+      -0.147,
+      0.06
+     ],
+     "bbox_max_m": [
+      0.25,
+      0.165,
+      0.7475
+     ],
+     "materials": [
+      "Hero_SM_Bath_Sink",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Sink_Brk2",
+     "file": "SM_Bath_Sink_Brk2.fbx",
+     "triangles": 324,
+     "bbox_min_m": [
+      -0.235,
+      -0.147,
+      0.06
+     ],
+     "bbox_max_m": [
+      0.235,
+      0.165,
+      0.7475
+     ],
+     "materials": [
+      "Hero_SM_Bath_Sink",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Sink_Brk3",
+     "file": "SM_Bath_Sink_Brk3.fbx",
+     "triangles": 788,
+     "bbox_min_m": [
+      -0.235,
+      -0.067,
+      0.076
+     ],
+     "bbox_max_m": [
+      0.235,
+      0.149,
+      0.7475
+     ],
+     "materials": [
+      "Hero_SM_Bath_Sink",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Sink_Brk4",
+     "file": "SM_Bath_Sink_Brk4.fbx",
+     "triangles": 486,
+     "bbox_min_m": [
+      0.0158,
+      -0.181,
+      0.72
+     ],
+     "bbox_max_m": [
+      0.264,
+      0.165,
+      0.85
+     ],
+     "materials": [
+      "Hero_SM_Bath_Sink",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Sink_Brk5",
+     "file": "SM_Bath_Sink_Brk5.fbx",
+     "triangles": 868,
+     "bbox_min_m": [
+      -0.026,
+      -0.05,
+      0.7415
+     ],
+     "bbox_max_m": [
+      0.026,
+      0.146,
+      0.974
+     ],
+     "materials": [
+      "Hero_SM_Bath_Sink",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Sink_Brk6",
+     "file": "SM_Bath_Sink_Brk6.fbx",
+     "triangles": 880,
+     "bbox_min_m": [
+      -0.1027,
+      -0.058,
+      0.434
+     ],
+     "bbox_max_m": [
+      0.1027,
+      0.165,
+      0.7475
+     ],
+     "materials": [
+      "Hero_SM_Bath_Sink",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Sink_Brk7",
+     "file": "SM_Bath_Sink_Brk7.fbx",
+     "triangles": 530,
+     "bbox_min_m": [
+      -0.264,
+      -0.181,
+      0.72
+     ],
+     "bbox_max_m": [
+      0.0868,
+      0.165,
+      0.85
+     ],
+     "materials": [
+      "Hero_SM_Bath_Sink",
+      "Break"
+     ]
+    }
+   ],
+   "note": "washbasin on a cabinet: ceramic countertop basin, chrome mixer and waste, white carcass on chrome legs; bottle trap, braided hoses, angle valves, shelf and cleaning things inside",
+   "kept_slots": [],
+   "triangles": 4316,
+   "bbox_min_m": [
+    -0.264,
+    -0.181,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.264,
+    0.165,
+    0.974
+   ],
+   "materials": [
+    "Hero_SM_Bath_Sink"
+   ],
+   "lod_triangles": [
+    4316,
+    1510,
+    516
+   ],
+   "ucx": 11,
+   "room": "bath",
+   "ru": "Раковина с тумбой",
+   "children": [
+    "SM_Bath_Sink_Door"
+   ],
+   "size_uu": [
+    1003,
+    657,
+    1851
+   ]
+  },
+  {
+   "name": "SM_Bath_Sink_Door",
+   "file": "SM_Bath_Sink_Door.fbx",
+   "set": "hero_bath",
+   "break_class": "wood",
+   "textures": {
+    "C": "SM_Bath_Sink_Door/tex/T_SM_Bath_Sink_Door_C.png",
+    "N": "SM_Bath_Sink_Door/tex/T_SM_Bath_Sink_Door_N.png",
+    "R": "SM_Bath_Sink_Door/tex/T_SM_Bath_Sink_Door_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_Bath_Sink_Door_Brk0",
+     "file": "SM_Bath_Sink_Door_Brk0.fbx",
+     "triangles": 648,
+     "bbox_min_m": [
+      0.1244,
+      -0.0435,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.496,
+      0.002,
+      0.652
+     ],
+     "materials": [
+      "Hero_SM_Bath_Sink_Door",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Sink_Door_Brk1",
+     "file": "SM_Bath_Sink_Door_Brk1.fbx",
+     "triangles": 884,
+     "bbox_min_m": [
+      0.0,
+      -0.016,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.385,
+      0.012,
+      0.652
+     ],
+     "materials": [
+      "Hero_SM_Bath_Sink_Door",
+      "Break"
+     ]
+    }
+   ],
+   "note": "vanity door: white lacquer, chrome bar pull, cup hinges",
+   "kept_slots": [],
+   "triangles": 688,
+   "bbox_min_m": [
+    0.0,
+    -0.0435,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.496,
+    0.012,
+    0.652
+   ],
+   "materials": [
+    "Hero_SM_Bath_Sink_Door"
+   ],
+   "lod_triangles": [
+    688,
+    239,
+    82
+   ],
+   "ucx": 1,
+   "room": "bath",
+   "ru": "Дверца тумбы раковины",
+   "attach": {
+    "parent": "SM_Bath_Sink",
+    "at_m": [
+     [
+      -0.248,
+      -0.147,
+      0.064
+     ]
+    ],
+    "move": "hinge",
+    "axis": "Z",
+    "open_deg": -100
+   },
+   "size_uu": [
+    942,
+    105,
+    1239
+   ]
+  },
+  {
+   "name": "SM_Bath_Toilet",
+   "file": "SM_Bath_Toilet.fbx",
+   "set": "hero_bath",
+   "break_class": "ceramic",
+   "textures": {
+    "C": "SM_Bath_Toilet/tex/T_SM_Bath_Toilet_C.png",
+    "N": "SM_Bath_Toilet/tex/T_SM_Bath_Toilet_N.png",
+    "R": "SM_Bath_Toilet/tex/T_SM_Bath_Toilet_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_Bath_Toilet_Brk0",
+     "file": "SM_Bath_Toilet_Brk0.fbx",
+     "triangles": 1906,
+     "bbox_min_m": [
+      -0.1838,
+      -0.184,
+      -0.0
+     ],
+     "bbox_max_m": [
+      0.185,
+      0.3,
+      0.405
+     ],
+     "materials": [
+      "Hero_SM_Bath_Toilet",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Toilet_Brk1",
+     "file": "SM_Bath_Toilet_Brk1.fbx",
+     "triangles": 532,
+     "bbox_min_m": [
+      -0.261,
+      0.089,
+      0.174
+     ],
+     "bbox_max_m": [
+      0.0857,
+      0.3,
+      0.425
+     ],
+     "materials": [
+      "Hero_SM_Bath_Toilet",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Toilet_Brk2",
+     "file": "SM_Bath_Toilet_Brk2.fbx",
+     "triangles": 732,
+     "bbox_min_m": [
+      -0.0161,
+      0.14,
+      0.405
+     ],
+     "bbox_max_m": [
+      0.19,
+      0.3,
+      0.76
+     ],
+     "materials": [
+      "Hero_SM_Bath_Toilet",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Toilet_Brk3",
+     "file": "SM_Bath_Toilet_Brk3.fbx",
+     "triangles": 708,
+     "bbox_min_m": [
+      -0.178,
+      0.152,
+      0.42
+     ],
+     "bbox_max_m": [
+      0.178,
+      0.288,
+      0.73
+     ],
+     "materials": [
+      "Hero_SM_Bath_Toilet",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Toilet_Brk4",
+     "file": "SM_Bath_Toilet_Brk4.fbx",
+     "triangles": 1334,
+     "bbox_min_m": [
+      -0.185,
+      -0.33,
+      -0.0
+     ],
+     "bbox_max_m": [
+      0.1759,
+      -0.0087,
+      0.405
+     ],
+     "materials": [
+      "Hero_SM_Bath_Toilet",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Toilet_Brk5",
+     "file": "SM_Bath_Toilet_Brk5.fbx",
+     "triangles": 732,
+     "bbox_min_m": [
+      -0.19,
+      0.14,
+      0.405
+     ],
+     "bbox_max_m": [
+      0.0539,
+      0.3,
+      0.76
+     ],
+     "materials": [
+      "Hero_SM_Bath_Toilet",
+      "Break"
+     ]
+    }
+   ],
+   "note": "toilet: ceramic pan with a real bowl and water, hollow cistern with fill valve, float and flush valve, supply hose from the wall valve",
+   "kept_slots": [],
+   "triangles": 3972,
+   "bbox_min_m": [
+    -0.261,
+    -0.33,
+    -0.0
+   ],
+   "bbox_max_m": [
+    0.19,
+    0.3,
+    0.76
+   ],
+   "materials": [
+    "Hero_SM_Bath_Toilet"
+   ],
+   "lod_triangles": [
+    3972,
+    1390,
+    476
+   ],
+   "ucx": 15,
+   "room": "bath",
+   "ru": "Унитаз с бачком",
+   "children": [
+    "SM_Bath_Toilet_Lid",
+    "SM_Bath_Toilet_Seat",
+    "SM_Bath_Toilet_TankLid"
+   ],
+   "size_uu": [
+    857,
+    1197,
+    1444
+   ]
+  },
+  {
+   "name": "SM_Bath_Toilet_Lid",
+   "file": "SM_Bath_Toilet_Lid.fbx",
+   "set": "hero_bath",
+   "break_class": "plastic",
+   "textures": {
+    "C": "SM_Bath_Toilet_Lid/tex/T_SM_Bath_Toilet_Lid_C.png",
+    "N": "SM_Bath_Toilet_Lid/tex/T_SM_Bath_Toilet_Lid_N.png",
+    "R": "SM_Bath_Toilet_Lid/tex/T_SM_Bath_Toilet_Lid_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_Bath_Toilet_Lid_Brk0",
+     "file": "SM_Bath_Toilet_Lid_Brk0.fbx",
+     "triangles": 632,
+     "bbox_min_m": [
+      -0.0443,
+      -0.436,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.192,
+      0.012,
+      0.022
+     ],
+     "materials": [
+      "Hero_SM_Bath_Toilet_Lid",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Toilet_Lid_Brk1",
+     "file": "SM_Bath_Toilet_Lid_Brk1.fbx",
+     "triangles": 656,
+     "bbox_min_m": [
+      -0.192,
+      -0.4295,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.0884,
+      0.012,
+      0.022
+     ],
+     "materials": [
+      "Hero_SM_Bath_Toilet_Lid",
+      "Break"
+     ]
+    }
+   ],
+   "note": "toilet lid, domed",
+   "kept_slots": [],
+   "triangles": 440,
+   "bbox_min_m": [
+    -0.192,
+    -0.436,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.192,
+    0.012,
+    0.022
+   ],
+   "materials": [
+    "Hero_SM_Bath_Toilet_Lid"
+   ],
+   "lod_triangles": [
+    440,
+    154,
+    52
+   ],
+   "ucx": 1,
+   "room": "bath",
+   "ru": "Крышка унитаза",
+   "attach": {
+    "parent": "SM_Bath_Toilet",
+    "at_m": [
+     [
+      0.0,
+      0.1,
+      0.426
+     ]
+    ],
+    "move": "hinge",
+    "axis": "X",
+    "open_deg": -92
+   },
+   "size_uu": [
+    730,
+    851,
+    42
+   ]
+  },
+  {
+   "name": "SM_Bath_Toilet_Seat",
+   "file": "SM_Bath_Toilet_Seat.fbx",
+   "set": "hero_bath",
+   "break_class": "plastic",
+   "textures": {
+    "C": "SM_Bath_Toilet_Seat/tex/T_SM_Bath_Toilet_Seat_C.png",
+    "N": "SM_Bath_Toilet_Seat/tex/T_SM_Bath_Toilet_Seat_N.png",
+    "R": "SM_Bath_Toilet_Seat/tex/T_SM_Bath_Toilet_Seat_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_Bath_Toilet_Seat_Brk0",
+     "file": "SM_Bath_Toilet_Seat_Brk0.fbx",
+     "triangles": 620,
+     "bbox_min_m": [
+      -0.0486,
+      -0.4163,
+      -0.0125
+     ],
+     "bbox_max_m": [
+      0.192,
+      0.012,
+      0.009
+     ],
+     "materials": [
+      "Hero_SM_Bath_Toilet_Seat",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Toilet_Seat_Brk1",
+     "file": "SM_Bath_Toilet_Seat_Brk1.fbx",
+     "triangles": 654,
+     "bbox_min_m": [
+      -0.192,
+      -0.436,
+      -0.0125
+     ],
+     "bbox_max_m": [
+      0.079,
+      0.012,
+      0.009
+     ],
+     "materials": [
+      "Hero_SM_Bath_Toilet_Seat",
+      "Break"
+     ]
+    }
+   ],
+   "note": "toilet seat ring with rubber buffers and chrome hinge barrels",
+   "kept_slots": [],
+   "triangles": 852,
+   "bbox_min_m": [
+    -0.192,
+    -0.436,
+    -0.0125
+   ],
+   "bbox_max_m": [
+    0.192,
+    0.012,
+    0.009
+   ],
+   "materials": [
+    "Hero_SM_Bath_Toilet_Seat"
+   ],
+   "lod_triangles": [
+    852,
+    298,
+    102
+   ],
+   "ucx": 8,
+   "room": "bath",
+   "ru": "Сиденье унитаза",
+   "attach": {
+    "parent": "SM_Bath_Toilet",
+    "at_m": [
+     [
+      0.0,
+      0.1,
+      0.416
+     ]
+    ],
+    "move": "hinge",
+    "axis": "X",
+    "open_deg": -85
+   },
+   "size_uu": [
+    730,
+    851,
+    41
+   ]
+  },
+  {
+   "name": "SM_Bath_Toilet_TankLid",
+   "file": "SM_Bath_Toilet_TankLid.fbx",
+   "set": "hero_bath",
+   "break_class": "ceramic",
+   "textures": {
+    "C": "SM_Bath_Toilet_TankLid/tex/T_SM_Bath_Toilet_TankLid_C.png",
+    "N": "SM_Bath_Toilet_TankLid/tex/T_SM_Bath_Toilet_TankLid_N.png",
+    "R": "SM_Bath_Toilet_TankLid/tex/T_SM_Bath_Toilet_TankLid_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_Bath_Toilet_TankLid_Brk0",
+     "file": "SM_Bath_Toilet_TankLid_Brk0.fbx",
+     "triangles": 614,
+     "bbox_min_m": [
+      0.0318,
+      -0.09,
+      -0.01
+     ],
+     "bbox_max_m": [
+      0.2,
+      0.09,
+      0.028
+     ],
+     "materials": [
+      "Hero_SM_Bath_Toilet_TankLid",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Toilet_TankLid_Brk1",
+     "file": "SM_Bath_Toilet_TankLid_Brk1.fbx",
+     "triangles": 794,
+     "bbox_min_m": [
+      -0.2,
+      -0.09,
+      -0.01
+     ],
+     "bbox_max_m": [
+      0.0683,
+      0.09,
+      0.0353
+     ],
+     "materials": [
+      "Hero_SM_Bath_Toilet_TankLid",
+      "Break"
+     ]
+    }
+   ],
+   "note": "cistern lid with the dual flush button",
+   "kept_slots": [],
+   "triangles": 524,
+   "bbox_min_m": [
+    -0.2,
+    -0.09,
+    -0.01
+   ],
+   "bbox_max_m": [
+    0.2,
+    0.09,
+    0.0353
+   ],
+   "materials": [
+    "Hero_SM_Bath_Toilet_TankLid"
+   ],
+   "lod_triangles": [
+    524,
+    182,
+    62
+   ],
+   "ucx": 1,
+   "room": "bath",
+   "ru": "Крышка бачка",
+   "attach": {
+    "parent": "SM_Bath_Toilet",
+    "at_m": [
+     [
+      0.0,
+      0.22,
+      0.76
+     ]
+    ],
+    "move": "lift",
+    "slide_m": [
+     0,
+     0,
+     0.17
+    ]
+   },
+   "size_uu": [
+    760,
+    342,
+    86
+   ]
+  },
+  {
+   "name": "SM_Bath_Towel",
+   "file": "SM_Bath_Towel.fbx",
+   "set": "hero_bath",
+   "break_class": "cloth",
+   "textures": {
+    "C": "SM_Bath_Towel/tex/T_SM_Bath_Towel_C.png",
+    "N": "SM_Bath_Towel/tex/T_SM_Bath_Towel_N.png",
+    "R": "SM_Bath_Towel/tex/T_SM_Bath_Towel_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_Bath_Towel_Brk0",
+     "file": "SM_Bath_Towel_Brk0.fbx",
+     "triangles": 2146,
+     "bbox_min_m": [
+      -0.1612,
+      -0.1414,
+      0.7834
+     ],
+     "bbox_max_m": [
+      0.161,
+      -0.0438,
+      1.621
+     ],
+     "materials": [
+      "Hero_SM_Bath_Towel",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Towel_Brk1",
+     "file": "SM_Bath_Towel_Brk1.fbx",
+     "triangles": 1650,
+     "bbox_min_m": [
+      -0.161,
+      -0.3102,
+      0.0009
+     ],
+     "bbox_max_m": [
+      0.1612,
+      -0.1042,
+      0.8123
+     ],
+     "materials": [
+      "Hero_SM_Bath_Towel",
+      "Break"
+     ]
+    }
+   ],
+   "note": "terry towel over the top rung, down to the floor (the ants climb it)",
+   "kept_slots": [],
+   "triangles": 3560,
+   "bbox_min_m": [
+    -0.1612,
+    -0.3102,
+    0.0009
+   ],
+   "bbox_max_m": [
+    0.1612,
+    -0.0438,
+    1.621
+   ],
+   "materials": [
+    "Hero_SM_Bath_Towel"
+   ],
+   "lod_triangles": [
+    3560,
+    1246,
+    426
+   ],
+   "ucx": 2,
+   "room": "bath",
+   "ru": "Полотенце на сушителе (свисает до пола)",
+   "attach": {
+    "parent": "SM_Bath_TowelRail",
+    "at_m": [
+     [
+      0,
+      0,
+      0
+     ]
+    ],
+    "move": "rest"
+   },
+   "size_uu": [
+    613,
+    506,
+    3078
+   ]
+  },
+  {
+   "name": "SM_Bath_TowelRail",
+   "file": "SM_Bath_TowelRail.fbx",
+   "set": "hero_bath",
+   "break_class": "metal",
+   "textures": {
+    "C": "SM_Bath_TowelRail/tex/T_SM_Bath_TowelRail_C.png",
+    "N": "SM_Bath_TowelRail/tex/T_SM_Bath_TowelRail_N.png",
+    "R": "SM_Bath_TowelRail/tex/T_SM_Bath_TowelRail_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_Bath_TowelRail_Brk0",
+     "file": "SM_Bath_TowelRail_Brk0.fbx",
+     "triangles": 792,
+     "bbox_min_m": [
+      -0.265,
+      -0.0984,
+      0.85
+     ],
+     "bbox_max_m": [
+      0.265,
+      -0.055,
+      1.664
+     ],
+     "materials": [
+      "Hero_SM_Bath_TowelRail",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_TowelRail_Brk1",
+     "file": "SM_Bath_TowelRail_Brk1.fbx",
+     "triangles": 2368,
+     "bbox_min_m": [
+      -0.291,
+      -0.088,
+      0.779
+     ],
+     "bbox_max_m": [
+      0.291,
+      0.0,
+      1.664
+     ],
+     "materials": [
+      "Hero_SM_Bath_TowelRail",
+      "Break"
+     ]
+    }
+   ],
+   "note": "heated towel rail: chrome ladder, capped uprights, bowed rungs, wall stands, valves and tails into the wall",
+   "kept_slots": [],
+   "triangles": 3160,
+   "bbox_min_m": [
+    -0.291,
+    -0.0984,
+    0.779
+   ],
+   "bbox_max_m": [
+    0.291,
+    0.0,
+    1.664
+   ],
+   "materials": [
+    "Hero_SM_Bath_TowelRail"
+   ],
+   "lod_triangles": [
+    3160,
+    1106,
+    379
+   ],
+   "ucx": 3,
+   "room": "bath",
+   "ru": "Полотенцесушитель",
+   "children": [
+    "SM_Bath_Towel"
+   ],
+   "size_uu": [
+    1106,
+    187,
+    1681
+   ]
+  },
+  {
+   "name": "SM_Bath_Tub",
+   "file": "SM_Bath_Tub.fbx",
+   "set": "hero_bath",
+   "break_class": "ceramic",
+   "textures": {
+    "C": "SM_Bath_Tub/tex/T_SM_Bath_Tub_C.png",
+    "N": "SM_Bath_Tub/tex/T_SM_Bath_Tub_N.png",
+    "R": "SM_Bath_Tub/tex/T_SM_Bath_Tub_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_Bath_Tub_Brk0",
+     "file": "SM_Bath_Tub_Brk0.fbx",
+     "triangles": 730,
+     "bbox_min_m": [
+      0.0463,
+      -0.35,
+      0.1
+     ],
+     "bbox_max_m": [
+      0.87,
+      0.35,
+      0.55
+     ],
+     "materials": [
+      "Hero_SM_Bath_Tub",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Tub_Brk1",
+     "file": "SM_Bath_Tub_Brk1.fbx",
+     "triangles": 1168,
+     "bbox_min_m": [
+      -0.87,
+      -0.35,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.87,
+      0.35,
+      0.52
+     ],
+     "materials": [
+      "Hero_SM_Bath_Tub",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Tub_Brk2",
+     "file": "SM_Bath_Tub_Brk2.fbx",
+     "triangles": 3144,
+     "bbox_min_m": [
+      0.258,
+      -0.034,
+      0.1215
+     ],
+     "bbox_max_m": [
+      0.792,
+      0.35,
+      1.1218
+     ],
+     "materials": [
+      "Hero_SM_Bath_Tub",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Tub_Brk3",
+     "file": "SM_Bath_Tub_Brk3.fbx",
+     "triangles": 948,
+     "bbox_min_m": [
+      -0.578,
+      -0.21,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.862,
+      0.21,
+      0.4204
+     ],
+     "materials": [
+      "Hero_SM_Bath_Tub",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Tub_Brk4",
+     "file": "SM_Bath_Tub_Brk4.fbx",
+     "triangles": 620,
+     "bbox_min_m": [
+      -0.87,
+      -0.35,
+      0.1
+     ],
+     "bbox_max_m": [
+      0.1588,
+      0.35,
+      0.55
+     ],
+     "materials": [
+      "Hero_SM_Bath_Tub",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Tub_Brk5",
+     "file": "SM_Bath_Tub_Brk5.fbx",
+     "triangles": 338,
+     "bbox_min_m": [
+      0.1189,
+      -0.35,
+      0.1
+     ],
+     "bbox_max_m": [
+      0.7853,
+      -0.1062,
+      0.55
+     ],
+     "materials": [
+      "Hero_SM_Bath_Tub",
+      "Break"
+     ]
+    }
+   ],
+   "note": "bathtub: enamelled shell with a rolled rim, screen on aluminium rails, end panels, cradles on feet, trap and overflow under it, waste, plug on a chain, wall mixer with shower",
+   "kept_slots": [],
+   "triangles": 5984,
+   "bbox_min_m": [
+    -0.87,
+    -0.35,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.87,
+    0.35,
+    1.1218
+   ],
+   "materials": [
+    "Hero_SM_Bath_Tub"
+   ],
+   "lod_triangles": [
+    5984,
+    2093,
+    718
+   ],
+   "ucx": 10,
+   "room": "bath",
+   "ru": "Ванна с экраном и смесителем",
+   "children": [
+    "SM_Bath_Mat",
+    "SM_Bath_Tub_Panel"
+   ],
+   "size_uu": [
+    3306,
+    1330,
+    2131
+   ]
+  },
+  {
+   "name": "SM_Bath_Tub_Panel",
+   "file": "SM_Bath_Tub_Panel.fbx",
+   "set": "hero_bath",
+   "break_class": "plastic",
+   "textures": {
+    "C": "SM_Bath_Tub_Panel/tex/T_SM_Bath_Tub_Panel_C.png",
+    "N": "SM_Bath_Tub_Panel/tex/T_SM_Bath_Tub_Panel_N.png",
+    "R": "SM_Bath_Tub_Panel/tex/T_SM_Bath_Tub_Panel_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_Bath_Tub_Panel_Brk0",
+     "file": "SM_Bath_Tub_Panel_Brk0.fbx",
+     "triangles": 448,
+     "bbox_min_m": [
+      -0.0172,
+      -0.0052,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.445,
+      0.0,
+      0.478
+     ],
+     "materials": [
+      "Hero_SM_Bath_Tub_Panel",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Tub_Panel_Brk1",
+     "file": "SM_Bath_Tub_Panel_Brk1.fbx",
+     "triangles": 692,
+     "bbox_min_m": [
+      -0.445,
+      -0.0106,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.1237,
+      0.0,
+      0.478
+     ],
+     "materials": [
+      "Hero_SM_Bath_Tub_Panel",
+      "Break"
+     ]
+    }
+   ],
+   "note": "the sliding half of the bath screen: ribbed plastic sheet with a grip",
+   "kept_slots": [],
+   "triangles": 816,
+   "bbox_min_m": [
+    -0.445,
+    -0.0106,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.445,
+    0.0,
+    0.478
+   ],
+   "materials": [
+    "Hero_SM_Bath_Tub_Panel"
+   ],
+   "lod_triangles": [
+    816,
+    284,
+    96
+   ],
+   "ucx": 1,
+   "room": "bath",
+   "ru": "Сдвижная панель экрана ванны",
+   "attach": {
+    "parent": "SM_Bath_Tub",
+    "at_m": [
+     [
+      0.415,
+      -0.342,
+      0.021
+     ]
+    ],
+    "move": "slide",
+    "slide_m": [
+     -0.8,
+     0,
+     0
+    ]
+   },
+   "size_uu": [
+    1691,
+    20,
+    908
+   ]
+  },
+  {
+   "name": "SM_Bath_Washer",
+   "file": "SM_Bath_Washer.fbx",
+   "set": "hero_bath",
+   "break_class": "metal",
+   "textures": {
+    "C": "SM_Bath_Washer/tex/T_SM_Bath_Washer_C.png",
+    "N": "SM_Bath_Washer/tex/T_SM_Bath_Washer_N.png",
+    "R": "SM_Bath_Washer/tex/T_SM_Bath_Washer_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_Bath_Washer_Brk0",
+     "file": "SM_Bath_Washer_Brk0.fbx",
+     "triangles": 108,
+     "bbox_min_m": [
+      -0.3,
+      -0.288,
+      0.014
+     ],
+     "bbox_max_m": [
+      0.25,
+      0.3,
+      0.82
+     ],
+     "materials": [
+      "Hero_SM_Bath_Washer",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Washer_Brk1",
+     "file": "SM_Bath_Washer_Brk1.fbx",
+     "triangles": 108,
+     "bbox_min_m": [
+      -0.25,
+      -0.288,
+      0.014
+     ],
+     "bbox_max_m": [
+      0.3,
+      0.3,
+      0.82
+     ],
+     "materials": [
+      "Hero_SM_Bath_Washer",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Washer_Brk2",
+     "file": "SM_Bath_Washer_Brk2.fbx",
+     "triangles": 836,
+     "bbox_min_m": [
+      -0.2955,
+      -0.288,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.288,
+      0.345,
+      0.82
+     ],
+     "materials": [
+      "Hero_SM_Bath_Washer",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Washer_Brk3",
+     "file": "SM_Bath_Washer_Brk3.fbx",
+     "triangles": 300,
+     "bbox_min_m": [
+      -0.3,
+      -0.3,
+      0.014
+     ],
+     "bbox_max_m": [
+      0.3,
+      0.3,
+      0.85
+     ],
+     "materials": [
+      "Hero_SM_Bath_Washer",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Washer_Brk4",
+     "file": "SM_Bath_Washer_Brk4.fbx",
+     "triangles": 2304,
+     "bbox_min_m": [
+      -0.3,
+      -0.3345,
+      0.014
+     ],
+     "bbox_max_m": [
+      0.3,
+      0.25,
+      0.82
+     ],
+     "materials": [
+      "Hero_SM_Bath_Washer",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Washer_Brk5",
+     "file": "SM_Bath_Washer_Brk5.fbx",
+     "triangles": 2292,
+     "bbox_min_m": [
+      -0.25,
+      -0.3,
+      0.014
+     ],
+     "bbox_max_m": [
+      0.25,
+      0.25,
+      0.635
+     ],
+     "materials": [
+      "Hero_SM_Bath_Washer",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Washer_Brk6",
+     "file": "SM_Bath_Washer_Brk6.fbx",
+     "triangles": 188,
+     "bbox_min_m": [
+      -0.25,
+      -0.25,
+      0.014
+     ],
+     "bbox_max_m": [
+      0.25,
+      0.25,
+      0.3
+     ],
+     "materials": [
+      "Hero_SM_Bath_Washer",
+      "Break"
+     ]
+    }
+   ],
+   "note": "front-loading washing machine: enamelled cabinet, laminate top, control strip, kick plate with filter flap, gasket, perforated drum with lifters and a towel, hoses and cord behind",
+   "kept_slots": [],
+   "triangles": 6136,
+   "bbox_min_m": [
+    -0.3,
+    -0.3345,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.3,
+    0.345,
+    0.85
+   ],
+   "materials": [
+    "Hero_SM_Bath_Washer"
+   ],
+   "lod_triangles": [
+    6136,
+    2147,
+    736
+   ],
+   "ucx": 14,
+   "room": "bath",
+   "ru": "Стиральная машина",
+   "children": [
+    "SM_Bath_Washer_Door"
+   ],
+   "size_uu": [
+    1140,
+    1291,
+    1615
+   ]
+  },
+  {
+   "name": "SM_Bath_Washer_Door",
+   "file": "SM_Bath_Washer_Door.fbx",
+   "set": "hero_bath",
+   "break_class": "plastic",
+   "textures": {
+    "C": "SM_Bath_Washer_Door/tex/T_SM_Bath_Washer_Door_C.png",
+    "N": "SM_Bath_Washer_Door/tex/T_SM_Bath_Washer_Door_N.png",
+    "R": "SM_Bath_Washer_Door/tex/T_SM_Bath_Washer_Door_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_Bath_Washer_Door_Brk0",
+     "file": "SM_Bath_Washer_Door_Brk0.fbx",
+     "triangles": 916,
+     "bbox_min_m": [
+      -0.012,
+      -0.036,
+      -0.214
+     ],
+     "bbox_max_m": [
+      0.429,
+      0.004,
+      0.214
+     ],
+     "materials": [
+      "Hero_SM_Bath_Washer_Door",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Washer_Door_Brk1",
+     "file": "SM_Bath_Washer_Door_Brk1.fbx",
+     "triangles": 748,
+     "bbox_min_m": [
+      0.1701,
+      -0.024,
+      -0.1441
+     ],
+     "bbox_max_m": [
+      0.365,
+      0.066,
+      0.15
+     ],
+     "materials": [
+      "Hero_SM_Bath_Washer_Door",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_Bath_Washer_Door_Brk2",
+     "file": "SM_Bath_Washer_Door_Brk2.fbx",
+     "triangles": 744,
+     "bbox_min_m": [
+      0.065,
+      -0.024,
+      -0.15
+     ],
+     "bbox_max_m": [
+      0.2554,
+      0.0658,
+      0.143
+     ],
+     "materials": [
+      "Hero_SM_Bath_Washer_Door",
+      "Break"
+     ]
+    }
+   ],
+   "note": "porthole door: plastic ring, smoked glass bowl, grip, steel hinge",
+   "kept_slots": [],
+   "triangles": 1316,
+   "bbox_min_m": [
+    -0.012,
+    -0.036,
+    -0.214
+   ],
+   "bbox_max_m": [
+    0.429,
+    0.066,
+    0.214
+   ],
+   "materials": [
+    "Hero_SM_Bath_Washer_Door"
+   ],
+   "lod_triangles": [
+    1316,
+    459,
+    157
+   ],
+   "ucx": 1,
+   "room": "bath",
+   "ru": "Люк стиральной машины",
+   "attach": {
+    "parent": "SM_Bath_Washer",
+    "at_m": [
+     [
+      -0.215,
+      -0.307,
+      0.43
+     ]
+    ],
+    "move": "hinge",
+    "axis": "Z",
+    "open_deg": -110
+   },
+   "size_uu": [
+    838,
+    194,
+    813
+   ]
+  }
+ ]
+}

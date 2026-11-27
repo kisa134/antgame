@@ -1,0 +1,114 @@
+{
+ "name": "SM_Hall_EntryDoor_Leaf",
+ "file": "SM_Hall_EntryDoor_Leaf.fbx",
+ "set": "hero_hall",
+ "break_class": "metal",
+ "textures": {
+  "C": "SM_Hall_EntryDoor_Leaf/tex/T_SM_Hall_EntryDoor_Leaf_C.png",
+  "N": "SM_Hall_EntryDoor_Leaf/tex/T_SM_Hall_EntryDoor_Leaf_N.png",
+  "R": "SM_Hall_EntryDoor_Leaf/tex/T_SM_Hall_EntryDoor_Leaf_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_Hall_EntryDoor_Leaf_Brk0",
+   "file": "SM_Hall_EntryDoor_Leaf_Brk0.fbx",
+   "triangles": 1024,
+   "bbox_min_m": [
+    -0.0088,
+    -0.014,
+    0.022
+   ],
+   "bbox_max_m": [
+    0.87,
+    0.07,
+    2.04
+   ],
+   "materials": [
+    "Hero_SM_Hall_EntryDoor_Leaf",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Hall_EntryDoor_Leaf_Brk1",
+   "file": "SM_Hall_EntryDoor_Leaf_Brk1.fbx",
+   "triangles": 452,
+   "bbox_min_m": [
+    0.014,
+    -0.0145,
+    0.025
+   ],
+   "bbox_max_m": [
+    0.866,
+    0.07,
+    2.037
+   ],
+   "materials": [
+    "Hero_SM_Hall_EntryDoor_Leaf",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Hall_EntryDoor_Leaf_Brk2",
+   "file": "SM_Hall_EntryDoor_Leaf_Brk2.fbx",
+   "triangles": 1724,
+   "bbox_min_m": [
+    0.421,
+    -0.042,
+    0.85
+   ],
+   "bbox_max_m": [
+    0.878,
+    0.098,
+    1.514
+   ],
+   "materials": [
+    "Hero_SM_Hall_EntryDoor_Leaf",
+    "Break"
+   ]
+  }
+ ],
+ "note": "steel entry door leaf: pressed panels outside, walnut lining with beaded fields inside, lever handles, two locks, peephole, bolts, seal",
+ "kept_slots": [],
+ "triangles": 3200,
+ "bbox_min_m": [
+  -0.0088,
+  -0.042,
+  0.022
+ ],
+ "bbox_max_m": [
+  0.878,
+  0.098,
+  2.04
+ ],
+ "materials": [
+  "Hero_SM_Hall_EntryDoor_Leaf"
+ ],
+ "lod_triangles": [
+  3200,
+  1120,
+  384
+ ],
+ "ucx": 1,
+ "room": "hall",
+ "ru": "Входная дверь: полотно",
+ "attach": {
+  "parent": "SM_Hall_EntryDoor_Frame",
+  "at_m": [
+   [
+    -0.44,
+    0.0,
+    0.0
+   ]
+  ],
+  "move": "hinge",
+  "axis": "Z",
+  "open_deg": -95
+ },
+ "size_uu": [
+  1685,
+  266,
+  3834
+ ]
+}

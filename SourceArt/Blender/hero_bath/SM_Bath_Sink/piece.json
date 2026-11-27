@@ -1,0 +1,199 @@
+{
+ "name": "SM_Bath_Sink",
+ "file": "SM_Bath_Sink.fbx",
+ "set": "hero_bath",
+ "break_class": "ceramic",
+ "textures": {
+  "C": "SM_Bath_Sink/tex/T_SM_Bath_Sink_C.png",
+  "N": "SM_Bath_Sink/tex/T_SM_Bath_Sink_N.png",
+  "R": "SM_Bath_Sink/tex/T_SM_Bath_Sink_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_Bath_Sink_Brk0",
+   "file": "SM_Bath_Sink_Brk0.fbx",
+   "triangles": 860,
+   "bbox_min_m": [
+    -0.25,
+    -0.147,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.234,
+    0.165,
+    0.7475
+   ],
+   "materials": [
+    "Hero_SM_Bath_Sink",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Sink_Brk1",
+   "file": "SM_Bath_Sink_Brk1.fbx",
+   "triangles": 108,
+   "bbox_min_m": [
+    0.0,
+    -0.147,
+    0.06
+   ],
+   "bbox_max_m": [
+    0.25,
+    0.165,
+    0.7475
+   ],
+   "materials": [
+    "Hero_SM_Bath_Sink",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Sink_Brk2",
+   "file": "SM_Bath_Sink_Brk2.fbx",
+   "triangles": 324,
+   "bbox_min_m": [
+    -0.235,
+    -0.147,
+    0.06
+   ],
+   "bbox_max_m": [
+    0.235,
+    0.165,
+    0.7475
+   ],
+   "materials": [
+    "Hero_SM_Bath_Sink",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Sink_Brk3",
+   "file": "SM_Bath_Sink_Brk3.fbx",
+   "triangles": 788,
+   "bbox_min_m": [
+    -0.235,
+    -0.067,
+    0.076
+   ],
+   "bbox_max_m": [
+    0.235,
+    0.149,
+    0.7475
+   ],
+   "materials": [
+    "Hero_SM_Bath_Sink",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Sink_Brk4",
+   "file": "SM_Bath_Sink_Brk4.fbx",
+   "triangles": 486,
+   "bbox_min_m": [
+    0.0158,
+    -0.181,
+    0.72
+   ],
+   "bbox_max_m": [
+    0.264,
+    0.165,
+    0.85
+   ],
+   "materials": [
+    "Hero_SM_Bath_Sink",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Sink_Brk5",
+   "file": "SM_Bath_Sink_Brk5.fbx",
+   "triangles": 868,
+   "bbox_min_m": [
+    -0.026,
+    -0.05,
+    0.7415
+   ],
+   "bbox_max_m": [
+    0.026,
+    0.146,
+    0.974
+   ],
+   "materials": [
+    "Hero_SM_Bath_Sink",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Sink_Brk6",
+   "file": "SM_Bath_Sink_Brk6.fbx",
+   "triangles": 880,
+   "bbox_min_m": [
+    -0.1027,
+    -0.058,
+    0.434
+   ],
+   "bbox_max_m": [
+    0.1027,
+    0.165,
+    0.7475
+   ],
+   "materials": [
+    "Hero_SM_Bath_Sink",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Sink_Brk7",
+   "file": "SM_Bath_Sink_Brk7.fbx",
+   "triangles": 530,
+   "bbox_min_m": [
+    -0.264,
+    -0.181,
+    0.72
+   ],
+   "bbox_max_m": [
+    0.0868,
+    0.165,
+    0.85
+   ],
+   "materials": [
+    "Hero_SM_Bath_Sink",
+    "Break"
+   ]
+  }
+ ],
+ "note": "washbasin on a cabinet: ceramic countertop basin, chrome mixer and waste, white carcass on chrome legs; bottle trap, braided hoses, angle valves, shelf and cleaning things inside",
+ "kept_slots": [],
+ "triangles": 4316,
+ "bbox_min_m": [
+  -0.264,
+  -0.181,
+  0.0
+ ],
+ "bbox_max_m": [
+  0.264,
+  0.165,
+  0.974
+ ],
+ "materials": [
+  "Hero_SM_Bath_Sink"
+ ],
+ "lod_triangles": [
+  4316,
+  1510,
+  516
+ ],
+ "ucx": 11,
+ "room": "bath",
+ "ru": "Раковина с тумбой",
+ "children": [
+  "SM_Bath_Sink_Door"
+ ],
+ "size_uu": [
+  1003,
+  657,
+  1851
+ ]
+}
