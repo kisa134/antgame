@@ -22,6 +22,7 @@
 #include "KitchenArtData.inl"
 #include "LevelV3.h"
 #include "Map4Look.h"
+#include "AntLab.h"
 
 // ---------------------------------------------------------------------------------------------
 // The look table: material slot name -> one of the game's own surfaces.
@@ -249,8 +250,55 @@ namespace KitchenArt
 {
 
 // Level v3 (-AntLevelV3) swaps in its own base table (LevelV3Art.inl): the same format, the movers keep v2's order (+ the toy box lid).
-TConstArrayView<FKitchenArtInst> Instances() { return LevelV3::Enabled() ? LevelV3::BaseArt() : TConstArrayView<FKitchenArtInst>(GKitchenArt, UE_ARRAY_COUNT(GKitchenArt)); }
-TConstArrayView<FKitchenArtMover> Movers() { return LevelV3::Enabled() ? LevelV3::BaseMovers() : TConstArrayView<FKitchenArtMover>(GKitchenMovers, UE_ARRAY_COUNT(GKitchenMovers)); }
+// KAN-40: a flat (AntLab) has its own tables in the same format: everything that works from these two works there.
+TConstArrayView<FKitchenArtInst> Instances()
+{
+	if (const FAntLabVariant* Lab = AntLab::Get()) { return Lab->Art; }
+	return LevelV3::Enabled() ? LevelV3::BaseArt() : TConstArrayView<FKitchenArtInst>(GKitchenArt, UE_ARRAY_COUNT(GKitchenArt));
+}
+TConstArrayView<FKitchenArtMover> Movers()
+{
+	if (const FAntLabVariant* Lab = AntLab::Get()) { return Lab->ArtMovers; }
+	return LevelV3::Enabled() ? LevelV3::BaseMovers() : TConstArrayView<FKitchenArtMover>(GKitchenMovers, UE_ARRAY_COUNT(GKitchenMovers));
+}
+
+FBox FHome::Box(const FBox& KitchenBox) const
+{
+	if (!bMoved) { return KitchenBox; }
+	FBox Out(ForceInit);
+	for (int32 i = 0; i < 8; ++i)
+	{
+		Out += At(FVector(i & 1 ? KitchenBox.Max.X : KitchenBox.Min.X, i & 2 ? KitchenBox.Max.Y : KitchenBox.Min.Y, i & 4 ? KitchenBox.Max.Z : KitchenBox.Min.Z));
+	}
+	return Out;
+}
+
+FTransform FHome::Whole() const
+{
+	if (!bMoved) { return FTransform::Identity; }
+	// P -> L.R * (S o (P - k)) + L.T  (K is a plain offset k)
+	const FVector S = L.GetScale3D();
+	return FTransform(L.GetRotation(), L.GetLocation() - L.GetRotation().RotateVector(S * K.GetLocation()), S);
+}
+
+FHome Home(const TCHAR* Group)
+{
+	FHome H;
+	if (const FAntLabVariant* Lab = AntLab::Get())
+	{
+		for (const FAntLabHome& LH : Lab->Homes)
+		{
+			if (LH.Id == Group) { H.bMoved = true; H.K = LH.K; H.L = LH.L; break; }
+		}
+	}
+	return H;
+}
+
+bool Has(const TCHAR* Group)
+{
+	const FAntLabVariant* Lab = AntLab::Get();
+	return !Lab || Lab->ArtBuilt.Contains(Group);
+}
 
 bool HeroArt()
 {

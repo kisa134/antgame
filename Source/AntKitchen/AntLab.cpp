@@ -18,6 +18,8 @@
 #include "EngineUtils.h"
 #include "Engine/World.h"
 #include "Components/StaticMeshComponent.h"
+#include "Engine/StaticMesh.h"
+#include "Misc/PackageName.h"
 
 #include "AntLabData.inl"
 
@@ -122,6 +124,7 @@ namespace
 				B.Tag = Str(O, TEXT("tag"));
 				B.bClimb = Num(O, TEXT("climb")) > 0.5;
 				B.bCollide = Num(O, TEXT("nocol")) < 0.5;
+				B.Art = Str(O, TEXT("art"));
 				V->Boxes.Add(B);
 			}
 		}
@@ -239,6 +242,136 @@ namespace
 			Err = TEXT("no nodes or no boxes");
 			return nullptr;
 		}
+		// ---- KAN-40: the models of the flat, the homes of the gadget code, the basins of the water
+		auto V3f = [](const TSharedPtr<FJsonObject>& O, const TCHAR* Name) { return FVector3f(VecField(O, Name)); };
+		auto RotZ = [](int32 Yaw, const FVector& A)
+		{
+			const int32 Q = ((Yaw % 360) + 360) % 360 / 90;
+			const double C = Q == 0 ? 1. : Q == 2 ? -1. : 0., S = Q == 1 ? 1. : Q == 3 ? -1. : 0.;
+			return FVector(C * A.X - S * A.Y, S * A.X + C * A.Y, A.Z);
+		};
+		const bool bArtOn = KitchenArt::Enabled();
+		if (bArtOn && R->TryGetArrayField(TEXT("art"), Arr))
+		{
+			for (const TSharedPtr<FJsonValue>& J : *Arr)
+			{
+				const TSharedPtr<FJsonObject> O = J->AsObject();
+				FKitchenArtInst I;
+				I.Name = nullptr;
+				I.Index = (int32)Num(O, TEXT("i"));
+				I.Role = (int32)Num(O, TEXT("role"));
+				I.Parent = (int32)Num(O, TEXT("par"), -1.0);
+				I.Loc = FVector3f(V->Origin + VecField(O, TEXT("loc")));
+				I.AX = V3f(O, TEXT("ax")); I.AY = V3f(O, TEXT("ay")); I.AZ = V3f(O, TEXT("az"));
+				I.Scale = V3f(O, TEXT("sc"));
+				V->Art.Add(I);
+				V->ArtNames.Add(Str(O, TEXT("n")));
+				V->ArtGroups.Add(Str(O, TEXT("g")));
+			}
+		}
+		if (bArtOn && R->TryGetArrayField(TEXT("movers"), Arr))
+		{
+			for (const TSharedPtr<FJsonValue>& J : *Arr)
+			{
+				const TSharedPtr<FJsonObject> O = J->AsObject();
+				FKitchenArtMover Mv;
+				Mv.Inst = (int32)Num(O, TEXT("inst"));
+				Mv.Type = (int32)Num(O, TEXT("type"));
+				Mv.Axis = V3f(O, TEXT("axis"));
+				Mv.Angle = (float)Num(O, TEXT("angle"));
+				Mv.Slide = V3f(O, TEXT("slide"));
+				Mv.Flags = (int32)Num(O, TEXT("flags"));
+				Mv.AutoClose = (float)Num(O, TEXT("auto"));
+				Mv.OpenText = Mv.CloseText = nullptr;
+				if (!V->Art.IsValidIndex(Mv.Inst)) { continue; }
+				V->ArtMovers.Add(Mv);
+				V->ArtTexts.Add(Str(O, TEXT("open")));
+				V->ArtTexts.Add(Str(O, TEXT("close")));
+			}
+		}
+		// the places kept for models that are still being made: the first name the build has is fitted into the box by its own bounds
+		if (bArtOn && R->TryGetArrayField(TEXT("slots"), Arr))
+		{
+			for (const TSharedPtr<FJsonValue>& J : *Arr)
+			{
+				const TSharedPtr<FJsonObject> O = J->AsObject();
+				const TArray<TSharedPtr<FJsonValue>>* NA = nullptr;
+				if (!O->TryGetArrayField(TEXT("names"), NA)) { continue; }
+				for (const TSharedPtr<FJsonValue>& NJ : *NA)
+				{
+					const FString N = NJ->AsString();
+					if (!FPackageName::DoesPackageExist(FString::Printf(TEXT("/Game/Hero/%s/%s"), *N, *N))) { continue; }
+					UStaticMesh* SlotMesh = KitchenArt::Mesh(*N);
+					if (!SlotMesh) { continue; }
+					const int32 Yaw = (int32)Num(O, TEXT("yaw"));
+					const FBox Bb = SlotMesh->GetBoundingBox();
+					const FVector Bd = Bb.GetSize() * KitchenArt::ImportScale, Bc = Bb.GetCenter() * KitchenArt::ImportScale;
+					const FVector Mn = P(VecField(O, TEXT("min"))), Mx = P(VecField(O, TEXT("max")));
+					const FVector Ld = Mx - Mn;
+					const bool bTurn = (((Yaw % 360) + 360) % 360 / 90) % 2 == 1;
+					const FVector Want = bTurn ? FVector(Ld.Y, Ld.X, Ld.Z) : Ld;
+					const FVector Sc(Bd.X > 1. ? Want.X / Bd.X : 1., Bd.Y > 1. ? Want.Y / Bd.Y : 1., Bd.Z > 1. ? Want.Z / Bd.Z : 1.);
+					const FVector Off = RotZ(Yaw, FVector(Sc.X * Bc.X, Sc.Y * Bc.Y, 0.));
+					FKitchenArtInst I;
+					I.Name = nullptr;
+					I.Index = 0; I.Role = KitchenArt::Static; I.Parent = -1;
+					I.Loc = FVector3f(FVector((Mn.X + Mx.X) * 0.5 - Off.X, (Mn.Y + Mx.Y) * 0.5 - Off.Y, Mn.Z - Sc.Z * Bb.Min.Z * KitchenArt::ImportScale));
+					I.AX = FVector3f(RotZ(Yaw, FVector::ForwardVector)); I.AY = FVector3f(RotZ(Yaw, FVector::RightVector)); I.AZ = FVector3f(0.f, 0.f, 1.f);
+					I.Scale = FVector3f(Sc);
+					V->Art.Add(I);
+					V->ArtNames.Add(N);
+					V->ArtGroups.Add(Str(O, TEXT("g")));
+					break;
+				}
+			}
+		}
+		for (int32 i = 0; i < V->Art.Num(); ++i)
+		{
+			V->Art[i].Name = *V->ArtNames[i];
+			if (!V->ArtBuilt.Contains(V->ArtGroups[i]) && KitchenArt::Mesh(V->Art[i].Name) != nullptr) { V->ArtBuilt.Add(V->ArtGroups[i]); }
+		}
+		for (int32 i = 0; i < V->ArtMovers.Num(); ++i)
+		{
+			V->ArtMovers[i].OpenText = *V->ArtTexts[2 * i];
+			V->ArtMovers[i].CloseText = *V->ArtTexts[2 * i + 1];
+		}
+		if (R->TryGetArrayField(TEXT("climb_art"), Arr))
+		{
+			for (const TSharedPtr<FJsonValue>& J : *Arr) { V->ArtClimb.Add(J->AsString()); }
+		}
+		if (R->TryGetArrayField(TEXT("homes"), Arr))
+		{
+			for (const TSharedPtr<FJsonValue>& J : *Arr)
+			{
+				const TSharedPtr<FJsonObject> O = J->AsObject();
+				FAntLabHome H;
+				H.Id = Str(O, TEXT("id"));
+				H.K = FTransform(VecField(O, TEXT("k")));
+				H.L = FTransform(FRotator(0., Num(O, TEXT("yaw")), 0.), V->Origin + VecField(O, TEXT("l")), VecField(O, TEXT("s")));
+				V->Homes.Add(H);
+			}
+		}
+		const TSharedPtr<FJsonObject>* WaterO = nullptr;
+		if (R->TryGetObjectField(TEXT("water"), WaterO) && (*WaterO)->TryGetArrayField(TEXT("basins"), Arr))
+		{
+			for (const TSharedPtr<FJsonValue>& J : *Arr)
+			{
+				const TSharedPtr<FJsonObject> O = J->AsObject();
+				FAntLabBasin B;
+				B.Name = Str(O, TEXT("name"));
+				B.Min = FVector2D(P(VecField(O, TEXT("min"))));
+				B.Max = FVector2D(P(VecField(O, TEXT("max"))));
+				B.Ref = FVector2D(P(VecField(O, TEXT("ref"))));
+				B.Z = (float)(V->Origin.Z + Num(O, TEXT("z")) * M);
+				B.Up = (float)Num(O, TEXT("up"), 45.0);
+				B.Down = (float)Num(O, TEXT("down"), 40.0);
+				B.Dx = (float)Num(O, TEXT("dx"), 25.0);
+				B.Sub = (int32)Num(O, TEXT("sub"), 1.0);
+				double Fill = 0.;
+				if (O->TryGetNumberField(TEXT("fill"), Fill)) { B.Fill = (float)(V->Origin.Z + Fill * M); }
+				V->Basins.Add(B);
+			}
+		}
 		return V;
 	}
 
@@ -351,6 +484,8 @@ bool Activate(TCHAR Id)
 	UE_LOG(LogTemp, Display, TEXT("ANTLAB variant %s «%s» loaded: %d rooms, %d boxes (%d climbable), %d zones, %d hatches, %d food, %d nodes, %d edges, nest %s, cake %s, Human %s"),
 		*V.Id, *V.Name, V.Rooms.Num(), V.Boxes.Num(), Climb, V.Zones.Num(), V.Hatches.Num(), V.Food.Num(), V.Nodes.Num(), V.Edges.Num(),
 		*V.Nest.ToCompactString(), *V.Cake.ToCompactString(), *V.HumanSpawn.ToString());
+	UE_LOG(LogTemp, Display, TEXT("ANTLAB art of variant %s: %d rows, %d movers, %d groups with their models in this build, %d homes, %d basins"),
+		*V.Id, V.Art.Num(), V.ArtMovers.Num(), V.ArtBuilt.Num(), V.Homes.Num(), V.Basins.Num());
 	return true;
 }
 

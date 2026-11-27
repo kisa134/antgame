@@ -83,4 +83,31 @@ namespace KitchenArt
 
 	/** Collision of a piece: Static = fixed kitchen, Moving = rideable. */
 	ANTKITCHEN_API void SetSolid(UStaticMeshComponent* C, ESolid Solid);
+
+	/**
+	 * KAN-40. The gadget code is written in the kitchen's coordinates. In a flat (AntLab) every art group of the kitchen stands
+	 * somewhere else, turned and scaled per axis: a home takes a kitchen point of that group to where it is in this world, and
+	 * back. In the kitchen it changes nothing.
+	 */
+	struct FHome
+	{
+		bool bMoved = false;
+		FTransform K, L;   // the group's box in the kitchen (a plain offset) and in this world (offset, yaw, scale)
+
+		FVector At(const FVector& KitchenPoint) const { return bMoved ? L.TransformPosition(K.InverseTransformPosition(KitchenPoint)) : KitchenPoint; }
+		FVector ToKitchen(const FVector& WorldPoint) const { return bMoved ? K.TransformPosition(L.InverseTransformPosition(WorldPoint)) : WorldPoint; }
+		FVector Dir(const FVector& KitchenDir) const { return bMoved ? L.GetRotation().RotateVector(KitchenDir) : KitchenDir; }
+		FRotator Rot(const FRotator& KitchenRot = FRotator::ZeroRotator) const { return bMoved ? (L.GetRotation() * KitchenRot.Quaternion()).Rotator() : KitchenRot; }
+		/** The axis-aligned box round a kitchen box. */
+		ANTKITCHEN_API FBox Box(const FBox& KitchenBox) const;
+		/** A rigid place (scale 1) for an actor that stands at a kitchen point. */
+		FTransform Tm(const FVector& KitchenLoc, const FRotator& KitchenRot = FRotator::ZeroRotator) const { return FTransform(Rot(KitchenRot), At(KitchenLoc)); }
+		/** The whole mapping as one transform (with the scale): for an actor that builds itself at the world origin in kitchen coordinates. */
+		ANTKITCHEN_API FTransform Whole() const;
+		/** One number for radii and reaches. */
+		float Size() const { return bMoved ? (float)((L.GetScale3D().X + L.GetScale3D().Y + L.GetScale3D().Z) / 3.) : 1.f; }
+	};
+	ANTKITCHEN_API FHome Home(const TCHAR* Group);
+	/** Does this world have that group of the kitchen? The kitchen: always. A flat: what was placed there and has its models. */
+	ANTKITCHEN_API bool Has(const TCHAR* Group);
 }

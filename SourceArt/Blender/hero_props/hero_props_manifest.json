@@ -5131,99 +5131,6 @@
    "ucx": 2
   },
   {
-   "name": "SM_K_CookieTin",
-   "file": "SM_K_CookieTin.fbx",
-   "set": "hero_props",
-   "textures": {
-    "C": "SM_K_CookieTin/tex/T_SM_K_CookieTin_C.png",
-    "N": "SM_K_CookieTin/tex/T_SM_K_CookieTin_N.png",
-    "R": "SM_K_CookieTin/tex/T_SM_K_CookieTin_R.png"
-   },
-   "collision_lod": 0,
-   "movers": [],
-   "breaks": [
-    {
-     "name": "SM_K_CookieTin_Brk0",
-     "file": "SM_K_CookieTin_Brk0.fbx",
-     "triangles": 2884,
-     "bbox_min_m": [
-      -0.1858,
-      -0.1858,
-      0.0
-     ],
-     "bbox_max_m": [
-      0.1858,
-      0.1858,
-      0.1563
-     ],
-     "materials": [
-      "Hero_SM_K_CookieTin",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_CookieTin_Brk1",
-     "file": "SM_K_CookieTin_Brk1.fbx",
-     "triangles": 2304,
-     "bbox_min_m": [
-      -0.1098,
-      -0.1451,
-      -0.0004
-     ],
-     "bbox_max_m": [
-      0.1248,
-      0.0937,
-      0.0388
-     ],
-     "materials": [
-      "Hero_SM_K_CookieTin",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_CookieTin_Brk2",
-     "file": "SM_K_CookieTin_Brk2.fbx",
-     "triangles": 1344,
-     "bbox_min_m": [
-      0.1611,
-      -0.1874,
-      -0.0494
-     ],
-     "bbox_max_m": [
-      0.2864,
-      0.1874,
-      0.3188
-     ],
-     "materials": [
-      "Hero_SM_K_CookieTin",
-      "Break"
-     ]
-    }
-   ],
-   "break_class": "metal",
-   "note": "KAN-22 small props: hero rebuild of the old piece (same frame and box)",
-   "triangles": 6532,
-   "bbox_min_m": [
-    -0.1858,
-    -0.1874,
-    -0.0494
-   ],
-   "bbox_max_m": [
-    0.2864,
-    0.1874,
-    0.3188
-   ],
-   "materials": [
-    "Hero_SM_K_CookieTin"
-   ],
-   "lod_triangles": [
-    6532,
-    2938,
-    1306
-   ],
-   "ucx": 2
-  },
-  {
    "name": "SM_K_TeaBag",
    "file": "SM_K_TeaBag.fbx",
    "set": "hero_props",
@@ -5934,99 +5841,6 @@
     120
    ],
    "ucx": 1
-  },
-  {
-   "name": "SM_K_GroceryBag",
-   "file": "SM_K_GroceryBag.fbx",
-   "set": "hero_props",
-   "textures": {
-    "C": "SM_K_GroceryBag/tex/T_SM_K_GroceryBag_C.png",
-    "N": "SM_K_GroceryBag/tex/T_SM_K_GroceryBag_N.png",
-    "R": "SM_K_GroceryBag/tex/T_SM_K_GroceryBag_R.png"
-   },
-   "collision_lod": 0,
-   "movers": [],
-   "breaks": [
-    {
-     "name": "SM_K_GroceryBag_Brk0",
-     "file": "SM_K_GroceryBag_Brk0.fbx",
-     "triangles": 2068,
-     "bbox_min_m": [
-      -0.2895,
-      -0.3842,
-      0.0
-     ],
-     "bbox_max_m": [
-      0.2895,
-      0.3158,
-      0.34
-     ],
-     "materials": [
-      "Hero_SM_K_GroceryBag",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_GroceryBag_Brk1",
-     "file": "SM_K_GroceryBag_Brk1.fbx",
-     "triangles": 1912,
-     "bbox_min_m": [
-      -0.2895,
-      -0.3842,
-      0.0
-     ],
-     "bbox_max_m": [
-      0.049,
-      0.2627,
-      0.34
-     ],
-     "materials": [
-      "Hero_SM_K_GroceryBag",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_GroceryBag_Brk2",
-     "file": "SM_K_GroceryBag_Brk2.fbx",
-     "triangles": 1952,
-     "bbox_min_m": [
-      -0.0868,
-      -0.3316,
-      0.0011
-     ],
-     "bbox_max_m": [
-      0.1947,
-      0.2106,
-      0.0763
-     ],
-     "materials": [
-      "Hero_SM_K_GroceryBag",
-      "Break"
-     ]
-    }
-   ],
-   "break_class": "paper",
-   "note": "KAN-22 small props: hero rebuild of the old piece (same frame and box)",
-   "triangles": 2216,
-   "bbox_min_m": [
-    -0.2895,
-    -0.3842,
-    0.0
-   ],
-   "bbox_max_m": [
-    0.2895,
-    0.3158,
-    0.34
-   ],
-   "materials": [
-    "Hero_SM_K_GroceryBag"
-   ],
-   "lod_triangles": [
-    2216,
-    1108,
-    554
-   ],
-   "ucx": 5
   },
   {
    "name": "SM_K_CardboardBox",
@@ -6996,232 +6810,6 @@
    "ucx": 1
   },
   {
-   "name": "SM_K_FruitBowl",
-   "file": "SM_K_FruitBowl.fbx",
-   "set": "hero_props",
-   "textures": {
-    "C": "SM_K_FruitBowl/tex/T_SM_K_FruitBowl_C.png",
-    "N": "SM_K_FruitBowl/tex/T_SM_K_FruitBowl_N.png",
-    "R": "SM_K_FruitBowl/tex/T_SM_K_FruitBowl_R.png"
-   },
-   "collision_lod": 0,
-   "movers": [],
-   "breaks": [
-    {
-     "name": "SM_K_FruitBowl_Brk0",
-     "file": "SM_K_FruitBowl_Brk0.fbx",
-     "triangles": 208,
-     "bbox_min_m": [
-      0.0459,
-      -0.2311,
-      0.0362
-     ],
-     "bbox_max_m": [
-      0.1576,
-      -0.137,
-      0.1074
-     ],
-     "materials": [
-      "Hero_SM_K_FruitBowl",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_FruitBowl_Brk1",
-     "file": "SM_K_FruitBowl_Brk1.fbx",
-     "triangles": 488,
-     "bbox_min_m": [
-      -0.2368,
-      -0.2027,
-      0.051
-     ],
-     "bbox_max_m": [
-      -0.1207,
-      0.1355,
-      0.1074
-     ],
-     "materials": [
-      "Hero_SM_K_FruitBowl",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_FruitBowl_Brk2",
-     "file": "SM_K_FruitBowl_Brk2.fbx",
-     "triangles": 438,
-     "bbox_min_m": [
-      -0.1942,
-      0.0632,
-      0.0
-     ],
-     "bbox_max_m": [
-      0.0092,
-      0.164,
-      0.1074
-     ],
-     "materials": [
-      "Hero_SM_K_FruitBowl",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_FruitBowl_Brk3",
-     "file": "SM_K_FruitBowl_Brk3.fbx",
-     "triangles": 694,
-     "bbox_min_m": [
-      -0.1707,
-      -0.0204,
-      0.0175
-     ],
-     "bbox_max_m": [
-      0.2368,
-      0.2255,
-      0.1074
-     ],
-     "materials": [
-      "Hero_SM_K_FruitBowl",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_FruitBowl_Brk4",
-     "file": "SM_K_FruitBowl_Brk4.fbx",
-     "triangles": 1348,
-     "bbox_min_m": [
-      -0.0537,
-      -0.1765,
-      0.0
-     ],
-     "bbox_max_m": [
-      0.236,
-      0.1211,
-      0.1074
-     ],
-     "materials": [
-      "Hero_SM_K_FruitBowl",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_FruitBowl_Brk5",
-     "file": "SM_K_FruitBowl_Brk5.fbx",
-     "triangles": 936,
-     "bbox_min_m": [
-      -0.0856,
-      -0.2368,
-      0.0
-     ],
-     "bbox_max_m": [
-      0.0633,
-      0.0989,
-      0.1074
-     ],
-     "materials": [
-      "Hero_SM_K_FruitBowl",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_FruitBowl_Brk6",
-     "file": "SM_K_FruitBowl_Brk6.fbx",
-     "triangles": 1126,
-     "bbox_min_m": [
-      -0.179,
-      -0.2368,
-      0.0
-     ],
-     "bbox_max_m": [
-      -0.0004,
-      0.1352,
-      0.1074
-     ],
-     "materials": [
-      "Hero_SM_K_FruitBowl",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_FruitBowl_Brk7",
-     "file": "SM_K_FruitBowl_Brk7.fbx",
-     "triangles": 604,
-     "bbox_min_m": [
-      -0.0716,
-      0.0121,
-      0.0227
-     ],
-     "bbox_max_m": [
-      0.2363,
-      0.2368,
-      0.1074
-     ],
-     "materials": [
-      "Hero_SM_K_FruitBowl",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_FruitBowl_Brk8",
-     "file": "SM_K_FruitBowl_Brk8.fbx",
-     "triangles": 2956,
-     "bbox_min_m": [
-      -0.1419,
-      -0.1011,
-      0.0121
-     ],
-     "bbox_max_m": [
-      0.1274,
-      0.1216,
-      0.1523
-     ],
-     "materials": [
-      "Hero_SM_K_FruitBowl",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_K_FruitBowl_Brk9",
-     "file": "SM_K_FruitBowl_Brk9.fbx",
-     "triangles": 120,
-     "bbox_min_m": [
-      -0.2253,
-      -0.1953,
-      0.0018
-     ],
-     "bbox_max_m": [
-      0.071,
-      0.1797,
-      0.0045
-     ],
-     "materials": [
-      "Hero_SM_K_FruitBowl",
-      "Break"
-     ]
-    }
-   ],
-   "break_class": "ceramic",
-   "note": "KAN-22 small props: hero rebuild of the old piece (same frame and box)",
-   "triangles": 5404,
-   "bbox_min_m": [
-    -0.2368,
-    -0.2368,
-    0.0
-   ],
-   "bbox_max_m": [
-    0.2368,
-    0.2368,
-    0.1523
-   ],
-   "materials": [
-    "Hero_SM_K_FruitBowl"
-   ],
-   "lod_triangles": [
-    5404,
-    2430,
-    1080
-   ],
-   "ucx": 10
-  },
-  {
    "name": "SM_K_DishRack",
    "file": "SM_K_DishRack.fbx",
    "set": "hero_props",
@@ -7690,85 +7278,6 @@
    "ucx": 9
   },
   {
-   "name": "SM_V3_Glasses",
-   "file": "SM_V3_Glasses.fbx",
-   "set": "hero_props",
-   "textures": {
-    "C": "SM_V3_Glasses/tex/T_SM_V3_Glasses_C.png",
-    "N": "SM_V3_Glasses/tex/T_SM_V3_Glasses_N.png",
-    "R": "SM_V3_Glasses/tex/T_SM_V3_Glasses_R.png"
-   },
-   "collision_lod": 0,
-   "movers": [],
-   "breaks": [
-    {
-     "name": "SM_V3_Glasses_Brk0",
-     "file": "SM_V3_Glasses_Brk0.fbx",
-     "triangles": 696,
-     "bbox_min_m": [
-      -0.0695,
-      -0.0037,
-      -0.01
-     ],
-     "bbox_max_m": [
-      0.0695,
-      0.0419,
-      0.0416
-     ],
-     "materials": [
-      "Hero_SM_V3_Glasses",
-      "Break"
-     ]
-    },
-    {
-     "name": "SM_V3_Glasses_Brk1",
-     "file": "SM_V3_Glasses_Brk1.fbx",
-     "triangles": 376,
-     "bbox_min_m": [
-      -0.0642,
-      -0.0018,
-      -0.0074
-     ],
-     "bbox_max_m": [
-      0.0642,
-      -0.0003,
-      0.0389
-     ],
-     "materials": [
-      "Hero_SM_V3_Glasses",
-      "Hero_Glass",
-      "Break"
-     ]
-    }
-   ],
-   "break_class": "glass",
-   "note": "KAN-22 small props: hero rebuild of the old piece (same frame and box)",
-   "glass": {
-    "opacity": 0.08
-   },
-   "triangles": 1072,
-   "bbox_min_m": [
-    -0.0695,
-    -0.0037,
-    -0.01
-   ],
-   "bbox_max_m": [
-    0.0695,
-    0.0419,
-    0.0416
-   ],
-   "materials": [
-    "Hero_SM_V3_Glasses",
-    "Hero_Glass"
-   ],
-   "lod_triangles": [
-    1072,
-    536,
-    268
-   ],
-   "ucx": 3
-  },
-  {
    "name": "SM_L_Coin",
    "file": "SM_L_Coin.fbx",
    "set": "hero_props",
@@ -7837,41 +7346,6 @@
     56
    ],
    "ucx": 1
-  },
-  {
-   "name": "SM_L_Sock",
-   "file": "SM_L_Sock.fbx",
-   "set": "hero_props",
-   "textures": {
-    "C": "SM_L_Sock/tex/T_SM_L_Sock_C.png",
-    "N": "SM_L_Sock/tex/T_SM_L_Sock_N.png",
-    "R": "SM_L_Sock/tex/T_SM_L_Sock_R.png"
-   },
-   "collision_lod": 0,
-   "movers": [],
-   "breaks": [],
-   "break_class": "cloth",
-   "note": "KAN-22 small props: hero rebuild of the old piece (same frame and box)",
-   "triangles": 576,
-   "bbox_min_m": [
-    -0.2774,
-    -0.1789,
-    0.0038
-   ],
-   "bbox_max_m": [
-    0.2226,
-    0.1277,
-    0.0909
-   ],
-   "materials": [
-    "Hero_SM_L_Sock"
-   ],
-   "lod_triangles": [
-    576,
-    288,
-    144
-   ],
-   "ucx": 2
   },
   {
    "name": "SM_L_YarnBall",
@@ -8158,6 +7632,532 @@
    "ucx": 2
   },
   {
+   "name": "SM_K_FruitBowl",
+   "file": "SM_K_FruitBowl.fbx",
+   "set": "hero_props",
+   "textures": {
+    "C": "SM_K_FruitBowl/tex/T_SM_K_FruitBowl_C.png",
+    "N": "SM_K_FruitBowl/tex/T_SM_K_FruitBowl_N.png",
+    "R": "SM_K_FruitBowl/tex/T_SM_K_FruitBowl_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_K_FruitBowl_Brk0",
+     "file": "SM_K_FruitBowl_Brk0.fbx",
+     "triangles": 274,
+     "bbox_min_m": [
+      -0.0114,
+      -0.2368,
+      0.0556
+     ],
+     "bbox_max_m": [
+      0.1623,
+      -0.1572,
+      0.1768
+     ],
+     "materials": [
+      "Hero_SM_K_FruitBowl",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_FruitBowl_Brk1",
+     "file": "SM_K_FruitBowl_Brk1.fbx",
+     "triangles": 656,
+     "bbox_min_m": [
+      -0.2368,
+      -0.2362,
+      0.018
+     ],
+     "bbox_max_m": [
+      0.0082,
+      0.054,
+      0.1768
+     ],
+     "materials": [
+      "Hero_SM_K_FruitBowl",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_FruitBowl_Brk2",
+     "file": "SM_K_FruitBowl_Brk2.fbx",
+     "triangles": 428,
+     "bbox_min_m": [
+      -0.2174,
+      0.0803,
+      0.0046
+     ],
+     "bbox_max_m": [
+      0.0078,
+      0.1644,
+      0.1768
+     ],
+     "materials": [
+      "Hero_SM_K_FruitBowl",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_FruitBowl_Brk3",
+     "file": "SM_K_FruitBowl_Brk3.fbx",
+     "triangles": 250,
+     "bbox_min_m": [
+      -0.1808,
+      0.1492,
+      0.0667
+     ],
+     "bbox_max_m": [
+      -0.0172,
+      0.2357,
+      0.1768
+     ],
+     "materials": [
+      "Hero_SM_K_FruitBowl",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_FruitBowl_Brk4",
+     "file": "SM_K_FruitBowl_Brk4.fbx",
+     "triangles": 1262,
+     "bbox_min_m": [
+      -0.0515,
+      -0.1749,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.2338,
+      0.1348,
+      0.1768
+     ],
+     "materials": [
+      "Hero_SM_K_FruitBowl",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_FruitBowl_Brk5",
+     "file": "SM_K_FruitBowl_Brk5.fbx",
+     "triangles": 902,
+     "bbox_min_m": [
+      -0.0744,
+      -0.2358,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.077,
+      0.11,
+      0.1752
+     ],
+     "materials": [
+      "Hero_SM_K_FruitBowl",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_FruitBowl_Brk6",
+     "file": "SM_K_FruitBowl_Brk6.fbx",
+     "triangles": 722,
+     "bbox_min_m": [
+      -0.0972,
+      -0.0361,
+      0.0212
+     ],
+     "bbox_max_m": [
+      0.2368,
+      0.2368,
+      0.1768
+     ],
+     "materials": [
+      "Hero_SM_K_FruitBowl",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_FruitBowl_Brk7",
+     "file": "SM_K_FruitBowl_Brk7.fbx",
+     "triangles": 1074,
+     "bbox_min_m": [
+      -0.2305,
+      -0.146,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.0027,
+      0.1341,
+      0.1768
+     ],
+     "materials": [
+      "Hero_SM_K_FruitBowl",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_FruitBowl_Brk8",
+     "file": "SM_K_FruitBowl_Brk8.fbx",
+     "triangles": 4344,
+     "bbox_min_m": [
+      -0.1602,
+      -0.1503,
+      0.0185
+     ],
+     "bbox_max_m": [
+      0.1642,
+      0.1446,
+      0.2392
+     ],
+     "materials": [
+      "Hero_SM_K_FruitBowl",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_FruitBowl_Brk9",
+     "file": "SM_K_FruitBowl_Brk9.fbx",
+     "triangles": 120,
+     "bbox_min_m": [
+      -0.2253,
+      -0.1953,
+      0.0018
+     ],
+     "bbox_max_m": [
+      0.071,
+      0.1797,
+      0.0045
+     ],
+     "materials": [
+      "Hero_SM_K_FruitBowl",
+      "Break"
+     ]
+    }
+   ],
+   "break_class": "ceramic",
+   "note": "KAN-22 small props: hero rebuild of the old piece (same frame and box)",
+   "triangles": 6696,
+   "bbox_min_m": [
+    -0.2368,
+    -0.2368,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.2368,
+    0.2368,
+    0.2392
+   ],
+   "materials": [
+    "Hero_SM_K_FruitBowl"
+   ],
+   "lod_triangles": [
+    6696,
+    3012,
+    1338
+   ],
+   "ucx": 18
+  },
+  {
+   "name": "SM_V3_Glasses",
+   "file": "SM_V3_Glasses.fbx",
+   "set": "hero_props",
+   "textures": {
+    "C": "SM_V3_Glasses/tex/T_SM_V3_Glasses_C.png",
+    "N": "SM_V3_Glasses/tex/T_SM_V3_Glasses_N.png",
+    "R": "SM_V3_Glasses/tex/T_SM_V3_Glasses_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_V3_Glasses_Brk0",
+     "file": "SM_V3_Glasses_Brk0.fbx",
+     "triangles": 1940,
+     "bbox_min_m": [
+      -0.0695,
+      -0.0038,
+      0.0003
+     ],
+     "bbox_max_m": [
+      0.0695,
+      0.0425,
+      0.0524
+     ],
+     "materials": [
+      "Hero_SM_V3_Glasses",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_V3_Glasses_Brk1",
+     "file": "SM_V3_Glasses_Brk1.fbx",
+     "triangles": 632,
+     "bbox_min_m": [
+      -0.0642,
+      -0.0018,
+      0.0032
+     ],
+     "bbox_max_m": [
+      0.0642,
+      -0.0003,
+      0.0495
+     ],
+     "materials": [
+      "Hero_SM_V3_Glasses",
+      "Hero_Glass",
+      "Break"
+     ]
+    }
+   ],
+   "break_class": "glass",
+   "note": "KAN-22 small props: hero rebuild of the old piece (same frame and box)",
+   "glass": {
+    "opacity": 0.08
+   },
+   "triangles": 2572,
+   "bbox_min_m": [
+    -0.0695,
+    -0.0038,
+    0.0003
+   ],
+   "bbox_max_m": [
+    0.0695,
+    0.0425,
+    0.0524
+   ],
+   "materials": [
+    "Hero_SM_V3_Glasses",
+    "Hero_Glass"
+   ],
+   "lod_triangles": [
+    2572,
+    1286,
+    643
+   ],
+   "ucx": 3
+  },
+  {
+   "name": "SM_L_Sock",
+   "file": "SM_L_Sock.fbx",
+   "set": "hero_props",
+   "textures": {
+    "C": "SM_L_Sock/tex/T_SM_L_Sock_C.png",
+    "N": "SM_L_Sock/tex/T_SM_L_Sock_N.png",
+    "R": "SM_L_Sock/tex/T_SM_L_Sock_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [],
+   "break_class": "cloth",
+   "note": "KAN-22 small props: hero rebuild of the old piece (same frame and box)",
+   "triangles": 5100,
+   "bbox_min_m": [
+    -0.2783,
+    -0.1971,
+    0.0003
+   ],
+   "bbox_max_m": [
+    0.2404,
+    0.1259,
+    0.0826
+   ],
+   "materials": [
+    "Hero_SM_L_Sock"
+   ],
+   "lod_triangles": [
+    5100,
+    2550,
+    1274
+   ],
+   "ucx": 3
+  },
+  {
+   "name": "SM_K_GroceryBag",
+   "file": "SM_K_GroceryBag.fbx",
+   "set": "hero_props",
+   "textures": {
+    "C": "SM_K_GroceryBag/tex/T_SM_K_GroceryBag_C.png",
+    "N": "SM_K_GroceryBag/tex/T_SM_K_GroceryBag_N.png",
+    "R": "SM_K_GroceryBag/tex/T_SM_K_GroceryBag_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_K_GroceryBag_Brk0",
+     "file": "SM_K_GroceryBag_Brk0.fbx",
+     "triangles": 2910,
+     "bbox_min_m": [
+      -0.2941,
+      -0.3861,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.0936,
+      0.3175,
+      0.3415
+     ],
+     "materials": [
+      "Hero_SM_K_GroceryBag",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_GroceryBag_Brk1",
+     "file": "SM_K_GroceryBag_Brk1.fbx",
+     "triangles": 2122,
+     "bbox_min_m": [
+      -0.0291,
+      -0.3744,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.3147,
+      0.3175,
+      0.341
+     ],
+     "materials": [
+      "Hero_SM_K_GroceryBag",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_GroceryBag_Brk2",
+     "file": "SM_K_GroceryBag_Brk2.fbx",
+     "triangles": 1388,
+     "bbox_min_m": [
+      -0.1795,
+      -0.3801,
+      0.0009
+     ],
+     "bbox_max_m": [
+      0.2087,
+      0.0368,
+      0.0793
+     ],
+     "materials": [
+      "Hero_SM_K_GroceryBag",
+      "Break"
+     ]
+    }
+   ],
+   "break_class": "paper",
+   "note": "KAN-22 small props: hero rebuild of the old piece (same frame and box)",
+   "triangles": 6420,
+   "bbox_min_m": [
+    -0.2941,
+    -0.3861,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.3147,
+    0.3175,
+    0.3415
+   ],
+   "materials": [
+    "Hero_SM_K_GroceryBag"
+   ],
+   "lod_triangles": [
+    6420,
+    3210,
+    1604
+   ],
+   "ucx": 6
+  },
+  {
+   "name": "SM_K_CookieTin",
+   "file": "SM_K_CookieTin.fbx",
+   "set": "hero_props",
+   "textures": {
+    "C": "SM_K_CookieTin/tex/T_SM_K_CookieTin_C.png",
+    "N": "SM_K_CookieTin/tex/T_SM_K_CookieTin_N.png",
+    "R": "SM_K_CookieTin/tex/T_SM_K_CookieTin_R.png"
+   },
+   "collision_lod": 0,
+   "movers": [],
+   "breaks": [
+    {
+     "name": "SM_K_CookieTin_Brk0",
+     "file": "SM_K_CookieTin_Brk0.fbx",
+     "triangles": 1924,
+     "bbox_min_m": [
+      -0.1858,
+      -0.1858,
+      0.0
+     ],
+     "bbox_max_m": [
+      0.1858,
+      0.1858,
+      0.1563
+     ],
+     "materials": [
+      "Hero_SM_K_CookieTin",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_CookieTin_Brk1",
+     "file": "SM_K_CookieTin_Brk1.fbx",
+     "triangles": 3440,
+     "bbox_min_m": [
+      -0.1808,
+      -0.1808,
+      0.0789
+     ],
+     "bbox_max_m": [
+      0.1808,
+      0.1808,
+      0.1186
+     ],
+     "materials": [
+      "Hero_SM_K_CookieTin",
+      "Break"
+     ]
+    },
+    {
+     "name": "SM_K_CookieTin_Brk2",
+     "file": "SM_K_CookieTin_Brk2.fbx",
+     "triangles": 896,
+     "bbox_min_m": [
+      0.0909,
+      -0.1874,
+      0.0005
+     ],
+     "bbox_max_m": [
+      0.2341,
+      0.1874,
+      0.3644
+     ],
+     "materials": [
+      "Hero_SM_K_CookieTin",
+      "Break"
+     ]
+    }
+   ],
+   "break_class": "metal",
+   "note": "KAN-22 small props: hero rebuild of the old piece (same frame and box)",
+   "triangles": 6260,
+   "bbox_min_m": [
+    -0.1858,
+    -0.1874,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.2341,
+    0.1874,
+    0.3644
+   ],
+   "materials": [
+    "Hero_SM_K_CookieTin"
+   ],
+   "lod_triangles": [
+    6260,
+    2816,
+    1251
+   ],
+   "ucx": 2
+  },
+  {
    "name": "SM_K_KnifeBlock",
    "file": "SM_K_KnifeBlock.fbx",
    "set": "hero_props",
@@ -8191,10 +8191,10 @@
     {
      "name": "SM_K_KnifeBlock_Brk1",
      "file": "SM_K_KnifeBlock_Brk1.fbx",
-     "triangles": 1340,
+     "triangles": 1740,
      "bbox_min_m": [
-      -0.0584,
-      -0.0558,
+      -0.06,
+      -0.0215,
       0.3118
      ],
      "bbox_max_m": [
@@ -8210,7 +8210,7 @@
    ],
    "break_class": "wood",
    "note": "KAN-22 small props: hero rebuild of the old piece (same frame and box)",
-   "triangles": 1352,
+   "triangles": 1752,
    "bbox_min_m": [
     -0.0842,
     -0.1579,
@@ -8225,9 +8225,9 @@
     "Hero_SM_K_KnifeBlock"
    ],
    "lod_triangles": [
-    1352,
-    608,
-    270
+    1752,
+    788,
+    350
    ],
    "ucx": 1
   }

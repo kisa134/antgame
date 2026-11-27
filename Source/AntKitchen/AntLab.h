@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "KitchenInteractables.h"
+#include "KitchenArt.h"
 #include "AntLab.generated.h"
 
 class AAntKitchenGameMode;
@@ -20,7 +21,11 @@ class AAntCharacter;
  * choice travels to the clients in AAntGameState::LabVariant. Process-wide: one world plays at a time.
  * Units: the JSON is in metres from the flat's inner south-west corner; everything below is already in uu (world).
  */
-struct FAntLabBox { FVector C; FVector S; FRotator R; FLinearColor Col; FString Kind; FString Room; FString Tag; bool bClimb = false; bool bCollide = true; };
+struct FAntLabBox { FVector C; FVector S; FRotator R; FLinearColor Col; FString Kind; FString Room; FString Tag; FString Art; bool bClimb = false; bool bCollide = true; };
+/** KAN-40. A basin of the liquid simulation (UAntFluidWorld), world uu: the rectangle, the level of its bed (measured at Ref), how far above and below it the bed is looked for, the cell. */
+struct FAntLabBasin { FString Name; FVector2D Min, Max, Ref; float Z = 0.f, Up = 45.f, Down = 40.f, Dx = 25.f, Fill = -1.e9f; int32 Sub = 1; };
+/** KAN-40. Where an art group of the kitchen stands in the flat: K (the kitchen, a plain offset) and L (the flat: offset, yaw, scale per axis). */
+struct FAntLabHome { FString Id; FTransform K, L; };
 struct FAntLabZone { FString Kind; FBox Box; float Temp = 0.f; float Rate = 0.f; FString Note; };
 struct FAntLabHatchDef { FString Id; FString Name; FVector C; FVector S; int32 Class = 1; TArray<FVector> Use; FString Note; };
 struct FAntLabRoom { FString Id; FString Name; FBox2D Rect; FString Hero; FString Physics; float Area = 0.f; };
@@ -51,6 +56,16 @@ struct FAntLabVariant
 	TArray<FVector2D> Patrol;
 	TArray<FAntLabNode> Nodes;
 	TArray<FAntLabEdge> Edges;
+
+	// ---- KAN-40: the flat's own models. Art and ArtMovers have the format of the kitchen's tables (KitchenArt::Instances() and
+	// Movers() hand them out while this variant is active), so the builder, the movers, the gadgets and AntWreck work from them.
+	TArray<FKitchenArtInst> Art;
+	TArray<FKitchenArtMover> ArtMovers;
+	TArray<FString> ArtNames, ArtGroups, ArtTexts;   // what the rows point into and the group of every row; not changed after loading
+	TSet<FString> ArtBuilt;                          // groups whose models this build has: their grey boxes are not built
+	TSet<FString> ArtClimb;                          // groups ants climb (the rest is smooth furniture, like the boxes it replaces)
+	TArray<FAntLabHome> Homes;
+	TArray<FAntLabBasin> Basins;
 
 	/** Metres (flat) -> world uu. */
 	FVector W(const FVector& Metres) const { return Origin + Metres * M; }
