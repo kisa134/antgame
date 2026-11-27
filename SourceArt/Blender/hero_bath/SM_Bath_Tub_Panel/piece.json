@@ -1,0 +1,98 @@
+{
+ "name": "SM_Bath_Tub_Panel",
+ "file": "SM_Bath_Tub_Panel.fbx",
+ "set": "hero_bath",
+ "break_class": "plastic",
+ "textures": {
+  "C": "SM_Bath_Tub_Panel/tex/T_SM_Bath_Tub_Panel_C.png",
+  "N": "SM_Bath_Tub_Panel/tex/T_SM_Bath_Tub_Panel_N.png",
+  "R": "SM_Bath_Tub_Panel/tex/T_SM_Bath_Tub_Panel_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_Bath_Tub_Panel_Brk0",
+   "file": "SM_Bath_Tub_Panel_Brk0.fbx",
+   "triangles": 448,
+   "bbox_min_m": [
+    -0.0172,
+    -0.0052,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.445,
+    0.0,
+    0.478
+   ],
+   "materials": [
+    "Hero_SM_Bath_Tub_Panel",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Tub_Panel_Brk1",
+   "file": "SM_Bath_Tub_Panel_Brk1.fbx",
+   "triangles": 692,
+   "bbox_min_m": [
+    -0.445,
+    -0.0106,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.1237,
+    0.0,
+    0.478
+   ],
+   "materials": [
+    "Hero_SM_Bath_Tub_Panel",
+    "Break"
+   ]
+  }
+ ],
+ "note": "the sliding half of the bath screen: ribbed plastic sheet with a grip",
+ "kept_slots": [],
+ "triangles": 816,
+ "bbox_min_m": [
+  -0.445,
+  -0.0106,
+  0.0
+ ],
+ "bbox_max_m": [
+  0.445,
+  0.0,
+  0.478
+ ],
+ "materials": [
+  "Hero_SM_Bath_Tub_Panel"
+ ],
+ "lod_triangles": [
+  816,
+  284,
+  96
+ ],
+ "ucx": 1,
+ "room": "bath",
+ "ru": "Сдвижная панель экрана ванны",
+ "attach": {
+  "parent": "SM_Bath_Tub",
+  "at_m": [
+   [
+    0.415,
+    -0.342,
+    0.021
+   ]
+  ],
+  "move": "slide",
+  "slide_m": [
+   -0.8,
+   0,
+   0
+  ]
+ },
+ "size_uu": [
+  1691,
+  20,
+  908
+ ]
+}

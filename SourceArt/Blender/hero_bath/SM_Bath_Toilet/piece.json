@@ -1,0 +1,163 @@
+{
+ "name": "SM_Bath_Toilet",
+ "file": "SM_Bath_Toilet.fbx",
+ "set": "hero_bath",
+ "break_class": "ceramic",
+ "textures": {
+  "C": "SM_Bath_Toilet/tex/T_SM_Bath_Toilet_C.png",
+  "N": "SM_Bath_Toilet/tex/T_SM_Bath_Toilet_N.png",
+  "R": "SM_Bath_Toilet/tex/T_SM_Bath_Toilet_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_Bath_Toilet_Brk0",
+   "file": "SM_Bath_Toilet_Brk0.fbx",
+   "triangles": 1906,
+   "bbox_min_m": [
+    -0.1838,
+    -0.184,
+    -0.0
+   ],
+   "bbox_max_m": [
+    0.185,
+    0.3,
+    0.405
+   ],
+   "materials": [
+    "Hero_SM_Bath_Toilet",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Toilet_Brk1",
+   "file": "SM_Bath_Toilet_Brk1.fbx",
+   "triangles": 532,
+   "bbox_min_m": [
+    -0.261,
+    0.089,
+    0.174
+   ],
+   "bbox_max_m": [
+    0.0857,
+    0.3,
+    0.425
+   ],
+   "materials": [
+    "Hero_SM_Bath_Toilet",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Toilet_Brk2",
+   "file": "SM_Bath_Toilet_Brk2.fbx",
+   "triangles": 732,
+   "bbox_min_m": [
+    -0.0161,
+    0.14,
+    0.405
+   ],
+   "bbox_max_m": [
+    0.19,
+    0.3,
+    0.76
+   ],
+   "materials": [
+    "Hero_SM_Bath_Toilet",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Toilet_Brk3",
+   "file": "SM_Bath_Toilet_Brk3.fbx",
+   "triangles": 708,
+   "bbox_min_m": [
+    -0.178,
+    0.152,
+    0.42
+   ],
+   "bbox_max_m": [
+    0.178,
+    0.288,
+    0.73
+   ],
+   "materials": [
+    "Hero_SM_Bath_Toilet",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Toilet_Brk4",
+   "file": "SM_Bath_Toilet_Brk4.fbx",
+   "triangles": 1334,
+   "bbox_min_m": [
+    -0.185,
+    -0.33,
+    -0.0
+   ],
+   "bbox_max_m": [
+    0.1759,
+    -0.0087,
+    0.405
+   ],
+   "materials": [
+    "Hero_SM_Bath_Toilet",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Toilet_Brk5",
+   "file": "SM_Bath_Toilet_Brk5.fbx",
+   "triangles": 732,
+   "bbox_min_m": [
+    -0.19,
+    0.14,
+    0.405
+   ],
+   "bbox_max_m": [
+    0.0539,
+    0.3,
+    0.76
+   ],
+   "materials": [
+    "Hero_SM_Bath_Toilet",
+    "Break"
+   ]
+  }
+ ],
+ "note": "toilet: ceramic pan with a real bowl and water, hollow cistern with fill valve, float and flush valve, supply hose from the wall valve",
+ "kept_slots": [],
+ "triangles": 3972,
+ "bbox_min_m": [
+  -0.261,
+  -0.33,
+  -0.0
+ ],
+ "bbox_max_m": [
+  0.19,
+  0.3,
+  0.76
+ ],
+ "materials": [
+  "Hero_SM_Bath_Toilet"
+ ],
+ "lod_triangles": [
+  3972,
+  1390,
+  476
+ ],
+ "ucx": 15,
+ "room": "bath",
+ "ru": "Унитаз с бачком",
+ "children": [
+  "SM_Bath_Toilet_Lid",
+  "SM_Bath_Toilet_Seat",
+  "SM_Bath_Toilet_TankLid"
+ ],
+ "size_uu": [
+  857,
+  1197,
+  1444
+ ]
+}

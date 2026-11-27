@@ -1,0 +1,101 @@
+{
+ "name": "SM_Bath_PaperHolder",
+ "file": "SM_Bath_PaperHolder.fbx",
+ "set": "hero_bath",
+ "break_class": "paper",
+ "textures": {
+  "C": "SM_Bath_PaperHolder/tex/T_SM_Bath_PaperHolder_C.png",
+  "N": "SM_Bath_PaperHolder/tex/T_SM_Bath_PaperHolder_N.png",
+  "R": "SM_Bath_PaperHolder/tex/T_SM_Bath_PaperHolder_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_Bath_PaperHolder_Brk0",
+   "file": "SM_Bath_PaperHolder_Brk0.fbx",
+   "triangles": 304,
+   "bbox_min_m": [
+    -0.1,
+    -0.121,
+    0.6953
+   ],
+   "bbox_max_m": [
+    0.1,
+    0.0,
+    0.793
+   ],
+   "materials": [
+    "Hero_SM_Bath_PaperHolder",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_PaperHolder_Brk1",
+   "file": "SM_Bath_PaperHolder_Brk1.fbx",
+   "triangles": 544,
+   "bbox_min_m": [
+    -0.05,
+    -0.122,
+    0.643
+   ],
+   "bbox_max_m": [
+    0.05,
+    -0.008,
+    0.757
+   ],
+   "materials": [
+    "Hero_SM_Bath_PaperHolder",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_PaperHolder_Brk2",
+   "file": "SM_Bath_PaperHolder_Brk2.fbx",
+   "triangles": 696,
+   "bbox_min_m": [
+    -0.0502,
+    -0.2503,
+    0.0088
+   ],
+   "bbox_max_m": [
+    0.0502,
+    -0.0646,
+    0.7645
+   ],
+   "materials": [
+    "Hero_SM_Bath_PaperHolder",
+    "Break"
+   ]
+  }
+ ],
+ "note": "paper holder with a phone shelf: chrome plate and arm, the roll on its core, the tail unrolled to the floor (the ants climb it)",
+ "kept_slots": [],
+ "triangles": 1544,
+ "bbox_min_m": [
+  -0.1,
+  -0.2503,
+  0.0088
+ ],
+ "bbox_max_m": [
+  0.1,
+  0.0,
+  0.793
+ ],
+ "materials": [
+  "Hero_SM_Bath_PaperHolder"
+ ],
+ "lod_triangles": [
+  1544,
+  539,
+  184
+ ],
+ "ucx": 4,
+ "room": "bath",
+ "ru": "Держатель туалетной бумаги с полкой",
+ "size_uu": [
+  380,
+  476,
+  1490
+ ]
+}

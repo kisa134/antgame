@@ -1,0 +1,95 @@
+{
+ "name": "SM_Bath_Toilet_Lid",
+ "file": "SM_Bath_Toilet_Lid.fbx",
+ "set": "hero_bath",
+ "break_class": "plastic",
+ "textures": {
+  "C": "SM_Bath_Toilet_Lid/tex/T_SM_Bath_Toilet_Lid_C.png",
+  "N": "SM_Bath_Toilet_Lid/tex/T_SM_Bath_Toilet_Lid_N.png",
+  "R": "SM_Bath_Toilet_Lid/tex/T_SM_Bath_Toilet_Lid_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_Bath_Toilet_Lid_Brk0",
+   "file": "SM_Bath_Toilet_Lid_Brk0.fbx",
+   "triangles": 632,
+   "bbox_min_m": [
+    -0.0443,
+    -0.436,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.192,
+    0.012,
+    0.022
+   ],
+   "materials": [
+    "Hero_SM_Bath_Toilet_Lid",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Toilet_Lid_Brk1",
+   "file": "SM_Bath_Toilet_Lid_Brk1.fbx",
+   "triangles": 656,
+   "bbox_min_m": [
+    -0.192,
+    -0.4295,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.0884,
+    0.012,
+    0.022
+   ],
+   "materials": [
+    "Hero_SM_Bath_Toilet_Lid",
+    "Break"
+   ]
+  }
+ ],
+ "note": "toilet lid, domed",
+ "kept_slots": [],
+ "triangles": 440,
+ "bbox_min_m": [
+  -0.192,
+  -0.436,
+  0.0
+ ],
+ "bbox_max_m": [
+  0.192,
+  0.012,
+  0.022
+ ],
+ "materials": [
+  "Hero_SM_Bath_Toilet_Lid"
+ ],
+ "lod_triangles": [
+  440,
+  154,
+  52
+ ],
+ "ucx": 1,
+ "room": "bath",
+ "ru": "Крышка унитаза",
+ "attach": {
+  "parent": "SM_Bath_Toilet",
+  "at_m": [
+   [
+    0.0,
+    0.1,
+    0.426
+   ]
+  ],
+  "move": "hinge",
+  "axis": "X",
+  "open_deg": -92
+ },
+ "size_uu": [
+  730,
+  851,
+  42
+ ]
+}

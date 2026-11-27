@@ -1,0 +1,85 @@
+{
+ "name": "SM_Bath_TowelRail",
+ "file": "SM_Bath_TowelRail.fbx",
+ "set": "hero_bath",
+ "break_class": "metal",
+ "textures": {
+  "C": "SM_Bath_TowelRail/tex/T_SM_Bath_TowelRail_C.png",
+  "N": "SM_Bath_TowelRail/tex/T_SM_Bath_TowelRail_N.png",
+  "R": "SM_Bath_TowelRail/tex/T_SM_Bath_TowelRail_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_Bath_TowelRail_Brk0",
+   "file": "SM_Bath_TowelRail_Brk0.fbx",
+   "triangles": 792,
+   "bbox_min_m": [
+    -0.265,
+    -0.0984,
+    0.85
+   ],
+   "bbox_max_m": [
+    0.265,
+    -0.055,
+    1.664
+   ],
+   "materials": [
+    "Hero_SM_Bath_TowelRail",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_TowelRail_Brk1",
+   "file": "SM_Bath_TowelRail_Brk1.fbx",
+   "triangles": 2368,
+   "bbox_min_m": [
+    -0.291,
+    -0.088,
+    0.779
+   ],
+   "bbox_max_m": [
+    0.291,
+    0.0,
+    1.664
+   ],
+   "materials": [
+    "Hero_SM_Bath_TowelRail",
+    "Break"
+   ]
+  }
+ ],
+ "note": "heated towel rail: chrome ladder, capped uprights, bowed rungs, wall stands, valves and tails into the wall",
+ "kept_slots": [],
+ "triangles": 3160,
+ "bbox_min_m": [
+  -0.291,
+  -0.0984,
+  0.779
+ ],
+ "bbox_max_m": [
+  0.291,
+  0.0,
+  1.664
+ ],
+ "materials": [
+  "Hero_SM_Bath_TowelRail"
+ ],
+ "lod_triangles": [
+  3160,
+  1106,
+  379
+ ],
+ "ucx": 3,
+ "room": "bath",
+ "ru": "Полотенцесушитель",
+ "children": [
+  "SM_Bath_Towel"
+ ],
+ "size_uu": [
+  1106,
+  187,
+  1681
+ ]
+}

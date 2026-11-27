@@ -1,0 +1,142 @@
+{
+ "name": "SM_Bath_Cabinet",
+ "file": "SM_Bath_Cabinet.fbx",
+ "set": "hero_bath",
+ "break_class": "wood",
+ "textures": {
+  "C": "SM_Bath_Cabinet/tex/T_SM_Bath_Cabinet_C.png",
+  "N": "SM_Bath_Cabinet/tex/T_SM_Bath_Cabinet_N.png",
+  "R": "SM_Bath_Cabinet/tex/T_SM_Bath_Cabinet_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_Bath_Cabinet_Brk0",
+   "file": "SM_Bath_Cabinet_Brk0.fbx",
+   "triangles": 108,
+   "bbox_min_m": [
+    -0.3,
+    -0.122,
+    1.15
+   ],
+   "bbox_max_m": [
+    -0.285,
+    0.0,
+    1.85
+   ],
+   "materials": [
+    "Hero_SM_Bath_Cabinet",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Cabinet_Brk1",
+   "file": "SM_Bath_Cabinet_Brk1.fbx",
+   "triangles": 108,
+   "bbox_min_m": [
+    0.285,
+    -0.122,
+    1.15
+   ],
+   "bbox_max_m": [
+    0.3,
+    0.0,
+    1.85
+   ],
+   "materials": [
+    "Hero_SM_Bath_Cabinet",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Cabinet_Brk2",
+   "file": "SM_Bath_Cabinet_Brk2.fbx",
+   "triangles": 216,
+   "bbox_min_m": [
+    -0.286,
+    -0.122,
+    1.15
+   ],
+   "bbox_max_m": [
+    0.286,
+    0.0,
+    1.85
+   ],
+   "materials": [
+    "Hero_SM_Bath_Cabinet",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Cabinet_Brk3.001",
+   "file": "SM_Bath_Cabinet_Brk3.001.fbx",
+   "triangles": 312,
+   "bbox_min_m": [
+    -0.286,
+    -0.11,
+    1.384
+   ],
+   "bbox_max_m": [
+    0.286,
+    -0.005,
+    1.626
+   ],
+   "materials": [
+    "Hero_SM_Bath_Cabinet",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_Bath_Cabinet_Brk4",
+   "file": "SM_Bath_Cabinet_Brk4.fbx",
+   "triangles": 1868,
+   "bbox_min_m": [
+    -0.224,
+    -0.0956,
+    1.165
+   ],
+   "bbox_max_m": [
+    0.2,
+    -0.025,
+    1.786
+   ],
+   "materials": [
+    "Hero_SM_Bath_Cabinet",
+    "Break"
+   ]
+  }
+ ],
+ "note": "mirror cabinet on the wall: white carcass, glass shelves on pins; tumbler with toothbrushes, toothpaste, jars, a spray, plasters inside",
+ "kept_slots": [],
+ "triangles": 2624,
+ "bbox_min_m": [
+  -0.3,
+  -0.122,
+  1.15
+ ],
+ "bbox_max_m": [
+  0.3,
+  0.0,
+  1.85
+ ],
+ "materials": [
+  "Hero_SM_Bath_Cabinet"
+ ],
+ "lod_triangles": [
+  2624,
+  917,
+  314
+ ],
+ "ucx": 7,
+ "room": "bath",
+ "ru": "Шкафчик зеркальный настенный",
+ "children": [
+  "SM_Bath_Cabinet_Door"
+ ],
+ "size_uu": [
+  1140,
+  232,
+  1330
+ ]
+}
