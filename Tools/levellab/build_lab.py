@@ -67,6 +67,40 @@ def mesh_bbox(name):
                     _BBOX[mv['name']] = (mv['bbox_min_m'], mv['bbox_max_m'])
     return _BBOX[name]
 
+_FLAT = None
+
+def flat_art():
+    """The flat's own sets (KAN-41: bedroom, bath, hall; the living room's pieces too): name -> the mesh's box in the ENGINE's
+    frame (metres; the manifests are written in Blender's frame and the importer mirrors Y, so a model's front is +Y here) and
+    its `attach` (where a part sits on its parent and how it moves, still in Blender's frame)."""
+    global _FLAT
+    if _FLAT is None:
+        _FLAT = {}
+        for s in ('hero_living', 'hero_bedroom', 'hero_bath', 'hero_hall'):
+            f = os.path.join(ROOT, 'SourceArt', 'Blender', s, s + '_manifest.json')
+            if not os.path.isfile(f):
+                continue
+            for pc in json.load(open(f, encoding='utf-8'))['pieces']:
+                a, b = pc['bbox_min_m'], pc['bbox_max_m']
+                _FLAT[pc['name']] = dict(min=[a[0], -b[1], a[2]], max=[b[0], -a[1], b[2]], attach=pc.get('attach'))
+    return _FLAT
+
+# what the player reads on a moving part of the flat's sets: (open, close)
+PART_TEXT = {
+    'SM_B_Dresser_Drawer': ('Выдвинуть ящик комода', 'Задвинуть ящик комода'),
+    'SM_B_Nightstand_Drawer': ('Выдвинуть ящик тумбы', 'Задвинуть ящик тумбы'),
+    'SM_B_Wardrobe_DoorL': ('Открыть дверцу шкафа', 'Закрыть дверцу шкафа'),
+    'SM_B_Wardrobe_DoorR': ('Открыть дверцу шкафа', 'Закрыть дверцу шкафа'),
+    'SM_Bath_Cabinet_Door': ('Открыть шкафчик с зеркалом', 'Закрыть шкафчик с зеркалом'),
+    'SM_Bath_Sink_Door': ('Открыть дверцу под раковиной', 'Закрыть дверцу под раковиной'),
+    'SM_Bath_Toilet_Lid': ('Поднять крышку унитаза', 'Опустить крышку унитаза'),
+    'SM_Bath_Toilet_Seat': ('Поднять сиденье унитаза', 'Опустить сиденье унитаза'),
+    'SM_Bath_Toilet_TankLid': ('Снять крышку бачка', 'Вернуть крышку бачка'),
+    'SM_Bath_Tub_Panel': ('Сдвинуть экран ванны', 'Задвинуть экран ванны'),
+    'SM_Bath_Washer_Door': ('Открыть люк стиральной машины', 'Закрыть люк стиральной машины'),
+    'SM_Hall_EntryDoor_Leaf': ('Открыть входную дверь', 'Закрыть входную дверь'),
+}
+
 def rot_z(yaw, v):
     c, s = {0: (1, 0), 90: (0, 1), 180: (-1, 0), 270: (0, -1)}[int(yaw) % 360]
     return [c * v[0] - s * v[1], s * v[0] + c * v[1], v[2]]
@@ -84,6 +118,7 @@ class Flat:
         self.nest, self.cake, self.human = None, None, None
         self.art, self.movers, self.homes, self.slots, self.basins = [], [], [], [], []
         self.climb_art = []
+        self._idx = {}
         self.pets = dict(cat=[], dog=[])
         self.notes = []
         self._n = itertools.count()
@@ -224,6 +259,48 @@ class Flat:
         self.art.append(dict(n=name, i=index, role=0, par=-1, loc=r3([at[0] * UU, at[1] * UU, at[2] * UU], 1), ax=r3([c, s, 0], 4), ay=r3([-s, c, 0], 4),
                              az=[0.0, 0.0, 1.0], sc=[scale, scale, scale], g=gid))
 
+    def hero(self, gid, name, at, yaw=0, by='back', parts=None, z=0.0):
+        """One model of the flat's own sets at its TRUE size (scale 1: nothing is fitted, so nothing is squashed), with its parts.
+        `at` (metres) is where the middle of its back edge stands (by='back': against a wall; a wall-hung model has its origin
+        there already), the middle of its footprint (by='mid') or its own origin (by='origin'). yaw turns it: 180 = the front
+        looks south, 270 = east, 0 = north, 90 = west. The parts the manifest attaches to it stand on their points: a hinge, a
+        slide and a lift become movers (a row with the role 1 and a mover of the flat's table, as the kitchen's doors), what
+        only lies or hangs there is one more row. parts: {part name: group} for parts that go to a group of their own."""
+        A = flat_art()
+        yaw = int(yaw) % 360
+        b0, b1 = A[name]['min'], A[name]['max']
+        off = {'back': [(b0[0] + b1[0]) / 2.0, b0[1], 0.0], 'mid': [(b0[0] + b1[0]) / 2.0, (b0[1] + b1[1]) / 2.0, 0.0], 'origin': [0.0, 0.0, 0.0]}[by]
+        o = rot_z(yaw, off)
+        org = [at[0] - o[0], at[1] - o[1], z]
+        ax, ay = r3(rot_z(yaw, [1, 0, 0]), 4), r3(rot_z(yaw, [0, 1, 0]), 4)
+        def row(n, p, role, g):
+            w = rot_z(yaw, p)
+            self._idx[n] = self._idx.get(n, -1) + 1
+            self.art.append(dict(n=n, i=self._idx[n], role=role, par=-1, loc=r3([(org[i] + w[i]) * UU for i in range(3)], 1),
+                                 ax=ax, ay=ay, az=[0.0, 0.0, 1.0], sc=[1.0, 1.0, 1.0], g=g))
+            return len(self.art) - 1
+        row(name, [0.0, 0.0, 0.0], 0, gid)
+        for pn in sorted(A):
+            t = A[pn]['attach']
+            if not t or t['parent'] != name:
+                continue
+            g = (parts or {}).get(pn, gid)
+            for p in t['at_m']:
+                mv = t['move']
+                k = row(pn, [p[0], -p[1], p[2]], 0 if mv == 'rest' else 1, g)
+                if mv == 'rest':
+                    continue
+                txt = PART_TEXT[pn]
+                if mv == 'hinge':     # (Blender's angle about its own axis; the mirrored Y turns its sense round)
+                    axis = {'Z': [0, 0, 1], 'X': [1, 0, 0]}[t['axis']]
+                    self.movers.append(dict(inst=k, type=0, axis=r3(rot_z(yaw, axis), 4), angle=-float(t['open_deg']), slide=[0.0, 0.0, 0.0],
+                                            flags=0, auto=0.0, open=txt[0], close=txt[1], g=g))
+                else:                  # slide, lift
+                    s = t['slide_m']
+                    self.movers.append(dict(inst=k, type=1, axis=[0.0, 0.0, 1.0], angle=0.0, slide=r3(rot_z(yaw, [s[0] * UU, -s[1] * UU, s[2] * UU]), 1),
+                                            flags=0, auto=0.0, open=txt[0], close=txt[1], g=g))
+        return org
+
     def slot(self, gid, names, mn, mx, yaw=0, note=''):
         """A place kept for a model that is not made yet (the bedroom, bath and hall sets): the first of `names` the game finds
         is fitted into the box mn..mx by its own bounds, and the grey boxes of this group step aside."""
@@ -304,7 +381,9 @@ def variant_A():
     # ---- floor slab, ceiling, outer shell
     F.box('slab', (-O, -1.5, -0.12), (8.42 + O, 6.9 + O, 0.0), 'floor', '#a7a39b', room='')
     F.box('ceiling', (-O, -1.5, CEIL), (8.42 + O, 6.9 + O, CEIL + 0.1), 'ceiling', '#e9e7e2', room='', tag='ceiling')
-    F.wall('outN', (-O, 6.9, 0), (8.42 + O, 6.9 + O, CEIL), [(6.0, 7.2, 0.85, 2.3)], OUTW)          # the bedroom window
+    # the bedroom window; the opening of the front door (its frame stands in it; behind the leaf a shut dark recess, not a way out)
+    F.wall('outN', (-O, 6.9, 0), (8.42 + O, 6.9 + O, CEIL), [(3.08, 4.22, 0.0, 2.18), (6.0, 7.2, 0.85, 2.3)], OUTW)
+    F.box('doorBack', (3.08, 7.0, 0.0), (4.22, 6.9 + O, 2.18), 'wall', '#2c2a28')
     F.box('glassN', (6.0, 7.02, 0.85), (7.2, 7.06, 2.3), 'glass', GLASS)
     F.box('sillN', (6.0, 6.7, 0.82), (7.2, 6.9, 0.85), 'top', TOP)
     F.box('frontdoor', (3.2, 6.88, 0.0), (4.1, 6.9, 2.05), 'furn', '#6d5a48', art='frontdoor')                          # the front door, shut
@@ -418,7 +497,7 @@ def variant_A():
     F.box('bed', (6.4, 4.2, 0.25), (8.42, 5.8, 0.55), 'furn', FURN2, art='bed')
     for (lx, ly) in ((6.42, 4.22), (8.36, 4.22), (6.42, 5.74), (8.36, 5.74)):
         F.box('bedLeg', (lx, ly, 0.0), (lx + 0.04, ly + 0.04, 0.25), 'furn', FURN, art='bed')
-    F.box('duvet', (6.38, 4.3, 0.0), (6.4, 5.7, 0.55), 'climb', CLIMB, climb=True)       # the duvet slipped down to the floor
+    F.box('duvet', (6.38, 4.3, 0.0), (6.4, 5.7, 0.55), 'climb', CLIMB, climb=True, art='duvet')       # the duvet slipped down to the floor
     F.box('headboard', (8.3, 4.2, 0.55), (8.42, 5.8, 1.1), 'climb', CLIMB, climb=True, art='bed')   # padded headboard
     F.cover.append(dict(min=[6.4, 4.2, 0.0], max=[8.42, 5.8, 0.25], name='под кроватью'))
     F.box('wardrobe', (4.6, 6.3, 0.0), (5.8, 6.9, 2.2), 'furn', FURN, art='wardrobe')
@@ -431,16 +510,18 @@ def variant_A():
 
     # ---- bath
     F.box('washer', (0.0, 5.5, 0.0), (0.6, 6.1, 0.85), 'furn', '#dcdfe2', art='washer')
-    F.box('hose', (0.6, 5.7, 0.0), (0.62, 5.74, 0.85), 'climb', CLIMB, climb=True)
-    F.box('bSink', (1.1, 5.12, 0.0), (1.6, 5.45, 0.85), 'furn', '#dcdfe2', art='bsink')
-    F.box('bTowel', (0.15, 5.12, 0.4), (0.45, 5.15, 2.0), 'climb', CLIMB, climb=True)    # a towel on a hook under the grille
-    F.box('bTowelLow', (0.15, 5.15, 0.0), (0.45, 5.17, 0.42), 'climb', CLIMB, climb=True) # its end on the floor
-    F.box('tubFloor', (0.0, 6.2, 0.0), (1.74, 6.9, 0.1), 'furn', '#e3e6e8', art='tub', tag='bowl')   # (KAN-40 'bowl': stays as an unseen solid under the model - the water's bowl)
-    F.box('tubS', (0.0, 6.2, 0.1), (1.74, 6.26, 0.55), 'furn', '#e3e6e8', art='tub', tag='bowl')
-    F.box('tubW', (0.0, 6.26, 0.1), (0.06, 6.9, 0.55), 'furn', '#e3e6e8', art='tub', tag='bowl')
-    F.box('tubE', (1.68, 6.26, 0.1), (1.74, 6.9, 0.55), 'furn', '#e3e6e8', art='tub', tag='bowl')
+    F.box('hose', (0.6, 5.7, 0.0), (0.62, 5.74, 0.85), 'climb', CLIMB, climb=True, art='washer')
+    # (the washbasin stands at the east wall: at the south wall, where the grey plan had it, it stood in the doorway)
+    F.box('bSink', (1.41, 5.5, 0.0), (1.74, 6.0, 0.85), 'furn', '#dcdfe2', art='bsink')
+    F.box('bTowel', (0.15, 5.12, 0.4), (0.45, 5.15, 2.0), 'climb', CLIMB, climb=True, art='btowel')    # a towel on a hook under the grille
+    F.box('bTowelLow', (0.15, 5.15, 0.0), (0.45, 5.17, 0.42), 'climb', CLIMB, climb=True, art='btowel') # its end on the floor
+    # (the tub's model holds the water in its own collision: at its true size the rim stands at 0.55, the grey boxes step aside)
+    F.box('tubFloor', (0.0, 6.2, 0.0), (1.74, 6.9, 0.1), 'furn', '#e3e6e8', art='tub')
+    F.box('tubS', (0.0, 6.2, 0.1), (1.74, 6.26, 0.55), 'furn', '#e3e6e8', art='tub')
+    F.box('tubW', (0.0, 6.26, 0.1), (0.06, 6.9, 0.55), 'furn', '#e3e6e8', art='tub')
+    F.box('tubE', (1.68, 6.26, 0.1), (1.74, 6.9, 0.55), 'furn', '#e3e6e8', art='tub')
     F.box('water', (0.06, 6.26, 0.38), (1.68, 6.9, 0.384), 'decal', WATER, collide=False, tag='fluid')   # (stands in for the real water: the tub basin below)
-    F.box('mat', (0.6, 6.18, 0.0), (1.0, 6.2, 0.55), 'climb', CLIMB, climb=True)        # the bath mat hung over the side
+    F.box('mat', (0.6, 6.18, 0.0), (1.0, 6.2, 0.55), 'climb', CLIMB, climb=True, art='mat')        # the bath mat hung over the side
     F.zone('wet', (0.06, 6.26, 0.1), (1.68, 6.9, 0.42), 'вода в ванне')
     F.zone('steam', (0.0, 6.2, 0.55), (1.74, 6.9, 1.6), 'пар над ванной: тепло и влажно', temp=36, rate=3)
     F.zone('wet', (0.9, 5.7, 0.0), (1.6, 6.18, 0.03), 'лужа у ванны')
@@ -449,15 +530,15 @@ def variant_A():
     # ---- wc
     F.box('toilet', (2.1, 6.3, 0.0), (2.6, 6.9, 0.42), 'furn', '#e3e6e8', art='toilet')
     F.box('tank', (2.1, 6.72, 0.42), (2.6, 6.9, 0.8), 'furn', '#e3e6e8', art='toilet')
-    F.box('paperShelf', (1.86, 5.95, 0.70), (1.98, 6.15, 0.72), 'top', TOP)
-    F.box('paper', (1.98, 6.0, 0.0), (2.0, 6.1, 0.72), 'climb', CLIMB, climb=True)       # the unrolled paper down to the floor
+    F.box('paperShelf', (1.86, 5.95, 0.70), (1.98, 6.15, 0.72), 'top', TOP, art='paper')
+    F.box('paper', (1.98, 6.0, 0.0), (2.0, 6.1, 0.72), 'climb', CLIMB, climb=True, art='paper')       # the unrolled paper down to the floor
 
-    # ---- hall
-    F.box('shoeRack', (3.0, 6.45, 0.0), (3.9, 6.88, 0.45), 'furn', FURN, art='shoerack')
-    F.box('boot', (3.3, 6.15, 0.0), (3.42, 6.45, 0.45), 'climb', CLIMB, climb=True)       # a tall boot leans on the rack
+    # ---- hall (the shoe rack stands at the west wall: in front of the door, where the grey plan had it, the door could not open)
+    F.box('shoeRack', (2.98, 5.35, 0.0), (3.3, 6.25, 0.58), 'furn', FURN, art='shoerack')
+    F.box('boot', (3.3, 5.75, 0.0), (3.42, 6.05, 0.45), 'climb', CLIMB, climb=True)       # a tall boot leans on the rack
     F.box('hatShelf', (4.2, 5.3, 1.75), (4.48, 6.4, 1.78), 'top', TOP, art='hatshelf')
-    F.box('coat', (4.17, 5.45, 0.05), (4.2, 5.75, 1.78), 'climb', CLIMB, climb=True)     # a long coat on the hook
-    F.box('coat2', (4.17, 5.9, 0.6), (4.2, 6.2, 1.78), 'climb', CLIMB, climb=True)       # a short jacket (does not reach the floor)
+    F.box('coat', (4.17, 5.45, 0.05), (4.2, 5.75, 1.78), 'climb', CLIMB, climb=True, art='coat')     # a long coat on the hook
+    F.box('coat2', (4.17, 5.9, 0.6), (4.2, 6.2, 1.78), 'climb', CLIMB, climb=True, art='coat')       # a short jacket (does not reach the floor)
 
     # ---- loggia
     F.box('box1', (7.6, -1.4, 0.0), (8.1, -0.95, 0.4), 'climb', CLIMB, climb=True)       # cardboard boxes, a staircase
@@ -527,17 +608,37 @@ def variant_A():
     #      Names: those of Tools/blender/hero_flat.py (the sets hero_bedroom, hero_bath, hero_hall, branch code/ANT-flat-art).
     #      yaw turns the model's own axes (in the engine a model's front is its +Y): 180 = the front looks south, 270 = east,
     #      0 = north, 90 = west.
-    S('bed', ['SM_B_Bed'], (6.4, 4.2, 0.0), (8.42, 5.8, 1.1), yaw=90, note='кровать с изголовьем у восточной стены: изголовье (у модели сзади) к востоку')
-    S('wardrobe', ['SM_B_Wardrobe'], (4.6, 6.3, 0.0), (5.8, 6.9, 2.2), yaw=180, note='шкаф у северной стены, фасад на юг')
-    S('toybox', ['SM_B_ToyBox'], (5.0, 3.9, 0.0), (5.6, 4.35, 0.4), yaw=0, note='ящик с игрушками у южной стены, фасад на север')
-    S('bear', ['SM_B_Bear'], (7.0, 6.3, 0.0), (7.3, 6.6, 0.3), yaw=180, note='плюшевый мишка на полу')
-    S('tub', ['SM_Bath_Tub'], (0.0, 6.2, 0.0), (1.74, 6.9, 0.55), yaw=180, note='ванна вдоль северной стены, экран на юг (внутри вода: чаша должна быть полой)')
-    S('washer', ['SM_Bath_Washer'], (0.0, 5.5, 0.0), (0.6, 6.1, 0.85), yaw=270, note='стиральная машина у западной стены, фасад на восток')
-    S('bsink', ['SM_Bath_Sink'], (1.1, 5.12, 0.0), (1.6, 5.45, 0.85), yaw=0, note='раковина с тумбой у южной стены ванной, фасад на север')
-    S('toilet', ['SM_Bath_Toilet'], (2.1, 6.3, 0.0), (2.6, 6.9, 0.8), yaw=180, note='унитаз с бачком у северной стены, фасад на юг')
-    S('shoerack', ['SM_Hall_ShoeRack', 'SM_H_ShoeRack'], (3.0, 6.45, 0.0), (3.9, 6.88, 0.45), yaw=180, note='обувница у входной двери')
-    S('hatshelf', ['SM_Hall_CoatRack', 'SM_Hall_HatShelf'], (4.2, 5.3, 1.75), (4.48, 6.4, 1.78), yaw=90, note='вешалка с полкой для шапок на восточной стене прихожей, лицом на запад')
-    S('frontdoor', ['SM_Hall_EntryDoor_Frame', 'SM_Hall_EntryDoor'], (3.2, 6.88, 0.0), (4.1, 6.9, 2.05), yaw=180, note='входная дверь (закрыта), лицом в прихожую')
+    S('bear', ['SM_B_Bear'], (7.0, 6.3, 0.0), (7.3, 6.6, 0.3), yaw=180, note='плюшевый мишка на полу (модели ещё нет)')
+    # ---- the bedroom, bath and hall sets (KAN-41) at their true size, every part on its point (docs/flat-art-list.md); doors,
+    #      drawers, lids and the front door are movers. What is cloth and reaches the floor is a group of its own: the ants climb it.
+    Hm = F.hero
+    # bedroom: the bed's head at the east wall, a bedside table on each side of it, the wardrobe at the north wall (clear of the
+    # window), the chest of drawers at the west wall between the door and the wardrobe; the toy box (the living room's set, with
+    # its lid) at the south wall, 17 cm off it for the lid
+    Hm('bed', 'SM_B_Bed', (8.42, 5.0), yaw=90, parts={'SM_B_Duvet': 'duvet'})
+    Hm('nightstand0', 'SM_B_Nightstand', (8.42, 3.957), yaw=90)
+    Hm('nightstand1', 'SM_B_Nightstand', (8.42, 6.08), yaw=90)
+    Hm('wardrobe', 'SM_B_Wardrobe', (5.385, 6.9), yaw=180)
+    Hm('dresser', 'SM_B_Dresser', (4.6, 5.255), yaw=270)
+    G('toybox', [602, 603, 604, 605], (8306, 520, 0), (9854, 1427, 780), (4.783, 3.886, 0.0), (4.783 + 1548 / UU, 3.886 + 907 / UU, 780 / UU), yaw=180)
+    # bath: the tub along the north wall (its screen to the south, the mixer at the west end), the washing machine at the west
+    # wall, the washbasin with the mirror cabinet over it at the east wall, the towel rail under the vent grille
+    Hm('tub', 'SM_Bath_Tub', (0.87, 6.9), yaw=180, parts={'SM_Bath_Mat': 'mat'})
+    Hm('washer', 'SM_Bath_Washer', (0.0, 5.8), yaw=270)
+    Hm('bsink', 'SM_Bath_Sink', (1.74, 5.75), yaw=90)
+    Hm('bcabinet', 'SM_Bath_Cabinet', (1.74, 5.75), yaw=90, by='origin')
+    Hm('towelrail', 'SM_Bath_TowelRail', (0.3, 5.12), yaw=0, by='origin', parts={'SM_Bath_Towel': 'btowel'})
+    # wc: the pan's axis on the middle of the door, the paper holder on the west wall
+    Hm('toilet', 'SM_Bath_Toilet', (2.36, 6.6), yaw=180, by='origin')
+    Hm('paper', 'SM_Bath_PaperHolder', (1.86, 6.05), yaw=270, by='origin')
+    # hall: the front door in its opening in the north wall (it opens into the hall), the mat before it, the coat rack on the east
+    # wall, the shoe rack (the living room's set) and the mirror on the west wall, clear of the door's swing
+    Hm('frontdoor', 'SM_Hall_EntryDoor_Frame', (3.65, 6.9), yaw=180, by='origin')
+    Hm('doormat', 'SM_Hall_DoorMat', (3.65, 6.62), yaw=0, by='mid')
+    Hm('hatshelf', 'SM_Hall_CoatRack', (4.48, 5.85), yaw=90, by='origin', parts={'SM_Hall_Coat': 'coat', 'SM_Hall_Jacket': 'coat'})
+    Hm('hmirror', 'SM_Hall_Mirror', (2.98, 6.56), yaw=270, by='origin')
+    Hm('shoerack', 'SM_L_ShoeRack', (2.98, 5.8), yaw=270)
+    F.climb_art += ['duvet', 'mat', 'btowel', 'paper', 'coat', 'washer', 'shoerack']   # cloth, paper, the hoses behind the washer, the rack's slats
     # ---- the pets (KAN-40): where the cat and the dog sleep, sit and sniff (do: 0 sleep, 1 eat or sniff, 2 sit; high: on furniture)
     F.pets = dict(
         cat=[dict(at=[7.95, 1.25, 0.45], do=0, time=55, high=1, yaw=180),     # asleep on the south end of the sofa
@@ -660,8 +761,8 @@ def variant_A():
     N('wPaper', (2.05, 6.05, 0), 'Рулон')
     N('wShelf', (1.92, 6.05, 0.72), 'Полочка с бумагой')
     N('hMid', (3.7, 5.7, 0), 'Прихожая')
-    N('hBoot', (3.36, 6.1, 0), 'Сапог')
-    N('hRack', (3.5, 6.65, 0.45), 'Обувница')
+    N('hBoot', (3.5, 5.9, 0), 'Сапог')
+    N('hRack', (3.14, 5.8, 0.58), 'Обувница')
     N('hCoat', (4.1, 5.6, 0), 'Пальто')
     N('hShelf', (4.34, 5.6, 1.78), 'Полка для шапок')
 
@@ -712,7 +813,7 @@ def variant_A():
     A((1.65, 1.3, 0.75), 2, 'kTable', what='на столе'); A((1.05, 0.13, 0.88), 2, 'kSill', what='на подоконнике')
     A((1.2, 3.45, 2.15), 3, 'kCabTop', what='на шкафчиках'); A((0.3, 1.75, 0.85), 1, 'kWorkW', what='у окна на столешнице')
     A((1.7, 4.45, 0), 0, 'cMid', what='в коридоре'); A((3.3, 4.6, 0), 1, 'cE', what='в коридоре у прихожей')
-    A((3.7, 5.55, 0), 1, 'hMid', what='в прихожей'); A((3.5, 6.65, 0.45), 2, 'hRack', what='на обувнице'); A((4.34, 5.9, 1.78), 3, 'hShelf', what='на полке для шапок')
+    A((3.7, 5.55, 0), 1, 'hMid', what='в прихожей'); A((3.14, 5.8, 0.58), 2, 'hRack', what='на обувнице'); A((4.34, 5.9, 1.78), 3, 'hShelf', what='на полке для шапок')
     A((1.3, 5.95, 0), 1, 'tMid', what='в ванной'); A((0.3, 5.8, 0.85), 2, 'tWasher', what='на стиралке'); A((1.2, 6.23, 0.55), 2, 'tRim', what='на краю ванны')
     A((2.4, 5.8, 0), 1, 'wMid', what='в туалете'); A((1.92, 6.05, 0.72), 2, 'wShelf', what='на полочке')
     A((3.6, 3.15, 0), 1, 'lDoor', what='у двери гостиной'); A((4.7, 2.6, 0), 1, 'lMid', what='на ковре')
@@ -720,13 +821,13 @@ def variant_A():
     A((5.1, 0.13, 0.88), 2, 'lSill', what='на подоконнике'); A((7.9, 1.3, 0.41), 2, 'lSofa', what='на диване')
     A((6.0, 3.42, 2.0), 3, 'lShelfTop', what='на стеллаже'); A((5.3, 1.5, 0.75), 2, 'cake', what='на праздничном столе')
     A((6.3, 2.1, 0.75), 3, 'cake', what='на праздничном столе')
-    A((4.85, 4.55, 0), 1, 'bDoor', what='в спальне у двери'); A((5.3, 4.15, 0.4), 2, 'bToy', what='на ящике с игрушками')
-    A((7.4, 5.3, 0.55), 2, 'bBed', what='на кровати'); A((8.36, 4.6, 1.1), 3, 'bHead', what='на изголовье')
+    A((4.85, 4.55, 0), 1, 'bDoor', what='в спальне у двери'); A((5.3, 4.15, 0.45), 2, 'bToy', what='на ящике с игрушками')
+    A((7.4, 5.3, 0.63), 2, 'bBed', what='на кровати'); A((8.36, 4.6, 1.1), 3, 'bHead', what='на изголовье')
     A((7.2, 5.0, 0), 2, 'bUnder', what='под кроватью'); A((7.15, 6.45, 0.3), 2, 'bBear', what='на мишке')
     A((2.9, -0.8, 0), 1, 'gK', what='на лоджии'); A((4.5, -0.6, 1.42), 2, 'gRail', what='на сушилке'); A((8.1, -1.2, 1.2), 3, 'gShelf', what='банки на полке')
     A((6.95, -0.95, 0.35), 3, 'gL', heavy=True, what='мешок картошки (тяжёлое)')
     A((1.9, 1.5, 0.75), 3, 'kTable', heavy=True, what='батон на столе (тяжёлое)')
-    A((7.6, 4.9, 0.55), 3, 'bBed', heavy=True, what='бутерброд ребёнка (тяжёлое)')
+    A((7.6, 4.9, 0.63), 3, 'bBed', heavy=True, what='бутерброд ребёнка (тяжёлое)')
     F.cake = dict(at=[5.8, 1.8, 0.75], node='cake', where='на праздничном столе в гостиной')
     return F
 
