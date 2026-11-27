@@ -97,6 +97,15 @@ namespace
 		{
 			return -1;
 		}
+		// KAN-40/41, the flat's bedroom, bath and hall sets: the class of each is the one of its art manifest (the rest of them is wood)
+		if (Has(N, { TEXT("entrydoor") })) { return -1; }   // (the front door's frame belongs to the wall)
+		if (Has(N, { TEXT("sm_bath_tub"), TEXT("sm_bath_toilet"), TEXT("sm_bath_sink") })) { bFixed = true; WakeMul = 5.f; return China; }   // sanitary ware: plumbed in and heavy
+		if (Has(N, { TEXT("sm_bath_washer") })) { return Appliance; }
+		if (Has(N, { TEXT("towelrail") })) { bFixed = true; return Metal; }
+		if (Has(N, { TEXT("coatrack") })) { return Wood; }
+		if (Has(N, { TEXT("sm_b_duvet"), TEXT("sm_bath_mat"), TEXT("sm_hall_coat"), TEXT("sm_hall_jacket") })) { return Cloth; }
+		if (Has(N, { TEXT("sm_hall_mirror") })) { return Glass; }
+		if (Has(N, { TEXT("paperholder") })) { return Paper; }
 		if (Has(N, { TEXT("bookshelf"), TEXT("tvstand"), TEXT("shoerack"), TEXT("wallshelf"), TEXT("spiceshelf") })) { return Board; }
 		// (the sink bowl SM_K_Sink is stainless steel, not chipboard: as ДСП it had 33 hp and any blow of 33 broke it into chunks.
 		//  Metal: ~12 kg, ~185 hp, dents and sags but never falls apart. Its cabinet SM_K_BaseSink stays ДСП.)
