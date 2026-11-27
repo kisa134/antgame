@@ -170,31 +170,62 @@ struct FV2Asset
 	UMaterialInterface* Inner = nullptr;
 };
 
-static const FV2Asset& LoadV2(const FString& Id, int32 Piece)
+/** bHero: the hero set (/Game/FoodHero/SM_FoodHero_<Id>/..., Tools/food/food_hero.py), same layout and materials as V2 */
+static const FV2Asset& LoadV2(const FString& Id, int32 Piece, bool bHero = false)
 {
 	static TMap<FString, FV2Asset> Cache;
-	const FString Key = FString::Printf(TEXT("%s#%d"), *Id, Piece);
+	const TCHAR* Set = bHero ? TEXT("FoodHero") : TEXT("FoodV2");
+	const FString Key = FString::Printf(TEXT("%s#%s#%d"), Set, *Id, Piece);
 	if (const FV2Asset* F = Cache.Find(Key)) { return *F; }
 	FV2Asset A;
-	const FString Dir = FString::Printf(TEXT("/Game/FoodV2/SM_FoodV2_%s"), *Id);
-	const FString MeshName = Piece >= 0 ? FString::Printf(TEXT("SM_FoodV2_%s_P%d"), *Id, Piece) : FString::Printf(TEXT("SM_FoodV2_%s"), *Id);
+	const FString Dir = FString::Printf(TEXT("/Game/%s/SM_%s_%s"), Set, Set, *Id);
+	const FString MeshName = Piece >= 0 ? FString::Printf(TEXT("SM_%s_%s_P%d"), Set, *Id, Piece) : FString::Printf(TEXT("SM_%s_%s"), Set, *Id);
+	const FString MiName = FString::Printf(TEXT("MI_%s_%s"), Set, *Id);
 	A.Mesh = LoadObject<UStaticMesh>(nullptr, *FString::Printf(TEXT("%s/%s.%s"), *Dir, *MeshName, *MeshName), nullptr, LOAD_NoWarn | LOAD_Quiet);
-	A.Mat = LoadObject<UMaterialInterface>(nullptr, *FString::Printf(TEXT("%s/MI_FoodV2_%s.MI_FoodV2_%s"), *Dir, *Id, *Id), nullptr, LOAD_NoWarn | LOAD_Quiet);
+	A.Mat = LoadObject<UMaterialInterface>(nullptr, *FString::Printf(TEXT("%s/%s.%s"), *Dir, *MiName, *MiName), nullptr, LOAD_NoWarn | LOAD_Quiet);
 	// the cut faces read the inner strip by height in the piece's own space: every piece has its own instance
 	if (Piece >= 0)
 	{
-		A.Inner = LoadObject<UMaterialInterface>(nullptr, *FString::Printf(TEXT("%s/MI_FoodV2_%s_Inner_P%d.MI_FoodV2_%s_Inner_P%d"), *Dir, *Id, Piece, *Id, Piece), nullptr, LOAD_NoWarn | LOAD_Quiet);
+		A.Inner = LoadObject<UMaterialInterface>(nullptr, *FString::Printf(TEXT("%s/%s_Inner_P%d.%s_Inner_P%d"), *Dir, *MiName, Piece, *MiName, Piece), nullptr, LOAD_NoWarn | LOAD_Quiet);
 	}
 	if (!A.Inner)
 	{
-		A.Inner = LoadObject<UMaterialInterface>(nullptr, *FString::Printf(TEXT("%s/MI_FoodV2_%s_Inner.MI_FoodV2_%s_Inner"), *Dir, *Id, *Id), nullptr, LOAD_NoWarn | LOAD_Quiet);
+		A.Inner = LoadObject<UMaterialInterface>(nullptr, *FString::Printf(TEXT("%s/%s_Inner.%s_Inner"), *Dir, *MiName, *MiName), nullptr, LOAD_NoWarn | LOAD_Quiet);
 	}
 	// (the cache outlives the map: root them, like AntArt does)
 	if (A.Mesh) { A.Mesh->AddToRoot(); }
 	if (A.Mat) { A.Mat->AddToRoot(); }
 	if (A.Inner) { A.Inner->AddToRoot(); }
-	if (!A.Mesh && Piece < 0) { UE_LOG(LogTemp, Warning, TEXT("ANTFOOD V2 model missing: %s"), *MeshName); }
+	if (!A.Mesh && Piece < 0) { UE_LOG(LogTemp, Warning, TEXT("ANTFOOD %s model missing: %s"), Set, *MeshName); }
 	return Cache.Add(Key, A);
+}
+
+/**
+ * -AntFoodHero (every food that has a hero model) or -AntFoodHero=Cake+Apple (only those): the hero versions of the food
+ * (Tools/food/food_hero.py: the owner's own models at the mop's level, and the new foods at the same level).
+ * Off by default - the owner's current models stay until he says yes to each one (CLAUDE.md, rule 2).
+ */
+static bool HeroOn(const FString& Id)
+{
+	static int32 Mode = -1;
+	static TSet<FString> Only;
+	if (Mode < 0)
+	{
+		FString V;
+		if (FParse::Value(FCommandLine::Get(), TEXT("AntFoodHero="), V, false))
+		{
+			TArray<FString> P;
+			V.Replace(TEXT(","), TEXT("+")).ParseIntoArray(P, TEXT("+"));
+			for (const FString& X : P) { Only.Add(X.TrimStartAndEnd().ToLower()); }
+			Mode = Only.Contains(TEXT("all")) ? 1 : 2;
+		}
+		else
+		{
+			Mode = FParse::Param(FCommandLine::Get(), TEXT("AntFoodHero")) ? 1 : 0;
+		}
+		UE_LOG(LogTemp, Display, TEXT("ANTFOOD hero models: %s"), Mode == 1 ? TEXT("all (-AntFoodHero)") : Mode == 2 ? *FString::Join(Only.Array(), TEXT("+")) : TEXT("off (default: the owner's models)"));
+	}
+	return Mode == 1 || (Mode == 2 && Only.Contains(Id.ToLower()));
 }
 
 static const FFood* FoodOf(const AKitchenLoot* L)
@@ -206,13 +237,18 @@ static const FFood* FoodOf(const AKitchenLoot* L)
 
 UStaticMesh* ModelV2(const AKitchenLoot* L, int32 Piece, UMaterialInterface** OutMat, UMaterialInterface** OutInner)
 {
-	if (!V2() || !L || L->bIsGear || L->bBody || L->bVault) { return nullptr; }
+	if (!L || L->bIsGear || L->bBody || L->bVault) { return nullptr; }
 	const FFood* F = FoodOf(L);
-	// an old food keeps its old model (the owner's decision 26.11): the new models only for the foods new to the game
-	if (!F || !F->bNew || (Piece >= 0 && Piece >= F->Pieces)) { return nullptr; }
+	if (!F) { return nullptr; }
+	// an old food keeps its old model (the owner's decision 26.11): the new models only for the foods new to the game;
+	// the hero set only with -AntFoodHero, food by food (the owner's yes)
+	const bool bHero = HeroOn(F->Id);
+	if (!bHero && (!V2() || !F->bNew)) { return nullptr; }
+	if (Piece >= 0 && Piece >= F->Pieces) { return nullptr; }
 	// a pre-cut piece only for a break into exactly the model's pieces (other breaks: the cut of AntShards)
 	if (Piece >= 0 && !(L->ShardPath.Num() == 2 && L->ShardPath[1] == F->Pieces)) { return nullptr; }
-	const FV2Asset& A = LoadV2(F->Id, Piece);
+	FV2Asset A = LoadV2(F->Id, Piece, bHero);
+	if (!A.Mesh && bHero && V2() && F->bNew) { A = LoadV2(F->Id, Piece, false); }   // (no hero model of it imported: the V2 one)
 	if (!A.Mesh) { return nullptr; }
 	if (OutMat) { *OutMat = A.Mat; }
 	if (OutInner) { *OutInner = A.Inner ? A.Inner : A.Mat; }
@@ -223,7 +259,8 @@ int32 BreakPieces(const AKitchenLoot* L)
 {
 	const FFood* F = FoodOf(L);
 	if (Kinds() && L && (EAntFoodKind)L->FoodNet.Kind == EAntFoodKind::Brittle) { return 2; }   // snaps in two
-	if (V2() && F && F->Pieces > 0 && L->ShardPath.Num() == 0 && ModelV2(L, -1) && LoadV2(F->Id, 0).Mesh) { return F->Pieces; }
+	if (F && (V2() || HeroOn(F->Id)) && F->Pieces > 0 && L->ShardPath.Num() == 0 && ModelV2(L, -1)
+		&& (LoadV2(F->Id, 0, HeroOn(F->Id)).Mesh || (F->bNew && V2() && LoadV2(F->Id, 0).Mesh))) { return F->Pieces; }
 	return 0;
 }
 
@@ -406,7 +443,19 @@ float ScaleV2(const AKitchenLoot* L)
 	if (L->ShardPath.Num() == 2 && Fd->Pieces > 0) { RefW = (float)Fd->Weight / Fd->Pieces; }
 	const float Soak = Soakable((EAntFoodKind)L->FoodNet.Kind) ? F(L->FoodNet.Soak) : 0.f;
 	const float W = FMath::Max(1.f, (float)L->Weight / (1.f + 0.4f * Soak));
-	return FMath::Clamp(FMath::Pow(W / FMath::Max(1.f, RefW), 1.f / 3.f), 0.15f, 2.5f);
+	float K = FMath::Clamp(FMath::Pow(W / FMath::Max(1.f, RefW), 1.f / 3.f), 0.15f, 2.5f);
+	// the hero set is sized by its whole mesh's box (whatever unit the importer gave it), pieces alike:
+	//  - an OLD food is as big as his model was in the game: the old art was fitted to 32 + 3.6 x weight uu along its longest
+	//    side (AKitchenLoot::GetRadius);
+	//  - a NEW food is its real size, like the V2 model (SizeCm, 1 m = 1900 uu)
+	if (HeroOn(Fd->Id))
+	{
+		const FV2Asset& Whole = LoadV2(Fd->Id, -1, true);
+		const float Max = Whole.Mesh ? (float)Whole.Mesh->GetBoundingBox().GetSize().GetMax() : 0.f;
+		const float Want = Fd->bNew ? Fd->SizeCm * 19.f : 32.f + Fd->Weight * 3.6f;
+		if (Max > 0.01f) { K *= Want / Max; }
+	}
+	return K;
 }
 
 void Init(AKitchenLoot* L)

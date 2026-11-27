@@ -6,9 +6,14 @@
 #   MI_FoodV2_<Id>_Inner[_P<k>]        M_FoodV2_Inner: the inner strip, height range in each piece's own space
 # The game uses them only with -AntFoodV2 (AntFood.cpp). Needs Tools/food/make_food_materials.py first.
 # Run: UnrealEditor-Cmd.exe AntKitchen.uproject -run=pythonscript -script=Tools/food/import_food_v2.py   (ANT_FOOD=Cake,Gummy to limit)
+# ANT_FOOD_SET=hero: the hero set instead (Tools/food/food_hero.py -> SourceArt/FoodHero/<Id>/ -> /Game/FoodHero/SM_FoodHero_<Id>/):
+#   the same materials (M_FoodV2, M_FoodV2_Inner), plus the UCX_ hulls of the FBX as the simple collision (complex = the triangles,
+#   for the ants) and the LOD1 / LOD2 FBX as LODs. Used by the game only with -AntFoodHero[=Cake+Apple] (AntFood.cpp).
 import unreal, os, glob, json
 PROJ = unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_dir())
-SRC = os.path.join(PROJ, "SourceArt", "FoodV2")
+SET = "FoodHero" if os.environ.get("ANT_FOOD_SET", "").lower() == "hero" else "FoodV2"
+HERO = SET == "FoodHero"
+SRC = os.path.join(PROJ, "SourceArt", SET)
 EAL = unreal.EditorAssetLibrary
 MEL = unreal.MaterialEditingLibrary
 AT = unreal.AssetToolsHelpers.get_asset_tools()
@@ -49,11 +54,16 @@ def import_mesh(f, dest, name):
     sm = o.get_editor_property("static_mesh_import_data")
     sm.set_editor_property("combine_meshes", True); sm.set_editor_property("auto_generate_collision", False)
     sm.set_editor_property("generate_lightmap_u_vs", False); sm.set_editor_property("remove_degenerates", False)
-    sm.set_editor_property("normal_import_method", unreal.FBXNormalImportMethod.FBXNIM_IMPORT_NORMALS)
+    sm.set_editor_property("normal_import_method", unreal.FBXNormalImportMethod.FBXNIM_IMPORT_NORMALS_AND_TANGENTS if HERO else unreal.FBXNormalImportMethod.FBXNIM_IMPORT_NORMALS)
+    if HERO:
+        try: sm.set_editor_property("one_convex_hull_per_ucx", True)
+        except Exception: pass
     sm.set_editor_property("import_uniform_scale", UU_PER_M / 100.0)      # FBX metres come in as cm: x19 -> 1 m = 1900 uu
     for k, v in (("build_nanite", False), ("build_reversed_index_buffer", False)):
         try: sm.set_editor_property(k, v)
         except Exception: pass
+    if HERO and EAL.does_asset_exist(dest + "/" + name):
+        EAL.delete_asset(dest + "/" + name)   # (a reimport over an asset made by the other importer keeps its unit and old hulls)
     mesh = task(f, dest, name, o)
     if not mesh: log("mesh failed " + f); return None
     try:
@@ -63,9 +73,17 @@ def import_mesh(f, dest, name):
     bs = mesh.get_editor_property("body_setup")
     if bs:
         agg = bs.get_editor_property("agg_geom")
-        for k in ("box_elems", "sphere_elems", "sphyl_elems", "convex_elems"): agg.set_editor_property(k, [])
-        bs.set_editor_property("agg_geom", agg)
-        bs.set_editor_property("collision_trace_flag", unreal.CollisionTraceFlag.CTF_USE_COMPLEX_AS_SIMPLE)   # collision by shape
+        n_ucx = len(agg.get_editor_property("convex_elems"))
+        if HERO and n_ucx > 0:
+            # the hero set brings its own UCX_ hulls: simple = the hulls (physics), complex = the triangles (the ants walk on the shape)
+            for k in ("box_elems", "sphere_elems", "sphyl_elems"): agg.set_editor_property(k, [])
+            bs.set_editor_property("agg_geom", agg)
+            bs.set_editor_property("collision_trace_flag", unreal.CollisionTraceFlag.CTF_USE_DEFAULT)
+            log("%s: %d UCX hulls kept" % (name, n_ucx))
+        else:
+            for k in ("box_elems", "sphere_elems", "sphyl_elems", "convex_elems"): agg.set_editor_property(k, [])
+            bs.set_editor_property("agg_geom", agg)
+            bs.set_editor_property("collision_trace_flag", unreal.CollisionTraceFlag.CTF_USE_COMPLEX_AS_SIMPLE)   # collision by shape
     EAL.save_loaded_asset(mesh)
     return mesh
 
@@ -92,28 +110,52 @@ def set_slots(mesh, outer, inner):
     return [str(s.get_editor_property("material_slot_name")) for s in out]
 
 n_ok = 0
+if HERO:
+    # the legacy FBX importer: it reads the UCX_ hulls and the tangents the normal map was baked against (Interchange skips the hulls here)
+    unreal.SystemLibrary.execute_console_command(None, "Interchange.FeatureFlags.Import.FBX false")
 for jf in sorted(glob.glob(os.path.join(SRC, "*", "food.json"))):
     with open(jf, encoding="utf-8") as f: man = json.load(f)
     fid = man["id"]
     if ONLY and fid not in ONLY: continue
     d = os.path.dirname(jf)
-    dest = "/Game/FoodV2/SM_FoodV2_" + fid
+    dest = "/Game/%s/SM_%s_%s" % (SET, SET, fid)
     tx = {}
     for k in ("C", "N", "R", "Toast", "Burnt", "Spoil", "Frozen", "InC"):
-        f = os.path.join(d, "T_FoodV2_%s_%s.png" % (fid, k))
+        f = os.path.join(d, "T_%s_%s_%s.png" % (SET, fid, k))
         if os.path.exists(f): tx[k] = import_tex(f, dest, "N" if k == "N" else ("R" if k == "R" else "C"))
-    outer = mi(dest, "MI_FoodV2_" + fid, "/Game/FoodV2/M_FoodV2", {"Jelly": float(man.get("jelly", 0.0))},
+    outer = mi(dest, "MI_%s_%s" % (SET, fid), "/Game/FoodV2/M_FoodV2", {"Jelly": float(man.get("jelly", 0.0))},
                {"C": tx.get("C"), "N": tx.get("N"), "R": tx.get("R"), "TToast": tx.get("Toast"), "TBurnt": tx.get("Burnt"), "TSpoil": tx.get("Spoil"), "TFrozen": tx.get("Frozen")})
     hr = man.get("h_range_m", [-0.02, 0.02])
     axis = 1.0 if man.get("inner_axis") == "r" else 0.0
-    usize = max(man["size_m"][0], man["size_m"][1]) * UU_PER_M
-    def inner_mi(name, dz):
-        return mi(dest, name, "/Game/FoodV2/M_FoodV2_Inner", {"HMin": (hr[0] - dz) * UU_PER_M, "HMax": (hr[1] - dz) * UU_PER_M if axis < 0.5 else hr[1] * UU_PER_M,
-                                                            "Axis": axis, "USize": usize}, {"InC": tx.get("InC")})
-    inner = inner_mi("MI_FoodV2_%s_Inner" % fid, 0.0)
-    whole = import_mesh(os.path.join(d, "SM_FoodV2_%s.fbx" % fid), dest, "SM_FoodV2_" + fid)
+    whole = import_mesh(os.path.join(d, "SM_%s_%s.fbx" % (SET, fid)), dest, "SM_%s_%s" % (SET, fid))
     if not whole: continue
+    upm = UU_PER_M
+    if HERO:
+        # (the legacy importer keeps its own unit: the inner strip's numbers are in the mesh's units, measured off its box;
+        #  the game sizes the hero set by its box too - AntFood::ScaleV2)
+        bb = whole.get_bounding_box(); ext = max(bb.max.x - bb.min.x, bb.max.y - bb.min.y, bb.max.z - bb.min.z)
+        upm = ext / max(1e-6, max(man["size_m"])); log("%s: %.1f units per metre in the mesh" % (fid, upm))
+    usize = max(man["size_m"][0], man["size_m"][1]) * upm
+    def inner_mi(name, dz):
+        return mi(dest, name, "/Game/FoodV2/M_FoodV2_Inner", {"HMin": (hr[0] - dz) * upm, "HMax": (hr[1] - dz) * upm if axis < 0.5 else hr[1] * upm,
+                                                            "Axis": axis, "USize": usize}, {"InC": tx.get("InC")})
+    inner = inner_mi("MI_%s_%s_Inner" % (SET, fid), 0.0)
     slots = set_slots(whole, outer, inner)
+    if HERO:
+        # LOD1 / LOD2 (the Human's distance) from their own FBX, the same atlas and slot
+        # (no editor subsystems in a commandlet: each LOD is imported as a mesh of its own and copied in by AntArtTools, as
+        #  Tools/import_blender_art.py does for the hero props)
+        for li, screen in ((1, 0.35), (2, 0.12)):
+            lf = os.path.join(d, "SM_%s_%s_LOD%d.fbx" % (SET, fid, li))
+            if not os.path.exists(lf): continue
+            tmpd = "/Game/%s/Tmp" % SET
+            tmp = import_mesh(lf, tmpd, "%s_LOD%d" % (fid, li))
+            ok = bool(tmp) and unreal.AntArtTools.set_lod_from_mesh(whole, li, tmp, screen)
+            log("%s LOD%d %s" % (fid, li, "ok" if ok else "FAILED"))
+            if tmp: EAL.delete_asset(tmpd + "/%s_LOD%d" % (fid, li))
+        try: log("%s LODs: %d" % (fid, unreal.AntArtTools.lod_count(whole)))
+        except Exception: pass
+        EAL.save_loaded_asset(whole)
     b = whole.get_bounding_box()
     log("%s whole %.0f x %.0f x %.0f uu (%.1f cm long), tris %d, slots %s" % (fid, b.max.x - b.min.x, b.max.y - b.min.y, b.max.z - b.min.z,
         (b.max.x - b.min.x) / 19.0, whole.get_num_triangles(0), ",".join(slots)))
@@ -122,7 +164,7 @@ for jf in sorted(glob.glob(os.path.join(SRC, "*", "food.json"))):
         pm = import_mesh(f, dest, pc["name"])
         if not pm: continue
         # (a piece's own origin is its centre: its height range moves by its offset from the whole)
-        pin = inner_mi("MI_FoodV2_%s_Inner_P%d" % (fid, k), pc["centre_m"][2])
+        pin = inner_mi("MI_%s_%s_Inner_P%d" % (SET, fid, k), pc["centre_m"][2])
         slots = set_slots(pm, outer, pin)
         log("%s piece %d tris %d slots %s" % (fid, k, pm.get_num_triangles(0), ",".join(slots)))
     n_ok += 1
