@@ -32,7 +32,10 @@ void AKitchenBuilder::BuildLab()
 	for (const FAntLabBox& B : V->Boxes)
 	{
 		// KAN-40: a box whose model is there steps aside; the painted water of the tub gives way to the real one
-		if ((!B.Art.IsEmpty() && V->ArtBuilt.Contains(B.Art)) || (bRealWater && B.Tag == TEXT("fluid")))
+		// (a "bowl" box stays under its model as an unseen solid: the bath set's tub has no bowl in its collision, the water ran out of it)
+		const bool bStoodAside = !B.Art.IsEmpty() && V->ArtBuilt.Contains(B.Art);
+		const bool bBowl = bStoodAside && B.Tag == TEXT("bowl");
+		if ((bStoodAside && !bBowl) || (bRealWater && B.Tag == TEXT("fluid")))
 		{
 			++Stood;
 			continue;
@@ -43,6 +46,7 @@ void AKitchenBuilder::BuildLab()
 			continue;
 		}
 		C->ComponentTags.Add(TEXT("AntLab"));
+		if (bBowl) { C->SetVisibility(false); C->SetCastShadow(false); }
 		// KAN-40: what the grey box stands for, for fire, water and current (without it the box mesh reads as cardboard and the floor burns)
 		if (B.Kind == TEXT("glass")) { C->ComponentTags.Add(TEXT("AntMat_glass")); }
 		else if (B.Kind == TEXT("furn") || B.Kind == TEXT("top") || B.Kind == TEXT("door")) { C->ComponentTags.Add(TEXT("AntMat_wood")); }

@@ -435,10 +435,10 @@ def variant_A():
     F.box('bSink', (1.1, 5.12, 0.0), (1.6, 5.45, 0.85), 'furn', '#dcdfe2', art='bsink')
     F.box('bTowel', (0.15, 5.12, 0.4), (0.45, 5.15, 2.0), 'climb', CLIMB, climb=True)    # a towel on a hook under the grille
     F.box('bTowelLow', (0.15, 5.15, 0.0), (0.45, 5.17, 0.42), 'climb', CLIMB, climb=True) # its end on the floor
-    F.box('tubFloor', (0.0, 6.2, 0.0), (1.74, 6.9, 0.1), 'furn', '#e3e6e8', art='tub')
-    F.box('tubS', (0.0, 6.2, 0.1), (1.74, 6.26, 0.55), 'furn', '#e3e6e8', art='tub')
-    F.box('tubW', (0.0, 6.26, 0.1), (0.06, 6.9, 0.55), 'furn', '#e3e6e8', art='tub')
-    F.box('tubE', (1.68, 6.26, 0.1), (1.74, 6.9, 0.55), 'furn', '#e3e6e8', art='tub')
+    F.box('tubFloor', (0.0, 6.2, 0.0), (1.74, 6.9, 0.1), 'furn', '#e3e6e8', art='tub', tag='bowl')   # (KAN-40 'bowl': stays as an unseen solid under the model - the water's bowl)
+    F.box('tubS', (0.0, 6.2, 0.1), (1.74, 6.26, 0.55), 'furn', '#e3e6e8', art='tub', tag='bowl')
+    F.box('tubW', (0.0, 6.26, 0.1), (0.06, 6.9, 0.55), 'furn', '#e3e6e8', art='tub', tag='bowl')
+    F.box('tubE', (1.68, 6.26, 0.1), (1.74, 6.9, 0.55), 'furn', '#e3e6e8', art='tub', tag='bowl')
     F.box('water', (0.06, 6.26, 0.38), (1.68, 6.9, 0.384), 'decal', WATER, collide=False, tag='fluid')   # (stands in for the real water: the tub basin below)
     F.box('mat', (0.6, 6.18, 0.0), (1.0, 6.2, 0.55), 'climb', CLIMB, climb=True)        # the bath mat hung over the side
     F.zone('wet', (0.06, 6.26, 0.1), (1.68, 6.9, 0.42), 'вода в ванне')
