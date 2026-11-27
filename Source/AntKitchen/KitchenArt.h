@@ -100,10 +100,9 @@ namespace KitchenArt
 		FRotator Rot(const FRotator& KitchenRot = FRotator::ZeroRotator) const { return bMoved ? (L.GetRotation() * KitchenRot.Quaternion()).Rotator() : KitchenRot; }
 		/** The axis-aligned box round a kitchen box. */
 		ANTKITCHEN_API FBox Box(const FBox& KitchenBox) const;
-		/** A rigid place (scale 1) for an actor that stands at a kitchen point. */
-		FTransform Tm(const FVector& KitchenLoc, const FRotator& KitchenRot = FRotator::ZeroRotator) const { return FTransform(Rot(KitchenRot), At(KitchenLoc)); }
-		/** The whole mapping as one transform (with the scale): for an actor that builds itself at the world origin in kitchen coordinates. */
-		ANTKITCHEN_API FTransform Whole() const;
+		/** The place of an actor that stands at a kitchen point: turned and SCALED with the group, so whatever the actor builds at
+		 *  its own offsets (pivots, use points, lights) lands where the home takes those kitchen points. Tm(0) is the whole mapping. */
+		ANTKITCHEN_API FTransform Tm(const FVector& KitchenLoc, const FRotator& KitchenRot = FRotator::ZeroRotator) const;
 		/** One number for radii and reaches. */
 		float Size() const { return bMoved ? (float)((L.GetScale3D().X + L.GetScale3D().Y + L.GetScale3D().Z) / 3.) : 1.f; }
 	};

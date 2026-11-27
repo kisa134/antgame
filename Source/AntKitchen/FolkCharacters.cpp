@@ -287,12 +287,14 @@ AGrandmaCharacter::AGrandmaCharacter()
 void AGrandmaCharacter::Settle()
 {
 	// Her armchair, from where the furniture stands; the seat's height from the armchair itself.
-	const FVector Chair = ArtPoint(TEXT("SM_L_Armchair"), 0, FVector(9150.f, -5800.f, 0.f));
-	FVector Seat = Chair + FVector(100.f, 0.f, 800.f);
+	// (KAN-40: the offsets are the kitchen's; in a flat the armchair stands elsewhere, turned and scaled: KitchenArt::Home)
+	const KitchenArt::FHome H = KitchenArt::Home(TEXT("armchair"));
+	const FVector Chair = H.ToKitchen(ArtPoint(TEXT("SM_L_Armchair"), 0, H.At(FVector(9150.f, -5800.f, 0.f))));
+	FVector Seat = H.At(Chair + FVector(100.f, 0.f, 800.f));
 	Seat.Z = NpcWorld::SurfaceZ(GetWorld(), Seat, 500.f, 700.f);
 	SeatPoint = Seat;
-	StandYaw = 0.f;   // the armchair faces east
-	StandPoint = FloorPoint(Seat + FVector(660.f, 0.f, 0.f));
+	StandYaw = (float)H.Rot().Yaw;   // the armchair faces east (in the kitchen)
+	StandPoint = FloorPoint(H.At(Chair + FVector(760.f, 0.f, 0.f)));
 	// Her feet are inside the armchair's footprint when she sits: near it her capsule does not collide with the chair (Think),
 	// so she walks right up to the seat and sits down. (She used to stop at its front edge and shuffle the last 500 backwards.)
 	ChairPart = AKitchenBuilder::FindArt(GetWorld(), TEXT("SM_L_Armchair"));
@@ -892,10 +894,13 @@ AKidCharacter::AKidCharacter()
 void AKidCharacter::Settle()
 {
 	// On the floor in front of the sofa, facing the TV.
-	const FVector Sofa = ArtPoint(TEXT("SM_L_Sofa"), 0, FVector(13500.f, 550.f, 0.f));
-	StandYaw = -90.f;
-	StandPoint = FloorPoint(Sofa + FVector(300.f, -1750.f, 0.f));
-	SeatPoint = FVector(StandPoint.X, StandPoint.Y + 190.f, StandPoint.Z - GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
+	// (KAN-40: the offsets are the kitchen's; in a flat the sofa stands elsewhere, turned and scaled: KitchenArt::Home)
+	const KitchenArt::FHome H = KitchenArt::Home(TEXT("sofa"));
+	const FVector Sofa = H.ToKitchen(ArtPoint(TEXT("SM_L_Sofa"), 0, H.At(FVector(13500.f, 550.f, 0.f))));
+	StandYaw = (float)H.Rot(FRotator(0.f, -90.f, 0.f)).Yaw;
+	StandPoint = FloorPoint(H.At(Sofa + FVector(300.f, -1750.f, 0.f)));
+	const FVector Back = H.Dir(FVector(0.f, 190.f, 0.f));
+	SeatPoint = FVector(StandPoint.X + Back.X, StandPoint.Y + Back.Y, StandPoint.Z - GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
 	SetActorLocationAndRotation(StandPoint, FRotator(0.f, StandYaw, 0.f), false, nullptr, ETeleportType::TeleportPhysics);
 	if (Controller) { Controller->SetControlRotation(FRotator(0.f, StandYaw, 0.f)); }
 	SitDown(SeatPoint, 2);

@@ -81,7 +81,7 @@ void AKitchenKnob::BeginPlay()
 	}
 	// The actor sits on the oven's control strip (the second knob from the left, in front of the hot burner).
 	// Everything else is placed in world space relative to it: the burner is at (-350, 3500, 1740).
-	const FVector B = FVector(-350.f, 3500.f, 1740.f) - GetActorLocation();   // burner, local
+	const FVector B = FVector(-350.f, 3500.f, 1740.f) - KitchenArt::Home(TEXT("range")).ToKitchen(GetActorLocation());   // burner, local (KAN-40: from where the knob is in the kitchen)
 	const bool bArt = KitchenArt::Enabled();
 	if (bArt)
 	{
@@ -203,7 +203,7 @@ void AKitchenKnob::Tick(float Dt)
 			SteamAccum -= 1.f;
 			const float A = FMath::FRandRange(0.f, 2.f * PI);
 			const float R = FMath::FRandRange(0.f, 300.f);
-			AntFx::Steam(this, FVector(-350.f + FMath::Cos(A) * R, 3500.f + FMath::Sin(A) * R, 2300.f), 150.f + Boil * 130.f, 150.f + Boil * 170.f);
+			AntFx::Steam(this, KitchenArt::Home(TEXT("range")).At(FVector(-350.f + FMath::Cos(A) * R, 3500.f + FMath::Sin(A) * R, 2300.f)), 150.f + Boil * 130.f, 150.f + Boil * 170.f);
 		}
 	}
 	const bool bBoiling = Boil > 0.6f;
@@ -214,14 +214,14 @@ void AKitchenKnob::Tick(float Dt)
 	}
 	if (Soup)
 	{
-		const FVector B = FVector(-350.f, 3500.f, 1740.f) - GetActorLocation();
+		const FVector B = FVector(-350.f, 3500.f, 1740.f) - KitchenArt::Home(TEXT("range")).ToKitchen(GetActorLocation());
 		Soup->SetRelativeLocation(B + FVector(0.f, 0.f, 540.f + (bBoiling ? FMath::Sin(Anim * 9.f) * 6.f : 0.f)));
 	}
 }
 
 void AKitchenKnob::AffectAnt(AAntCharacter* Ant, FAntEnv& Env) const
 {
-	const FVector P = Ant->GetActorLocation();
+	const FVector P = KitchenArt::Home(TEXT("range")).ToKitchen(Ant->GetActorLocation());   // (KAN-40: the numbers below are the kitchen's)
 	const FVector B(-350.f, 3500.f, 1740.f);
 	if (!bOn && Boil < 0.1f)
 	{

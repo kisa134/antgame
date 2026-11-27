@@ -35,7 +35,12 @@ public:
 
 	float InteractRadius = 230.f;
 
+	virtual void BeginPlay() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	/** KAN-40, a flat (AntLab): the variant this gadget was spawned in and the scale of its art group's home (KitchenArt::FHome::Tm).
+	 *  A guest may get a gadget before the game state: the gadget makes the variant known and takes its scale before it builds itself. */
+	UPROPERTY(Replicated) uint8 LabId = 0;
+	UPROPERTY(Replicated) FVector HomeScale = FVector::OneVector;
 
 	// ---- Doors (AntDoor in AntRun.h): the heavy ones need several ants holding [E] together ----
 	/** AntDoor::EClass of this thing; 0 = not a door, a plain [E]. */
@@ -300,7 +305,7 @@ public:
 	virtual bool CanInteract(const AAntCharacter* Ant) const override { return false; }
 	virtual void AffectAnt(AAntCharacter* Ant, FAntEnv& Env) const override;
 
-	static FBox Puddle() { return FBox(FVector(2900.f, 3700.f, -50.f), FVector(4500.f, 4950.f, 70.f)); }
+	static FBox Puddle() { return KitchenArt::Home(TEXT("wire")).Box(FBox(FVector(2900.f, 3700.f, -50.f), FVector(4500.f, 4950.f, 70.f))); }
 
 private:
 	void Spark();

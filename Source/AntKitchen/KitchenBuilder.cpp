@@ -91,7 +91,8 @@ FVector AKitchenBuilder::NestLocation(uint8 Team)
 {
 	if (const FAntLabVariant* Lab = AntLab::Get())
 	{
-		return Team == 0 ? Lab->Nest : Lab->Origin + FVector(0.f, -80000.f, 0.f);   // the lab has no red hill: far away and out of reach
+		// (KAN-40: the red clan comes in where the variant says; a variant without such a place has no red clan: far away and out of reach)
+		return Team == 0 ? Lab->Nest : Lab->bRival ? Lab->Rival : Lab->Origin + FVector(0.f, -80000.f, 0.f);
 	}
 	if (Team == 0)
 	{

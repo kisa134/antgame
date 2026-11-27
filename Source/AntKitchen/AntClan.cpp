@@ -14,6 +14,7 @@
 #include "KitchenMover.h"
 #include "KitchenBuilder.h"
 #include "KitchenArt.h"
+#include "AntLab.h"
 #include "LevelV2.h"
 #include "EngineUtils.h"
 #include "Engine/World.h"
@@ -659,7 +660,7 @@ int32 AAntClan::ChooseAmbushNode(AKitchenLoot* C, float Now) const
 {
 	// Where will they come home from? What the clan saw last (if it is fresh), else where the cake is, else the middle of the living room.
 	const bool bFresh = Now - SeenTime < 100.f;
-	FVector Ref = bFresh ? SeenAt : FVector(13750.f, -4600.f, 0.f);
+	FVector Ref = bFresh ? SeenAt : AntLab::Get() ? AntLab::Get()->Cake : FVector(13750.f, -4600.f, 0.f);   // (KAN-40, a flat: where its cake lies)
 	if (!bFresh && bKnowsCake && C) { Ref = C->GetActorLocation(); }
 	if (Raid->Cake == AntCake::Ours && C && bFresh) { Ref = C->GetActorLocation(); }
 	// Both ways home from there; the players take the quicker one (so the clan reckons).

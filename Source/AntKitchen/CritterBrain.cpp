@@ -11,6 +11,7 @@
 #include "HumanCharacter.h"
 #include "FolkCharacters.h"
 #include "KitchenArt.h"
+#include "AntLab.h"
 #include "KitchenBuilder.h"
 #include "KitchenEvents.h"
 #include "KitchenInteractables.h"
@@ -301,7 +302,15 @@ void ACritter::ResolveSpots()
 		}
 		Rests.Add({ P, Do, Time, bHigh, FaceYaw });
 	};
-	if (Kind == 1)
+	if (const FAntLabVariant* Lab = AntLab::Get())
+	{
+		// KAN-40, a flat: their places are in the variant's data (build_lab.py: pets)
+		for (const FAntLabPetSpot& S : (Kind == 1 ? Lab->CatSpots : Lab->DogSpots))
+		{
+			Add(S.P, S.Do, S.Time, S.bHigh, S.Yaw);
+		}
+	}
+	else if (Kind == 1)
 	{
 		// Level v2: she sleeps on the east cushion (over the blanket ramp), watches from the west one; the kid has the middle.
 		Add(ArtAt(TEXT("SM_L_Sofa_SeatCushion"), 0, FVector(15500.f, 370.f, 950.f), FVector(0.f, 0.f, 250.f)), 0, 55.f, true, -90.f);    // asleep on the sofa: the cushion the kid does not sit on

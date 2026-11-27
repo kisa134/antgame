@@ -796,15 +796,20 @@ void AAntKitchenGameMode::RunBeginPlay()
 		}
 	};
 	// Things ants can switch on to make noise: the microwave (start button on its front) and the TV (the console on the stand).
-	if (!AntLab::Get())   // (KAN-37 lab: not in the grey box)
+	// (KAN-40: a flat has them where its microwave and its console stand)
+	if (KitchenArt::Has(TEXT("microwave")))
 	{
-	SpawnBox(0, FVector(2290.f, 3985.f, 1960.f));
-	FVector Console(12500.f, -8250.f, 1160.f);
-	if (const FKitchenArtInst* I = KitchenArt::Enabled() ? KitchenArt::Find(TEXT("SM_L_GameConsole")) : nullptr)
-	{
-		Console = FVector(I->Loc) + FVector(0.f, 0.f, 60.f);
+		SpawnBox(0, KitchenArt::Home(TEXT("microwave")).At(FVector(2290.f, 3985.f, 1960.f)));
 	}
-	SpawnBox(1, Console);
+	FVector Console(12500.f, -8250.f, 1160.f);
+	const FKitchenArtInst* ConsoleRow = KitchenArt::Enabled() ? KitchenArt::Find(TEXT("SM_L_GameConsole")) : nullptr;
+	if (ConsoleRow)
+	{
+		Console = FVector(ConsoleRow->Loc) + FVector(0.f, 0.f, 60.f);
+	}
+	if (ConsoleRow || !AntLab::Get())
+	{
+		SpawnBox(1, Console);
 	}
 	SpawnHighProps();
 
@@ -834,25 +839,27 @@ void AAntKitchenGameMode::RunBeginPlay()
 
 void AAntKitchenGameMode::SpawnHighProps()
 {
-	if (AntLab::Get())
-	{
-		return;   // KAN-37 lab: the kitchen's high props have no place in the grey box
-	}
 	// Heavy things near an edge, up high: lean on one and it goes over. On the Human's head it stuns him; on a fire ant it is the end.
-	struct FDef { const TCHAR* Name; EAntShape Shape; FVector Loc; FVector Size; FLinearColor Color; float Mass; };
+	// (KAN-40: Group = the piece of the kitchen it stands on. A flat has those whose piece it has, on that piece where it stands there.)
+	struct FDef { const TCHAR* Name; EAntShape Shape; FVector Loc; FVector Size; FLinearColor Color; float Mass; const TCHAR* Group; };
 	const FDef Defs[] =
 	{
-		{ TEXT("Крышка от кастрюли"), EAntShape::Cylinder, FVector(300.f, 3170.f, 1760.f),    FVector(230.f, 230.f, 26.f),  FLinearColor(0.72f, 0.74f, 0.78f), 4.f },
-		{ TEXT("Кружка"),             EAntShape::Cylinder, FVector(-4700.f, 3170.f, 1820.f),  FVector(150.f, 150.f, 170.f), FLinearColor(0.2f, 0.45f, 0.8f),   5.f },   // level v2: the bread box stands where it was
-		{ TEXT("Банка специй"),       EAntShape::Cylinder, FVector(2250.f, 3160.f, 1800.f),   FVector(110.f, 110.f, 180.f), FLinearColor(0.75f, 0.3f, 0.15f),  4.f },
-		{ TEXT("Банка огурцов"),      EAntShape::Cylinder, FVector(3700.f, 3230.f, 3880.f),   FVector(190.f, 190.f, 270.f), FLinearColor(0.35f, 0.6f, 0.25f),  7.f },
-		{ TEXT("Банка варенья"),      EAntShape::Cylinder, FVector(-6700.f, 300.f, 2780.f),   FVector(160.f, 160.f, 220.f), FLinearColor(0.6f, 0.1f, 0.2f),    6.f },
-		{ TEXT("Тарелка"),            EAntShape::Cylinder, FVector(-1250.f, -1700.f, 1440.f), FVector(320.f, 320.f, 22.f),  FLinearColor(0.95f, 0.95f, 0.92f), 5.f },
-		{ TEXT("Кружка"),             EAntShape::Cylinder, FVector(14450.f, -3150.f, 1090.f), FVector(150.f, 150.f, 170.f), FLinearColor(0.85f, 0.3f, 0.25f),  5.f },
+		{ TEXT("Крышка от кастрюли"), EAntShape::Cylinder, FVector(300.f, 3170.f, 1760.f),    FVector(230.f, 230.f, 26.f),  FLinearColor(0.72f, 0.74f, 0.78f), 4.f, TEXT("dishwasher") },
+		{ TEXT("Кружка"),             EAntShape::Cylinder, FVector(-4700.f, 3170.f, 1820.f),  FVector(150.f, 150.f, 170.f), FLinearColor(0.2f, 0.45f, 0.8f),   5.f, nullptr },   // level v2: the bread box stands where it was
+		{ TEXT("Банка специй"),       EAntShape::Cylinder, FVector(2250.f, 3160.f, 1800.f),   FVector(110.f, 110.f, 180.f), FLinearColor(0.75f, 0.3f, 0.15f),  4.f, nullptr },
+		{ TEXT("Банка огурцов"),      EAntShape::Cylinder, FVector(3700.f, 3230.f, 3880.f),   FVector(190.f, 190.f, 270.f), FLinearColor(0.35f, 0.6f, 0.25f),  7.f, TEXT("fridge") },
+		{ TEXT("Банка варенья"),      EAntShape::Cylinder, FVector(-6700.f, 300.f, 2780.f),   FVector(160.f, 160.f, 220.f), FLinearColor(0.6f, 0.1f, 0.2f),    6.f, nullptr },
+		{ TEXT("Тарелка"),            EAntShape::Cylinder, FVector(-1250.f, -1700.f, 1440.f), FVector(320.f, 320.f, 22.f),  FLinearColor(0.95f, 0.95f, 0.92f), 5.f, TEXT("ktable") },
+		{ TEXT("Кружка"),             EAntShape::Cylinder, FVector(14450.f, -3150.f, 1090.f), FVector(150.f, 150.f, 170.f), FLinearColor(0.85f, 0.3f, 0.25f),  5.f, nullptr },
 	};
+	const bool bFlat = AntLab::Get() != nullptr;
 	for (const FDef& D : Defs)
 	{
-		const FTransform TM(D.Loc);
+		if (bFlat && (!D.Group || !KitchenArt::Has(D.Group)))
+		{
+			continue;
+		}
+		const FTransform TM(bFlat ? KitchenArt::Home(D.Group).At(D.Loc) : D.Loc);
 		if (AKitchenProp* P = GetWorld()->SpawnActorDeferred<AKitchenProp>(AKitchenProp::StaticClass(), TM, nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn))
 		{
 			P->ShapeIndex = (uint8)D.Shape;
@@ -867,7 +874,7 @@ void AAntKitchenGameMode::SpawnHighProps()
 
 void AAntKitchenGameMode::SpawnContainerLoot()
 {
-	if (!bHeist || !KitchenArt::Enabled() || AntLab::Get())
+	if (!bHeist || !KitchenArt::Enabled())
 	{
 		return;
 	}
@@ -887,20 +894,36 @@ void AAntKitchenGameMode::SpawnContainerLoot()
 		{ FVector(4300.f, 3550.f, 970.f), 3 },   { FVector(3250.f, 4400.f, 1770.f), 2 },    // fridge shelves
 		{ FVector(11800.f, -8400.f, 160.f), 3 }, { FVector(12700.f, -8450.f, 160.f), 2 },   // TV stand, behind its sliding doors
 	};
+	// KAN-40, a flat: the same spots, each inside the piece of the kitchen it belongs to (in the order of the list above), where
+	// that piece stands in the flat; a piece the flat does not have has no loot.
+	static const TCHAR* const SpotGroup[] =
+	{
+		TEXT("base1400"), TEXT("base1400"), nullptr, nullptr, nullptr, nullptr,
+		TEXT("wcabn0"), TEXT("wcabn1"), TEXT("wcabw0"), TEXT("wcabw1"), TEXT("wcabw2"), TEXT("wcabw2"),
+		TEXT("drawers"), TEXT("drawers"), TEXT("fridge"), TEXT("fridge"), TEXT("fridge"), TEXT("tvstand"), TEXT("tvstand"),
+	};
+	static_assert(UE_ARRAY_COUNT(SpotGroup) == UE_ARRAY_COUNT(Spots), "one art group per spot");
+	const bool bFlat = AntLab::Get() != nullptr;
 	int32 N = 0;
 	TArray<TWeakObjectPtr<AKitchenLoot>> Placed;
 	TArray<FVector> Wanted;
-	for (const FSpot& S : Spots)
+	for (int32 Si = 0; Si < UE_ARRAY_COUNT(Spots); ++Si)
 	{
-		if (!IsSpotFree(S.P))
+		const FSpot& S = Spots[Si];
+		if (bFlat && (!SpotGroup[Si] || !KitchenArt::Has(SpotGroup[Si])))
 		{
 			continue;
 		}
-		if (AKitchenLoot* L = SpawnFood(S.P, S.Tier))
+		const FVector At = bFlat ? KitchenArt::Home(SpotGroup[Si]).At(S.P) : S.P;
+		if (!IsSpotFree(At))
+		{
+			continue;
+		}
+		if (AKitchenLoot* L = SpawnFood(At, S.Tier))
 		{
 			++N;
 			Placed.Add(L);
-			Wanted.Add(S.P);
+			Wanted.Add(At);
 		}
 	}
 	UE_LOG(LogTemp, Display, TEXT("ANTLOOT %d pieces placed behind doors"), N);
@@ -1063,7 +1086,7 @@ void AAntKitchenGameMode::RunTick()
 		CompleteOrder(AntOrder::Overfill);
 	}
 	CheckTrapped();
-	if (!Run.bEventDone && Run.EventPlanned != 0 && Gone >= Run.EventAt && GS->ShiftStage < 3 && !AntLab::Get())   // (KAN-37 lab: no kitchen events)
+	if (!Run.bEventDone && Run.EventPlanned != 0 && Gone >= Run.EventAt && GS->ShiftStage < 3)   // (KAN-40: a flat has the kitchen's events too)
 	{
 		StartEvent(Run.EventPlanned);
 	}
@@ -1352,6 +1375,13 @@ void AAntKitchenGameMode::StartEvent(uint8 Id)
 	case AntEvent::Vacuum:
 	{
 		Where = FVector(5300.f, -3600.f, ARobotVacuum::Height * 0.5f + 2.f);
+		if (const FAntLabVariant* Lab = AntLab::Get())
+		{
+			// KAN-40, a flat: it starts in the corridor (the node «cE», or where the Human comes in)
+			const int32 Node = Lab->NodeIndex(TEXT("cE"));
+			const FVector At = Lab->Nodes.IsValidIndex(Node) ? Lab->Nodes[Node].At : AKitchenBuilder::HumanSpawn();
+			Where = FVector(At.X, At.Y, Lab->Origin.Z + ARobotVacuum::Height * 0.5f + 2.f);
+		}
 		const FTransform TM(FRotator(0.f, 160.f, 0.f), Where);
 		if (ARobotVacuum* V = W->SpawnActorDeferred<ARobotVacuum>(ARobotVacuum::StaticClass(), TM, nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn))
 		{
@@ -1364,6 +1394,14 @@ void AAntKitchenGameMode::StartEvent(uint8 Id)
 	case AntEvent::Flood:
 	{
 		Where = FVector(-3500.f, 2200.f, 1.f);
+		if (AntLab::Get())
+		{
+			// KAN-40, a flat: the hose bursts at the foot of its sink unit (a flat without one has no flood)
+			if (!KitchenArt::Has(TEXT("sink")) || !UAntFluidWorld::Active(this)) { break; }
+			Where = KitchenArt::Home(TEXT("sink")).At(FVector(-3500.f, 2900.f, 60.f));
+			UAntFluidWorld::Active(this)->AddSource(AntFluid::Water, Where, 3.f, FMath::Max(8.f, Len * 0.5f), 120.f);
+			break;
+		}
 		if (UAntFluidWorld* Fluid = UAntFluidWorld::Active(this))
 		{
 			// The real water: the dishwasher hose bursts under the worktop and the floor floods for real.
@@ -1382,6 +1420,13 @@ void AAntKitchenGameMode::StartEvent(uint8 Id)
 	case AntEvent::Pizza:
 	{
 		Where = FVector(5100.f, -3500.f, 0.f);
+		if (const FAntLabVariant* Lab = AntLab::Get())
+		{
+			// KAN-40, a flat: the box is left on the floor of the hall (the node «hMid», or where the Human comes in)
+			const int32 Node = Lab->NodeIndex(TEXT("hMid"));
+			const FVector At = Lab->Nodes.IsValidIndex(Node) ? Lab->Nodes[Node].At : AKitchenBuilder::HumanSpawn();
+			Where = FVector(At.X, At.Y, Lab->Origin.Z);
+		}
 		FActorSpawnParameters P;
 		P.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 		if (APizzaBox* Box = W->SpawnActor<APizzaBox>(APizzaBox::StaticClass(), FTransform(Where), P))

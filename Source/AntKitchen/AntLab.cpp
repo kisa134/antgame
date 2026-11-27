@@ -177,6 +177,8 @@ namespace
 			V->Spawn = P(VecField(*NestO, TEXT("spawn")));
 			V->NestRadius = (float)Num(*NestO, TEXT("radius"), 0.3) * M;
 			V->SpawnRadius = (float)Num(*NestO, TEXT("spawn_r"), 0.2) * M;
+			const TArray<TSharedPtr<FJsonValue>>* RivalA = nullptr;
+			if ((*NestO)->TryGetArrayField(TEXT("rival"), RivalA)) { V->Rival = P(Vec(RivalA)); V->bRival = true; }
 		}
 		if (R->TryGetArrayField(TEXT("food"), Arr))
 		{
@@ -330,6 +332,15 @@ namespace
 			V->Art[i].Name = *V->ArtNames[i];
 			if (!V->ArtBuilt.Contains(V->ArtGroups[i]) && KitchenArt::Mesh(V->Art[i].Name) != nullptr) { V->ArtBuilt.Add(V->ArtGroups[i]); }
 		}
+		// (a home with no rows of its own - the wire by the fridge, the fan - is there as soon as the art is)
+		if (bArtOn && R->TryGetArrayField(TEXT("homes"), Arr))
+		{
+			for (const TSharedPtr<FJsonValue>& J : *Arr)
+			{
+				const FString Id = Str(J->AsObject(), TEXT("id"));
+				if (!V->ArtGroups.Contains(Id)) { V->ArtBuilt.Add(Id); }
+			}
+		}
 		for (int32 i = 0; i < V->ArtMovers.Num(); ++i)
 		{
 			V->ArtMovers[i].OpenText = *V->ArtTexts[2 * i];
@@ -349,6 +360,25 @@ namespace
 				H.K = FTransform(VecField(O, TEXT("k")));
 				H.L = FTransform(FRotator(0., Num(O, TEXT("yaw")), 0.), V->Origin + VecField(O, TEXT("l")), VecField(O, TEXT("s")));
 				V->Homes.Add(H);
+			}
+		}
+		const TSharedPtr<FJsonObject>* PetsO = nullptr;
+		if (R->TryGetObjectField(TEXT("pets"), PetsO))
+		{
+			for (int32 Who = 0; Who < 2; ++Who)
+			{
+				if (!(*PetsO)->TryGetArrayField(Who == 0 ? TEXT("cat") : TEXT("dog"), Arr)) { continue; }
+				for (const TSharedPtr<FJsonValue>& J : *Arr)
+				{
+					const TSharedPtr<FJsonObject> O = J->AsObject();
+					FAntLabPetSpot S;
+					S.P = P(VecField(O, TEXT("at")));
+					S.Do = (uint8)Num(O, TEXT("do"));
+					S.Time = (float)Num(O, TEXT("time"), 20.0);
+					S.bHigh = Num(O, TEXT("high")) > 0.5;
+					S.Yaw = (float)Num(O, TEXT("yaw"), 1000.0);
+					(Who == 0 ? V->CatSpots : V->DogSpots).Add(S);
+				}
 			}
 		}
 		const TSharedPtr<FJsonObject>* WaterO = nullptr;

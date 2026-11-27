@@ -404,4 +404,6 @@ namespace AntReact
 	ANTKITCHEN_API bool DevCommand(AAntKitchenGameMode* GM, const TArray<FString>& A);
 	/** The heat a point gets from the hot things of the flat right now (°C, 22 = room). Every machine (server for gameplay). */
 	ANTKITCHEN_API float HeatAt(const UWorld* W, const FVector& P);
+	/** The same in the kitchen's own coordinates (KAN-40: HeatAt takes a lab flat's point back to them). */
+	ANTKITCHEN_API float HeatAtKitchen(const UWorld* W, const FVector& P);
 }

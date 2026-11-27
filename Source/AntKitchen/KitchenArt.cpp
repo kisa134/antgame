@@ -273,12 +273,15 @@ FBox FHome::Box(const FBox& KitchenBox) const
 	return Out;
 }
 
-FTransform FHome::Whole() const
+FTransform FHome::Tm(const FVector& KitchenLoc, const FRotator& KitchenRot) const
 {
-	if (!bMoved) { return FTransform::Identity; }
-	// P -> L.R * (S o (P - k)) + L.T  (K is a plain offset k)
+	if (!bMoved) { return FTransform(KitchenRot, KitchenLoc); }
+	// The home is P -> L.R * (S o (P - k)) + L.T with S along the kitchen's axes. An actor turned by Rk in the kitchen has its own
+	// axes along Rk: its scale is what S does along them (exact for quarter turns, which is what the gadgets are).
+	const FQuat Rk = KitchenRot.Quaternion();
 	const FVector S = L.GetScale3D();
-	return FTransform(L.GetRotation(), L.GetLocation() - L.GetRotation().RotateVector(S * K.GetLocation()), S);
+	auto Along = [&Rk, &S](const FVector& Axis) { const FVector A = Rk.RotateVector(Axis); return FVector(A.X * S.X, A.Y * S.Y, A.Z * S.Z).Size(); };
+	return FTransform(L.GetRotation() * Rk, At(KitchenLoc), FVector(Along(FVector::ForwardVector), Along(FVector::RightVector), Along(FVector::UpVector)));
 }
 
 FHome Home(const TCHAR* Group)

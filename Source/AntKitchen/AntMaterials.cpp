@@ -333,6 +333,17 @@ const FAntMatProps* ForName(const FString& Name)
 const FAntMatProps* ForComponent(const UPrimitiveComponent* C, FString* OutWhy)
 {
 	if (!C) { return nullptr; }
+	// 0. KAN-40: an explicit tag wins over the mesh's name (a lab flat is built of one box mesh: AntMat_stone, AntMat_wood...)
+	for (const FName& T : C->ComponentTags)
+	{
+		const FString Tag = T.ToString();
+		if (!Tag.StartsWith(TEXT("AntMat_"))) { continue; }
+		if (const FAntMatProps* M = Find(Tag.RightChop(7)))
+		{
+			if (OutWhy) { *OutWhy = FString::Printf(TEXT("тег %s"), *Tag); }
+			return M;
+		}
+	}
 	// 1. the mesh's own name (most specific: SM_K_Sponge, SM_V3_GlassShards...)
 	if (const UStaticMeshComponent* S = Cast<UStaticMeshComponent>(C))
 	{

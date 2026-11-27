@@ -73,7 +73,8 @@ void AAntKitchenGameMode::InitGame(const FString& MapName, const FString& Option
 	Super::InitGame(MapName, Options, ErrorMessage);
 	// KAN-37: the level lab variant of this world (-AntLab=X or the menu), before anything asks where things are. The game state
 	// carries it to the clients (AAntGameState::LabVariant).
-	AntLab::Activate(AntLab::Wanted());
+	// (KAN-40: the training and the sandbox are written for the kitchen: they are played there whatever map the menu has chosen)
+	AntLab::Activate(AntTut::Wanted() != AntTut::Off ? (TCHAR)0 : AntLab::Wanted());
 }
 
 void AAntKitchenGameMode::BeginPlay()
@@ -205,11 +206,9 @@ void AAntKitchenGameMode::BeginPlay()
 
 	SpawnHuman();
 	const bool bLab = AntLab::Get() != nullptr;
-	if (!bLab)   // KAN-37 lab: a grey box with the Human only (no gadgets, residents, pets, bottles, background swarm)
-	{
-		SpawnGadgets();
-		AKitchenSpillBottle::SpawnAll(GetWorld());   // level v2: the oil and the water bottle ants can tip over
-	}
+	// (KAN-40: a flat has its gadgets too, each where its art group stands: SpawnGadgets. Still not there: the background swarm.)
+	SpawnGadgets();
+	AKitchenSpillBottle::SpawnAll(GetWorld());   // level v2: the oil and the water bottle ants can tip over
 	RunBeginPlay();
 	if (!bLab)
 	{
@@ -296,48 +295,64 @@ void AAntKitchenGameMode::BeginPlay()
 void AAntKitchenGameMode::SpawnGadgets()
 {
 	UWorld* W = GetWorld();
-	auto Spawn = [W](UClass* Class, const FVector& Loc, const FRotator& Rot, TFunctionRef<void(AActor*)> Setup) -> AActor*
+	const FAntLabVariant* Lab = AntLab::Get();
+	const bool bLab = Lab != nullptr;
+	const uint8 LabId = Lab && Lab->Id.Len() > 0 ? (uint8)Lab->Id[0] : 0;
+	// KAN-40. Every place below is the kitchen's. A gadget belongs to an art group of the kitchen (Group): in a flat it stands where
+	// that group stands (KitchenArt::Home), turned and scaled with it; a group the flat does not have has no gadget.
+	auto Spawn = [W, LabId](UClass* Class, const FVector& Loc, const FRotator& Rot, TFunctionRef<void(AActor*)> Setup, const TCHAR* Group = nullptr) -> AActor*
 	{
-		const FTransform TM(Rot, Loc);
+		if (Group && !KitchenArt::Has(Group))
+		{
+			return nullptr;
+		}
+		const FTransform TM = Group ? KitchenArt::Home(Group).Tm(Loc, Rot) : FTransform(Rot, Loc);
 		AActor* A = W->SpawnActorDeferred<AActor>(Class, TM, nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 		if (A)
 		{
+			if (AKitchenInteractable* KI = Cast<AKitchenInteractable>(A))
+			{
+				KI->LabId = LabId;
+				KI->HomeScale = TM.GetScale3D();
+			}
 			Setup(A);
 			A->FinishSpawning(TM);
 		}
 		return A;
 	};
-	auto Door = [&Spawn](EKitchenDoorKind Kind, const FVector& Loc)
+	auto Door = [&Spawn](EKitchenDoorKind Kind, const FVector& Loc, const TCHAR* Group)
 	{
-		return Cast<AKitchenDoor>(Spawn(AKitchenDoor::StaticClass(), Loc, FRotator::ZeroRotator, [Kind](AActor* A) { CastChecked<AKitchenDoor>(A)->Kind = Kind; }));
+		return Cast<AKitchenDoor>(Spawn(AKitchenDoor::StaticClass(), Loc, FRotator::ZeroRotator, [Kind](AActor* A) { CastChecked<AKitchenDoor>(A)->Kind = Kind; }, Group));
 	};
-	auto Passage = [&Spawn](EPassageLook Look, const FVector& Loc, float Yaw, const FVector& Exit, const TCHAR* Name)
+	auto Passage = [&Spawn](EPassageLook Look, const FVector& Loc, float Yaw, const FVector& Exit, const TCHAR* Name, const TCHAR* Group)
 	{
-		Spawn(AKitchenPassage::StaticClass(), Loc, FRotator(0.f, Yaw, 0.f), [Look, Exit, Name](AActor* A)
+		const FVector ExitHere = KitchenArt::Home(Group).At(Exit);
+		Spawn(AKitchenPassage::StaticClass(), Loc, FRotator(0.f, Yaw, 0.f), [Look, ExitHere, Name](AActor* A)
 		{
 			AKitchenPassage* P = CastChecked<AKitchenPassage>(A);
 			P->Look = Look;
-			P->Exit = Exit;
+			P->Exit = ExitHere;
 			P->RouteName = Name;
-		});
+		}, Group);
 	};
 	auto NoSetup = [](AActor*) {};
 
-	FridgeDoor = Door(EKitchenDoorKind::Fridge, FVector(4700.f, 3100.f, 120.f));
-	Door(EKitchenDoorKind::Oven, FVector(-750.f, 3000.f, 300.f));
+	FridgeDoor = Door(EKitchenDoorKind::Fridge, FVector(4700.f, 3100.f, 120.f), TEXT("fridge"));
+	Door(EKitchenDoorKind::Oven, FVector(-750.f, 3000.f, 300.f), TEXT("range"));
 	const bool bArt = KitchenArt::Enabled();   // the modelled kitchen: a few gadgets stand where its pieces are
-	Door(EKitchenDoorKind::Drawer, FVector(bArt ? -4900.f : -4950.f, 3000.f, 1330.f));   // the modelled drawer unit is centred 50 further east
-	Door(EKitchenDoorKind::Dishwasher, FVector(650.f, 3000.f, 120.f));
-	Door(EKitchenDoorKind::Microwave, FVector(1300.f, 4000.f, 1740.f));
-	Spawn(AKitchenKnob::StaticClass(), bArt ? FVector(-920.f, 2962.f, 1612.f) : FVector(-920.f, 2945.f, 1600.f), FRotator::ZeroRotator, NoSetup);        // stove knob + the pot of soup
-	Spawn(AKitchenPedalBin::StaticClass(), FVector(6000.f, -1500.f, 0.f), FRotator::ZeroRotator, NoSetup);     // the bin's lid and pedal
-	Spawn(AKitchenFan::StaticClass(), FVector(500.f, 3400.f, 1710.f), FRotator::ZeroRotator, NoSetup);         // desk fan on the counter
+	Door(EKitchenDoorKind::Drawer, FVector(bArt ? -4900.f : -4950.f, 3000.f, 1330.f), TEXT("drawers"));   // the modelled drawer unit is centred 50 further east
+	Door(EKitchenDoorKind::Dishwasher, FVector(650.f, 3000.f, 120.f), TEXT("dishwasher"));
+	Door(EKitchenDoorKind::Microwave, FVector(1300.f, 4000.f, 1740.f), TEXT("microwave"));
+	Spawn(AKitchenKnob::StaticClass(), bArt ? FVector(-920.f, 2962.f, 1612.f) : FVector(-920.f, 2945.f, 1600.f), FRotator::ZeroRotator, NoSetup, TEXT("range"));        // stove knob + the pot of soup
+	Spawn(AKitchenPedalBin::StaticClass(), FVector(6000.f, -1500.f, 0.f), FRotator::ZeroRotator, NoSetup, TEXT("bin"));     // the bin's lid and pedal
+	Spawn(AKitchenFan::StaticClass(), FVector(500.f, 3400.f, 1710.f), FRotator::ZeroRotator, NoSetup, TEXT("fan"));         // desk fan on the counter
 
-	Faucet = Cast<AKitchenFaucet>(Spawn(AKitchenFaucet::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, NoSetup));
-	Spawn(AKitchenSwitch::StaticClass(), FVector(-6995.f, 1900.f, 2300.f), FRotator::ZeroRotator, NoSetup);
-	Spawn(AKitchenToaster::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, NoSetup);
-	Spawn(AKitchenWire::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, NoSetup);
-	Spawn(AKitchenTrap::StaticClass(), FVector(-3150.f, 3450.f, 140.f), FRotator(0.f, 90.f, 0.f), NoSetup);
+	// (the faucet works in world places of its own: AKitchenFaucet::Spout() and the like know where the sink unit stands)
+	Faucet = KitchenArt::Has(TEXT("sink")) ? Cast<AKitchenFaucet>(Spawn(AKitchenFaucet::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, NoSetup)) : nullptr;
+	Spawn(AKitchenSwitch::StaticClass(), FVector(-6995.f, 1900.f, 2300.f), FRotator::ZeroRotator, NoSetup, TEXT("switch"));
+	Spawn(AKitchenToaster::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, NoSetup, TEXT("toaster"));
+	Spawn(AKitchenWire::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, NoSetup, TEXT("wire"));
+	Spawn(AKitchenTrap::StaticClass(), FVector(-3150.f, 3450.f, 140.f), FRotator(0.f, 90.f, 0.f), NoSetup, TEXT("sink"));
 	if (bArt)
 	{
 		// Every other moving part of the modelled kitchen: cabinet doors, drawers, the freezer door, the crisper,
@@ -356,8 +371,51 @@ void AAntKitchenGameMode::SpawnGadgets()
 	}
 
 	// Secret routes (each end leads to the other). The air ducts are real now: crawl in through the grilles (KitchenHouse.cpp).
-	Passage(EPassageLook::Drain, FVector(-3500.f, 4000.f, 1150.f), 0.f, FVector(-3500.f, 3600.f, 200.f), TEXT("слив раковины → под мойку"));
-	Passage(EPassageLook::Pipe, FVector(-3300.f, 4300.f, 140.f), 0.f, FVector(-3700.f, 3800.f, 1210.f), TEXT("труба → в раковину"));
+	Passage(EPassageLook::Drain, FVector(-3500.f, 4000.f, 1150.f), 0.f, FVector(-3500.f, 3600.f, 200.f), TEXT("слив раковины → под мойку"), TEXT("sink"));
+	Passage(EPassageLook::Pipe, FVector(-3300.f, 4300.f, 140.f), 0.f, FVector(-3700.f, 3800.f, 1210.f), TEXT("труба → в раковину"), TEXT("sink"));
+	if (bLab)
+	{
+		// KAN-40, a flat: the junk that lies on the dining table and under the fridge (the rest of the kitchen's list has no place here)
+		struct FLabProp { EAntShape Shape; FVector Loc; FVector Size; FLinearColor Color; float Mass; const TCHAR* Group; };
+		const FLabProp LabProps[] =
+		{
+			{ EAntShape::Sphere, FVector(200.f, -200.f, 1450.f), FVector(90.f), FLinearColor(0.5f, 0.85f, 0.3f), 1.f, TEXT("ktable") },                  // grapes on the table
+			{ EAntShape::Sphere, FVector(-400.f, -1000.f, 1450.f), FVector(90.f), FLinearColor(0.5f, 0.85f, 0.3f), 1.f, TEXT("ktable") },
+			{ EAntShape::Cylinder, FVector(-900.f, -300.f, 1450.f), FVector(70.f, 70.f, 80.f), FLinearColor(0.75f, 0.75f, 0.8f), 1.2f, TEXT("ktable") },  // thimble
+			{ EAntShape::Cylinder, FVector(3600.f, 3800.f, 20.f), FVector(70.f, 70.f, 10.f), FLinearColor(0.75f, 0.6f, 0.3f), 2.f, TEXT("fridge") },      // coin under the fridge
+		};
+		for (const FLabProp& D : LabProps)
+		{
+			if (!KitchenArt::Has(D.Group)) { continue; }
+			Spawn(AKitchenProp::StaticClass(), KitchenArt::Home(D.Group).At(D.Loc), FRotator::ZeroRotator, [&D](AActor* A)
+			{
+				AKitchenProp* P = CastChecked<AKitchenProp>(A);
+				P->ShapeIndex = (uint8)D.Shape;
+				P->Size = D.Size;
+				P->Color = D.Color;
+				P->Mass = D.Mass;
+			});
+		}
+		// The family and the pets of a flat (KAN-40): the dog and the cat at the first of their places (the variant's data), the kid on the
+		// floor in front of the sofa, grandma in her armchair. Each of them settles itself from where the furniture stands.
+		if (Lab->DogSpots.Num() > 0)
+		{
+			Spawn(ACritter::StaticClass(), Lab->DogSpots[0].P, FRotator::ZeroRotator, [](AActor* A) { CastChecked<ACritter>(A)->Kind = 0; });
+		}
+		if (Lab->CatSpots.Num() > 0)
+		{
+			Spawn(ACritter::StaticClass(), Lab->CatSpots[0].P + FVector(0.f, 0.f, 300.f), FRotator::ZeroRotator, [](AActor* A) { CastChecked<ACritter>(A)->Kind = 1; });
+		}
+		if (NpcWorld::NewNpcs() && HumanBody::Enabled(HumanFig::Kid) && KitchenArt::Has(TEXT("sofa")))
+		{
+			Spawn(AKidCharacter::StaticClass(), KitchenArt::Home(TEXT("sofa")).At(FVector(13800.f, -1200.f, 800.f)), FRotator::ZeroRotator, [](AActor*) {});
+		}
+		if (NpcWorld::NewNpcs() && HumanBody::Enabled(HumanFig::Grandma) && KitchenArt::Has(TEXT("armchair")))
+		{
+			Spawn(AGrandmaCharacter::StaticClass(), KitchenArt::Home(TEXT("armchair")).At(FVector(9910.f, -5800.f, 1480.f)), FRotator::ZeroRotator, [](AActor*) {});
+		}
+		return;
+	}
 	// The pets and the rest of the family (primitives for now).
 	Spawn(ACritter::StaticClass(), FVector(600.f, -600.f, 0.f), FRotator::ZeroRotator, [](AActor* A) { CastChecked<ACritter>(A)->Kind = 0; });
 	Spawn(ACritter::StaticClass(), FVector(bArt ? 15500.f : 13500.f, 400.f, 950.f), FRotator(0.f, -90.f, 0.f), [](AActor* A) { CastChecked<ACritter>(A)->Kind = 1; });   // level v2: the east cushion (not inside the kid)
@@ -708,7 +766,7 @@ void AAntKitchenGameMode::SpawnHeavyLoot()
 void AAntKitchenGameMode::KitchenLifeEvent()
 {
 	AAntGameState* GS = GetGameState<AAntGameState>();
-	if (!GS || GS->Phase != 0 || AntLab::Get())
+	if (!GS || GS->Phase != 0)   // (KAN-40: a flat has its fridge, its faucet and its cabinet doors: the same small events)
 	{
 		return;
 	}
@@ -782,7 +840,7 @@ void AAntKitchenGameMode::RestartPlayer(AController* NewPlayer)
 	// Inside the safe zone of the nest; both nests open towards the middle of the kitchen.
 	const float Out = Team == 0 ? 1.f : -1.f;
 	// Level v2: the fire ants come out of the red anthill in the yard (a solid mound 427 high): they appear on top of it, in the crater.
-	const FVector Loc = Nest + FVector(Out * FMath::FRandRange(180.f, 380.f), FMath::FRandRange(-280.f, 280.f), (Team == 1 && KitchenArt::Enabled()) ? 520.f : 60.f);
+	const FVector Loc = Nest + FVector(Out * FMath::FRandRange(180.f, 380.f), FMath::FRandRange(-280.f, 280.f), (Team == 1 && KitchenArt::Enabled() && !AntLab::Get()) ? 520.f : 60.f);   // (a flat: no mound)
 	RestartPlayerAtTransform(NewPlayer, FTransform(FRotator(0.f, Team == 0 ? 0.f : 180.f, 0.f), Loc));
 }
 

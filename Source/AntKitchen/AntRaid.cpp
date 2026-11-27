@@ -694,7 +694,7 @@ void AAntRaid::CountStartCost()
 
 void AAntRaid::StartClan()
 {
-	if (!InRaid() || !GM || FParse::Param(FCommandLine::Get(), TEXT("AntNoClan")) || AntTut::OwnsRaid(this) || AntLab::Get())   // (KAN-37 lab: no red clan)   // (dev: a raid without the red clan; the training)
+	if (!InRaid() || !GM || FParse::Param(FCommandLine::Get(), TEXT("AntNoClan")) || AntTut::OwnsRaid(this) || (AntLab::Get() && !AntLab::Get()->bRival))   // (KAN-40: a flat has the red clan where its data gives them a way in)   // (dev: a raid without the red clan; the training)
 	{
 		return;
 	}
@@ -716,7 +716,7 @@ bool AAntRaid::OnClanCakeHome(AKitchenLoot* C)
 	}
 	C->ReleaseAll();
 	// It lies in the crater on top of the hill, in plain sight, while they eat it: 100% down to 40% over the tier's window.
-	const FVector Top = AKitchenBuilder::NestLocation(1) + FVector(0.f, 0.f, 470.f);
+	const FVector Top = AKitchenBuilder::NestLocation(1) + FVector(0.f, 0.f, AntLab::Get() ? 80.f : 470.f);   // (a flat: no mound, it lies on the floor where they come in)
 	C->SetActorLocation(Top, false, nullptr, ETeleportType::TeleportPhysics);
 	const float Window = TierDef().Window * FMath::Clamp((CakeLeft - 40) / 60.f, 0.05f, 1.f);
 	CakeWindowEnds = S->GetServerWorldTimeSeconds() + Window;

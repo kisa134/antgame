@@ -84,6 +84,7 @@ class Flat:
         self.nest, self.cake, self.human = None, None, None
         self.art, self.movers, self.homes, self.slots, self.basins = [], [], [], [], []
         self.climb_art = []
+        self.pets = dict(cat=[], dog=[])
         self.notes = []
         self._n = itertools.count()
 
@@ -501,8 +502,12 @@ def variant_A():
     G('ksill', [91], (-1650, -5005, 2120), (1650, -4815, 2196), (0.8, 0.0, 0.85), (1.8, 0.25, 0.88))
     G('kradiator', [299], (-692, -4995, -4), (692, -4767, 1402), (0.9, 0.02, 0.12), (1.7, 0.14, 0.70))
     F.place('klamp', 'SM_K_CeilingLamp', (1.5, 1.8, CEIL - 0.1316))
+    # gadgets that have no model of their own in the table: the bare wire (in the kitchen: behind the fridge; here: in the corner
+    # south of it, out of the west wall) and the desk fan on the west worktop
+    G('wire', [], (3100, 4780, 0), (3650, 5000, 800), (0.0, 0.08, 0.0), (0.116, 0.37, 0.42), yaw=90)
+    G('fan', [], (120, 3020, 1710), (880, 3780, 2500), (0.22, 1.78, 0.85), (0.50, 2.06, 1.141), yaw=90)
     # living room
-    G('tvstand', [194, 195, 196], (10395, -8996, 0), (15905, -7704, 1102), (3.12, 1.0, 0.0), (3.6, 2.6, 0.5), yaw=270)
+    G('tvstand', [194, 195, 196, 198], (10395, -8996, 0), (15905, -7704, 1102), (3.12, 1.0, 0.0), (3.6, 2.6, 0.5), yaw=270)
     G('tv', [197], (11193, -8909, 1099), (15107, -8491, 3303), (3.14, 1.3, 0.5), (3.26, 2.3, 1.2), yaw=270)
     KR = kitchen_art()[0]
     G('bookshelf', sorted(k for k, r in KR.items() if r['n'].startswith('SM_L_Book') and 19100 <= r['loc'][0] <= 20250 and -7150 <= r['loc'][1] <= -1850),
@@ -512,22 +517,44 @@ def variant_A():
     G('lwin', [90], (16635, -9150, 2200), (19935, -9026, 4309), (4.5, -0.2, 0.88), (5.6, -0.08, 2.4))
     G('lsill', [93], (16635, -9005, 2120), (19935, -8815, 2196), (4.5, 0.0, 0.85), (5.6, 0.25, 0.88))
     F.fit('carpet', 'SM_L_Carpet', (4.2, 0.9, 0.0), (6.6, 2.7, 0.012))
+    # grandma's armchair (no box in the grey plan: the corner south of the TV stand; it faces east, as in the kitchen's living room)
+    G('armchair', [295], (8295, -6902, 0), (10005, -4698, 1900), (3.14, 0.10, 0.0), (3.72, 0.85, 0.75))
     F.place('llamp', 'SM_L_CeilingLamp', (5.77, 1.8, CEIL - 0.1316))
-    F.climb_art = ['kradiator', 'bed', 'bear', 'sofa', 'carpet']     # what ants climb like the box it replaces; the rest is smooth furniture
+    F.climb_art = ['kradiator', 'bed', 'bear', 'sofa', 'carpet', 'armchair']     # what ants climb like the box it replaces; the rest is smooth furniture
     # ---- places kept for the sets that are being modelled (bedroom, bath, hall): a model with one of these names is fitted
     #      into the box by its own bounds as soon as the game has it; until then the grey boxes stand there.
     S = F.slot
-    S('bed', ['SM_B_Bed'], (6.4, 4.2, 0.0), (8.42, 5.8, 1.1), yaw=270, note='кровать с изголовьем у восточной стены; изголовье к +X')
-    S('wardrobe', ['SM_B_Wardrobe'], (4.6, 6.3, 0.0), (5.8, 6.9, 2.2), yaw=0, note='шкаф у северной стены, фасад на юг')
-    S('toybox', ['SM_B_ToyBox', 'SM_V3_ToyBox'], (5.0, 3.9, 0.0), (5.6, 4.35, 0.4), yaw=180, note='ящик с игрушками у южной стены')
-    S('bear', ['SM_B_Bear'], (7.0, 6.3, 0.0), (7.3, 6.6, 0.3), yaw=0, note='плюшевый мишка на полу')
-    S('tub', ['SM_T_Bathtub'], (0.0, 6.2, 0.0), (1.74, 6.9, 0.55), yaw=0, note='ванна вдоль северной стены (внутри вода: чаша должна быть полой)')
-    S('washer', ['SM_T_Washer'], (0.0, 5.5, 0.0), (0.6, 6.1, 0.85), yaw=90, note='стиральная машина у западной стены, фасад на восток')
-    S('bsink', ['SM_T_Sink'], (1.1, 5.12, 0.0), (1.6, 5.45, 0.85), yaw=180, note='раковина с тумбой у южной стены ванной')
-    S('toilet', ['SM_T_Toilet'], (2.1, 6.3, 0.0), (2.6, 6.9, 0.8), yaw=0, note='унитаз с бачком у северной стены')
-    S('shoerack', ['SM_H_ShoeRack'], (3.0, 6.45, 0.0), (3.9, 6.88, 0.45), yaw=0, note='обувница у входной двери')
-    S('hatshelf', ['SM_H_HatShelf'], (4.2, 5.3, 1.75), (4.48, 6.4, 1.78), yaw=270, note='полка для шапок на восточной стене прихожей')
-    S('frontdoor', ['SM_H_FrontDoor'], (3.2, 6.88, 0.0), (4.1, 6.9, 2.05), yaw=0, note='входная дверь (закрыта)')
+    #      Names: those of Tools/blender/hero_flat.py (the sets hero_bedroom, hero_bath, hero_hall, branch code/ANT-flat-art).
+    #      yaw turns the model's own axes (in the engine a model's front is its +Y): 180 = the front looks south, 270 = east,
+    #      0 = north, 90 = west.
+    S('bed', ['SM_B_Bed'], (6.4, 4.2, 0.0), (8.42, 5.8, 1.1), yaw=90, note='кровать с изголовьем у восточной стены: изголовье (у модели сзади) к востоку')
+    S('wardrobe', ['SM_B_Wardrobe'], (4.6, 6.3, 0.0), (5.8, 6.9, 2.2), yaw=180, note='шкаф у северной стены, фасад на юг')
+    S('toybox', ['SM_B_ToyBox'], (5.0, 3.9, 0.0), (5.6, 4.35, 0.4), yaw=0, note='ящик с игрушками у южной стены, фасад на север')
+    S('bear', ['SM_B_Bear'], (7.0, 6.3, 0.0), (7.3, 6.6, 0.3), yaw=180, note='плюшевый мишка на полу')
+    S('tub', ['SM_Bath_Tub'], (0.0, 6.2, 0.0), (1.74, 6.9, 0.55), yaw=180, note='ванна вдоль северной стены, экран на юг (внутри вода: чаша должна быть полой)')
+    S('washer', ['SM_Bath_Washer'], (0.0, 5.5, 0.0), (0.6, 6.1, 0.85), yaw=270, note='стиральная машина у западной стены, фасад на восток')
+    S('bsink', ['SM_Bath_Sink'], (1.1, 5.12, 0.0), (1.6, 5.45, 0.85), yaw=0, note='раковина с тумбой у южной стены ванной, фасад на север')
+    S('toilet', ['SM_Bath_Toilet'], (2.1, 6.3, 0.0), (2.6, 6.9, 0.8), yaw=180, note='унитаз с бачком у северной стены, фасад на юг')
+    S('shoerack', ['SM_Hall_ShoeRack', 'SM_H_ShoeRack'], (3.0, 6.45, 0.0), (3.9, 6.88, 0.45), yaw=180, note='обувница у входной двери')
+    S('hatshelf', ['SM_Hall_CoatRack', 'SM_Hall_HatShelf'], (4.2, 5.3, 1.75), (4.48, 6.4, 1.78), yaw=90, note='вешалка с полкой для шапок на восточной стене прихожей, лицом на запад')
+    S('frontdoor', ['SM_Hall_EntryDoor_Frame', 'SM_Hall_EntryDoor'], (3.2, 6.88, 0.0), (4.1, 6.9, 2.05), yaw=180, note='входная дверь (закрыта), лицом в прихожую')
+    # ---- the pets (KAN-40): where the cat and the dog sleep, sit and sniff (do: 0 sleep, 1 eat or sniff, 2 sit; high: on furniture)
+    F.pets = dict(
+        cat=[dict(at=[7.95, 1.25, 0.45], do=0, time=55, high=1, yaw=180),     # asleep on the south end of the sofa
+             dict(at=[7.95, 2.5, 0.45], do=2, time=25, high=1, yaw=180),      # the other end, watching the floor
+             dict(at=[1.3, 0.125, 0.88], do=2, time=25, high=1, yaw=0),       # the kitchen window sill, lying along it
+             dict(at=[3.38, 2.42, 0.5], do=2, time=18, high=1, yaw=0),        # on the TV stand, beside the TV
+             dict(at=[4.6, 1.3, 0.0], do=2, time=12),                         # on the carpet
+             dict(at=[5.8, 5.6, 0.0], do=0, time=30)],                        # a nap on the bedroom floor
+        dog=[dict(at=[2.72, 1.4, 0.0], do=0, time=50),                        # asleep by the dining table
+             dict(at=[2.35, 2.6, 0.0], do=1, time=8),                         # sniffing at the bin
+             dict(at=[3.6, 6.1, 0.0], do=1, time=6),                          # the shoes in the hall
+             dict(at=[7.2, 2.6, 0.0], do=2, time=12),                         # sitting by the sofa, begging
+             dict(at=[7.2, 3.2, 0.0], do=0, time=45),                         # asleep in the corner of the living room
+             dict(at=[0.95, 1.9, 0.0], do=1, time=7)])                        # licking the floor by the worktop
+    # ---- the red clan (KAN-40): they come in at the west end of the loggia (no mound in a flat: a patch of soil on the floor)
+    F.nest['rival'] = [0.4, -0.85, 0.0]
+    F.box('rivalbed', (0.12, -1.13, 0.0), (0.68, -0.57, 0.02), 'decal', '#7a2e22', collide=False)
     # ---- water (the liquid simulation's basins; the order matters: the worktop with the sink, the floor, the tub)
     F.basin('worktop', (0.80, 2.90), (2.14, 3.62), 0.85, (1.14, 3.04), 70, 640, 20)
     F.basin('floor', (-0.02, -1.42), (8.44, 6.92), 0.0, (1.5, 2.3), 45, 40, 30)
@@ -681,7 +708,7 @@ def variant_A():
     A = F.add_food
     A((0.9, 2.45, 0), 0, 'kMid', what='крошки у гнезда'); A((1.6, 2.6, 0), 0, 'kMid', what='крошки')
     A((1.9, 1.4, 0), 1, 'kTableF', what='под столом'); A((1.1, 3.35, 0), 1, 'kSinkIn', what='под мойкой')
-    A((1.2, 3.3, 0.85), 1, 'kWork', what='у мойки'); A((1.95, 3.2, 0.85), 2, 'kWork', what='у плиты')
+    A((0.35, 2.8, 0.85), 1, 'kWork', what='у мойки'); A((2.0, 3.06, 0.85), 2, 'kWork', what='у плиты')
     A((1.65, 1.3, 0.75), 2, 'kTable', what='на столе'); A((1.05, 0.13, 0.88), 2, 'kSill', what='на подоконнике')
     A((1.2, 3.45, 2.15), 3, 'kCabTop', what='на шкафчиках'); A((0.3, 1.75, 0.85), 1, 'kWorkW', what='у окна на столешнице')
     A((1.7, 4.45, 0), 0, 'cMid', what='в коридоре'); A((3.3, 4.6, 0), 1, 'cE', what='в коридоре у прихожей')
@@ -690,7 +717,7 @@ def variant_A():
     A((2.4, 5.8, 0), 1, 'wMid', what='в туалете'); A((1.92, 6.05, 0.72), 2, 'wShelf', what='на полочке')
     A((3.6, 3.15, 0), 1, 'lDoor', what='у двери гостиной'); A((4.7, 2.6, 0), 1, 'lMid', what='на ковре')
     A((7.95, 2.3, 0), 2, 'lUnderSofa', what='под диваном'); A((3.35, 2.2, 0.5), 2, 'lTv', what='на тумбе')
-    A((5.1, 0.13, 0.88), 2, 'lSill', what='на подоконнике'); A((7.9, 1.3, 0.45), 2, 'lSofa', what='на диване')
+    A((5.1, 0.13, 0.88), 2, 'lSill', what='на подоконнике'); A((7.9, 1.3, 0.41), 2, 'lSofa', what='на диване')
     A((6.0, 3.42, 2.0), 3, 'lShelfTop', what='на стеллаже'); A((5.3, 1.5, 0.75), 2, 'cake', what='на праздничном столе')
     A((6.3, 2.1, 0.75), 3, 'cake', what='на праздничном столе')
     A((4.85, 4.55, 0), 1, 'bDoor', what='в спальне у двери'); A((5.3, 4.15, 0.4), 2, 'bToy', what='на ящике с игрушками')
@@ -714,7 +741,7 @@ def export(F):
                 origin_uu=[60000.0, 0.0, 0.0], bounds=[min(xs), min(ys), max(xs), max(ys)], ceiling=CEIL,
                 rooms=F.rooms, boxes=F.boxes, zones=F.zones, hatches=F.hatches, cover=F.cover, nest=F.nest,
                 food=F.food, cake=F.cake, human=F.human, nodes=list(F.nodes.values()), edges=F.edges,
-                art=F.art, movers=F.movers, homes=F.homes, slots=F.slots, climb_art=F.climb_art, water=dict(basins=F.basins))
+                art=F.art, movers=F.movers, homes=F.homes, slots=F.slots, climb_art=F.climb_art, pets=F.pets, water=dict(basins=F.basins))
 
 # ---------------------------------------------------------------------------------------------------------- the check
 

@@ -43,6 +43,10 @@ void AKitchenBuilder::BuildLab()
 			continue;
 		}
 		C->ComponentTags.Add(TEXT("AntLab"));
+		// KAN-40: what the grey box stands for, for fire, water and current (without it the box mesh reads as cardboard and the floor burns)
+		if (B.Kind == TEXT("glass")) { C->ComponentTags.Add(TEXT("AntMat_glass")); }
+		else if (B.Kind == TEXT("furn") || B.Kind == TEXT("top") || B.Kind == TEXT("door")) { C->ComponentTags.Add(TEXT("AntMat_wood")); }
+		else { C->ComponentTags.Add(TEXT("AntMat_stone")); }   // (walls, the floor, and the painted marks on them)
 		Map4::MarkDebug(C);   // (the art audit has nothing to say about a grey box)
 		if (B.bCollide)
 		{

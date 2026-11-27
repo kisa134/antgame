@@ -26,6 +26,8 @@ struct FAntLabBox { FVector C; FVector S; FRotator R; FLinearColor Col; FString 
 struct FAntLabBasin { FString Name; FVector2D Min, Max, Ref; float Z = 0.f, Up = 45.f, Down = 40.f, Dx = 25.f, Fill = -1.e9f; int32 Sub = 1; };
 /** KAN-40. Where an art group of the kitchen stands in the flat: K (the kitchen, a plain offset) and L (the flat: offset, yaw, scale per axis). */
 struct FAntLabHome { FString Id; FTransform K, L; };
+/** KAN-40. A place of the cat or the dog (ACritter::ResolveSpots): Do 0 sleep, 1 eat or sniff, 2 sit; bHigh: on furniture (the height is taken from it). */
+struct FAntLabPetSpot { FVector P; uint8 Do = 0; float Time = 20.f; bool bHigh = false; float Yaw = 1000.f; };
 struct FAntLabZone { FString Kind; FBox Box; float Temp = 0.f; float Rate = 0.f; FString Note; };
 struct FAntLabHatchDef { FString Id; FString Name; FVector C; FVector S; int32 Class = 1; TArray<FVector> Use; FString Note; };
 struct FAntLabRoom { FString Id; FString Name; FBox2D Rect; FString Hero; FString Physics; float Area = 0.f; };
@@ -66,6 +68,9 @@ struct FAntLabVariant
 	TSet<FString> ArtClimb;                          // groups ants climb (the rest is smooth furniture, like the boxes it replaces)
 	TArray<FAntLabHome> Homes;
 	TArray<FAntLabBasin> Basins;
+	TArray<FAntLabPetSpot> CatSpots, DogSpots;
+	FVector Rival = FVector::ZeroVector;             // where the red clan comes into the flat (their «hill»)
+	bool bRival = false;
 
 	/** Metres (flat) -> world uu. */
 	FVector W(const FVector& Metres) const { return Origin + Metres * M; }

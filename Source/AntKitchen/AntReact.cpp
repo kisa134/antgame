@@ -29,6 +29,7 @@
 #include "RenderUtils.h"
 #include "LevelV2.h"
 #include "LevelV3.h"
+#include "AntLab.h"
 #include "Map4Look.h"
 #include "NpcRoutine.h"
 #include "NpcBody.h"
@@ -848,7 +849,24 @@ void AAntReactNet::TickHeat(float Dt)
 	}
 }
 
-float AntReact::HeatAt(const UWorld* W, const FVector& P)
+float AntReact::HeatAt(const UWorld* W, const FVector& WorldP)
+{
+	// KAN-40: in a lab flat the cold and the hot places stand where their models stand: the point goes back to the kitchen's coordinates of that group
+	if (AntLab::Get())
+	{
+		static const TCHAR* Groups[] = { TEXT("fridge"), TEXT("kradiator"), TEXT("range"), TEXT("microwave"), TEXT("toaster") };
+		for (const TCHAR* G : Groups)
+		{
+			const KitchenArt::FHome H = KitchenArt::Home(G);
+			if (!H.bMoved) { continue; }
+			const float T = HeatAtKitchen(W, H.ToKitchen(WorldP));
+			if (T != 22.f) { return T; }
+		}
+	}
+	return HeatAtKitchen(W, WorldP);
+}
+
+float AntReact::HeatAtKitchen(const UWorld* W, const FVector& P)
 {
 	const AAntReactNet* N = AAntReactNet::Get(W);
 	const int32 Mode = N ? N->HeatMode : -1;
@@ -872,8 +890,8 @@ void AAntReactNet::AffectAnt(AAntCharacter* Ant, FAntEnv& Env) const
 {
 	const FVector P = Ant->GetActorLocation();
 	// the kitchen radiator (the living-room one is the builder's) and the running microwave
-	if (InBox(P, Spot::RadK0, Spot::RadK1)) { Env.Temp(64.f, 10.f); }
-	if (MicroUntil > NetNow() && bPower && InBox(P, Spot::MicroBox0, Spot::MicroBox1)) { Env.Temp(75.f, 30.f); Env.Cause = TEXT("Микроволновка греет! Вылезай"); }
+	if (InBox(KitchenArt::Home(TEXT("kradiator")).ToKitchen(P), Spot::RadK0, Spot::RadK1)) { Env.Temp(64.f, 10.f); }
+	if (MicroUntil > NetNow() && bPower && InBox(KitchenArt::Home(TEXT("microwave")).ToKitchen(P), Spot::MicroBox0, Spot::MicroBox1)) { Env.Temp(75.f, 30.f); Env.Cause = TEXT("Микроволновка греет! Вылезай"); }
 	for (const FAntReactMelt& M : Melts)
 	{
 		if (M.Kind == 0 && FVector::DistSquared(P, M.Pos) < 140.f * 140.f) { Env.Temp(3.f, 7.f); break; }
@@ -903,7 +921,7 @@ void AAntReactNet::TickWet(float Dt)
 	{
 		DishDripUntil = Now + 30.f;
 		ChainLog(TEXT("C16"), TEXT("the dishwasher door is open: the wet racks drip off the ramp"));
-		if (Fluid) { Fluid->AddSource(AntFluid::Water, Spot::DishLip, 0.3f, 30.f, 50.f); }
+		if (Fluid) { Fluid->AddSource(AntFluid::Water, KitchenArt::Home(TEXT("dishwasher")).At(Spot::DishLip), 0.3f, 30.f, 50.f); }
 	}
 	bDishWasOpen = bDishOpen;
 	if (!Fluid) { return; }
@@ -2554,7 +2572,8 @@ namespace AntReact
 bool Enabled()
 {
 	static const bool bOff = FParse::Param(FCommandLine::Get(), TEXT("AntNoReact"));
-	return !bOff && LevelV3::Enabled() && KitchenArt::Enabled();
+	// KAN-40: a lab flat has the net too (power, clouds, zaps, heat); only the reactive objects of the chains are the kitchen's
+	return !bOff && (LevelV3::Enabled() || AntLab::Get() != nullptr) && KitchenArt::Enabled();
 }
 
 bool HasPower(const UObject* Ctx)
@@ -2628,6 +2647,13 @@ void ResetAll(UWorld* W)
 	Net->HeatMode = -1;
 	for (TActorIterator<AAntReactProp> It(W); It; ++It) { It->Destroy(); }
 
+	if (AntLab::Get())
+	{
+		// KAN-40: the spots of the chains C7..C22 are kitchen coordinates: a flat gets the net and the matter, not those objects
+		UE_LOG(LogTemp, Display, TEXT("ANTREACT reset: power on, a lab flat - the net and the matter only, no reactive objects of the chains"));
+		AntMatter::ResetAll(W);
+		return;
+	}
 	SpawnProp(W, AntProp::Pepper, OnTop(W, Spot::Pepper, 500.f, 900.f), 0.f);
 	SpawnProp(W, AntProp::Flour, OnTop(W, Spot::Flour, 500.f, 900.f), 0.f);
 	SpawnProp(W, AntProp::IceTray, OnTop(W, Spot::Ice, 500.f, 900.f), 0.f);

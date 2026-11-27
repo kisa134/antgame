@@ -471,15 +471,19 @@ void AKitchenSpillBottle::SpawnAll(UWorld* World)
 	{
 		return;   // the places are the level v2 kitchen's
 	}
-	struct FDef { uint8 Kind; FVector At; };
+	struct FDef { uint8 Kind; FVector At; const TCHAR* Group; };
 	const FDef Defs[] =
 	{
-		{ SlickKind::Oil,   FVector(-1650.f, 2860.f, 0.f) },   // on the floor by the stove, against the cabinet front
-		{ SlickKind::Water, FVector(2350.f, 2850.f, 0.f) },    // by the fridge, in front of the corner cabinet
+		{ SlickKind::Oil,   FVector(-1650.f, 2860.f, 0.f), TEXT("range") },   // on the floor by the stove, against the cabinet front
+		{ SlickKind::Water, FVector(2350.f, 2850.f, 0.f), TEXT("fridge") },   // by the fridge, in front of the corner cabinet
 	};
 	for (const FDef& D : Defs)
 	{
-		FVector At = D.At;
+		if (!KitchenArt::Has(D.Group))
+		{
+			continue;   // (KAN-40: a flat without that piece)
+		}
+		FVector At = KitchenArt::Home(D.Group).At(D.At);   // (the kitchen's place; a flat: by the same piece)
 		FHitResult Hit;
 		if (World->LineTraceSingleByObjectType(Hit, At + FVector(0.f, 0.f, 500.f), At - FVector(0.f, 0.f, 500.f), FCollisionObjectQueryParams(ECC_WorldStatic)))
 		{

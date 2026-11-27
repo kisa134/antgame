@@ -26,6 +26,7 @@
 #include "Net/UnrealNetwork.h"
 #include "EngineUtils.h"
 #include "AntReact.h"
+#include "AntLab.h"
 #include "Engine/World.h"
 
 namespace InteractColors
@@ -105,6 +106,36 @@ void AKitchenInteractable::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(AKitchenInteractable, PullMissing);
+	DOREPLIFETIME_CONDITION(AKitchenInteractable, LabId, COND_InitialOnly);
+	DOREPLIFETIME_CONDITION(AKitchenInteractable, HomeScale, COND_InitialOnly);
+}
+
+void AKitchenInteractable::BeginPlay()
+{
+	if (!HasAuthority())
+	{
+		// KAN-40: a guest builds the gadget from the flat's tables, at the flat's scale (see LabId).
+		const FAntLabVariant* Lab = AntLab::Get();
+		if (LabId != 0 && (!Lab || Lab->Id.Len() == 0 || Lab->Id[0] != (TCHAR)LabId)) { AntLab::Activate((TCHAR)LabId); }
+		if (!HomeScale.Equals(FVector::OneVector, 1.e-4)) { SetActorScale3D(HomeScale); }
+	}
+	Super::BeginPlay();
+}
+
+namespace
+{
+	/** KAN-40: the art group (KitchenArt::Home) a door of the kitchen belongs to. */
+	const TCHAR* DoorGroup(EKitchenDoorKind Kind)
+	{
+		switch (Kind)
+		{
+		case EKitchenDoorKind::Fridge: return TEXT("fridge");
+		case EKitchenDoorKind::Oven: return TEXT("range");
+		case EKitchenDoorKind::Drawer: return TEXT("drawers");
+		case EKitchenDoorKind::Dishwasher: return TEXT("dishwasher");
+		default: return TEXT("microwave");
+		}
+	}
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -548,14 +579,15 @@ void AKitchenDoor::SetOpen(bool bInOpen, float AutoClose)
 		bLootSpawned = true;
 		if (AAntKitchenGameMode* GM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
 		{
-			const FVector Base = GetActorLocation() + FVector(0.f, -1100.f, 55.f);
+			const KitchenArt::FHome H = KitchenArt::Home(DoorGroup(Kind));   // (KAN-40: the numbers are the kitchen's)
+			const FVector Base = H.ToKitchen(GetActorLocation()) + FVector(0.f, -1100.f, 55.f);
 			// Level v2, the gradient rule: the drawer is 18 s from the nest, so the stash is tiers 1, 2, 1 (it was 2, 3, 2).
 			const int32 Down = KitchenArt::Enabled() ? 1 : 0;
-			GM->SpawnFood(Base + FVector(-320.f, 500.f, 0.f), 2 - Down);
-			GM->SpawnFood(Base + FVector(250.f, 900.f, 0.f), 3 - Down);
-			GM->SpawnFood(Base + FVector(-60.f, 1350.f, 0.f), 2 - Down);
+			GM->SpawnFood(H.At(Base + FVector(-320.f, 500.f, 0.f)), 2 - Down);
+			GM->SpawnFood(H.At(Base + FVector(250.f, 900.f, 0.f)), 3 - Down);
+			GM->SpawnFood(H.At(Base + FVector(-60.f, 1350.f, 0.f)), 2 - Down);
 			FRandomStream R(FMath::Rand());
-			GM->SpawnGear(Base + FVector(380.f, 1250.f, 0.f), AntKit::RollWeapon(R.RandRange(1, 3), R));
+			GM->SpawnGear(H.At(Base + FVector(380.f, 1250.f, 0.f)), AntKit::RollWeapon(R.RandRange(1, 3), R));
 		}
 	}
 }
@@ -636,7 +668,7 @@ void AKitchenDoor::Interact(AAntCharacter* Ant)
 
 void AKitchenDoor::AffectAnt(AAntCharacter* Ant, FAntEnv& Env) const
 {
-	const FVector P = Ant->GetActorLocation();
+	const FVector P = KitchenArt::Home(DoorGroup(Kind)).ToKitchen(Ant->GetActorLocation());   // (KAN-40: the boxes below are the kitchen's)
 	if (Kind == EKitchenDoorKind::Fridge)
 	{
 		if (FBox(FVector(2780.f, 3100.f, 200.f), FVector(4620.f, 4670.f, 2500.f)).IsInside(P))
@@ -1125,7 +1157,7 @@ void AKitchenToaster::BeginPlay()
 FBox AKitchenToaster::Slots()
 {
 	// The modelled toaster has real slots 350 deep: whoever sits down in one is launched too.
-	return FBox(FVector(-6500.f, 4000.f, KitchenArt::Enabled() ? 1780.f : 2100.f), FVector(-6000.f, 4400.f, 2400.f));
+	return KitchenArt::Home(TEXT("toaster")).Box(FBox(FVector(-6500.f, 4000.f, KitchenArt::Enabled() ? 1780.f : 2100.f), FVector(-6000.f, 4400.f, 2400.f)));
 }
 
 bool AKitchenToaster::CanInteract(const AAntCharacter* Ant) const
@@ -1192,10 +1224,11 @@ void AKitchenToaster::Pop()
 	ReadyAt = Now() + 6.f;
 	MulticastPop();
 	AntReact::OnToasterPop(this);   // C13: wound right down by three ants, the toast flies across the kitchen (AntReact.h)
-	AntSfx::Everyone(this, AntSfx::Toaster, FVector(-6000.f, 4200.f, 1900.f), 1.f);
+	const KitchenArt::FHome Home = KitchenArt::Home(TEXT("toaster"));   // (KAN-40: the numbers below are the kitchen's)
+	AntSfx::Everyone(this, AntSfx::Toaster, Home.At(FVector(-6000.f, 4200.f, 1900.f)), 1.f);
 	if (AAntKitchenGameMode* NoiseGM = GetWorld()->GetAuthGameMode<AAntKitchenGameMode>())
 	{
-		NoiseGM->MakeNoise(FVector(-6000.f, 4200.f, 1900.f), 0.9f, AntNoise::Toaster, this);
+		NoiseGM->MakeNoise(Home.At(FVector(-6000.f, 4200.f, 1900.f)), 0.9f, AntNoise::Toaster, this);
 	}
 
 	int32 Launched = 0;
@@ -1205,7 +1238,7 @@ void AKitchenToaster::Pop()
 		AAntCharacter* Ant = *It;
 		if (Ant && !Ant->bDead && Slots().IsInside(Ant->GetActorLocation()))
 		{
-			Ant->ApplyLaunch(FVector(FMath::FRandRange(-120.f, 120.f), 320.f, 2750.f));
+			Ant->ApplyLaunch(Home.Dir(FVector(FMath::FRandRange(-120.f, 120.f), 320.f, 2750.f)));
 			Who = Ant->GetDisplayName();
 			++Launched;
 		}
@@ -1225,7 +1258,7 @@ void AKitchenToaster::Pop()
 			const FBox Worktop(FVector(-7000.f, 2950.f, 1690.f), FVector(-4150.f, 5000.f, 2100.f));
 			for (TActorIterator<AKitchenLoot> It(GetWorld()); It; ++It)
 			{
-				if (!It->bIsGear && !It->IsCarried() && Worktop.IsInside(It->GetActorLocation())) { ++OnTop; }
+				if (!It->bIsGear && !It->IsCarried() && Worktop.IsInside(Home.ToKitchen(It->GetActorLocation()))) { ++OnTop; }
 			}
 			bBake = OnTop < 2 && Now() >= NextFoodAt;
 			UE_LOG(LogTemp, Display, TEXT("ANTV2 toaster: %d on the worktop, %s"), OnTop, bBake ? TEXT("two pieces of toast pop out") : (Now() < NextFoodAt ? TEXT("no toast: still cooling (40 s)") : TEXT("no toast: two lie there already")));
@@ -1233,8 +1266,8 @@ void AKitchenToaster::Pop()
 		if (bBake)
 		{
 			NextFoodAt = Now() + 40.f;
-			GM->SpawnFood(FVector(-5700.f, 3820.f, 1745.f), 0);
-			GM->SpawnFood(FVector(-5740.f, 4560.f, 1745.f), 1);
+			GM->SpawnFood(Home.At(FVector(-5700.f, 3820.f, 1745.f)), 0);
+			GM->SpawnFood(Home.At(FVector(-5740.f, 4560.f, 1745.f)), 1);
 		}
 	}
 }
@@ -1326,7 +1359,7 @@ void AKitchenWire::Tick(float DeltaSeconds)
 			S->SetVisibility(bOn);
 			if (bOn)
 			{
-				S->SetWorldLocation(WireSpot::End + FVector(60.f, 0.f, 10.f) + FMath::VRand() * FMath::FRandRange(10.f, 90.f));
+				S->SetWorldLocation(GetActorTransform().TransformPosition(WireSpot::End + FVector(60.f, 0.f, 10.f)) + FMath::VRand() * FMath::FRandRange(10.f, 90.f));
 			}
 		}
 	}
@@ -1341,7 +1374,8 @@ void AKitchenWire::Tick(float DeltaSeconds)
 void AKitchenWire::Spark()
 {
 	MulticastSpark();
-	AntSfx::Everyone(this, AntSfx::Zap, WireSpot::End, 1.f);
+	const FVector WireEnd = GetActorTransform().TransformPosition(WireSpot::End);   // (KAN-40: the wire stands where its group does)
+	AntSfx::Everyone(this, AntSfx::Zap, WireEnd, 1.f);
 	TArray<AAntCharacter*> Shocked;
 	for (TActorIterator<AAntCharacter> It(GetWorld()); It; ++It)
 	{
@@ -1351,12 +1385,12 @@ void AKitchenWire::Spark()
 			continue;
 		}
 		const FVector P = Ant->GetActorLocation();
-		const float D = FVector::Dist(P, WireSpot::End);
+		const float D = FVector::Dist(P, WireEnd);
 		if (D < 280.f)
 		{
 			Shocked.Add(Ant);
 			Ant->HurtBy(35.f, TEXT("получил разряд током"));
-			Ant->ApplyLaunch((P - WireSpot::End).GetSafeNormal2D() * 450.f + FVector(0.f, 0.f, 350.f));
+			Ant->ApplyLaunch((P - WireEnd).GetSafeNormal2D() * 450.f + FVector(0.f, 0.f, 350.f));
 			Ant->Toast(TEXT("БЗЗЗТ! Оголённый провод!"));
 		}
 		else if (Puddle().IsInside(P))
