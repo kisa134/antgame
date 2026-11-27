@@ -250,12 +250,17 @@ def build_bed():
     return parts, hs
 
 def build_bed_pillow():
-    """sleeping pillow 0.70 x 0.50 m in a linen case with an oxford hem (origin under its middle)"""
+    """sleeping pillow 0.70 x 0.50 m in a linen case, piped round its seam (origin under its middle)"""
     hs = Hulls(); parts = []; ln = LINEN()
     c = soft("Pillow", -0.31, 0.31, -0.21, 0.21, 0.04, 0.12, ln, 0.035, 4, 1.0, 1); parts.append((c, 0))
-    parts.append((box("Hem", -0.35, 0.35, -0.25, 0.25, 0.072, 0.084, ln, 0.005, 2), 0))
-    parts.append((pipe("HemStitch", [rect_loop(-0.312, 0.312, -0.212, 0.212, 0.0846, 0.02, 4)], 0.0012, THREAD(), True), 0))
-    hs.box(-0.33, 0.33, -0.23, 0.23, 0.0, 0.15)
+    # the piping follows the filled pillow: its sides bulge 4 cm at their middle (the puff of soft()), none at the corners
+    n = 10; loop = []
+    loop += [(0.312 + 0.04 * (1 - (y / 0.21) ** 2), y, 0.08) for y in [-0.19 + 0.38 * k / n for k in range(n + 1)]]
+    loop += [(x, 0.212 + 0.04 * (1 - (x / 0.31) ** 2), 0.08) for x in [0.29 - 0.58 * k / n for k in range(n + 1)]]
+    loop += [(-0.312 - 0.04 * (1 - (y / 0.21) ** 2), y, 0.08) for y in [0.19 - 0.38 * k / n for k in range(n + 1)]]
+    loop += [(x, -0.212 - 0.04 * (1 - (x / 0.31) ** 2), 0.08) for x in [-0.29 + 0.58 * k / n for k in range(n + 1)]]
+    parts.append((pipe("Piping", [loop], 0.005, ln, True), 0))
+    hs.box(-0.34, 0.34, -0.24, 0.24, 0.0, 0.15)
     return parts, hs
 
 def build_duvet():
@@ -1011,7 +1016,7 @@ BEDROOM = {
                   "double bed: oak frame bolted to square legs, beech slats in caps on ledgers and a centre beam, piped mattress with handles, oak headboard with a tufted teal pad",
                   [("SM_B_Pillow", T(-0.37, 0.62, 0.552) @ Rz(4), None), ("SM_B_Pillow", T(0.37, 0.63, 0.552) @ Rz(-5), None), ("SM_B_Duvet", I4, None)]),
     "SM_B_Pillow": P("Подушка", build_bed_pillow, 2048, groups([[0]], [(0, (0.0, 0, 0.08), (1, 0.2, 0), 0.01, 3, 0.0)]), "cloth",
-                     "sleeping pillow in a linen case with an oxford hem", None, A("SM_B_Bed", [(-0.37, 0.62, 0.552), (0.37, 0.63, 0.552)], "rest")),
+                     "sleeping pillow in a linen case, piped round its seam", None, A("SM_B_Bed", [(-0.37, 0.62, 0.552), (0.37, 0.63, 0.552)], "rest")),
     "SM_B_Duvet": P("Одеяло (свисает до пола)", build_duvet, 4096, groups([[0]], [(0, (0.1, -0.3, 0.56), (1, 0.25, 0), 0.02, 5, 0.0)]), "cloth",
                     "quilted duvet on the bed, over the foot end and down to the floor (the ants climb it)", None, A("SM_B_Bed", [(0, 0, 0)], "rest")),
     "SM_B_Nightstand": P("Тумба прикроватная", build_nightstand, 2048, groups([[1], [2], [3], [4, 5], [6], [7]]), "wood",
@@ -1125,13 +1130,17 @@ def review(name, done, spec):
         if kn in done:
             c = done[kn][0].copy(); H.link(c); c.matrix_world = mc; kids.append((c, kn, mc, mo))
     back = []; at = spec["attach"]
-    if at and at["move"] == "rest" and at["parent"] in done:
+    if at and at["move"] == "rest" and at["parent"] in done and not any(abs(v) > 1e-6 for v in at["at_m"][0]):   # (a part in its parent's frame: shown on it)
         c = done[at["parent"]][0].copy(); H.link(c); back.append(c)
     shown = [lod0] + [k[0] for k in kids] + back
     for o in H.S().objects: o.hide_render = o not in shown
     _put(lod0, prev)
     before = set(H.S().objects)
     mn, mx = H.bounds([lod0] + [k[0] for k in kids]); wmn, wmx = H.bounds(shown)
+    lift = -mn.z if mn.z < -0.02 else 0.0          # (a part whose pivot is at its middle, the washer's door: stood on the studio floor)
+    if lift:
+        for o in [lod0] + list(pieces): o.matrix_world = Matrix.Translation((0, 0, lift)) @ o.matrix_world
+        mn, mx = H.bounds([lod0] + [k[0] for k in kids]); wmn, wmx = H.bounds(shown)
     H.stage(wall_y=wmx.y + 0.003)
     cams = auto_cams(mn, mx); c0 = (mn + mx) * 0.5; e = mx - mn; s2 = max(e.x, e.y, e.z * 1.9, 0.25)
     def cam(k):
@@ -1166,6 +1175,8 @@ def review(name, done, spec):
     H.sheet(shots, os.path.join(REV, name + ".jpg"), 3)
     for o in [o for o in H.S().objects if o not in before]: bpy.data.objects.remove(o)
     for c in [k[0] for k in kids] + back: bpy.data.objects.remove(c)
+    if lift:
+        for o in [lod0] + list(pieces): o.matrix_world = Matrix.Translation((0, 0, -lift)) @ o.matrix_world
 
 def main():
     t0 = time.time()

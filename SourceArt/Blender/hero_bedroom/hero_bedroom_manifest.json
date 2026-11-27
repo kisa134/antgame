@@ -824,15 +824,15 @@
     {
      "name": "SM_B_Pillow_Brk0",
      "file": "SM_B_Pillow_Brk0.fbx",
-     "triangles": 3772,
+     "triangles": 3602,
      "bbox_min_m": [
-      -0.0495,
-      -0.25,
+      -0.0506,
+      -0.2557,
       0.0022
      ],
      "bbox_max_m": [
-      0.35,
-      0.25,
+      0.357,
+      0.257,
       0.1578
      ],
      "materials": [
@@ -843,15 +843,15 @@
     {
      "name": "SM_B_Pillow_Brk1",
      "file": "SM_B_Pillow_Brk1.fbx",
-     "triangles": 3734,
+     "triangles": 3618,
      "bbox_min_m": [
-      -0.35,
-      -0.25,
+      -0.357,
+      -0.257,
       0.0021
      ],
      "bbox_max_m": [
-      0.0515,
-      0.25,
+      0.0526,
+      0.2558,
       0.1579
      ],
      "materials": [
@@ -860,26 +860,26 @@
      ]
     }
    ],
-   "note": "sleeping pillow in a linen case with an oxford hem",
+   "note": "sleeping pillow in a linen case, piped round its seam",
    "kept_slots": [],
-   "triangles": 5404,
+   "triangles": 5680,
    "bbox_min_m": [
-    -0.35,
-    -0.25,
+    -0.357,
+    -0.257,
     0.0021
    ],
    "bbox_max_m": [
-    0.35,
-    0.25,
+    0.357,
+    0.257,
     0.1579
    ],
    "materials": [
     "Hero_SM_B_Pillow"
    ],
    "lod_triangles": [
-    5404,
-    1890,
-    648
+    5680,
+    1988,
+    680
    ],
    "ucx": 1,
    "room": "bedroom",
@@ -901,8 +901,8 @@
     "move": "rest"
    },
    "size_uu": [
-    1330,
-    950,
+    1357,
+    977,
     296
    ]
   },
