@@ -2166,7 +2166,8 @@ def knifeblock(M):
         h = _hinge(rbox("Handle%d" % k, -16, 16, -26, 26, 0, 300 if k < 4 else 220, M["padDark"], 8, 0, 3)); h.rotation_euler = (-ang, 0, 0); h.location = u(x, y, z - 10); P.append((h, 1))
         for zz in (90, 190):
             for s in (-1, 1):
-                P.append((_tilt(lathe_s("Rivet", [(0, 0), (6, 0), (5, 2), (0, 3)], M["brass"], 10), (0, s * math.pi / 2, 0), (x + s * 16, y + zz * math.sin(ang), z - 10 + zz * math.cos(ang))), 1))
+                P.append((_tilt(outward(lathe_s("Rivet", [(0, 0), (6, 0), (5, 2), (0, 3)], M["brass"], 10)), (0, s * math.pi / 2, 0),   # (outward: this profile comes out of the screw inside out)
+ (x + s * 16, y + zz * math.sin(ang), z - 10 + zz * math.cos(ang))), 1))
     return P
 
 def _wire(name, pts, M, r=5.0): return sweep(name, pts, circ(r, 6), M["chromeWire"])
