@@ -1,0 +1,143 @@
+{
+ "name": "SM_B_Bed",
+ "file": "SM_B_Bed.fbx",
+ "set": "hero_bedroom",
+ "break_class": "wood",
+ "textures": {
+  "C": "SM_B_Bed/tex/T_SM_B_Bed_C.png",
+  "N": "SM_B_Bed/tex/T_SM_B_Bed_N.png",
+  "R": "SM_B_Bed/tex/T_SM_B_Bed_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_B_Bed_Brk0",
+   "file": "SM_B_Bed_Brk0.fbx",
+   "triangles": 1536,
+   "bbox_min_m": [
+    -0.8018,
+    -1.01,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.8018,
+    0.965,
+    0.4
+   ],
+   "materials": [
+    "Hero_SM_B_Bed",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_B_Bed_Brk1",
+   "file": "SM_B_Bed_Brk1.fbx",
+   "triangles": 968,
+   "bbox_min_m": [
+    -0.8,
+    -0.992,
+    0.25
+   ],
+   "bbox_max_m": [
+    0.8,
+    0.945,
+    0.4
+   ],
+   "materials": [
+    "Hero_SM_B_Bed",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_B_Bed_Brk2",
+   "file": "SM_B_Bed_Brk2.fbx",
+   "triangles": 2776,
+   "bbox_min_m": [
+    -0.774,
+    -0.967,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.774,
+    0.92,
+    0.349
+   ],
+   "materials": [
+    "Hero_SM_B_Bed",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_B_Bed_Brk3",
+   "file": "SM_B_Bed_Brk3.fbx",
+   "triangles": 2632,
+   "bbox_min_m": [
+    -0.7919,
+    -0.9909,
+    0.3381
+   ],
+   "bbox_max_m": [
+    0.7919,
+    0.9059,
+    0.5489
+   ],
+   "materials": [
+    "Hero_SM_B_Bed",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_B_Bed_Brk4",
+   "file": "SM_B_Bed_Brk4.fbx",
+   "triangles": 6588,
+   "bbox_min_m": [
+    -0.8,
+    0.889,
+    0.2
+   ],
+   "bbox_max_m": [
+    0.8,
+    1.01,
+    1.1
+   ],
+   "materials": [
+    "Hero_SM_B_Bed",
+    "Break"
+   ]
+  }
+ ],
+ "note": "double bed: oak frame bolted to square legs, beech slats in caps on ledgers and a centre beam, piped mattress with handles, oak headboard with a tufted teal pad",
+ "kept_slots": [],
+ "triangles": 14500,
+ "bbox_min_m": [
+  -0.8018,
+  -1.01,
+  0.0
+ ],
+ "bbox_max_m": [
+  0.8018,
+  1.01,
+  1.1
+ ],
+ "materials": [
+  "Hero_SM_B_Bed"
+ ],
+ "lod_triangles": [
+  14500,
+  5074,
+  1740
+ ],
+ "ucx": 13,
+ "room": "bedroom",
+ "ru": "Кровать двуспальная",
+ "children": [
+  "SM_B_Duvet",
+  "SM_B_Pillow"
+ ],
+ "size_uu": [
+  3047,
+  3838,
+  2090
+ ]
+}

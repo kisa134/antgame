@@ -1,0 +1,132 @@
+{
+ "name": "SM_B_Dresser_Drawer",
+ "file": "SM_B_Dresser_Drawer.fbx",
+ "set": "hero_bedroom",
+ "break_class": "wood",
+ "textures": {
+  "C": "SM_B_Dresser_Drawer/tex/T_SM_B_Dresser_Drawer_C.png",
+  "N": "SM_B_Dresser_Drawer/tex/T_SM_B_Dresser_Drawer_N.png",
+  "R": "SM_B_Dresser_Drawer/tex/T_SM_B_Dresser_Drawer_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_B_Dresser_Drawer_Brk0",
+   "file": "SM_B_Dresser_Drawer_Brk0.fbx",
+   "triangles": 532,
+   "bbox_min_m": [
+    -0.43,
+    -0.032,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.43,
+    0.018,
+    0.162
+   ],
+   "materials": [
+    "Hero_SM_B_Dresser_Drawer",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_B_Dresser_Drawer_Brk1",
+   "file": "SM_B_Dresser_Drawer_Brk1.fbx",
+   "triangles": 372,
+   "bbox_min_m": [
+    -0.4166,
+    -0.032,
+    0.012
+   ],
+   "bbox_max_m": [
+    0.4166,
+    0.39,
+    0.142
+   ],
+   "materials": [
+    "Hero_SM_B_Dresser_Drawer",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_B_Dresser_Drawer_Brk2",
+   "file": "SM_B_Dresser_Drawer_Brk2.fbx",
+   "triangles": 2632,
+   "bbox_min_m": [
+    -0.3656,
+    -0.032,
+    0.03
+   ],
+   "bbox_max_m": [
+    0.3656,
+    0.36,
+    0.09
+   ],
+   "materials": [
+    "Hero_SM_B_Dresser_Drawer",
+    "Break"
+   ]
+  }
+ ],
+ "note": "dresser drawer: walnut front, two brass knobs, beech box; rolled socks and folded things inside",
+ "kept_slots": [],
+ "triangles": 3536,
+ "bbox_min_m": [
+  -0.43,
+  -0.032,
+  0.0
+ ],
+ "bbox_max_m": [
+  0.43,
+  0.39,
+  0.162
+ ],
+ "materials": [
+  "Hero_SM_B_Dresser_Drawer"
+ ],
+ "lod_triangles": [
+  3536,
+  1236,
+  424
+ ],
+ "ucx": 5,
+ "room": "bedroom",
+ "ru": "Ящик комода (4 шт.)",
+ "attach": {
+  "parent": "SM_B_Dresser",
+  "at_m": [
+   [
+    0.0,
+    -0.225,
+    0.11900000000000001
+   ],
+   [
+    0.0,
+    -0.225,
+    0.301
+   ],
+   [
+    0.0,
+    -0.225,
+    0.483
+   ],
+   [
+    0.0,
+    -0.225,
+    0.665
+   ]
+  ],
+  "move": "slide",
+  "slide_m": [
+   0,
+   -0.3,
+   0
+  ]
+ },
+ "size_uu": [
+  1634,
+  802,
+  308
+ ]
+}

@@ -1,0 +1,95 @@
+{
+ "name": "SM_B_Wardrobe_DoorL",
+ "file": "SM_B_Wardrobe_DoorL.fbx",
+ "set": "hero_bedroom",
+ "break_class": "wood",
+ "textures": {
+  "C": "SM_B_Wardrobe_DoorL/tex/T_SM_B_Wardrobe_DoorL_C.png",
+  "N": "SM_B_Wardrobe_DoorL/tex/T_SM_B_Wardrobe_DoorL_N.png",
+  "R": "SM_B_Wardrobe_DoorL/tex/T_SM_B_Wardrobe_DoorL_R.png"
+ },
+ "collision_lod": 0,
+ "movers": [],
+ "breaks": [
+  {
+   "name": "SM_B_Wardrobe_DoorL_Brk0",
+   "file": "SM_B_Wardrobe_DoorL_Brk0.fbx",
+   "triangles": 1976,
+   "bbox_min_m": [
+    0.0,
+    -0.052,
+    0.0
+   ],
+   "bbox_max_m": [
+    0.597,
+    0.012,
+    2.074
+   ],
+   "materials": [
+    "Hero_SM_B_Wardrobe_DoorL",
+    "Break"
+   ]
+  },
+  {
+   "name": "SM_B_Wardrobe_DoorL_Brk1",
+   "file": "SM_B_Wardrobe_DoorL_Brk1.fbx",
+   "triangles": 592,
+   "bbox_min_m": [
+    0.075,
+    -0.052,
+    0.085
+   ],
+   "bbox_max_m": [
+    0.56,
+    -0.005,
+    1.989
+   ],
+   "materials": [
+    "Hero_SM_B_Wardrobe_DoorL",
+    "Break"
+   ]
+  }
+ ],
+ "note": "wardrobe door, hinged on the left: green frame, two fielded panels with beads, brass knob, four cup hinges",
+ "kept_slots": [],
+ "triangles": 2568,
+ "bbox_min_m": [
+  0.0,
+  -0.052,
+  0.0
+ ],
+ "bbox_max_m": [
+  0.597,
+  0.012,
+  2.074
+ ],
+ "materials": [
+  "Hero_SM_B_Wardrobe_DoorL"
+ ],
+ "lod_triangles": [
+  2568,
+  898,
+  308
+ ],
+ "ucx": 1,
+ "room": "bedroom",
+ "ru": "Дверца шкафа левая",
+ "attach": {
+  "parent": "SM_B_Wardrobe",
+  "at_m": [
+   [
+    -0.5985,
+    -0.278,
+    0.084
+   ]
+  ],
+  "move": "hinge",
+  "axis": "Z",
+  "open_deg": -105
+ },
+ "size_uu": [
+  1134,
+  122,
+  3941
+ ]
+}
